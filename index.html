@@ -634,9 +634,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="12" /></svg>
                       <span>Background</span>
                     </div>
-                    <div class="setting-toggle-row">
-                      <input type="color" id="settings-bg-color" value="#0c1021" />
-                    </div>
+                    <input type="color" id="settings-bg-color" value="#0c1021" title="Set 3D Background Color" />
                   </div>
 
                   <div class="scene-control-item">
@@ -644,92 +642,88 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8" /></svg>
                       <span>Select Color</span>
                     </div>
-                    <div class="setting-toggle-row">
-                      <input type="color" id="settings-select-color" value="#00d2ff" />
-                    </div>
+                    <input type="color" id="settings-select-color" value="#00d2ff" title="Set Default Selection Color" />
                   </div>
 
-                  <div class="scene-control-item">
+                  <div class="scene-control-item" style="grid-column: span 2;">
                     <div class="scene-control-label">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8" /></svg>
                       <span>Hover Color</span>
                     </div>
-                    <div class="setting-toggle-row">
-                      <input type="color" id="settings-hover-color" value="#00f5a0" />
-                    </div>
+                    <input type="color" id="settings-hover-color" value="#00f5a0" title="Set Pointer Hover Color" />
                   </div>
 
                   <!-- Custom Highlighter Styles Studio -->
-                  <div class="scene-control-item" style="grid-column: span 2; display: flex; flex-direction: column; gap: 0.4rem; background: var(--bg-hover); padding: 0.5rem; border: 1.5px solid var(--border-strong); border-radius: 4px; margin-top: 0.2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.25rem;">
-                      <span style="font-size: 0.68rem; font-weight: 800; color: var(--accent-500); display: flex; align-items: center; gap: 0.3rem;">
+                  <div class="custom-highlight-studio-card">
+                    <div class="custom-highlight-header">
+                      <div class="custom-highlight-title">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                        Custom Highlight Styles
-                      </span>
-                      <span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono);">OBC Highlighter</span>
+                        <span>Custom Highlight Styles</span>
+                      </div>
+                      <span class="custom-highlight-badge">OBC Highlighter</span>
                     </div>
 
-                    <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.3;">
+                    <div class="custom-highlight-hint">
                       Apply persistent highlight overlays to selected items. <em>Select color takes precedence until deselected.</em>
                     </div>
 
-                    <div style="display: flex; gap: 0.35rem; align-items: center;">
-                      <select id="select-custom-highlighter-style" style="flex: 1; font-size: 0.68rem; font-weight: 700; background: var(--bg-input); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 3px; padding: 0.25rem 0.4rem;">
+                    <div class="custom-highlight-selector-row">
+                      <select id="select-custom-highlighter-style" class="custom-highlight-select">
                         <option value="Red">Red Alert (#ef4444)</option>
                         <option value="Green">Pass / Green (#10b981)</option>
                         <option value="Amber">Warning / Amber (#f59e0b)</option>
                         <option value="Purple">VIP / Purple (#a855f7)</option>
                         <option value="Cyan">Review / Cyan (#06b6d4)</option>
                       </select>
-                      <input type="color" id="picker-custom-highlighter-color" value="#ef4444" style="width: 28px; height: 26px; border: 1px solid var(--border-strong); border-radius: 3px; cursor: pointer; background: transparent;" title="Adjust Style Color" />
+                      <div class="custom-color-picker-wrapper">
+                        <input type="color" id="picker-custom-highlighter-color" value="#ef4444" title="Adjust Style Color" />
+                      </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; margin-top: 0.1rem;">
-                      <button type="button" class="btn-action-primary" id="btn-apply-custom-highlight" style="font-size: 0.65rem; padding: 0.3rem 0.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M2 12h20"/></svg>
-                        Apply Highlight
+                    <div class="custom-highlight-actions-grid">
+                      <button type="button" class="btn-highlight-apply" id="btn-apply-custom-highlight">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M2 12h20"/></svg>
+                        <span>Apply Highlight</span>
                       </button>
-                      <button type="button" class="btn-secondary" id="btn-reset-custom-highlight" style="font-size: 0.65rem; padding: 0.3rem 0.2rem; font-weight: 800; border-color: var(--border-strong); display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                        Reset Selected
+                      <button type="button" class="btn-highlight-reset" id="btn-reset-custom-highlight">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        <span>Reset Selected</span>
                       </button>
                     </div>
 
-                    <button type="button" class="btn-secondary" id="btn-clear-all-highlighters" style="width: 100%; font-size: 0.62rem; padding: 0.25rem; font-weight: 700; border-color: var(--color-warning, #f59e0b); color: var(--color-warning, #f59e0b); display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                      Clear All Custom Highlights
+                    <button type="button" class="btn-highlight-clear-all" id="btn-clear-all-highlighters">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                      <span>Clear All Custom Highlights</span>
                     </button>
                   </div>
 
-                  <div class="scene-control-item" style="grid-column: span 2;">
-                    <button class="btn-secondary" id="btn-clear-select-colors" style="width: 100%; border-color: var(--color-warning); color: var(--color-warning); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      Clear Selection Highlight
+                  <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.2rem;">
+                    <button type="button" class="btn-action-clear-selection" id="btn-clear-select-colors">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      <span>Clear Selection Highlight</span>
                     </button>
-                  </div>
 
-                  <div class="scene-control-item" style="grid-column: span 2;">
-                    <button class="btn-secondary" id="btn-clear-cache" style="width: 100%; border-color: var(--color-error); color: var(--color-error); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                      Clear Offline Cache
+                    <button type="button" class="btn-action-clear-cache" id="btn-clear-cache">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      <span>Clear Offline Cache</span>
                     </button>
                   </div>
                 </div>
 
                 <!-- Exploded Disassembly View & Clustering Method -->
-                <div class="control-row" style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                <div class="control-row" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 0.45rem;">
                   <div class="control-label" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
                     <span>Disassembly Clustering</span>
                     <span class="value-badge" id="badge-explosion-mode">CATEGORIES</span>
                   </div>
-                  <select class="custom-select" id="select-explosion-mode" style="width: 100%; font-size: 0.72rem; padding: 0.35rem 0.5rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 2px; box-shadow: none; font-family: var(--font-body); font-weight: 700; cursor: pointer;">
+                  <select class="custom-select" id="select-explosion-mode" style="width: 100%; font-size: 0.72rem; padding: 0.4rem 0.6rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: none; font-family: var(--font-body); font-weight: 700; cursor: pointer;">
                     <option value="category-cluster" selected>Category Clusters (Sorted)</option>
                     <option value="asset-dense-cluster">Asset & Equipment Matrix (Tandem)</option>
                     <option value="radial">Radial 3D Spatial</option>
                     <option value="storey-cluster">Storey Level Stack</option>
                   </select>
 
-                  <div class="control-label" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.3rem;">
+                  <div class="control-label" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
                     <span>Disassembly Factor</span>
                     <span class="value-badge" id="val-explosion-factor">0%</span>
                   </div>
