@@ -1,0 +1,23 @@
+{
+  "name": "Web BIM Twin — 4D/5D Digital Twin",
+  "short_name": "BIM Twin",
+  "description": "High-Performance 4D/5D Web BIM Viewer, Construction Sequencer and Cost Estimating Platform",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#d4af37",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

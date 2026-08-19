@@ -1,0 +1,6 @@
+{
+  "name": "BIM Kintsugi",
+  "description": "Enterprise BIM Viewer with IFC model loading, 3D navigation, digital twin data, 4D simulation, and section cutting tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
