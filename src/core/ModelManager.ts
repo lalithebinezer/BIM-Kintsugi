@@ -16,8 +16,8 @@ export class ModelManager {
     await this.ifcLoader.setup({
       autoSetWasm: false,
       wasm: {
-        path: "/",
-        absolute: true,
+        path: import.meta.env.BASE_URL || "./",
+        absolute: false,
       },
     });
 

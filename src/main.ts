@@ -2596,8 +2596,8 @@ async function loadModelData(name: string, buffer: Uint8Array) {
         await ifcLoader.setup({
           autoSetWasm: false,
           wasm: {
-            path: "/",
-            absolute: true
+            path: import.meta.env.BASE_URL || "./",
+            absolute: false
           }
         });
         isIfcLoaderSetup = true;
