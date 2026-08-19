@@ -224,7 +224,13 @@ export class SectionPlanesHUD {
     emptyContainer.classList.add("hidden");
     listContainer.innerHTML = "";
 
-    const activePlane = this.clippingModule.getActivePlane();
+    const activePlane = this.clippingModule.getActivePlane() || (planes.length > 0 ? planes[0] : null);
+    if (activePlane) {
+      const activeMeta = this.clippingModule.getPlaneAxisMeta(activePlane);
+      this.updateDynamicPlaneColor(activeMeta.color || "var(--accent-500)");
+    } else {
+      this.updateDynamicPlaneColor("var(--accent-500)");
+    }
 
     planes.forEach((plane, index) => {
       const meta = this.clippingModule.getPlaneAxisMeta(plane);
@@ -303,6 +309,37 @@ export class SectionPlanesHUD {
     // Auto-show HUD if cuts exist and HUD is not visible
     if (planes.length > 0 && !this.isVisible) {
       this.show();
+    }
+  }
+
+  /**
+   * Dynamically adjusts the border color, glow, and header accents of the mini-HUD
+   * to match the color assigned to the cutting plane in the 3D viewport.
+   */
+  private updateDynamicPlaneColor(colorHex: string) {
+    if (!this.container) return;
+
+    this.container.style.setProperty("--active-plane-color", colorHex);
+
+    if (colorHex.startsWith("#")) {
+      this.container.style.borderColor = `${colorHex}85`;
+      this.container.style.boxShadow = `var(--shadow-panel, 0 20px 40px rgba(0,0,0,0.5)), 0 0 0 1px ${colorHex}55, 0 0 20px ${colorHex}35`;
+    } else {
+      this.container.style.borderColor = "var(--border-color, rgba(255, 255, 255, 0.1))";
+      this.container.style.boxShadow = "var(--shadow-panel, 0 20px 40px rgba(0,0,0,0.5)), 0 0 0 1px var(--border-subtle), 0 0 16px var(--accent-glow2)";
+    }
+
+    const dot = this.container.querySelector(".section-hud-dot") as HTMLElement | null;
+    if (dot) {
+      dot.style.background = colorHex;
+      dot.style.boxShadow = `0 0 8px ${colorHex}`;
+    }
+
+    const badge = this.container.querySelector("#section-hud-count") as HTMLElement | null;
+    if (badge) {
+      badge.style.color = colorHex;
+      badge.style.borderColor = colorHex.startsWith("#") ? `${colorHex}60` : "var(--border-accent)";
+      badge.style.background = colorHex.startsWith("#") ? `${colorHex}20` : "var(--accent-glow2)";
     }
   }
 

@@ -189,7 +189,7 @@ export class ClippingModule {
       if (prevBorder) prevBorder.visible = false;
       if (this.activePlane.planeMaterial) {
         this.activePlane.planeMaterial.opacity = 0.15;
-        this.activePlane.planeMaterial.color = new THREE.Color(0x00bcd4);
+        this.activePlane.planeMaterial.color = this.getPlaneThreeColor(this.activePlane);
       }
     }
 
@@ -198,12 +198,45 @@ export class ClippingModule {
     if (this.activePlane) {
       this.attachGlowBorder(this.activePlane);
       const activeBorder = this.planeGlowBorders.get(this.activePlane);
-      if (activeBorder) activeBorder.visible = true;
+      if (activeBorder) {
+        activeBorder.visible = true;
+        if (activeBorder.material) {
+          (activeBorder.material as THREE.LineBasicMaterial).color = this.getPlaneThreeColor(this.activePlane);
+        }
+      }
+      if (this.activePlane.planeMaterial) {
+        this.activePlane.planeMaterial.color = this.getPlaneThreeColor(this.activePlane);
+      }
     }
+
+    this.notifyPlanesChanged();
   }
 
   public getActivePlane(): any | null {
     return this.activePlane;
+  }
+
+  /**
+   * Returns the specific CSS color hex string for a given plane.
+   */
+  public getPlaneColor(plane: any): string {
+    if (!plane) return "var(--accent-500)";
+    const meta = this.getPlaneAxisMeta(plane);
+    return meta.color || "var(--accent-500)";
+  }
+
+  /**
+   * Returns the THREE.Color instance for a given plane.
+   */
+  public getPlaneThreeColor(plane: any): THREE.Color {
+    if (!plane) return this.getThemeAccentColor();
+    const meta = this.getPlaneAxisMeta(plane);
+    if (meta.color && meta.color.startsWith("#")) {
+      try {
+        return new THREE.Color(meta.color);
+      } catch (_) {}
+    }
+    return this.getThemeAccentColor();
   }
 
   /**
@@ -230,6 +263,8 @@ export class ClippingModule {
     const helper = plane.helper || (plane as any)._helper;
     if (!helper) return;
 
+    const planeColor = this.getPlaneThreeColor(plane);
+
     // Create a square outline representing the plane cut boundary
     const size = (plane.size || 5) * 1.05;
     const half = size / 2;
@@ -246,7 +281,7 @@ export class ClippingModule {
 
     const geom = new THREE.BufferGeometry().setFromPoints(points);
     const mat = new THREE.LineBasicMaterial({
-      color: this.getThemeAccentColor(),
+      color: planeColor,
       linewidth: 3,
       transparent: true,
       opacity: 0.9,
@@ -327,9 +362,9 @@ export class ClippingModule {
         const time = performance.now() * 0.0032;
         const pulse = 0.5 + 0.5 * Math.sin(time); // Smooth 0 to 1 oscillation
 
-        const accentColor = this.getThemeAccentColor();
+        const planeColor = this.getPlaneThreeColor(this.activePlane);
         const pulseFactor = 0.8 + 0.3 * pulse;
-        const pulseColor = accentColor.clone().multiplyScalar(pulseFactor);
+        const pulseColor = planeColor.clone().multiplyScalar(pulseFactor);
 
         // Modulate plane helper surface material
         if (this.activePlane.planeMaterial) {
