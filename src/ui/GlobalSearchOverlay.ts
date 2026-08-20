@@ -64,13 +64,13 @@ export class GlobalSearchOverlay {
         <div class="bim-search-header">
           <div class="bim-search-title-group">
             <div class="bim-search-icon-badge">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </div>
-            <div style="display: flex; flex-direction: column;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="bim-search-title-text-group">
+              <div class="bim-search-title-row">
                 <span class="bim-search-title">GLOBAL BIM SEARCH</span>
                 <span class="bim-search-version-badge" id="search-models-count-badge">0 Models</span>
               </div>

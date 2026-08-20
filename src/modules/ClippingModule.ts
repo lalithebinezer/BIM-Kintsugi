@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import { BimEngine } from "../core/BimEngine";
+import { SectionPlaneGizmo } from "./SectionPlaneGizmo";
 
 export class ClippingModule {
   private static instance: ClippingModule;
@@ -207,6 +208,9 @@ export class ClippingModule {
       if (this.activePlane.planeMaterial) {
         this.activePlane.planeMaterial.color = this.getPlaneThreeColor(this.activePlane);
       }
+      SectionPlaneGizmo.getInstance().attachToPlane(this.activePlane);
+    } else {
+      SectionPlaneGizmo.getInstance().detach();
     }
 
     this.notifyPlanesChanged();
@@ -327,6 +331,10 @@ export class ClippingModule {
           }
         }
 
+        if (this.activePlane === plane) {
+          SectionPlaneGizmo.getInstance().updateTransform();
+        }
+
         if (this.engine.fragments && this.engine.fragments.core) {
           this.engine.fragments.core.update(true);
         }
@@ -339,6 +347,9 @@ export class ClippingModule {
             plane.setFromNormalAndCoplanarPoint(normal, targetPoint);
           } catch (_) {}
           this.isGliding = false;
+          if (this.activePlane === plane) {
+            SectionPlaneGizmo.getInstance().updateTransform();
+          }
           if (this.engine.fragments && this.engine.fragments.core) {
             this.engine.fragments.core.update(true);
           }
@@ -435,6 +446,7 @@ export class ClippingModule {
 
       clipper.enabled = false;
       this.activePlane = null;
+      SectionPlaneGizmo.getInstance().detach();
     }
 
     if (this.engine.fragments && this.engine.fragments.core) {
@@ -548,6 +560,27 @@ export class ClippingModule {
   }
 
   /**
+   * Sets a custom human-readable name/label for a clipping plane.
+   */
+  public setPlaneName(plane: any, name: string) {
+    if (!plane) return;
+    plane.userData = plane.userData || {};
+    plane.userData.customName = name.trim();
+    this.notifyPlanesChanged();
+  }
+
+  /**
+   * Gets the display name for a clipping plane.
+   */
+  public getPlaneName(plane: any, defaultIndex?: number): string {
+    if (!plane) return "Section Plane";
+    if (plane.userData && typeof plane.userData.customName === "string" && plane.userData.customName.trim()) {
+      return plane.userData.customName.trim();
+    }
+    return defaultIndex !== undefined ? `Plane #${defaultIndex + 1}` : "Section Plane";
+  }
+
+  /**
    * Retrieves user-friendly axis metadata for a given plane.
    */
   public getPlaneAxisMeta(plane: any): { label: string; axis: string; color: string } {
@@ -597,6 +630,14 @@ export class ClippingModule {
       border.visible = nextState && (this.activePlane === plane);
     }
 
+    if (this.activePlane === plane) {
+      if (nextState) {
+        SectionPlaneGizmo.getInstance().attachToPlane(plane);
+      } else {
+        SectionPlaneGizmo.getInstance().detach();
+      }
+    }
+
     if (this.engine.fragments && this.engine.fragments.core) {
       this.engine.fragments.core.update(true);
     }
@@ -621,6 +662,10 @@ export class ClippingModule {
           plane.three.setFromNormalAndCoplanarPoint(newNormal, origin);
         }
       }
+    }
+
+    if (this.activePlane === plane) {
+      SectionPlaneGizmo.getInstance().updateTransform();
     }
 
     if (this.engine.fragments && this.engine.fragments.core) {
@@ -705,6 +750,7 @@ export class ClippingModule {
     }
     this.planeGlowBorders.clear();
     this.activePlane = null;
+    SectionPlaneGizmo.getInstance().detach();
 
     if (this.engine.clipper) {
       this.engine.clipper.deleteAll();

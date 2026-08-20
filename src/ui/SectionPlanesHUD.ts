@@ -236,6 +236,7 @@ export class SectionPlanesHUD {
       const meta = this.clippingModule.getPlaneAxisMeta(plane);
       const isPlaneActive = plane === activePlane;
       const isEnabled = plane.enabled !== false && plane.visible !== false;
+      const planeName = this.clippingModule.getPlaneName(plane, index);
 
       const itemEl = document.createElement("div");
       itemEl.className = `section-plane-item ${isPlaneActive ? "active-plane" : ""} ${!isEnabled ? "plane-disabled" : ""}`;
@@ -247,7 +248,12 @@ export class SectionPlanesHUD {
             ${meta.axis}
           </span>
           <div class="plane-title-col">
-            <span class="plane-name">Plane #${index + 1}</span>
+            <div class="plane-name-row">
+              <span class="plane-name" title="Click or double-click to rename">${planeName}</span>
+              <button type="button" class="btn-plane-rename" title="Rename section plane (e.g. Floor 1 Section)">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
             <span class="plane-sub-label">${meta.label}</span>
           </div>
         </div>
@@ -267,10 +273,79 @@ export class SectionPlanesHUD {
         </div>
       `;
 
+      // Inline renaming logic
+      const nameRow = itemEl.querySelector(".plane-name-row") as HTMLElement | null;
+      const nameSpan = itemEl.querySelector(".plane-name") as HTMLElement | null;
+      const btnRename = itemEl.querySelector(".btn-plane-rename") as HTMLElement | null;
+
+      const triggerRename = (e: Event) => {
+        e.stopPropagation();
+        if (!nameRow || !nameSpan || nameRow.querySelector(".plane-name-input")) return;
+
+        const currentName = this.clippingModule.getPlaneName(plane, index);
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "plane-name-input";
+        input.value = currentName;
+        input.maxLength = 36;
+        input.setAttribute("aria-label", "Rename section plane");
+        input.placeholder = `Plane #${index + 1}`;
+
+        let finished = false;
+        const finishEditing = (save: boolean) => {
+          if (finished) return;
+          finished = true;
+          if (!input.parentNode) return;
+
+          const newName = input.value.trim();
+          if (save && newName) {
+            this.clippingModule.setPlaneName(plane, newName);
+          }
+          this.renderPlanesList(this.clippingModule.getAllPlanes());
+        };
+
+        input.addEventListener("keydown", (evt) => {
+          evt.stopPropagation();
+          if (evt.key === "Enter") {
+            finishEditing(true);
+          } else if (evt.key === "Escape") {
+            finishEditing(false);
+          }
+        });
+
+        input.addEventListener("blur", () => {
+          finishEditing(true);
+        });
+
+        input.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+        });
+
+        input.addEventListener("mousedown", (evt) => {
+          evt.stopPropagation();
+        });
+
+        nameSpan.style.display = "none";
+        if (btnRename) btnRename.style.display = "none";
+        nameRow.insertBefore(input, nameSpan);
+        input.focus();
+        input.select();
+      };
+
+      if (btnRename) {
+        btnRename.addEventListener("click", triggerRename);
+      }
+      if (nameSpan) {
+        nameSpan.addEventListener("dblclick", triggerRename);
+      }
+
       // Click row to activate
       const infoCol = itemEl.querySelector(".plane-item-info");
       if (infoCol) {
-        infoCol.addEventListener("click", () => {
+        infoCol.addEventListener("click", (e) => {
+          if ((e.target as HTMLElement).closest(".plane-name-input") || (e.target as HTMLElement).closest(".btn-plane-rename")) {
+            return;
+          }
           this.clippingModule.setActivePlane(plane);
           this.renderPlanesList(this.clippingModule.getAllPlanes());
         });

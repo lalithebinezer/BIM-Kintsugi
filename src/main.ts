@@ -2990,7 +2990,7 @@ if (clipperBtn) {
     }
     updateViewportHint(
       isNowActive
-        ? "Section Cut Active — Double-click any surface to slice model • Manage planes with the floating mini-HUD"
+        ? "Section Cut Active — Drag the 3D Gizmo handles in the viewport or use the Mini-HUD sliders to slice the model"
         : "Double-click any 3D element to inspect properties • Drag to Orbit view"
     );
   });
