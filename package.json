@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.2.5",
     "@types/three": "^0.184.1",
     "esbuild": "^0.28.2",
     "playwright": "^1.61.0",

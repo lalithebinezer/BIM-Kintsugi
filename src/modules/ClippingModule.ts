@@ -21,7 +21,8 @@ export class ClippingModule {
     this.engine = BimEngine.getInstance();
     this.initSectionPlanes();
     this.setupClipperHooks();
-    this.startPulsingAnimation();
+    // Pulse animation starts lazily on first plane creation, not in constructor,
+    // to avoid a hot rAF loop running before any clipping plane exists.
   }
 
   public static getInstance(): ClippingModule {
@@ -124,6 +125,7 @@ export class ClippingModule {
     if (!plane) return;
 
     this.setActivePlane(plane);
+    this.ensurePulseAnimationRunning();
 
     // Attach custom glowing border to the plane helper
     this.attachGlowBorder(plane);
@@ -359,6 +361,14 @@ export class ClippingModule {
 
       requestAnimationFrame(step);
     });
+  }
+
+  /**
+   * Ensures the pulse animation loop is running. Safe to call multiple times.
+   * Only starts the loop once; subsequent calls are no-ops.
+   */
+  private ensurePulseAnimationRunning() {
+    this.startPulsingAnimation();
   }
 
   /**

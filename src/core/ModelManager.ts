@@ -46,7 +46,7 @@ export class ModelManager {
       if (!("isLodMaterial" in material && material.isLodMaterial)) {
         material.polygonOffset = true;
         material.polygonOffsetUnits = 1;
-        material.polygonOffsetFactor = Math.random();
+        material.polygonOffsetFactor = 1;
       }
     });
   }

@@ -26,7 +26,31 @@ import * as BUI from "@thatopen/ui";
 import CameraControls from "camera-controls";
 import { PropertyEditor, initPropertyEditorUI } from "./ui/PropertyEditor";
 import "./ui/BimViewCube";
-function getCategoryColor(_theme: string, _category: string) { return "#a78bfa"; }
+function getCategoryColor(_theme: string, category: string): string {
+  const categoryColorMap: Record<string, string> = {
+    IFCWALL: "#94a3b8",
+    IFCWALLSTANDARDCASE: "#94a3b8",
+    IFCSLAB: "#60a5fa",
+    IFCROOF: "#6b7280",
+    IFCCOLUMN: "#fbbf24",
+    IFCBEAM: "#f97316",
+    IFCDOOR: "#34d399",
+    IFCWINDOW: "#38bdf8",
+    IFCSTAIR: "#a78bfa",
+    IFCSTAIRFLIGHT: "#a78bfa",
+    IFCRAILING: "#e879f9",
+    IFCFURNISHINGELEMENT: "#fb923c",
+    IFCFLOWSEGMENT: "#22d3ee",
+    IFCFLOWFITTING: "#22d3ee",
+    IFCFLOWTERMINAL: "#4ade80",
+    IFCSPACE: "#fde68a",
+    IFCFOOTING: "#d97706",
+    IFCPILE: "#92400e",
+    IFCPLATE: "#78716c",
+    IFCCOVERING: "#a3e635",
+  };
+  return categoryColorMap[category.toUpperCase()] ?? "#a78bfa";
+}
 import { ScheduleManager } from "./modules/ScheduleManager";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
 

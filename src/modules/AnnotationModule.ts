@@ -202,7 +202,7 @@ export class AnnotationModule {
     const thumbnail = this.captureViewportThumbnail();
 
     const anno: PinAnnotation = {
-      id: `anno-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `anno-${Date.now()}-${this.nextPinNumber}`,
       number: pinNumber,
       position: pos.clone(),
       cameraPosition: cameraPos,
