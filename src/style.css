@@ -105,7 +105,7 @@
 
 ::selection {
   background: var(--accent-500);
-  color: var(--accent-btn-text, #ffffff);
+  color: var(--accent-btn-text, #000000);
 }
 
 html, body {
