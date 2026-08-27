@@ -70,6 +70,20 @@
 
   --bim-ui_size-base: 13px;
   --bim-ui_main-base: #141418;
+  --bim-ui_bg-base: #0A0A0C;
+  --bim-ui_bg-contrast-10: #141418;
+  --bim-ui_bg-contrast-20: #1a1a20;
+  --bim-ui_bg-contrast-40: rgba(255, 255, 255, 0.08);
+  --bim-ui_bg-contrast-60: rgba(255, 255, 255, 0.15);
+  --bim-ui_bg-contrast-80: #a1a1aa;
+  --bim-ui_bg-contrast-100: #ffffff;
+  --bim-ui_accent-base: var(--accent-500);
+  --bim-ui_accent-contrast: #000000;
+  --bim-dropdown--c: var(--text-primary);
+  --bim-dropdown--bgc: var(--bg-card);
+  --bim-dropdown--bdc: var(--border-color);
+  --bim-dropdown-menu--bgc: var(--bg-panel);
+  --bim-dropdown-menu--bdc: var(--border-strong);
   
   --ease-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
   --ease-normal: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -351,30 +365,133 @@ header {
   color: var(--text-dim);
 }
 
-.select-theme-toggle {
-  height: 36px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
+/* ============================================================
+   GLOBAL SELECT & DROPDOWN THEME SYNCHRONIZATION
+   ============================================================ */
+
+select,
+.select-theme-toggle,
+.custom-select,
+.custom-highlight-select,
+.bim-search-select,
+.timeline-speed-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--bg-card);
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23D4FF3F' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 10px 10px;
   color: var(--text-primary);
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition: all var(--ease-fast);
-  padding: 0 0.75rem;
   font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.35rem 1.6rem 0.35rem 0.6rem;
   outline: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--ease-fast), background-color var(--ease-fast), box-shadow var(--ease-fast), transform var(--ease-fast);
 }
 
-.select-theme-toggle option {
-  background: var(--bg-surface);
+select:hover,
+.select-theme-toggle:hover,
+.custom-select:hover,
+.custom-highlight-select:hover,
+.bim-search-select:hover,
+.timeline-speed-select:hover {
+  border-color: var(--border-hover);
+  background-color: var(--bg-hover);
+}
+
+select:focus,
+select:focus-visible,
+.select-theme-toggle:focus,
+.custom-select:focus,
+.custom-highlight-select:focus,
+.bim-search-select:focus,
+.timeline-speed-select:focus {
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 1px var(--accent-500), 0 0 12px var(--accent-glow);
+}
+
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--border-subtle);
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Ensure all options rendered by OS popup menus inherit theme dark card styling */
+select option,
+select optgroup,
+.select-theme-toggle option,
+.custom-select option,
+.custom-highlight-select option,
+.bim-search-select option,
+.timeline-speed-select option {
+  background-color: #141418;
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+select option:checked,
+.select-theme-toggle option:checked,
+.custom-select option:checked,
+.custom-highlight-select option:checked,
+.bim-search-select option:checked {
+  background-color: #1c1c24;
+  color: var(--accent-500);
+  font-weight: 700;
+}
+
+select option:hover,
+select option:focus {
+  background-color: rgba(212, 255, 63, 0.15);
+  color: var(--accent-400);
+}
+
+/* @thatopen/ui Web Component bim-dropdown integration */
+bim-dropdown {
+  --bim-dropdown--c: var(--text-primary);
+  --bim-dropdown--bgc: var(--bg-card);
+  --bim-dropdown--bdc: var(--border-color);
+  font-family: var(--font-body);
+}
+
+bim-dropdown dialog {
+  background: var(--bg-panel) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(190%) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-float) !important;
+  padding: 0.35rem 0 !important;
+}
+
+bim-option {
   color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  transition: all var(--ease-fast);
 }
 
-.select-theme-toggle:hover {
-  border-color: var(--border-accent);
-  transform: translateY(-1px);
+bim-option:hover,
+bim-option[active] {
+  background-color: var(--bg-hover) !important;
+  color: var(--accent-500) !important;
+}
+
+select.btn-secondary {
+  display: inline-block;
+  text-align: left;
+  height: auto;
+  font-weight: 600;
 }
 
 .btn-sidebar-toggle {
@@ -1598,7 +1715,8 @@ input[type="color"]::-moz-color-swatch {
   gap: 0.5rem;
 }
 
-.form-input-box span {
+.form-input-box span,
+.form-input-box label {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -1613,13 +1731,19 @@ input[type="color"]::-moz-color-swatch {
   font-family: var(--font-mono);
   color: var(--text-primary);
   outline: none;
-  width: 110px;
+  width: 130px;
   text-align: right;
   transition: border-color var(--ease-fast);
 }
 
 .form-input-box input:focus {
   border-color: var(--border-accent);
+}
+
+.form-input-box select {
+  width: 130px;
+  font-size: 0.72rem;
+  padding: 0.3rem 1.5rem 0.3rem 0.5rem;
 }
 
 .cost-summary-card {

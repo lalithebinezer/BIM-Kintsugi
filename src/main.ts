@@ -4297,24 +4297,24 @@ window.addEventListener("keydown", (e) => {
   }
 
   const pressedKey = e.key.toLowerCase();
-  if (pressedKey === keyBindings.forward.toLowerCase()) firstPersonKeys.forward = true;
-  if (pressedKey === keyBindings.left.toLowerCase()) firstPersonKeys.left = true;
-  if (pressedKey === keyBindings.backward.toLowerCase()) firstPersonKeys.backward = true;
-  if (pressedKey === keyBindings.right.toLowerCase()) firstPersonKeys.right = true;
+  if (pressedKey === keyBindings.forward.toLowerCase() || pressedKey === "arrowup") firstPersonKeys.forward = true;
+  if (pressedKey === keyBindings.left.toLowerCase() || pressedKey === "arrowleft") firstPersonKeys.left = true;
+  if (pressedKey === keyBindings.backward.toLowerCase() || pressedKey === "arrowdown") firstPersonKeys.backward = true;
+  if (pressedKey === keyBindings.right.toLowerCase() || pressedKey === "arrowright") firstPersonKeys.right = true;
   if (pressedKey === "q" || e.code === "Space") firstPersonKeys.up = true;
-  if (pressedKey === "e" || e.key === "Shift") firstPersonKeys.down = true;
+  if (pressedKey === "e" || e.key === "Shift" || pressedKey === "c") firstPersonKeys.down = true;
 });
 
 window.addEventListener("keyup", (e) => {
   if (activeBindingAction) return;
 
   const pressedKey = e.key.toLowerCase();
-  if (pressedKey === keyBindings.forward.toLowerCase()) firstPersonKeys.forward = false;
-  if (pressedKey === keyBindings.left.toLowerCase()) firstPersonKeys.left = false;
-  if (pressedKey === keyBindings.backward.toLowerCase()) firstPersonKeys.backward = false;
-  if (pressedKey === keyBindings.right.toLowerCase()) firstPersonKeys.right = false;
+  if (pressedKey === keyBindings.forward.toLowerCase() || pressedKey === "arrowup") firstPersonKeys.forward = false;
+  if (pressedKey === keyBindings.left.toLowerCase() || pressedKey === "arrowleft") firstPersonKeys.left = false;
+  if (pressedKey === keyBindings.backward.toLowerCase() || pressedKey === "arrowdown") firstPersonKeys.backward = false;
+  if (pressedKey === keyBindings.right.toLowerCase() || pressedKey === "arrowright") firstPersonKeys.right = false;
   if (pressedKey === "q" || e.code === "Space") firstPersonKeys.up = false;
-  if (pressedKey === "e" || e.key === "Shift") firstPersonKeys.down = false;
+  if (pressedKey === "e" || e.key === "Shift" || pressedKey === "c") firstPersonKeys.down = false;
 });
 
 // Update rotateSpeed on camera controls initialization/change
@@ -4324,12 +4324,19 @@ world.camera.controls.addEventListener("update", () => {
   }
 });
 
+const movementClock = new THREE.Clock();
+const fpSmoothVelocity = new THREE.Vector3();
+const fpsPresetVelocity = new THREE.Vector3();
+
 let animateFrameCount = 0;
 function animateFirstPerson() {
   requestAnimationFrame(animateFirstPerson);
 
   const controls = world.camera.controls;
   if (!controls) return;
+
+  const rawDt = movementClock.getDelta();
+  const dt = Math.min(rawDt, 0.1); // Clamp to prevent teleports on tab focus loss
 
   animateFrameCount++;
   if (animateFrameCount % 60 === 0 && activePreset === "FPS") {
@@ -4344,21 +4351,34 @@ function animateFirstPerson() {
       
       const moveDelta = new THREE.Vector3();
 
-      // 1. Calculate manual movement inputs relative to look vector
-      if (toggleWASD.checked) {
+      // 1. Calculate manual movement inputs relative to look vector with delta-time & inertia
+      if (toggleWASD && toggleWASD.checked) {
         const forward = new THREE.Vector3();
         world.camera.three.getWorldDirection(forward);
         forward.y = 0;
-        forward.normalize();
+        if (forward.lengthSq() > 0.0001) forward.normalize();
 
         const right = new THREE.Vector3();
         right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
-        const speed = movementSpeed;
-        if (firstPersonKeys.forward) moveDelta.addScaledVector(forward, speed);
-        if (firstPersonKeys.backward) moveDelta.addScaledVector(forward, -speed);
-        if (firstPersonKeys.left) moveDelta.addScaledVector(right, -speed);
-        if (firstPersonKeys.right) moveDelta.addScaledVector(right, speed);
+        const inputDir = new THREE.Vector3();
+        if (firstPersonKeys.forward) inputDir.add(forward);
+        if (firstPersonKeys.backward) inputDir.sub(forward);
+        if (firstPersonKeys.left) inputDir.sub(right);
+        if (firstPersonKeys.right) inputDir.add(right);
+
+        if (inputDir.lengthSq() > 0.0001) {
+          inputDir.normalize();
+        }
+
+        const targetSpeed = Math.max(movementSpeed, 0.2) * 7.0;
+        const targetVel = inputDir.multiplyScalar(targetSpeed);
+        const damping = 1.0 - Math.exp(-14.0 * dt);
+        fpsPresetVelocity.lerp(targetVel, damping);
+
+        moveDelta.copy(fpsPresetVelocity).multiplyScalar(dt);
+      } else {
+        fpsPresetVelocity.set(0, 0, 0);
       }
 
       const newPos = previousPos.clone().add(moveDelta);
@@ -4645,45 +4665,58 @@ function animateFirstPerson() {
     return;
   }
 
-  // --- Standard WASD Keyboard Navigation (Orbit Mode & FPS) ---
-  if (!toggleWASD.checked) return;
-
-  const isAnyWASDPressed = firstPersonKeys.forward || firstPersonKeys.backward || firstPersonKeys.left || firstPersonKeys.right || firstPersonKeys.up || firstPersonKeys.down;
-  if (!isAnyWASDPressed) return;
+  // --- Smooth WASD Keyboard Navigation (First Person & Orbit Mode) ---
+  if (!toggleWASD || !toggleWASD.checked) {
+    fpSmoothVelocity.set(0, 0, 0);
+    return;
+  }
 
   const cameraModeSelect = document.getElementById("settings-camera-mode") as HTMLSelectElement | null;
-  if (cameraModeSelect?.value === "FirstPerson") {
-    if (firstPersonKeys.forward) controls.forward(movementSpeed, false);
-    if (firstPersonKeys.backward) controls.forward(-movementSpeed, false);
-    if (firstPersonKeys.left) controls.truck(-movementSpeed, 0, false);
-    if (firstPersonKeys.right) controls.truck(movementSpeed, 0, false);
-    if (firstPersonKeys.up) controls.elevate(movementSpeed, false);
-    if (firstPersonKeys.down) controls.elevate(-movementSpeed, false);
-  } else {
-    // Default Orbit mode WASD panning relative to camera look direction
-    const forward = new THREE.Vector3();
-    world.camera.three.getWorldDirection(forward);
-    forward.y = 0;
+  const isFirstPersonMode = cameraModeSelect?.value === "FirstPerson";
+
+  // Calculate forward (XZ plane) and right directions based on camera orientation
+  const forward = new THREE.Vector3();
+  world.camera.three.getWorldDirection(forward);
+  forward.y = 0;
+  if (forward.lengthSq() > 0.0001) {
     forward.normalize();
+  } else {
+    forward.set(0, 0, -1);
+  }
 
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+  const right = new THREE.Vector3();
+  right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
-    const speed = movementSpeed * 0.35;
-    const panDelta = new THREE.Vector3();
-    if (firstPersonKeys.forward) panDelta.addScaledVector(forward, speed);
-    if (firstPersonKeys.backward) panDelta.addScaledVector(forward, -speed);
-    if (firstPersonKeys.left) panDelta.addScaledVector(right, -speed);
-    if (firstPersonKeys.right) panDelta.addScaledVector(right, speed);
-    if (firstPersonKeys.up) panDelta.y += speed;
-    if (firstPersonKeys.down) panDelta.y -= speed;
+  const moveDir = new THREE.Vector3();
+  if (firstPersonKeys.forward) moveDir.add(forward);
+  if (firstPersonKeys.backward) moveDir.sub(forward);
+  if (firstPersonKeys.right) moveDir.add(right);
+  if (firstPersonKeys.left) moveDir.sub(right);
 
-    if (panDelta.lengthSq() > 0.000001) {
-      const targetVal = new THREE.Vector3();
-      controls.getTarget(targetVal);
-      targetVal.add(panDelta);
-      controls.moveTo(targetVal.x, targetVal.y, targetVal.z, false);
-    }
+  // Normalize horizontal direction for consistent diagonal speed
+  if (moveDir.lengthSq() > 0.0001) {
+    moveDir.normalize();
+  }
+
+  let verticalDir = 0;
+  if (firstPersonKeys.up) verticalDir += 1;
+  if (firstPersonKeys.down) verticalDir -= 1;
+
+  // Base speed in meters/second
+  const targetSpeed = Math.max(movementSpeed, 0.2) * (isFirstPersonMode ? 7.5 : 5.0);
+  const targetVelocity = moveDir.multiplyScalar(targetSpeed);
+  targetVelocity.y = verticalDir * targetSpeed * 0.75;
+
+  // Smooth acceleration and deceleration via exponential damping (inertia)
+  const damping = 1.0 - Math.exp(-14.0 * dt);
+  fpSmoothVelocity.lerp(targetVelocity, damping);
+
+  if (fpSmoothVelocity.lengthSq() > 0.00001) {
+    const displacement = fpSmoothVelocity.clone().multiplyScalar(dt);
+    const targetVal = new THREE.Vector3();
+    controls.getTarget(targetVal);
+    targetVal.add(displacement);
+    controls.moveTo(targetVal.x, targetVal.y, targetVal.z, false);
   }
 
   // Update real-time HUD overlays

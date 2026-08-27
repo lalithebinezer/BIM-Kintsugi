@@ -54,26 +54,6 @@ export class KeyboardController {
         }
       }
 
-      // WASD / Arrow movement for 3D Camera Controls
-      const world = (window as any).viewer_world;
-      if (world && world.camera && world.camera.controls) {
-        const controls = world.camera.controls;
-        const key = e.key.toLowerCase();
-        const moveSpeed = 2;
-        if (key === 'w' || key === 'arrowup') {
-          controls.forward(moveSpeed, true);
-        } else if (key === 's' || key === 'arrowdown') {
-          controls.forward(-moveSpeed, true);
-        } else if (key === 'a' || key === 'arrowleft') {
-          controls.truck(-moveSpeed, 0, true);
-        } else if (key === 'd' || key === 'arrowright') {
-          controls.truck(moveSpeed, 0, true);
-        } else if (key === 'q') {
-          controls.truck(0, moveSpeed, true);
-        } else if (key === 'e') {
-          controls.truck(0, -moveSpeed, true);
-        }
-      }
 
       // BIM Feature Hotkeys
       const keyLower = e.key.toLowerCase();

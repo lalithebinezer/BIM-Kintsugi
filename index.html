@@ -551,7 +551,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 22 12 17 22 22 12 2" /></svg>
                       <span>Navigation Mode</span>
                     </div>
-                    <select id="settings-camera-mode" class="btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.7rem; outline: none; border-color: var(--border-color); background: var(--bg-input); color: var(--text-main); border-radius: 6px;">
+                    <select id="settings-camera-mode" class="custom-select">
                       <option value="Orbit">Orbit</option>
                       <option value="FirstPerson">First Person</option>
                       <option value="Plan">Plan</option>
@@ -563,7 +563,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2" /></svg>
                       <span>Projection</span>
                     </div>
-                    <select id="settings-camera-projection" class="btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.7rem; outline: none; border-color: var(--border-color); background: var(--bg-input); color: var(--text-main); border-radius: 6px;">
+                    <select id="settings-camera-projection" class="custom-select">
                       <option value="Perspective">Perspective</option>
                       <option value="Orthographic">Orthographic</option>
                     </select>
@@ -716,7 +716,7 @@
                     <span>Disassembly Clustering</span>
                     <span class="value-badge" id="badge-explosion-mode">CATEGORIES</span>
                   </div>
-                  <select class="custom-select" id="select-explosion-mode" style="width: 100%; font-size: 0.72rem; padding: 0.4rem 0.6rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: none; font-family: var(--font-body); font-weight: 700; cursor: pointer;">
+                  <select class="custom-select" id="select-explosion-mode" style="width: 100%;">
                     <option value="category-cluster" selected>Category Clusters (Sorted)</option>
                     <option value="asset-dense-cluster">Asset & Equipment Matrix (Tandem)</option>
                     <option value="radial">Radial 3D Spatial</option>
@@ -833,7 +833,7 @@
                     <div class="scene-control-label" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
                       <span>Shader FX Overlay</span>
                     </div>
-                    <select id="settings-postproc-fxmode" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; background: var(--bg-input); color: var(--text-primary); border-radius: 4px; border: 1px solid var(--border-subtle);">
+                    <select id="settings-postproc-fxmode" class="custom-select">
                       <option value="0">Default (Theme Auto)</option>
                       <option value="1">Blueprint Draft Grid</option>
                       <option value="2">CRT Cyber Scanlines</option>
@@ -1129,8 +1129,7 @@
                     style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
                     <span>Camera Gameplay Preset</span>
                   </div>
-                  <select id="settings-game-camera-preset" class="btn-secondary"
-                    style="padding: 0.15rem 0.5rem; font-size: 0.7rem; outline: none; border-color: var(--border-color); background: var(--bg-input); color: var(--text-primary); border-radius: 6px;">
+                  <select id="settings-game-camera-preset" class="custom-select">
                     <option value="Default">Default Viewer</option>
                     <option value="FPS">FPS (First-Person)</option>
                     <option value="Sports">Sports (Bird's Eye)</option>
@@ -1160,8 +1159,7 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Weapon View</span>
-                  <select id="settings-fps-weapon-style" class="btn-secondary"
-                    style="padding: 0.1rem 0.35rem; font-size: 0.65rem; background: var(--bg-input); color: var(--text-primary); border-radius: 4px; border-color: var(--border-color);">
+                  <select id="settings-fps-weapon-style" class="custom-select">
                     <option value="Default">Default</option>
                     <option value="Wide">Wide</option>
                   </select>
@@ -1191,8 +1189,7 @@
                 style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Attachment Point</span>
-                  <select id="settings-racing-attachment" class="btn-secondary"
-                    style="padding: 0.1rem 0.35rem; font-size: 0.65rem; background: var(--bg-input); color: var(--text-primary); border-radius: 4px; border-color: var(--border-color);">
+                  <select id="settings-racing-attachment" class="custom-select">
                     <option value="Bumper">Bumper (Front)</option>
                     <option value="Hood">Hood (Rear/Top)</option>
                   </select>
@@ -1497,7 +1494,7 @@
                   <textarea id="bcf-topic-desc" placeholder="Issue description..." rows="2" style="font-size: 0.7rem; padding: 0.3rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; resize: vertical;"></textarea>
 
                   <div style="display: flex; gap: 0.3rem;">
-                    <select id="bcf-topic-type" style="flex: 1; font-size: 0.68rem; padding: 0.2rem; background: var(--bg-input); color: var(--text-primary); border-radius: 4px; border: 1px solid var(--border-color);">
+                    <select id="bcf-topic-type" class="custom-select" style="flex: 1;">
                       <option value="Clash">Clash</option>
                       <option value="Coordination">Coordination</option>
                       <option value="Schedule Risk">Schedule Risk</option>
@@ -1505,7 +1502,7 @@
                       <option value="Information">Information</option>
                       <option value="Fault">Fault</option>
                     </select>
-                    <select id="bcf-topic-priority" style="flex: 1; font-size: 0.68rem; padding: 0.2rem; background: var(--bg-input); color: var(--text-primary); border-radius: 4px; border: 1px solid var(--border-color);">
+                    <select id="bcf-topic-priority" class="custom-select" style="flex: 1;">
                       <option value="Minor">Minor</option>
                       <option value="Normal" selected>Normal</option>
                       <option value="Major">Major</option>
@@ -1575,7 +1572,7 @@
                     Category &amp; Spatial Operations
                   </div>
                   <div style="display: flex; gap: 0.3rem;">
-                    <select id="select-query-category" style="flex: 1; font-size: 0.65rem; font-weight: 700; background: var(--bg-input); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.35rem;">
+                    <select id="select-query-category" class="custom-select" style="flex: 1;">
                       <option value="IFCWALL">IFCWALL</option>
                       <option value="IFCSLAB">IFCSLAB</option>
                       <option value="IFCDOOR">IFCDOOR</option>
