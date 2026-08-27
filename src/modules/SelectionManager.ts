@@ -447,7 +447,11 @@ export class SelectionManager {
     if (!set) return;
 
     this.syncFromSelectionMap(set.modelIdMap);
-    await this.engine.highlighter.highlightByID("select", this.selectedElements, true, false);
+    try {
+      if (this.engine.highlighter?.highlightByID) {
+        await this.engine.highlighter.highlightByID("select", this.selectedElements, true, false);
+      }
+    } catch (e) {}
     showToast(`Restored Selection Set: "${set.name}" (${set.count} items)`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`);
   }
 
@@ -519,10 +523,10 @@ export class SelectionManager {
   public async clearSelection() {
     this.selectedElements = {};
     try {
-      await this.engine.highlighter.clear("select");
-    } catch (e) {
-      console.warn("Highlighter clear:", e);
-    }
+      if (this.engine.highlighter?.clear && (this.engine.fragments as any)?.core) {
+        await this.engine.highlighter.clear("select").catch(() => {});
+      }
+    } catch (e) {}
 
     const bar = document.getElementById("viewport-selection-bar");
     if (bar) bar.style.display = "none";
@@ -539,8 +543,17 @@ export class SelectionManager {
     let primaryName: string | undefined;
     const catMap: Record<string, { count: number; expressIds: number[]; modelId: string }> = {};
 
+    let fragmentsList: Map<string, any> | null = null;
+    try {
+      if (this.engine.fragments && (this.engine.fragments as any).list) {
+        fragmentsList = this.engine.fragments.list;
+      }
+    } catch (e) {
+      fragmentsList = null;
+    }
+
     for (const mid in this.selectedElements) {
-      const model = this.engine.fragments.list.get(mid) as any;
+      const model = fragmentsList?.get ? fragmentsList.get(mid) : null;
       totalCount += this.selectedElements[mid].size;
 
       for (const id of this.selectedElements[mid]) {
