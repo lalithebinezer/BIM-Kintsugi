@@ -226,28 +226,51 @@
           <div class="toolbar-section">
             <span class="section-label">Selection</span>
             <div class="toolbar-buttons">
-              <button class="btn-tool" id="btn-focus" title="Zoom Fit Selection">
+              <button class="btn-tool" id="btn-box-select" title="Box / Marquee Drag Selection (B or Hold Alt+Drag)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
+                  <polyline points="9 9 15 15" />
+                  <polyline points="15 9 9 15" />
+                </svg>
+                <span>Box (B)</span>
+              </button>
+              <button class="btn-tool" id="btn-focus" title="Zoom Fit Selection (F)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                   <line x1="11" y1="8" x2="11" y2="14" />
                   <line x1="8" y1="11" x2="14" y2="11" />
                 </svg>
-                <span>Focus</span>
+                <span>Focus (F)</span>
               </button>
-              <button class="btn-tool" id="btn-hide-selected" title="Hide Selected Element">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-                <span>Hide</span>
-              </button>
-              <button class="btn-tool" id="btn-isolate" title="Isolate Selected Element">
+              <button class="btn-tool" id="btn-isolate" title="Isolate Selected Element (I)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 2 7 12 12 22 7 12 2" />
                   <polyline points="2 17 12 22 22 17" />
                 </svg>
-                <span>Isolate</span>
+                <span>Isolate (I)</span>
+              </button>
+              <button class="btn-tool" id="btn-hide-selected" title="Hide Selected Element (H)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+                <span>Hide (H)</span>
+              </button>
+              <button class="btn-tool" id="btn-select-all" title="Select All Elements (Ctrl+A)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                <span>All</span>
+              </button>
+              <button class="btn-tool" id="btn-invert-select" title="Invert Active Selection (Ctrl+I)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                <span>Invert</span>
               </button>
               <button class="btn-tool" id="btn-clear-selection" title="Clear selection (Esc)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2018,13 +2041,29 @@
         <span id="selection-bar-title" class="selection-bar-title">1 Element Selected</span>
       </div>
       <div class="selection-bar-actions">
-        <button type="button" id="btn-selection-hud-focus" class="btn-hud-action" title="Focus selection (Z)">
+        <button type="button" id="btn-selection-hud-focus" class="btn-hud-action" title="Focus Camera on Selection (F)">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span>Focus</span>
+          <span>Focus (F)</span>
         </button>
-        <button type="button" id="btn-selection-hud-isolate" class="btn-hud-action" title="Isolate selection (I)">
+        <button type="button" id="btn-selection-hud-isolate" class="btn-hud-action" title="Isolate Selection (I)">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>
-          <span>Isolate</span>
+          <span>Isolate (I)</span>
+        </button>
+        <button type="button" id="btn-selection-hud-category" class="btn-hud-action" title="Select All Elements of Same Category (C)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>
+          <span>Category</span>
+        </button>
+        <button type="button" id="btn-selection-hud-xray" class="btn-hud-action" title="Ghost unselected elements (X-Ray)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/></svg>
+          <span>X-Ray</span>
+        </button>
+        <button type="button" id="btn-selection-hud-hide" class="btn-hud-action" title="Hide Selected (H)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          <span>Hide</span>
+        </button>
+        <button type="button" id="btn-selection-hud-inspect" class="btn-hud-action" title="View Properties in Inspector">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Inspect</span>
         </button>
         <button type="button" id="btn-viewport-esc-selection" class="btn-hud-esc" title="Exit from selection (Esc)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

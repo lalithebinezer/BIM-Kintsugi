@@ -4278,6 +4278,23 @@ input[type="color"]::-moz-color-swatch {
   color: #ffffff;
 }
 
+/* Selection Marquee Box (Box Selection Tool) */
+.selection-marquee-box {
+  position: fixed;
+  border: 1.5px dashed var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.12);
+  pointer-events: none;
+  z-index: 99990;
+  border-radius: 3px;
+  box-shadow: 0 0 16px rgba(212, 255, 63, 0.25);
+  animation: marqueePulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes marqueePulse {
+  from { background: rgba(212, 255, 63, 0.08); }
+  to { background: rgba(212, 255, 63, 0.16); }
+}
+
 /* Toast Notifications */
 .bim-toast-container {
   position: absolute;

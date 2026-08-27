@@ -79,6 +79,7 @@ import { ModelInfoManager } from "./modules/ModelInfoManager";
 import { MinimapHUD } from "./ui/MinimapHUD";
 import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
+import { SelectionManager } from "./modules/SelectionManager";
 import { formatCurrency, formatItemCount } from "./utils/formatters";
 
 BUI.Manager.init();
@@ -3001,6 +3002,41 @@ if (clearSelectionBtn) {
     document.body.classList.add('right-sidebar-collapsed');
   });
 }
+
+// Advanced Selection Suite Actions
+const selectionMgr = SelectionManager.getInstance();
+
+document.getElementById("btn-box-select")?.addEventListener("click", () => {
+  selectionMgr.toggleBoxSelectMode();
+});
+
+document.getElementById("btn-select-all")?.addEventListener("click", async () => {
+  await selectionMgr.selectAll();
+});
+
+document.getElementById("btn-invert-select")?.addEventListener("click", async () => {
+  await selectionMgr.invertSelection();
+});
+
+document.getElementById("btn-selection-hud-category")?.addEventListener("click", async () => {
+  await selectionMgr.selectSameCategory();
+});
+
+document.getElementById("btn-selection-hud-xray")?.addEventListener("click", () => {
+  AnnotationModule.getInstance().toggleXRay();
+  showToast("Toggled X-Ray Ghost View", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/></svg>`);
+});
+
+document.getElementById("btn-selection-hud-hide")?.addEventListener("click", () => {
+  document.getElementById("btn-hide-selected")?.click();
+});
+
+document.getElementById("btn-selection-hud-inspect")?.addEventListener("click", () => {
+  document.body.classList.remove('right-sidebar-collapsed');
+  if (typeof (window as any).switchSidebarTab === "function") {
+    (window as any).switchSidebarTab("right-tab-bar", "inspector");
+  }
+});
 
 // Bottom Toolbar Actions: Sectioning
 const clipperBtn = document.getElementById("btn-section-cut");

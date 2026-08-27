@@ -57,7 +57,17 @@ export class KeyboardController {
 
       // BIM Feature Hotkeys
       const keyLower = e.key.toLowerCase();
-      if (keyLower === 'f') {
+      if ((e.ctrlKey || e.metaKey) && keyLower === 'a') {
+        e.preventDefault();
+        document.getElementById('btn-select-all')?.click();
+      } else if ((e.ctrlKey || e.metaKey) && keyLower === 'i') {
+        e.preventDefault();
+        document.getElementById('btn-invert-select')?.click();
+      } else if (keyLower === 'b') {
+        document.getElementById('btn-box-select')?.click();
+      } else if (keyLower === 'c') {
+        document.getElementById('btn-selection-hud-category')?.click();
+      } else if (keyLower === 'f') {
         document.getElementById('btn-focus')?.click();
       } else if (keyLower === 'h') {
         document.getElementById('btn-hide-selected')?.click();
