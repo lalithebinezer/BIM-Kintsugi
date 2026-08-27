@@ -448,6 +448,8 @@ grid.position.y = -0.01;
 world.scene.three.add(grid);
 
 // Multi-Selection State Storage
+let activeExpressId: number | null = null;
+let activeModelId: string | null = null;
 const multiSelectedElements: Record<string, Set<number>> = {};
 
 function updateBreadcrumbs(storeyName: string = "Level 0", elementName: string = "Element", _modelId?: string, expressId?: number) {
@@ -549,9 +551,14 @@ async function clearAllSelections(notify: boolean = true) {
   for (const mid in multiSelectedElements) {
     multiSelectedElements[mid].clear();
   }
+  activeExpressId = null;
+  activeModelId = null;
+
   try {
     await highlighter.clear("select");
     await highlighter.clear("hover");
+    SelectionManager.getInstance().clearSelection();
+    SelectionManager.getInstance().toggleBoxSelectMode(false);
   } catch (e) {
     console.warn("Highlighter clear error:", e);
   }
@@ -559,10 +566,18 @@ async function clearAllSelections(notify: boolean = true) {
   updateMultiSelectionBatchCard();
   updateViewportSelectionBar();
   resetPropertiesPanel();
+  if (propertyEditor) {
+    await propertyEditor.deselect();
+  }
   updateBreadcrumbs("All Storeys", "No Element Selected");
+
+  // Collapse properties panel on escape
+  document.body.classList.add('right-sidebar-collapsed');
 
   const ctxMenu = document.getElementById("bim-context-menu");
   if (ctxMenu) ctxMenu.style.display = "none";
+  const hoverBadge = document.getElementById("viewport-hover-badge");
+  if (hoverBadge) hoverBadge.style.display = "none";
 
   if (notify) {
     showToast("Selection Cleared (Esc)", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`);
@@ -1254,8 +1269,6 @@ function updateDashboardMetrics() {
 
 
 // --- PROPERTIES / SELECTED STATE LOGIC ---
-let activeModelId: string | null = null;
-let activeExpressId: number | null = null;
 
 const costUnit = document.getElementById("cost-unit-cost")! as HTMLInputElement;
 const costQty = document.getElementById("cost-quantity")! as HTMLInputElement;

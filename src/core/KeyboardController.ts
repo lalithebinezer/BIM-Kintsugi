@@ -29,13 +29,23 @@ export class KeyboardController {
         (activeEl as HTMLElement).isContentEditable
       );
 
-      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
-        if (!isTyping) {
-          e.preventDefault();
-          if (typeof (window as any).toggleShortcutsModal === "function") {
-            (window as any).toggleShortcutsModal();
-          }
+      if (e.key === 'Escape') {
+        if (activeEl && (activeEl as HTMLElement).blur) {
+          (activeEl as HTMLElement).blur();
         }
+        // Clear all 3D element selections and close menus/modals
+        if (typeof (window as any).clearAllSelections === 'function') {
+          (window as any).clearAllSelections();
+        } else {
+          document.getElementById('btn-clear-selection')?.click();
+          document.getElementById('btn-batch-clear')?.click();
+        }
+        const ctxMenu = document.getElementById('bim-context-menu');
+        if (ctxMenu) ctxMenu.style.display = 'none';
+        const cmdModal = document.getElementById('command-palette-modal');
+        if (cmdModal) cmdModal.style.display = 'none';
+        const shortcutsModal = document.getElementById('shortcuts-modal');
+        if (shortcutsModal) shortcutsModal.style.display = 'none';
         return;
       }
 
@@ -96,20 +106,6 @@ export class KeyboardController {
           e.preventDefault();
           btn4dPlay.click();
         }
-      } else if (e.key === 'Escape') {
-        // Clear all 3D element selections and close menus/modals
-        if (typeof (window as any).clearAllSelections === 'function') {
-          (window as any).clearAllSelections();
-        } else {
-          document.getElementById('btn-clear-selection')?.click();
-          document.getElementById('btn-batch-clear')?.click();
-        }
-        const ctxMenu = document.getElementById('bim-context-menu');
-        if (ctxMenu) ctxMenu.style.display = 'none';
-        const cmdModal = document.getElementById('command-palette-modal');
-        if (cmdModal) cmdModal.style.display = 'none';
-        const shortcutsModal = document.getElementById('shortcuts-modal');
-        if (shortcutsModal) shortcutsModal.style.display = 'none';
       }
     });
   }
