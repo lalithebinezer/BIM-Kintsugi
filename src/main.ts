@@ -2400,6 +2400,9 @@ const initBim = async () => {
         selectedModel = Array.from(fragments.list.values())[0];
       }
 
+      // Sync SelectionManager state and update HUD
+      SelectionManager.getInstance().syncFromSelectionMap(selection);
+
       if (firstExpressId !== null && selectedModel) {
         await displayElementProperties(selectedModel, firstExpressId);
         if (propertyEditor) {
@@ -2422,6 +2425,7 @@ const initBim = async () => {
     });
 
     highlighter.events.select.onClear.add(async () => {
+      SelectionManager.getInstance().clearSelection();
       resetPropertiesPanel();
       if (propertyEditor) {
         await propertyEditor.deselect();

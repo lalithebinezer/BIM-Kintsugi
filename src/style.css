@@ -4281,18 +4281,66 @@ input[type="color"]::-moz-color-swatch {
 /* Selection Marquee Box (Box Selection Tool) */
 .selection-marquee-box {
   position: fixed;
-  border: 1.5px dashed var(--accent-500, #D4FF3F);
-  background: rgba(212, 255, 63, 0.12);
   pointer-events: none;
   z-index: 99990;
   border-radius: 3px;
-  box-shadow: 0 0 16px rgba(212, 255, 63, 0.25);
-  animation: marqueePulse 1.5s infinite alternate ease-in-out;
+  transition: border-color 0.1s ease, background 0.1s ease;
 }
 
-@keyframes marqueePulse {
-  from { background: rgba(212, 255, 63, 0.08); }
-  to { background: rgba(212, 255, 63, 0.16); }
+.selection-marquee-box.marquee-window {
+  border: 1.5px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+}
+
+.selection-marquee-box.marquee-crossing {
+  border: 1.5px dashed var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.14);
+  box-shadow: 0 0 16px rgba(212, 255, 63, 0.3);
+}
+
+/* Category Breakdown Chips inside Floating HUD */
+.selection-category-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.2rem;
+}
+
+.selection-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--bg-card, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  color: var(--text-primary, #ffffff);
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.selection-cat-chip:hover {
+  background: var(--accent-500, #D4FF3F);
+  color: #000000;
+  border-color: var(--accent-500, #D4FF3F);
+  transform: translateY(-1px);
+}
+
+.selection-cat-chip .chip-count {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.02rem 0.28rem;
+  border-radius: 8px;
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+
+.selection-cat-chip:hover .chip-count {
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
 }
 
 /* Toast Notifications */
