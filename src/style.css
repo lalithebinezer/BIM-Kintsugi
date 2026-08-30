@@ -2059,29 +2059,31 @@ input[type="color"]::-moz-color-swatch {
   max-width: 96vw;
 }
 
-#model-stats-hud {
-  margin-bottom: 0.15rem;
-}
-
 .bottom-toolbar.magic-dock {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  height: 64px;
-  background: var(--bg-surface, rgba(14, 16, 22, 0.85));
-  backdrop-filter: blur(28px) saturate(210%);
-  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  height: 66px;
+  background: var(--bg-surface, rgba(14, 16, 22, 0.88));
+  backdrop-filter: blur(32px) saturate(220%);
+  -webkit-backdrop-filter: blur(32px) saturate(220%);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
   border-radius: 9999px;
-  padding: 0 0.95rem;
-  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  padding: 0 1.1rem;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  transition: transform var(--ease-spring), opacity var(--ease-normal);
+  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, opacity var(--ease-normal);
+}
+
+.bottom-toolbar.magic-dock:hover {
+  height: 72px;
+  transform: translateY(-2px);
+  box-shadow: 0 30px 64px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--border-accent, rgba(255, 255, 255, 0.1)), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .bottom-toolbar.magic-dock::-webkit-scrollbar {
@@ -2101,7 +2103,7 @@ input[type="color"]::-moz-color-swatch {
   width: 42px;
   height: 42px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   color: var(--text-main, #FFFFFF);
   padding: 0;
@@ -2125,27 +2127,27 @@ input[type="color"]::-moz-color-swatch {
 .dock-icon.btn-tool:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: var(--accent-500);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), 0 0 14px var(--accent-glow);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 16px var(--accent-glow);
 }
 
 .dock-icon.btn-tool.active {
   background: var(--accent-500);
   border-color: var(--accent-500);
   color: var(--accent-btn-text, #000000);
-  box-shadow: 0 0 18px var(--accent-500);
+  box-shadow: 0 0 20px var(--accent-500);
 }
 
 .dock-icon.btn-tool-accent {
-  background: rgba(212, 255, 63, 0.08);
-  border-color: rgba(212, 255, 63, 0.28);
-  color: var(--accent-400, #D4FF3F);
+  background: var(--accent-glow2, rgba(56, 189, 248, 0.1));
+  border-color: var(--border-accent, rgba(56, 189, 248, 0.3));
+  color: var(--accent-400, #38BDF8);
 }
 
 .dock-separator {
   width: 1px;
   height: 28px;
   background: var(--border-color, rgba(255, 255, 255, 0.15));
-  margin: 0 0.25rem;
+  margin: 0 0.3rem;
   flex-shrink: 0;
 }
 
@@ -2155,20 +2157,20 @@ input[type="color"]::-moz-color-swatch {
   bottom: calc(100% + 14px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
-  background: var(--bg-surface, rgba(12, 14, 18, 0.95));
+  background: var(--bg-surface, rgba(10, 12, 16, 0.95));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.14));
-  border-radius: 6px;
-  padding: 0.28rem 0.65rem;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 7px;
+  padding: 0.3rem 0.65rem;
   font-family: var(--font-body, system-ui);
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-primary, #FFFFFF);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2);
   z-index: 2147483647;
   transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -2179,9 +2181,9 @@ input[type="color"]::-moz-color-swatch {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 4px;
+  border-width: 5px;
   border-style: solid;
-  border-color: var(--border-color, rgba(255, 255, 255, 0.15)) transparent transparent transparent;
+  border-color: var(--bg-surface, rgba(10, 12, 16, 0.95)) transparent transparent transparent;
 }
 
 .dock-item:hover .dock-tooltip {
