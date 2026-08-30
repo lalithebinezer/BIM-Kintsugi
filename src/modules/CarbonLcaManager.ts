@@ -296,5 +296,36 @@ export class CarbonLcaManager {
       toggleBtn.classList.toggle("active", this.isHeatmapActive);
       toggleBtn.innerText = this.isHeatmapActive ? "Heatmap: Active" : "Toggle Heatmap";
     }
+
+    const matList = document.getElementById("carbon-materials-list");
+    if (matList) {
+      matList.innerHTML = "";
+      Object.entries(this.carbonProfiles).forEach(([key, profile]) => {
+        if (!profile.sustainableAlternative) return;
+        const isSwapped = this.materialSubstitutions[key] === "green";
+        const row = document.createElement("div");
+        row.className = "carbon-material-row";
+        row.innerHTML = `
+          <div class="mat-info">
+            <span class="mat-name">${isSwapped ? profile.sustainableAlternative.name : profile.name}</span>
+            <span class="mat-saving ${isSwapped ? "active" : ""}">
+              ${isSwapped ? `✓ Active (${profile.sustainableAlternative.reductionPercent}% saved)` : `Save ${profile.sustainableAlternative.reductionPercent}%`}
+            </span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" class="chk-carbon-swap" data-cat="${key}" ${isSwapped ? "checked" : ""} />
+            <span class="toggle-slider"></span>
+          </label>
+        `;
+
+        row.querySelector(".chk-carbon-swap")?.addEventListener("change", (e) => {
+          const checked = (e.target as HTMLInputElement).checked;
+          this.substituteMaterial(key, checked);
+          if (this.isHeatmapActive) this.applyHeatmapVisuals();
+        });
+
+        matList.appendChild(row);
+      });
+    }
   }
 }

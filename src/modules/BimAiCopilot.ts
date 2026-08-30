@@ -188,6 +188,33 @@ export class BimAiCopilot {
       chatContainer.appendChild(msgDiv);
     });
 
+    document.querySelectorAll(".copilot-chip-btn").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const q = (chip as HTMLElement).dataset.query;
+        if (q) this.executeQuery(q);
+      });
+    });
+
+    const voiceBtn = document.getElementById("btn-copilot-voice");
+    if (voiceBtn && !voiceBtn.hasAttribute("data-bound")) {
+      voiceBtn.setAttribute("data-bound", "true");
+      voiceBtn.addEventListener("click", () => {
+        const prompts = [
+          "Run clash audit between MEP and Structure",
+          "Show carbon sustainability heatmap",
+          "Select all load-bearing walls",
+          "Isolate all columns",
+        ];
+        const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+        const input = document.getElementById("copilot-user-input") as HTMLInputElement;
+        if (input) {
+          input.value = randomPrompt;
+          this.executeQuery(randomPrompt);
+          input.value = "";
+        }
+      });
+    }
+
     chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 }

@@ -2264,6 +2264,10 @@
         <div class="drawer-actions-bar">
           <button id="btn-toggle-carbon-heatmap" class="btn-md btn-accent flex-1">Toggle Heatmap</button>
         </div>
+        <div class="drawer-section-header">
+          <span>Material Substitutions (Simulator)</span>
+        </div>
+        <div id="carbon-materials-list" class="carbon-materials-container thin-scrollbar"></div>
       </div>
     </div>
 
@@ -2279,9 +2283,19 @@
           <button class="btn-icon drawer-close-btn" data-target="copilot-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
+      <div class="copilot-quick-chips thin-scrollbar">
+        <button class="copilot-chip-btn" data-query="Run clash audit between MEP and Structure">⚡ Clash Audit</button>
+        <button class="copilot-chip-btn" data-query="Show carbon sustainability heatmap">🌿 6D Carbon</button>
+        <button class="copilot-chip-btn" data-query="Select all walls">🧱 Select Walls</button>
+        <button class="copilot-chip-btn" data-query="Isolate all columns">🏛️ Columns</button>
+        <button class="copilot-chip-btn" data-query="Clear all selections and heatmaps">🧹 Clear All</button>
+      </div>
       <div class="drawer-body chat-drawer-body">
         <div id="copilot-chat-messages" class="copilot-messages-box thin-scrollbar"></div>
         <div class="copilot-input-bar">
+          <button id="btn-copilot-voice" class="btn-icon" title="Voice dictation prompt" style="color: var(--accent-500);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
           <input type="text" id="copilot-user-input" placeholder="Ask AI Copilot to select, isolate, clash test, or inspect..." />
           <button id="btn-copilot-send" class="btn-accent btn-sm">Send</button>
         </div>
