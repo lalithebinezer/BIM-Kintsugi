@@ -83,7 +83,6 @@ import { AnnotationModule } from "./modules/AnnotationModule";
 import { SnapshotModule } from "./modules/SnapshotModule";
 import { HighlighterManager } from "./modules/HighlighterManager";
 import { ModelInfoManager } from "./modules/ModelInfoManager";
-import { MinimapHUD } from "./ui/MinimapHUD";
 import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
 import { SelectionManager } from "./modules/SelectionManager";
@@ -404,7 +403,6 @@ world.onCameraChanged.add((camera) => {
   for (const [, model] of fragments.list) {
     model.useCamera(camera.three);
   }
-  MinimapHUD.getInstance().update();
 });
 
 // Dynamic Metric Scale Ruler HUD calculation
@@ -428,9 +426,8 @@ function updateMetricScaleBar() {
   }
 }
 
-// Continuously update MinimapHUD, Scale Ruler, and 3D Pin Annotations on render loops
+// Continuously update Scale Ruler and 3D Pin Annotations on render loops
 function animateHUD() {
-  MinimapHUD.getInstance().update();
   AnnotationModule.getInstance().updateOverlayPositions();
   updateMetricScaleBar();
   requestAnimationFrame(animateHUD);
@@ -4781,7 +4778,6 @@ function animateFirstPerson() {
 
   // Update real-time HUD overlays
   AnnotationModule.getInstance().updateOverlayPositions();
-  MinimapHUD.getInstance().update();
 }
 animateFirstPerson();
 

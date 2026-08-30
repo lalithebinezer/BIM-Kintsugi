@@ -2185,60 +2185,6 @@ input[type="color"]::-moz-color-swatch {
   transition: right var(--ease-normal), bottom var(--ease-normal);
 }
 
-.minimap-hud-container {
-  position: relative;
-  width: 136px;
-  background: var(--bg-panel);
-  backdrop-filter: blur(var(--glass-blur)) saturate(190%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(190%);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  box-shadow: var(--shadow-panel);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.radar-hud-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.45);
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  height: 20px;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-
-.radar-hud-title {
-  font-size: 0.55rem;
-  font-weight: 800;
-  color: var(--accent-500);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.radar-status-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-success);
-  box-shadow: 0 0 6px var(--color-success);
-}
-
-.radar-elevation-badge {
-  font-family: var(--font-mono);
-  font-size: 0.52rem;
-  font-weight: 800;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
 .viewport-scale-bar {
   display: flex;
   flex-direction: column;
