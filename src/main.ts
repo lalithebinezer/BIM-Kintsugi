@@ -7303,7 +7303,6 @@ function initAppleDockMagnifier() {
 
     items.forEach((item) => {
       const btn = item.querySelector<HTMLElement>(".dock-icon");
-      const tooltip = item.querySelector<HTMLElement>(".dock-tooltip");
       if (!btn) return;
 
       const rect = btn.getBoundingClientRect();
@@ -7318,16 +7317,10 @@ function initAppleDockMagnifier() {
         btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
         item.style.margin = `0 ${(factor * 3.5).toFixed(1)}px`;
         item.style.zIndex = Math.round(100 * factor + 10).toString();
-        if (tooltip) {
-          tooltip.style.transform = `translateX(-50%) translateY(${(-translateY * 0.7).toFixed(1)}px)`;
-        }
       } else {
         btn.style.transform = "scale(1) translateY(0px)";
         item.style.margin = "0 0";
         item.style.zIndex = "1";
-        if (tooltip) {
-          tooltip.style.transform = "translateX(-50%) translateY(4px)";
-        }
       }
     });
   };
@@ -7335,15 +7328,11 @@ function initAppleDockMagnifier() {
   const onMouseLeave = () => {
     items.forEach((item) => {
       const btn = item.querySelector<HTMLElement>(".dock-icon");
-      const tooltip = item.querySelector<HTMLElement>(".dock-tooltip");
       if (btn) {
         btn.style.transform = "scale(1) translateY(0px)";
       }
       item.style.margin = "0 0";
       item.style.zIndex = "1";
-      if (tooltip) {
-        tooltip.style.transform = "translateX(-50%) translateY(4px)";
-      }
     });
   };
 
