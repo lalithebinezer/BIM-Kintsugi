@@ -5687,6 +5687,116 @@ body.right-sidebar-collapsed .right-sidebar {
   color: var(--accent-500, #D4FF3F);
 }
 
+.drawer-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.btn-md {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-xs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-accent {
+  background: var(--accent-500, #D4FF3F);
+  color: var(--accent-btn-text, #000000);
+  border: 1px solid var(--accent-500, #D4FF3F);
+}
+
+.btn-accent:hover {
+  background: var(--accent-400, #E5FF7A);
+  border-color: var(--accent-400, #E5FF7A);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-outline {
+  background: var(--bg-card, #16161C);
+  color: var(--text-primary, #FFFFFF);
+  border: 1px solid var(--border-strong, #3E3E50);
+}
+
+.btn-outline:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-500, #D4FF3F);
+  color: var(--accent-500, #D4FF3F);
+}
+
+.btn-outline.active {
+  background: rgba(212, 255, 63, 0.15);
+  border-color: var(--accent-500, #D4FF3F);
+  color: var(--accent-500, #D4FF3F);
+}
+
+.btn-outline-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #EF4444;
+}
+
+.jump-to-user-btn {
+  background: var(--bg-surface, #121216);
+  color: var(--text-secondary, #CBD5E1);
+  border: 1px solid var(--border-subtle, #2A2A35);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jump-to-user-btn:hover {
+  border-color: var(--accent-500, #D4FF3F);
+  color: var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.1);
+}
+
 .drawer-section-card {
   background: var(--bg-card, #16161C);
   border: 1px solid var(--border-subtle, #23232C);
