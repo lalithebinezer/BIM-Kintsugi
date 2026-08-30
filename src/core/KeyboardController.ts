@@ -44,8 +44,7 @@ export class KeyboardController {
         if (ctxMenu) ctxMenu.style.display = 'none';
         const cmdModal = document.getElementById('command-palette-modal');
         if (cmdModal) cmdModal.style.display = 'none';
-        const shortcutsModal = document.getElementById('shortcuts-modal');
-        if (shortcutsModal) shortcutsModal.style.display = 'none';
+        document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
         return;
       }
 
@@ -88,11 +87,7 @@ export class KeyboardController {
       } else if (keyLower === 'x') {
         document.getElementById('btn-section-cut')?.click();
       } else if (keyLower === 'm') {
-        const measureToggle = document.getElementById('settings-toggle-measure') as HTMLInputElement | null;
-        if (measureToggle) {
-          measureToggle.checked = !measureToggle.checked;
-          measureToggle.dispatchEvent(new Event('change'));
-        }
+        document.getElementById('btn-header-measure')?.click();
       } else if (keyLower === 'z') {
         document.getElementById('btn-view-fit')?.click();
       } else if (keyLower === 't') {

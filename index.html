@@ -82,6 +82,33 @@
           </button>
           
 
+          <!-- Enterprise BIM Suites Quick-Launch -->
+          <button class="btn-shortcuts-toggle" id="btn-header-measure" title="Smart 3D Dimensioning & Snap Tool (M)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
+            <span>DIMENSIONS</span>
+          </button>
+
+          <button class="btn-shortcuts-toggle" id="btn-header-clash" title="Real-Time Multi-Discipline Clash Matrix">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>CLASHES</span>
+            <span id="clash-header-count" style="font-size: 0.55rem; background: #F43F5E; color: #FFFFFF; font-weight: 900; padding: 0.05rem 0.25rem; border-radius: 2px;">3</span>
+          </button>
+
+          <button class="btn-shortcuts-toggle" id="btn-header-carbon" title="6D Embodied Carbon & LCA Heatmap">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            <span>6D CARBON</span>
+          </button>
+
+          <button class="btn-shortcuts-toggle" id="btn-header-copilot" title="AI BIM Copilot Natural Language Assistant" style="border-color: var(--accent-500);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
+            <span>AI COPILOT</span>
+          </button>
+
+          <button class="btn-shortcuts-toggle" id="btn-header-collab" title="Live Collaboration & Active Peers">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span id="collab-header-count">4 LIVE</span>
+          </button>
+
           <button class="btn-sidebar-toggle" id="btn-toggle-right" title="Toggle Scene & Properties">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -2092,7 +2119,167 @@
       <button class="ctx-item" data-action="focus" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus Camera</button>
     </div>
 
-        <!-- Toast Notification Feed -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+    <!-- ENTERPRISE BIM MODULE DRAWERS & OVERLAYS                           -->
+    <!-- ═════════════════════════════════════════════════════════════════════ -->
+
+    <!-- 1. Dimension & Measurement Suite Drawer -->
+    <div id="measurement-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
+          <h3>3D Snap Dimensioning</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="measurement-mode-badge" class="drawer-status-tag">Ready</span>
+          <button class="btn-icon drawer-close-btn" data-target="measurement-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <div class="drawer-tool-grid">
+          <button id="btn-measure-dist" class="btn-drawer-tool active" data-type="distance">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span>Distance</span>
+          </button>
+          <button id="btn-measure-delta" class="btn-drawer-tool" data-type="delta">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 22 2 22"/></svg>
+            <span>ΔXYZ Ortho</span>
+          </button>
+          <button id="btn-measure-angle" class="btn-drawer-tool" data-type="angle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 21 16 4"/></svg>
+            <span>Angle (°)</span>
+          </button>
+          <button id="btn-measure-area" class="btn-drawer-tool" data-type="area">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            <span>Surface (m²)</span>
+          </button>
+        </div>
+        <div class="drawer-section-card">
+          <div class="section-card-row">
+            <span>Vertex Snapping</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chk-measure-snap" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="live-measure-preview">
+            <span class="live-label">Live Cursor:</span>
+            <span id="measurement-live-val" class="live-val">0.000 m</span>
+          </div>
+        </div>
+        <div class="drawer-section-header">
+          <span>Active Measurements (<span id="measurement-count-badge">0 Active</span>)</span>
+          <button id="btn-clear-all-measurements" class="btn-xs btn-outline-danger">Clear All</button>
+        </div>
+        <div id="measurement-list" class="measurement-item-list thin-scrollbar"></div>
+      </div>
+    </div>
+
+    <!-- 2. Real-Time Clash Matrix Drawer -->
+    <div id="clash-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <h3>Multi-Discipline Clash Matrix</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="clash-critical-badge" class="drawer-status-tag tag-critical">0 Critical</span>
+          <button class="btn-icon drawer-close-btn" data-target="clash-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <div class="drawer-actions-bar">
+          <button id="btn-run-clash-audit" class="btn-md btn-accent flex-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Run Clash Audit</span>
+          </button>
+          <button id="btn-export-clash-bcf" class="btn-md btn-outline" title="Export to BCF 3.0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>BCF</span>
+          </button>
+        </div>
+        <div class="drawer-section-header">
+          <span>Clash Results (<span id="clash-total-badge">0 Total</span>)</span>
+        </div>
+        <div id="clash-results-list" class="clash-results-container thin-scrollbar"></div>
+      </div>
+    </div>
+
+    <!-- 3. 6D Embodied Carbon & LCA Sustainability Drawer -->
+    <div id="carbon-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          <h3>6D Embodied Carbon & LCA</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="carbon-rating-grade" class="carbon-grade-badge grade-A">Grade A</span>
+          <button class="btn-icon drawer-close-btn" data-target="carbon-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <div class="carbon-kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Total Carbon</span>
+            <span id="carbon-total-tonnes" class="kpi-val">0.0 tCO₂e</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Intensity</span>
+            <span id="carbon-intensity-m2" class="kpi-val">0.0 kg/m²</span>
+          </div>
+        </div>
+        <div class="carbon-savings-card">
+          <span class="savings-title">🌿 Sustainable Opportunity</span>
+          <span id="carbon-potential-savings" class="savings-val">-0.0 tCO₂e potential savings</span>
+        </div>
+        <div class="drawer-actions-bar">
+          <button id="btn-toggle-carbon-heatmap" class="btn-md btn-accent flex-1">Toggle Heatmap</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. AI BIM Copilot Chat Drawer -->
+    <div id="copilot-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
+          <h3>BIM AI Copilot</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span class="drawer-status-tag tag-ai">Active</span>
+          <button class="btn-icon drawer-close-btn" data-target="copilot-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body chat-drawer-body">
+        <div id="copilot-chat-messages" class="copilot-messages-box thin-scrollbar"></div>
+        <div class="copilot-input-bar">
+          <input type="text" id="copilot-user-input" placeholder="Ask AI Copilot to select, isolate, clash test, or inspect..." />
+          <button id="btn-copilot-send" class="btn-accent btn-sm">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Live Collaboration Panel -->
+    <div id="collab-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h3>Live Workstation Peers</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="collab-user-count-badge" class="drawer-status-tag">4 Online</span>
+          <button class="btn-icon drawer-close-btn" data-target="collab-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <div class="drawer-actions-bar">
+          <button id="btn-follow-host" class="btn-md btn-outline flex-1">Follow Presenter</button>
+        </div>
+        <div id="collab-users-list" class="collab-users-container"></div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Feed -->
     <div id="bim-toast-container" style="position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100010; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;"></div>
 
     <script type="module" src="/src/main.ts"></script>

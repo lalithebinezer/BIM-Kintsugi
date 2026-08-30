@@ -26,6 +26,11 @@ import * as BUI from "@thatopen/ui";
 import CameraControls from "camera-controls";
 import { PropertyEditor, initPropertyEditorUI } from "./ui/PropertyEditor";
 import "./ui/BimViewCube";
+import { MeasurementSuite } from "./modules/MeasurementSuite";
+import { ClashDetector } from "./modules/ClashDetector";
+import { CarbonLcaManager } from "./modules/CarbonLcaManager";
+import { BimAiCopilot } from "./modules/BimAiCopilot";
+import { CollaborationManager } from "./modules/CollaborationManager";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -6933,18 +6938,137 @@ function renderHUD() {
 }
 requestAnimationFrame(renderHUD);
 
-// --- PWA SERVICE WORKER REGISTRATION ---
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .then((reg) => {
-        console.log("PWA Service Worker registered with scope:", reg.scope);
-      })
-      .catch((err) => {
-        console.log("PWA Service Worker registration skipped:", err);
-      });
+// ═════════════════════════════════════════════════════════════════════
+// ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
+// ═════════════════════════════════════════════════════════════════════
+
+const measurementSuite = MeasurementSuite.getInstance();
+const clashDetector = ClashDetector.getInstance();
+const carbonManager = CarbonLcaManager.getInstance();
+const bimAiCopilot = BimAiCopilot.getInstance();
+const collabManager = CollaborationManager.getInstance();
+
+function closeAllEnterpriseDrawers() {
+  document.querySelectorAll(".enterprise-drawer").forEach((drawer) => {
+    drawer.classList.add("hidden");
   });
 }
+
+function toggleEnterpriseDrawer(panelId: string) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const isCurrentlyOpen = !panel.classList.contains("hidden");
+  closeAllEnterpriseDrawers();
+  if (!isCurrentlyOpen) {
+    panel.classList.remove("hidden");
+  }
+}
+
+// Header Buttons
+document.getElementById("btn-header-measure")?.addEventListener("click", () => {
+  toggleEnterpriseDrawer("measurement-panel");
+  measurementSuite.updateMeasurementUI();
+});
+
+document.getElementById("btn-header-clash")?.addEventListener("click", () => {
+  toggleEnterpriseDrawer("clash-panel");
+  clashDetector.updateClashUI();
+});
+
+document.getElementById("btn-header-carbon")?.addEventListener("click", () => {
+  toggleEnterpriseDrawer("carbon-panel");
+  carbonManager.updateCarbonUI();
+});
+
+document.getElementById("btn-header-copilot")?.addEventListener("click", () => {
+  toggleEnterpriseDrawer("copilot-panel");
+  bimAiCopilot.updateCopilotUI();
+});
+
+document.getElementById("btn-header-collab")?.addEventListener("click", () => {
+  toggleEnterpriseDrawer("collab-panel");
+  collabManager.updateCollabUI();
+});
+
+// Drawer Close buttons
+document.querySelectorAll(".drawer-close-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const target = (e.currentTarget as HTMLElement).dataset.target;
+    if (target) {
+      document.getElementById(target)?.classList.add("hidden");
+    }
+  });
+});
+
+// Measurement Tool Buttons
+document.querySelectorAll(".btn-drawer-tool").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    document.querySelectorAll(".btn-drawer-tool").forEach((b) => b.classList.remove("active"));
+    const targetBtn = e.currentTarget as HTMLElement;
+    targetBtn.classList.add("active");
+    const type = targetBtn.dataset.type as any;
+    measurementSuite.startMeasurement(type || "distance");
+    showToast(`Active Measurement: ${type?.toUpperCase() || "DISTANCE"}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/></svg>`);
+  });
+});
+
+document.getElementById("chk-measure-snap")?.addEventListener("change", (e) => {
+  measurementSuite.setSnapEnabled((e.target as HTMLInputElement).checked);
+});
+
+document.getElementById("btn-clear-all-measurements")?.addEventListener("click", () => {
+  measurementSuite.clearAllMeasurements();
+});
+
+// Clash Detection Actions
+document.getElementById("btn-run-clash-audit")?.addEventListener("click", async () => {
+  showToast("Scanning multi-discipline models for clashes...", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`);
+  const results = await clashDetector.runClashAudit();
+  const crit = results.filter((c) => c.severity === "critical").length;
+  showToast(`Clash Audit Complete: ${results.length} Clashes (${crit} Critical)`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`);
+});
+
+document.getElementById("btn-export-clash-bcf")?.addEventListener("click", () => {
+  const bcf = clashDetector.exportBcfIssues();
+  const blob = new Blob([bcf], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `BIM_Kintsugi_Clashes_${Date.now()}.bcf.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Exported BCF 3.0 Clash Report", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>`);
+});
+
+// 6D Carbon Heatmap Actions
+document.getElementById("btn-toggle-carbon-heatmap")?.addEventListener("click", () => {
+  const active = carbonManager.toggleHeatmap();
+  showToast(active ? "6D Embodied Carbon Heatmap Active" : "Heatmap Disabled", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>`);
+});
+
+// AI Copilot Actions
+const copilotInput = document.getElementById("copilot-user-input") as HTMLInputElement;
+const copilotSendBtn = document.getElementById("btn-copilot-send");
+
+async function handleCopilotSend() {
+  if (!copilotInput || !copilotInput.value.trim()) return;
+  const q = copilotInput.value.trim();
+  copilotInput.value = "";
+  await bimAiCopilot.executeQuery(q);
+}
+
+copilotSendBtn?.addEventListener("click", handleCopilotSend);
+copilotInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleCopilotSend();
+  }
+});
+
+// Collaboration Follow Host
+document.getElementById("btn-follow-host")?.addEventListener("click", () => {
+  const active = collabManager.toggleFollowHost();
+  showToast(active ? "Camera Synced: Following Presenter" : "Independent Camera View", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/></svg>`);
+});
+
 
 
