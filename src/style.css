@@ -2060,6 +2060,10 @@ input[type="color"]::-moz-color-swatch {
   overflow: visible !important;
 }
 
+#model-stats-hud {
+  margin-bottom: 0.85rem;
+}
+
 .bottom-toolbar.magic-dock {
   pointer-events: auto;
   display: inline-flex;
@@ -2133,9 +2137,12 @@ input[type="color"]::-moz-color-swatch {
 }
 
 .dock-icon.btn-tool-accent {
-  background: var(--accent-glow2, rgba(56, 189, 248, 0.1));
-  border-color: var(--border-accent, rgba(56, 189, 248, 0.3));
-  color: var(--accent-400, #38BDF8);
+  color: var(--accent-400, #D4FF3F);
+}
+
+.dock-icon.btn-tool-accent:hover {
+  background: var(--accent-glow2, rgba(212, 255, 63, 0.15));
+  border-color: var(--accent-500);
 }
 
 .dock-separator {
