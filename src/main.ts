@@ -6964,31 +6964,21 @@ function toggleEnterpriseDrawer(panelId: string) {
   }
 }
 
-// Header Buttons
-document.getElementById("btn-header-measure")?.addEventListener("click", () => {
-  toggleEnterpriseDrawer("measurement-panel");
-  measurementSuite.updateMeasurementUI();
-});
+// Header & Dock Buttons
+const bindEnterpriseTrigger = (headerId: string, dockId: string, panelId: string, onOpen?: () => void) => {
+  const handler = () => {
+    toggleEnterpriseDrawer(panelId);
+    if (onOpen) onOpen();
+  };
+  document.getElementById(headerId)?.addEventListener("click", handler);
+  document.getElementById(dockId)?.addEventListener("click", handler);
+};
 
-document.getElementById("btn-header-clash")?.addEventListener("click", () => {
-  toggleEnterpriseDrawer("clash-panel");
-  clashDetector.updateClashUI();
-});
-
-document.getElementById("btn-header-carbon")?.addEventListener("click", () => {
-  toggleEnterpriseDrawer("carbon-panel");
-  carbonManager.updateCarbonUI();
-});
-
-document.getElementById("btn-header-copilot")?.addEventListener("click", () => {
-  toggleEnterpriseDrawer("copilot-panel");
-  bimAiCopilot.updateCopilotUI();
-});
-
-document.getElementById("btn-header-collab")?.addEventListener("click", () => {
-  toggleEnterpriseDrawer("collab-panel");
-  collabManager.updateCollabUI();
-});
+bindEnterpriseTrigger("btn-header-measure", "btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
+bindEnterpriseTrigger("btn-header-clash", "btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
+bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => carbonManager.updateCarbonUI());
+bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
+bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
 
 // Drawer Close buttons
 document.querySelectorAll(".drawer-close-btn").forEach((btn) => {
