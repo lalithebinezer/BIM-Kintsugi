@@ -295,8 +295,12 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
-  padding: 0.5rem 1.25rem;
+  background: var(--bg-panel-header, rgba(10, 10, 12, 0.88));
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 0.45rem 1.25rem;
   z-index: 100;
   pointer-events: auto !important;
   width: 100%;
@@ -312,22 +316,23 @@ header {
 }
 
 .brand-logo {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 2px solid var(--accent-500);
-  background: transparent;
+  background: radial-gradient(circle at center, rgba(212, 255, 63, 0.15), transparent 70%);
   display: flex;
   align-items: center;
   justify-content: center;
   transform: rotate(45deg);
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 4px;
+  box-shadow: 0 0 12px var(--accent-glow, rgba(212, 255, 63, 0.25));
   flex-shrink: 0;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .brand-logo:hover {
-  transform: scale(1.05) rotate(45deg);
+  transform: scale(1.08) rotate(45deg);
+  box-shadow: 0 0 18px var(--accent-500);
 }
 
 .brand-logo div {
@@ -340,8 +345,9 @@ header {
 
 .brand-text h1 {
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  letter-spacing: -0.04em;
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   text-transform: uppercase;
   color: var(--text-primary);
   display: flex;
@@ -351,14 +357,16 @@ header {
 
 .brand-badge {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  background: var(--accent-500);
-  color: black;
+  font-size: 0.58rem;
+  background: linear-gradient(135deg, var(--accent-500), var(--accent-400));
+  color: var(--accent-btn-text, #000000);
   padding: 2px 8px;
   border-radius: 99px;
   margin-left: 0.5rem;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: 0.05em;
   border: none;
+  box-shadow: 0 0 10px var(--accent-glow, rgba(212, 255, 63, 0.3));
 }
 
 /* Header Center Info & Status Capsule */
