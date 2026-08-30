@@ -372,17 +372,24 @@
         </div>
       </div>
 
-      <!-- ─── HUD ANCHOR: BOTTOM-RIGHT (Metric Scale Bar) ─── -->
+      <!-- ─── HUD ANCHOR: BOTTOM-RIGHT (Architectural Scale Bar) ─── -->
       <div class="hud-anchor-bottom-right" id="hud-anchor-bottom-right">
-        <!-- Metric Scale Ruler HUD -->
-        <div id="viewport-scale-bar" class="viewport-scale-bar" title="3D Dynamic Metric Scale">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>0</span>
-            <span id="scale-bar-label">5.0 m</span>
+        <!-- Architectural Metric Scale Ruler HUD -->
+        <div id="viewport-scale-bar" class="viewport-scale-bar" title="3D Dynamic Architectural Scale & Elevation">
+          <div class="scale-bar-header">
+            <span class="scale-bar-mode">ISO 128</span>
+            <span id="scale-elevation-label" class="scale-elevation-badge">ELV: +0.0m</span>
           </div>
-          <div style="width: 80px; height: 4px; background: var(--border-strong); border-radius: 1px; position: relative;">
-            <div style="position: absolute; left: 0; top: -2px; width: 2px; height: 8px; background: var(--border-strong);"></div>
-            <div style="position: absolute; right: 0; top: -2px; width: 2px; height: 8px; background: var(--border-strong);"></div>
+          <div class="scale-ruler-track">
+            <div class="scale-tick start"></div>
+            <div class="scale-tick mid"></div>
+            <div class="scale-tick end"></div>
+            <div class="scale-ruler-bar"></div>
+          </div>
+          <div class="scale-bar-footer">
+            <span>0</span>
+            <span id="scale-bar-mid-label">2.5m</span>
+            <span id="scale-bar-label" class="scale-bar-max">5.0m</span>
           </div>
         </div>
       </div>

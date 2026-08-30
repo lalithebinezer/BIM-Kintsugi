@@ -405,11 +405,14 @@ world.onCameraChanged.add((camera) => {
   }
 });
 
-// Dynamic Metric Scale Ruler HUD calculation
+// Dynamic Metric Scale Ruler HUD calculation (Architectural ISO Steps & Elevation)
 function updateMetricScaleBar() {
-  const scaleLabelEl = document.getElementById("scale-bar-label");
+  const scaleMaxEl = document.getElementById("scale-bar-label");
+  const scaleMidEl = document.getElementById("scale-bar-mid-label");
+  const elvBadgeEl = document.getElementById("scale-elevation-label");
   const cam = world.camera?.three;
-  if (!scaleLabelEl || !cam) return;
+  if (!scaleMaxEl || !cam) return;
+
   try {
     const target = new THREE.Vector3();
     world.camera.controls.getTarget(target);
@@ -419,8 +422,29 @@ function updateMetricScaleBar() {
     const visibleHeight = 2 * Math.tan(fovRad / 2) * Math.max(1, dist);
     const visibleWidth = visibleHeight * (window.innerWidth / Math.max(1, window.innerHeight));
     const metersPerPixel = visibleWidth / Math.max(1, window.innerWidth);
-    const rulerMeters = Math.max(0.1, metersPerPixel * 80);
-    scaleLabelEl.innerText = rulerMeters >= 10 ? `${Math.round(rulerMeters)} m` : `${rulerMeters.toFixed(1)} m`;
+    
+    // Scale bar track is 100px wide
+    const rawMeters = Math.max(0.1, metersPerPixel * 100);
+    
+    // Choose clean architectural interval
+    const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+    let chosen = steps[0];
+    for (const step of steps) {
+      if (rawMeters >= step * 0.65) {
+        chosen = step;
+      }
+    }
+
+    scaleMaxEl.innerText = chosen >= 10 ? `${Math.round(chosen)}m` : `${chosen.toFixed(chosen < 1 ? 1 : 0)}m`;
+    if (scaleMidEl) {
+      const mid = chosen / 2;
+      scaleMidEl.innerText = mid >= 10 ? `${Math.round(mid)}m` : `${mid.toFixed(mid < 1 ? 1 : 0)}m`;
+    }
+
+    if (elvBadgeEl) {
+      const elv = cam.position.y;
+      elvBadgeEl.innerText = `ELV: ${elv >= 0 ? "+" : ""}${elv.toFixed(1)}m`;
+    }
   } catch (e) {
     // fallback
   }
