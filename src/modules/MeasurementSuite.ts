@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { SoundManager } from "../core/SoundManager";
 
 export interface MeasurementPoint {
   position: THREE.Vector3;
@@ -236,6 +237,7 @@ export class MeasurementSuite {
     };
 
     this.currentPoints.push(newPt);
+    SoundManager.getInstance().playSnap();
 
     if (this.activeType === "distance" || this.activeType === "delta") {
       if (this.currentPoints.length >= 2) {
@@ -355,10 +357,36 @@ export class MeasurementSuite {
     const pts = points.map((p) => p.position);
     pts.push(points[0].position);
     const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
-    const lineMat = new THREE.LineBasicMaterial({ color: 0xa855f7, depthTest: false });
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xa855f7, depthTest: false, linewidth: 2 });
     const line = new THREE.Line(lineGeo, lineMat);
     line.renderOrder = 9997;
     group.add(line);
+
+    // Render transparent 3D polygon fill
+    try {
+      const shape = new THREE.Shape();
+      shape.moveTo(points[0].position.x, points[0].position.z);
+      for (let i = 1; i < points.length; i++) {
+        shape.lineTo(points[i].position.x, points[i].position.z);
+      }
+      shape.closePath();
+
+      const polyGeo = new THREE.ShapeGeometry(shape);
+      polyGeo.rotateX(-Math.PI / 2);
+      polyGeo.translate(0, points[0].position.y, 0);
+
+      const polyMat = new THREE.MeshBasicMaterial({
+        color: 0xa855f7,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const polyMesh = new THREE.Mesh(polyGeo, polyMat);
+      polyMesh.renderOrder = 9996;
+      group.add(polyMesh);
+    } catch (e) {}
+
     this.overlayGroup.add(group);
 
     const center = new THREE.Vector3();

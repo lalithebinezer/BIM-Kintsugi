@@ -33,6 +33,9 @@ import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { CollaborationManager } from "./modules/CollaborationManager";
 import { MinimapModule } from "./modules/MinimapModule";
 import { PhasingTimelineModule } from "./modules/PhasingTimelineModule";
+import { SoundManager } from "./core/SoundManager";
+import { PresentationSheetModule } from "./modules/PresentationSheetModule";
+import { GraphicsVFXManager } from "./modules/GraphicsVFXManager";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -6470,7 +6473,8 @@ if (btnViewIso) {
 const btnViewSnapshot = document.getElementById("btn-view-snapshot");
 if (btnViewSnapshot) {
   btnViewSnapshot.addEventListener("click", () => {
-    SnapshotModule.getInstance().captureTechnicalSnapshot();
+    showToast("Generating 4K Architectural Presentation Board...", "success");
+    PresentationSheetModule.getInstance().export4KBoard();
   });
 }
 
@@ -7336,15 +7340,82 @@ function initAppleDockMagnifier() {
     });
   };
 
+  // Audio micro-haptics on dock hover
+  let lastHoveredItem: HTMLElement | null = null;
+  items.forEach((item) => {
+    item.addEventListener("mouseenter", () => {
+      if (lastHoveredItem !== item) {
+        lastHoveredItem = item;
+        SoundManager.getInstance().playHover();
+      }
+    }, { passive: true });
+    item.addEventListener("click", () => {
+      SoundManager.getInstance().playClick();
+    }, { passive: true });
+  });
+
   dock.addEventListener("mousemove", onMouseMove, { passive: true });
-  dock.addEventListener("mouseleave", onMouseLeave, { passive: true });
+  dock.addEventListener("mouseleave", () => {
+    lastHoveredItem = null;
+    onMouseLeave();
+  }, { passive: true });
 }
 
 initAppleDockMagnifier();
 
+// Initialize Graphics VFX Manager (Ambient Ground Shadows & Tone Mapping)
+GraphicsVFXManager.getInstance();
+
 // Initialize theme from saved preference or default to obsidian
 const savedTheme = typeof localStorage !== "undefined" ? localStorage.getItem("bim_theme_preset") || "obsidian" : "obsidian";
 applyGlobalTheme(savedTheme);
+
+// ─── GLOBAL POWER SHORTCUTS LISTENER ───
+window.addEventListener("keydown", (e) => {
+  // Ignore typing inside inputs, textareas, and select elements
+  const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select" || (e.target as HTMLElement)?.isContentEditable) {
+    return;
+  }
+
+  const key = e.key.toLowerCase();
+
+  if (e.key === "?" || (e.shiftKey && key === "/")) {
+    e.preventDefault();
+    const helpModal = document.getElementById("help-modal");
+    if (helpModal) {
+      helpModal.classList.remove("hidden");
+      // Switch to shortcuts tab
+      document.querySelectorAll(".help-tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".help-tab-panel").forEach((p) => p.classList.remove("active"));
+      const tabBtn = document.querySelector('[data-help-tab="shortcuts"]');
+      const tabPane = document.getElementById("help-tab-shortcuts");
+      tabBtn?.classList.add("active");
+      tabPane?.classList.add("active");
+      SoundManager.getInstance().playClick();
+    }
+  } else if (key === "m" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const btnMeasure = document.getElementById("btn-dock-measure");
+    btnMeasure?.click();
+  } else if (key === "b" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const btnBox = document.getElementById("btn-box-select");
+    btnBox?.click();
+  } else if (key === "i" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const btnIsolate = document.getElementById("btn-dock-isolate");
+    btnIsolate?.click();
+  } else if (key === "h" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const btnHide = document.getElementById("btn-dock-hide");
+    btnHide?.click();
+  } else if (key === "f" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const btnFit = document.getElementById("btn-view-fit");
+    btnFit?.click();
+  }
+});
 
 
 
