@@ -205,170 +205,203 @@
         <div style="display: flex; gap: 0.35rem; align-items: center;"><span style="color: var(--text-muted);">Poly</span> <strong id="hud-polygons" style="font-family: monospace; font-size: 0.7rem;">0</strong></div>
       </div>
     </div>
-        <div class="bottom-toolbar" role="toolbar" aria-label="BIM Operations Toolbar">
-          <div class="toolbar-section">
-            <span class="section-label">Visibility</span>
-            <div class="toolbar-buttons">
-              <button class="btn-tool" id="btn-show-all" title="Show All Elements">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <span>Show All</span>
-              </button>
-              <button class="btn-tool" id="btn-hide-all" title="Hide All Elements">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path
-                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-                <span>Hide All</span>
-              </button>
-            </div>
+        <!-- MagicUI Apple Floating Dock -->
+        <div class="bottom-toolbar magic-dock" role="toolbar" aria-label="BIM Operations Dock">
+          
+          <!-- Visibility Cluster -->
+          <div class="dock-item" data-tooltip="Show All Elements">
+            <button class="btn-tool dock-icon" id="btn-show-all" aria-label="Show All Elements">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Show All</span>
           </div>
 
-          <div class="toolbar-divider"></div>
-
-          <div class="toolbar-section">
-            <span class="section-label">Data</span>
-            <div class="toolbar-buttons">
-              <button class="btn-tool btn-tool-accent" id="btn-load-ifc" title="Load Local Model">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <span>Load IFC</span>
-              </button>
-              <button class="btn-tool btn-tool-accent" id="btn-export-frag" title="Export current model to FRAG">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                <span>Export FRAG</span>
-              </button>
-              <button class="btn-tool btn-tool-accent" id="btn-load-frag" title="Load local FRAG model">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>Load FRAG</span>
-              </button>
-            </div>
+          <div class="dock-item" data-tooltip="Hide All Elements">
+            <button class="btn-tool dock-icon" id="btn-hide-all" aria-label="Hide All Elements">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Hide All</span>
           </div>
 
-          <div class="toolbar-divider"></div>
+          <div class="dock-separator"></div>
 
-          <!-- Enterprise BIM Suites -->
-          <div class="toolbar-section">
-            <span class="section-label">Enterprise</span>
-            <div class="toolbar-buttons">
-              <button class="btn-tool" id="btn-dock-measure" title="Smart 3D Dimensioning & Snap Tool (M)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
-                <span>Dimensions</span>
-              </button>
-              <button class="btn-tool" id="btn-dock-clash" title="Multi-Discipline Clash Matrix">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>Clashes</span>
-              </button>
-              <button class="btn-tool" id="btn-dock-carbon" title="6D Embodied Carbon & LCA Heatmap">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
-                <span>6D Carbon</span>
-              </button>
-              <button class="btn-tool" id="btn-dock-copilot" title="AI BIM Copilot Natural Language Assistant" style="border-color: var(--accent-500);">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
-                <span>AI Copilot</span>
-              </button>
-              <button class="btn-tool" id="btn-dock-collab" title="Live Collaboration & Active Peers">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <span>Collab</span>
-              </button>
-            </div>
+          <!-- Data & File Cluster -->
+          <div class="dock-item" data-tooltip="Load IFC Model">
+            <button class="btn-tool dock-icon btn-tool-accent" id="btn-load-ifc" aria-label="Load Local Model">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Load IFC</span>
           </div>
 
-          <div class="toolbar-divider"></div>
-
-          <div class="toolbar-section">
-            <span class="section-label">Selection</span>
-            <div class="toolbar-buttons">
-              <button class="btn-tool" id="btn-box-select" title="Box / Marquee Drag Selection (B or Hold Alt+Drag)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
-                  <polyline points="9 9 15 15" />
-                  <polyline points="15 9 9 15" />
-                </svg>
-                <span>Box (B)</span>
-              </button>
-              <button class="btn-tool" id="btn-focus" title="Zoom Fit Selection (F)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="11" y1="8" x2="11" y2="14" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-                <span>Focus (F)</span>
-              </button>
-              <button class="btn-tool" id="btn-isolate" title="Isolate Selected Element (I)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                </svg>
-                <span>Isolate (I)</span>
-              </button>
-              <button class="btn-tool" id="btn-hide-selected" title="Hide Selected Element (H)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-                <span>Hide (H)</span>
-              </button>
-              <button class="btn-tool" id="btn-select-all" title="Select All Elements (Ctrl+A)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                </svg>
-                <span>All</span>
-              </button>
-              <button class="btn-tool" id="btn-invert-select" title="Invert Active Selection (Ctrl+I)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-                <span>Invert</span>
-              </button>
-              <button class="btn-tool" id="btn-clear-selection" title="Clear selection (Esc)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="15" y1="9" x2="9" y2="15" />
-                  <line x1="9" y1="9" x2="15" y2="15" />
-                </svg>
-                <span>Clear (Esc)</span>
-              </button>
-            </div>
+          <div class="dock-item" data-tooltip="Export Model to FRAG">
+            <button class="btn-tool dock-icon btn-tool-accent" id="btn-export-frag" aria-label="Export to FRAG">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Export FRAG</span>
           </div>
 
-          <div class="toolbar-divider"></div>
-
-          <div class="toolbar-section">
-            <span class="section-label">Sectioning</span>
-            <div class="toolbar-buttons">
-              <button class="btn-tool" id="btn-section-cut" title="Toggle Section Cut mode (double-click viewport)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                </svg>
-                <span>Section Cut</span>
-              </button>
-              <button class="btn-tool" id="btn-clear-sections" title="Delete all section planes">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                <span>Clear Cuts</span>
-              </button>
-            </div>
+          <div class="dock-item" data-tooltip="Load FRAG Model">
+            <button class="btn-tool dock-icon btn-tool-accent" id="btn-load-frag" aria-label="Load FRAG model">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Load FRAG</span>
           </div>
+
+          <div class="dock-separator"></div>
+
+          <!-- Enterprise BIM Suites Cluster -->
+          <div class="dock-item" data-tooltip="Smart 3D Dimensions (M)">
+            <button class="btn-tool dock-icon" id="btn-dock-measure" aria-label="Smart 3D Dimensions">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
+            </button>
+            <span class="dock-tooltip">Dimensions</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Multi-Discipline Clash Matrix">
+            <button class="btn-tool dock-icon" id="btn-dock-clash" aria-label="Clash Matrix">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </button>
+            <span class="dock-tooltip">Clashes</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="6D Embodied Carbon & LCA Heatmap">
+            <button class="btn-tool dock-icon" id="btn-dock-carbon" aria-label="6D Carbon Heatmap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+            </button>
+            <span class="dock-tooltip">6D Carbon</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="AI BIM Copilot Assistant">
+            <button class="btn-tool dock-icon" id="btn-dock-copilot" aria-label="AI BIM Copilot" style="border-color: var(--accent-500);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
+            </button>
+            <span class="dock-tooltip">AI Copilot</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Live Collaboration & Active Peers">
+            <button class="btn-tool dock-icon" id="btn-dock-collab" aria-label="Live Collaboration">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </button>
+            <span class="dock-tooltip">Live Peers</span>
+          </div>
+
+          <div class="dock-separator"></div>
+
+          <!-- Selection & Inspection Cluster -->
+          <div class="dock-item" data-tooltip="Box / Marquee Drag Selection (B)">
+            <button class="btn-tool dock-icon" id="btn-box-select" aria-label="Box Select">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
+                <polyline points="9 9 15 15" />
+                <polyline points="15 9 9 15" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Box (B)</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Zoom Fit Selection (F)">
+            <button class="btn-tool dock-icon" id="btn-focus" aria-label="Zoom Focus">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Focus (F)</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Isolate Selected Element (I)">
+            <button class="btn-tool dock-icon" id="btn-isolate" aria-label="Isolate Element">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Isolate (I)</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Hide Selected Element (H)">
+            <button class="btn-tool dock-icon" id="btn-hide-selected" aria-label="Hide Selected">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Hide (H)</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Select All Elements (Ctrl+A)">
+            <button class="btn-tool dock-icon" id="btn-select-all" aria-label="Select All">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Select All</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Invert Active Selection (Ctrl+I)">
+            <button class="btn-tool dock-icon" id="btn-invert-select" aria-label="Invert Selection">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Invert</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Clear Selection (Esc)">
+            <button class="btn-tool dock-icon" id="btn-clear-selection" aria-label="Clear Selection">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Clear (Esc)</span>
+          </div>
+
+          <div class="dock-separator"></div>
+
+          <!-- Sectioning Cluster -->
+          <div class="dock-item" data-tooltip="Toggle Section Cut Planes">
+            <button class="btn-tool dock-icon" id="btn-section-cut" aria-label="Section Cut">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Section Cut</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="Delete All Section Planes">
+            <button class="btn-tool dock-icon" id="btn-clear-sections" aria-label="Clear Section Cuts">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">Clear Cuts</span>
+          </div>
+
         </div>
       </div>
 

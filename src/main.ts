@@ -7289,46 +7289,63 @@ document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((se
   });
 });
 
-// ─── APPLE MACOS DOCK MAGNIFIER FOR BOTTOM-TOOLBAR ───
+// ─── MAGICUI APPLE DOCK SPRING MAGNIFIER ───
 function initAppleDockMagnifier() {
-  const toolbar = document.querySelector<HTMLElement>(".bottom-toolbar");
-  if (!toolbar) return;
+  const dock = document.querySelector<HTMLElement>(".bottom-toolbar.magic-dock");
+  if (!dock) return;
 
-  const buttons = Array.from(toolbar.querySelectorAll<HTMLElement>(".btn-tool"));
-  const maxScale = 1.32;
-  const radius = 125; // influence radius in pixels
+  const items = Array.from(dock.querySelectorAll<HTMLElement>(".dock-item"));
+  const maxScale = 1.42;
+  const radius = 130; // influence radius in pixels
 
   const onMouseMove = (e: MouseEvent) => {
     const mouseX = e.clientX;
 
-    buttons.forEach((btn) => {
+    items.forEach((item) => {
+      const btn = item.querySelector<HTMLElement>(".dock-icon");
+      const tooltip = item.querySelector<HTMLElement>(".dock-tooltip");
+      if (!btn) return;
+
       const rect = btn.getBoundingClientRect();
       const btnCenterX = rect.left + rect.width / 2;
       const dist = Math.abs(mouseX - btnCenterX);
 
       if (dist < radius) {
-        // Smooth cosine bell curve
+        // Continuous smooth cosine bell curve
         const factor = Math.cos((dist / radius) * (Math.PI / 2));
         const scale = 1 + (maxScale - 1) * Math.pow(factor, 1.4);
-        const translateY = -7 * factor;
+        const translateY = -9 * factor;
         btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
-        btn.style.zIndex = Math.round(50 * factor + 10).toString();
+        item.style.zIndex = Math.round(100 * factor + 10).toString();
+        if (tooltip) {
+          tooltip.style.transform = `translateX(-50%) translateY(${(-translateY * 0.8).toFixed(1)}px)`;
+        }
       } else {
         btn.style.transform = "scale(1) translateY(0px)";
-        btn.style.zIndex = "1";
+        item.style.zIndex = "1";
+        if (tooltip) {
+          tooltip.style.transform = "translateX(-50%) translateY(4px)";
+        }
       }
     });
   };
 
   const onMouseLeave = () => {
-    buttons.forEach((btn) => {
-      btn.style.transform = "scale(1) translateY(0px)";
-      btn.style.zIndex = "1";
+    items.forEach((item) => {
+      const btn = item.querySelector<HTMLElement>(".dock-icon");
+      const tooltip = item.querySelector<HTMLElement>(".dock-tooltip");
+      if (btn) {
+        btn.style.transform = "scale(1) translateY(0px)";
+      }
+      item.style.zIndex = "1";
+      if (tooltip) {
+        tooltip.style.transform = "translateX(-50%) translateY(4px)";
+      }
     });
   };
 
-  toolbar.addEventListener("mousemove", onMouseMove, { passive: true });
-  toolbar.addEventListener("mouseleave", onMouseLeave, { passive: true });
+  dock.addEventListener("mousemove", onMouseMove, { passive: true });
+  dock.addEventListener("mouseleave", onMouseLeave, { passive: true });
 }
 
 initAppleDockMagnifier();
