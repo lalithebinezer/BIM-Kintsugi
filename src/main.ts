@@ -7148,5 +7148,70 @@ document.getElementById("select-timeline-speed")?.addEventListener("change", (e)
   phasingTimeline.setSpeed(speed);
 });
 
+// ─── ENTERPRISE THEME SYNCHRONIZATION ENGINE ───
+interface ThemePresetConfig {
+  name: string;
+  label: string;
+  hover3D: string;
+  select3D: string;
+  background3D: number;
+}
+
+const THEME_PRESET_MAP: Record<string, ThemePresetConfig> = {
+  obsidian: { name: "obsidian", label: "Obsidian Dark", hover3D: "#D4FF3F", select3D: "#00D2FF", background3D: 0x0A0A0C },
+  zen: { name: "zen", label: "Zen Minimalist", hover3D: "#F59E0B", select3D: "#3B82F6", background3D: 0x121316 },
+  cyberpunk: { name: "cyberpunk", label: "Cyberpunk Neon", hover3D: "#00F0FF", select3D: "#EC4899", background3D: 0x070913 },
+  blueprint: { name: "blueprint", label: "CAD Blueprint", hover3D: "#64FFDA", select3D: "#38BDF8", background3D: 0x0A192F },
+  light: { name: "light", label: "Light Studio", hover3D: "#4F46E5", select3D: "#0284C7", background3D: 0xF8FAFC },
+};
+
+function applyGlobalTheme(themeKey: string) {
+  const preset = THEME_PRESET_MAP[themeKey] || THEME_PRESET_MAP.obsidian;
+  document.documentElement.setAttribute("data-theme", preset.name);
+  try {
+    localStorage.setItem("bim_theme_preset", preset.name);
+  } catch (e) {}
+
+  // Sync 3D Highlighter Hover & Select Colors in Three.js
+  try {
+    const hoverStyle = highlighter.styles.get("hover");
+    if (hoverStyle) {
+      hoverStyle.color = new THREE.Color(preset.hover3D);
+    }
+    const selectStyle = highlighter.styles.get("select");
+    if (selectStyle) {
+      selectStyle.color = new THREE.Color(preset.select3D);
+    }
+  } catch (e) {}
+
+  // Sync 3D Scene Background Color
+  try {
+    if (world?.scene?.three) {
+      world.scene.three.background = new THREE.Color(preset.background3D);
+    }
+  } catch (e) {}
+
+  // Sync dropdown selector state
+  const selector = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
+  if (selector && selector.value !== preset.name) {
+    selector.value = preset.name;
+  }
+}
+
+// Wire theme dropdown change event
+const themeSelector = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
+if (themeSelector) {
+  themeSelector.addEventListener("change", (e) => {
+    const selected = (e.target as HTMLSelectElement).value;
+    applyGlobalTheme(selected);
+    const preset = THEME_PRESET_MAP[selected];
+    showToast(`Theme Switched: ${preset?.label || selected}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`);
+  });
+}
+
+// Initialize theme from saved preference or default to obsidian
+const savedTheme = typeof localStorage !== "undefined" ? localStorage.getItem("bim_theme_preset") || "obsidian" : "obsidian";
+applyGlobalTheme(savedTheme);
+
 
 
