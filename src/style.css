@@ -6797,6 +6797,208 @@ body.right-sidebar-collapsed .right-sidebar {
   transform: translateY(0);
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   LIVE WORKSTATION COLLABORATION PANEL STYLES
+   ═════════════════════════════════════════════════════════════════════ */
+
+.collab-toolbar-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--bg-card, #16161C);
+  border-bottom: 1px solid var(--border-color, #23232C);
+}
+
+.collab-tab-nav {
+  display: flex;
+  background: var(--bg-panel-header, #16161C);
+  border-bottom: 1px solid var(--border-color, #23232C);
+}
+
+.collab-tab-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--text-muted, #94A3B8);
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.collab-tab-btn:hover {
+  color: var(--text-primary, #FFFFFF);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.collab-tab-btn.active {
+  color: var(--accent-500, #D4FF3F);
+  border-bottom-color: var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.04);
+}
+
+.collab-tab-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.collab-tab-pane.hidden {
+  display: none !important;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.user-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.user-selection-badge {
+  font-size: 0.55rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--accent-400, #A7F3D0);
+  background: rgba(16, 185, 129, 0.12);
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Audio wave speaking animation */
+.audio-wave-anim {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+}
+
+.audio-wave-anim .bar {
+  width: 2px;
+  background: #10B981;
+  border-radius: 1px;
+  animation: audioWave 1s infinite ease-in-out;
+}
+
+.audio-wave-anim .bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+.audio-wave-anim .bar:nth-child(2) { height: 90%; animation-delay: 0.25s; }
+.audio-wave-anim .bar:nth-child(3) { height: 60%; animation-delay: 0.4s; }
+
+@keyframes audioWave {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+
+.user-online-dot.speaking {
+  background: #10B981 !important;
+  box-shadow: 0 0 6px 1px #10B981;
+}
+
+/* Collab Chat Stream */
+.collab-chat-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  overflow-y: auto;
+  min-height: 240px;
+  max-height: 380px;
+}
+
+.collab-chat-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--bg-card, #16161C);
+  border: 1px solid var(--border-subtle, #23232C);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+}
+
+.collab-chat-bubble.is-me {
+  border-color: rgba(212, 255, 63, 0.3);
+  background: rgba(212, 255, 63, 0.04);
+}
+
+.chat-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.62rem;
+}
+
+.chat-author {
+  font-weight: 800;
+}
+
+.chat-time {
+  color: var(--text-dim, #52525B);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+}
+
+.chat-body {
+  font-size: 0.68rem;
+  color: var(--text-main, #E4E4E7);
+  line-height: 1.35;
+}
+
+.btn-chat-pin {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-chat-pin:hover {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: #38BDF8;
+  transform: translateY(-1px);
+}
+
+.collab-chat-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-panel-header, #16161C);
+  border-top: 1px solid var(--border-color, #23232C);
+}
+
+.collab-chat-input-bar input {
+  flex: 1;
+  background: var(--bg-input, #0A0A0C);
+  border: 1px solid var(--border-color, #23232C);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  color: var(--text-primary, #FFFFFF);
+  font-size: 0.68rem;
+  outline: none;
+}
+
+.collab-chat-input-bar input:focus {
+  border-color: var(--accent-500, #D4FF3F);
+}
+
 
 
 

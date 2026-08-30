@@ -7082,6 +7082,66 @@ document.getElementById("btn-follow-host")?.addEventListener("click", () => {
   showToast(active ? "Camera Synced: Following Presenter" : "Independent Camera View", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/></svg>`);
 });
 
+// Collab Ping Location Beacon
+document.getElementById("btn-collab-ping-loc")?.addEventListener("click", () => {
+  const pos = collabManager.pingCurrentLocation();
+  showToast(`Dropped 3D Beacon at [${pos[0].toFixed(1)}, ${pos[1].toFixed(1)}, ${pos[2].toFixed(1)}]`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>`);
+});
+
+// Collab Mic Toggle
+document.getElementById("btn-collab-mic-toggle")?.addEventListener("click", () => {
+  const unmuted = collabManager.toggleMic();
+  showToast(unmuted ? "Microphone Active (Broadcasting Voice)" : "Microphone Muted", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${unmuted ? '#10B981' : '#F43F5E'}" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>`);
+});
+
+// Collab Copy Invite Link
+document.getElementById("btn-collab-copy-invite")?.addEventListener("click", () => {
+  const url = `${window.location.origin}/?room=KINTSUGI-PRO-8924`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Session Invite Link Copied to Clipboard!", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`);
+  }).catch(() => {
+    showToast("Room ID: KINTSUGI-PRO-8924", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/></svg>`);
+  });
+});
+
+// Collab Tabs Switching
+document.querySelectorAll(".collab-tab-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const targetTab = (e.currentTarget as HTMLElement).getAttribute("data-collab-tab");
+    document.querySelectorAll(".collab-tab-btn").forEach((b) => b.classList.remove("active"));
+    (e.currentTarget as HTMLElement).classList.add("active");
+
+    const peersPane = document.getElementById("collab-tab-peers-content");
+    const chatPane = document.getElementById("collab-tab-chat-content");
+
+    if (targetTab === "chat") {
+      peersPane?.classList.add("hidden");
+      chatPane?.classList.remove("hidden");
+    } else {
+      chatPane?.classList.add("hidden");
+      peersPane?.classList.remove("hidden");
+    }
+  });
+});
+
+// Collab Chat Send Message
+const collabChatInput = document.getElementById("collab-chat-input") as HTMLInputElement | null;
+const collabChatSendBtn = document.getElementById("btn-collab-chat-send");
+
+function handleSendCollabChat() {
+  if (!collabChatInput || !collabChatInput.value.trim()) return;
+  const txt = collabChatInput.value.trim();
+  collabChatInput.value = "";
+  collabManager.sendChatMessage(txt);
+}
+
+collabChatSendBtn?.addEventListener("click", handleSendCollabChat);
+collabChatInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleSendCollabChat();
+  }
+});
+
 // ─── 2D RADAR MINIMAP & WALK MODE ───
 const minimap = MinimapModule.getInstance();
 minimap.init("minimap-canvas");

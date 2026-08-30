@@ -2336,11 +2336,35 @@
           <button class="btn-icon drawer-close-btn" data-target="collab-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
-      <div class="drawer-body thin-scrollbar">
-        <div class="drawer-actions-bar">
-          <button id="btn-follow-host" class="btn-md btn-outline flex-1">Follow Presenter</button>
+
+      <!-- Quick Action Ribbon -->
+      <div class="collab-toolbar-ribbon">
+        <button id="btn-follow-host" class="btn-xs btn-outline flex-1">Follow Presenter</button>
+        <button id="btn-collab-ping-loc" class="btn-xs btn-outline" title="Drop a 3D Beacon at your current view">📍 Ping 3D</button>
+        <button id="btn-collab-mic-toggle" class="btn-xs btn-outline" title="Toggle Microphone Audio">🎙️ Mute</button>
+        <button id="btn-collab-copy-invite" class="btn-xs btn-accent" title="Copy Collaboration Room Link">🔗 Invite</button>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="collab-tab-nav">
+        <button class="collab-tab-btn active" data-collab-tab="peers">Active Peers</button>
+        <button class="collab-tab-btn" data-collab-tab="chat">Live Spatial Chat</button>
+      </div>
+
+      <div class="drawer-body thin-scrollbar" style="display: flex; flex-direction: column; flex: 1;">
+        <!-- Tab 1: Peers List -->
+        <div id="collab-tab-peers-content" class="collab-tab-pane active">
+          <div id="collab-users-list" class="collab-users-container"></div>
         </div>
-        <div id="collab-users-list" class="collab-users-container"></div>
+
+        <!-- Tab 2: Live Chat Stream -->
+        <div id="collab-tab-chat-content" class="collab-tab-pane hidden" style="display: flex; flex-direction: column; flex: 1; height: 100%;">
+          <div id="collab-chat-messages" class="collab-chat-box thin-scrollbar"></div>
+          <div class="collab-chat-input-bar">
+            <input type="text" id="collab-chat-input" placeholder="Type a message to peers..." />
+            <button id="btn-collab-chat-send" class="btn-accent btn-xs">Send</button>
+          </div>
+        </div>
       </div>
     </div>
 
