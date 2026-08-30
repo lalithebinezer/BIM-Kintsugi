@@ -31,6 +31,8 @@ import { ClashDetector } from "./modules/ClashDetector";
 import { CarbonLcaManager } from "./modules/CarbonLcaManager";
 import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { CollaborationManager } from "./modules/CollaborationManager";
+import { MinimapModule } from "./modules/MinimapModule";
+import { PhasingTimelineModule } from "./modules/PhasingTimelineModule";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -7078,6 +7080,72 @@ copilotInput?.addEventListener("keydown", (e) => {
 document.getElementById("btn-follow-host")?.addEventListener("click", () => {
   const active = collabManager.toggleFollowHost();
   showToast(active ? "Camera Synced: Following Presenter" : "Independent Camera View", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/></svg>`);
+});
+
+// ─── 2D RADAR MINIMAP & WALK MODE ───
+const minimap = MinimapModule.getInstance();
+minimap.init("minimap-canvas");
+
+document.getElementById("btn-minimap-walk-toggle")?.addEventListener("click", () => {
+  const isWalk = minimap.toggleWalkMode();
+  showToast(isWalk ? "Walkthrough Mode: WASD Keys Active" : "Orbit Camera Mode", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg>`);
+});
+
+document.getElementById("minimap-level-select")?.addEventListener("change", (e) => {
+  const levelIdx = parseInt((e.target as HTMLSelectElement).value, 10);
+  minimap.setLevel(levelIdx);
+});
+
+// ─── 4D PHASING SIMULATION DOCK ───
+const phasingTimeline = PhasingTimelineModule.getInstance();
+
+const toggle4DTimeline = () => {
+  const dock = document.getElementById("phasing-timeline-dock");
+  if (dock) {
+    const isHidden = dock.classList.contains("hidden");
+    dock.classList.toggle("hidden", !isHidden);
+    if (isHidden) {
+      phasingTimeline.updateUI();
+    } else {
+      phasingTimeline.pause();
+    }
+  }
+};
+
+document.getElementById("btn-4d-mode")?.addEventListener("click", () => {
+  toggle4DTimeline();
+});
+
+document.getElementById("btn-close-phasing-dock")?.addEventListener("click", () => {
+  document.getElementById("phasing-timeline-dock")?.classList.add("hidden");
+  phasingTimeline.pause();
+});
+
+document.getElementById("btn-timeline-play")?.addEventListener("click", () => {
+  phasingTimeline.togglePlayPause();
+});
+
+document.getElementById("btn-timeline-reset")?.addEventListener("click", () => {
+  phasingTimeline.reset();
+  showToast("4D Timeline: Reset to Week 1", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/></svg>`);
+});
+
+document.getElementById("btn-timeline-step-back")?.addEventListener("click", () => {
+  phasingTimeline.stepBackward();
+});
+
+document.getElementById("btn-timeline-step-fwd")?.addEventListener("click", () => {
+  phasingTimeline.stepForward();
+});
+
+document.getElementById("timeline-week-slider")?.addEventListener("input", (e) => {
+  const val = parseInt((e.target as HTMLInputElement).value, 10);
+  phasingTimeline.setWeek(val);
+});
+
+document.getElementById("select-timeline-speed")?.addEventListener("change", (e) => {
+  const speed = parseInt((e.target as HTMLSelectElement).value, 10);
+  phasingTimeline.setSpeed(speed);
 });
 
 

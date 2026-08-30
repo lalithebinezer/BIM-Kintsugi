@@ -6341,6 +6341,196 @@ body.right-sidebar-collapsed .right-sidebar {
   50% { filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6)); }
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   2D FLOOR PLAN RADAR MINIMAP & 4D PHASING TIMELINE BAR
+   ═════════════════════════════════════════════════════════════════════ */
+
+.minimap-radar-widget {
+  position: fixed;
+  bottom: 84px;
+  right: 18px;
+  width: 200px;
+  background: var(--bg-surface, rgba(14, 14, 18, 0.92));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1.5px solid var(--border-strong, #2A2A35);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: drawerSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.minimap-radar-widget.hidden {
+  display: none !important;
+}
+
+.minimap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-panel-header, #16161C);
+  border-bottom: 1px solid var(--border-color, #23232C);
+}
+
+.minimap-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-primary, #FFFFFF);
+}
+
+.minimap-level-select {
+  padding: 0.15rem 0.35rem !important;
+  font-size: 0.62rem !important;
+  height: 22px !important;
+  background-position: right 0.25rem center !important;
+}
+
+.minimap-canvas-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  background: #0A0A0E;
+}
+
+#minimap-canvas {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+.minimap-footer {
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-panel-header, #16161C);
+  border-top: 1px solid var(--border-color, #23232C);
+}
+
+/* 4D Construction Phasing Simulation Timeline Dock */
+.phasing-timeline-bar {
+  position: fixed;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 820px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-surface, rgba(14, 14, 18, 0.94));
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1.5px solid var(--border-strong, #2A2A35);
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 1rem;
+  animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.phasing-timeline-bar.hidden {
+  display: none !important;
+}
+
+.timeline-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-timeline-play-btn {
+  background: var(--accent-500, #D4FF3F) !important;
+  color: var(--accent-btn-text, #000000) !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-timeline-play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: var(--shadow-glow);
+}
+
+.timeline-slider-track-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.timeline-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timeline-phase-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary, #FFFFFF);
+}
+
+.timeline-week-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--accent-500, #D4FF3F);
+}
+
+.timeline-track-container {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: var(--bg-card, #202028);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.timeline-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-500, #D4FF3F), #38BDF8);
+  border-radius: 3px;
+  pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+.timeline-range-input {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  width: 100%;
+  height: 16px;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.timeline-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.timeline-speed-select {
+  height: 28px !important;
+  padding: 0.2rem 0.5rem !important;
+  font-size: 0.68rem !important;
+}
+
 
 
 

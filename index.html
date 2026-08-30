@@ -2335,6 +2335,69 @@
       </div>
     </div>
 
+    <!-- ─── 2D FLOOR PLAN RADAR MINIMAP & WALK NAVIGATION ─── -->
+    <div id="minimap-container" class="minimap-radar-widget">
+      <div class="minimap-header">
+        <div class="minimap-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span>2D Radar</span>
+        </div>
+        <select id="minimap-level-select" class="custom-select minimap-level-select">
+          <option value="0">L0 (Ground)</option>
+          <option value="1">L1 (First)</option>
+          <option value="2">L2 (Second)</option>
+          <option value="3">Roof</option>
+        </select>
+      </div>
+      <div class="minimap-canvas-wrap">
+        <canvas id="minimap-canvas" width="180" height="180"></canvas>
+      </div>
+      <div class="minimap-footer">
+        <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="width: 100%;">Orbit Mode</button>
+      </div>
+    </div>
+
+    <!-- ─── 4D PHASING SIMULATION DOCK ─── -->
+    <div id="phasing-timeline-dock" class="phasing-timeline-bar hidden">
+      <div class="timeline-controls-left">
+        <button id="btn-timeline-reset" class="btn-icon" title="Reset to Week 1">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+        </button>
+        <button id="btn-timeline-step-back" class="btn-icon" title="Previous Week">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button id="btn-timeline-play" class="btn-icon btn-timeline-play-btn" title="Play / Pause Simulation">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button id="btn-timeline-step-fwd" class="btn-icon" title="Next Week">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <div class="timeline-slider-track-wrap">
+        <div class="timeline-meta-row">
+          <span id="timeline-phase-name" class="timeline-phase-label"><span style="color: #F59E0B; font-weight: 800;">Structure</span>: Substructure & Foundation</span>
+          <span id="timeline-week-label" class="timeline-week-badge">Week 1 / 52 (2%)</span>
+        </div>
+        <div class="timeline-track-container">
+          <div id="timeline-progress-fill" class="timeline-progress-bar" style="width: 2%;"></div>
+          <input type="range" id="timeline-week-slider" min="1" max="52" step="1" value="1" class="timeline-range-input" />
+        </div>
+      </div>
+
+      <div class="timeline-controls-right">
+        <select id="select-timeline-speed" class="custom-select timeline-speed-select">
+          <option value="1">1x Speed</option>
+          <option value="2">2x Speed</option>
+          <option value="5">5x Speed</option>
+          <option value="10">10x Speed</option>
+        </select>
+        <button id="btn-close-phasing-dock" class="btn-icon" title="Close 4D Timeline">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Toast Notification Feed -->
     <div id="bim-toast-container" style="position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100010; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;"></div>
 
