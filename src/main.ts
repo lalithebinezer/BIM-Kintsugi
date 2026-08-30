@@ -7191,23 +7191,23 @@ function applyGlobalTheme(themeKey: string) {
     }
   } catch (e) {}
 
-  // Sync dropdown selector state
-  const selector = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
-  if (selector && selector.value !== preset.name) {
-    selector.value = preset.name;
-  }
+  // Sync all theme dropdown selectors across the entire DOM
+  document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((selector) => {
+    if (selector.value !== preset.name) {
+      selector.value = preset.name;
+    }
+  });
 }
 
-// Wire theme dropdown change event
-const themeSelector = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
-if (themeSelector) {
-  themeSelector.addEventListener("change", (e) => {
+// Wire theme dropdown change event on all theme selectors
+document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((selector) => {
+  selector.addEventListener("change", (e) => {
     const selected = (e.target as HTMLSelectElement).value;
     applyGlobalTheme(selected);
     const preset = THEME_PRESET_MAP[selected];
     showToast(`Theme Switched: ${preset?.label || selected}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`);
   });
-}
+});
 
 // Initialize theme from saved preference or default to obsidian
 const savedTheme = typeof localStorage !== "undefined" ? localStorage.getItem("bim_theme_preset") || "obsidian" : "obsidian";

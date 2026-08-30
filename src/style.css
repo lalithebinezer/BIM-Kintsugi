@@ -559,7 +559,9 @@ select optgroup,
 .custom-select option,
 .custom-highlight-select option,
 .bim-search-select option,
-.timeline-speed-select option {
+.timeline-speed-select option,
+.clash-status-select option,
+.minimap-level-select option {
   background-color: #141418;
   color: #ffffff;
   padding: 0.5rem 0.75rem;
@@ -572,16 +574,64 @@ select option:checked,
 .select-theme-toggle option:checked,
 .custom-select option:checked,
 .custom-highlight-select option:checked,
-.bim-search-select option:checked {
+.bim-search-select option:checked,
+.clash-status-select option:checked,
+.minimap-level-select option:checked {
   background-color: #1c1c24;
   color: var(--accent-500);
   font-weight: 700;
 }
 
-select option:hover,
-select option:focus {
-  background-color: rgba(212, 255, 63, 0.15);
-  color: var(--accent-400);
+/* Theme-specific option styling for light, zen, cyberpunk, and blueprint */
+[data-theme="light"] select option,
+[data-theme="light"] .custom-select option,
+[data-theme="light"] .select-theme-toggle option,
+[data-theme="light"] .clash-status-select option,
+[data-theme="light"] .minimap-level-select option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+}
+
+[data-theme="light"] select option:checked,
+[data-theme="light"] .custom-select option:checked {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+}
+
+[data-theme="zen"] select option,
+[data-theme="zen"] .custom-select option {
+  background-color: #18191E;
+  color: #F3F4F6;
+}
+
+[data-theme="zen"] select option:checked,
+[data-theme="zen"] .custom-select option:checked {
+  background-color: #24252D;
+  color: #F59E0B;
+}
+
+[data-theme="cyberpunk"] select option,
+[data-theme="cyberpunk"] .custom-select option {
+  background-color: #0E1326;
+  color: #F3F4F6;
+}
+
+[data-theme="cyberpunk"] select option:checked,
+[data-theme="cyberpunk"] .custom-select option:checked {
+  background-color: #16203D;
+  color: #00F0FF;
+}
+
+[data-theme="blueprint"] select option,
+[data-theme="blueprint"] .custom-select option {
+  background-color: #112240;
+  color: #F3F4F6;
+}
+
+[data-theme="blueprint"] select option:checked,
+[data-theme="blueprint"] .custom-select option:checked {
+  background-color: #1B3563;
+  color: #64FFDA;
 }
 
 /* @thatopen/ui Web Component bim-dropdown integration */
