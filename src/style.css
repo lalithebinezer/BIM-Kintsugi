@@ -6531,6 +6531,139 @@ body.right-sidebar-collapsed .right-sidebar {
   font-size: 0.68rem !important;
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   4D SCHEDULE TASKS WIDGET CARDS
+   ═════════════════════════════════════════════════════════════════════ */
+
+#schedule-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.25rem 0;
+}
+
+.schedule-task-item {
+  background: var(--bg-card, #16161C);
+  border: 1px solid var(--border-subtle, #23232C);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.schedule-task-item:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+  border-color: var(--border-strong, #3E3E50);
+  transform: translateY(-1px);
+}
+
+.schedule-task-item.active-task {
+  border-color: var(--accent-500, #D4FF3F);
+  box-shadow: 0 0 12px var(--accent-glow, rgba(212, 255, 63, 0.2));
+  background: rgba(212, 255, 63, 0.05);
+}
+
+.schedule-task-item.active-task::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-500, #D4FF3F);
+}
+
+.task-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.task-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--text-primary, #FFFFFF);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.task-status-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.task-badge-planned {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.task-badge-active {
+  background: rgba(245, 158, 11, 0.18);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  animation: pulse-amber 2s infinite ease-in-out;
+}
+
+.task-badge-complete {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.task-date-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.62rem;
+  color: var(--text-muted, #94A3B8);
+  font-family: var(--font-mono, monospace);
+}
+
+.task-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary, #CBD5E1);
+  font-family: var(--font-mono, monospace);
+}
+
+.task-progress-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--bg-input, #0A0A0C);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.task-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-500, #D4FF3F), #38BDF8);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 6px 1px rgba(245, 158, 11, 0.6); }
+}
+
 
 
 
