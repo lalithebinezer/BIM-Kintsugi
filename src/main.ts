@@ -5513,6 +5513,26 @@ async function applyCategoryColors() {
 }
 (window as any).applyCategoryColors = applyCategoryColors;
 
+// --- GLOBAL THEME SYSTEM SYNCHRONIZATION ---
+function initThemeSystem() {
+  const themeSelect = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
+  const savedTheme = localStorage.getItem("bim_theme") || "obsidian";
+  
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  if (themeSelect) {
+    themeSelect.value = savedTheme;
+    themeSelect.addEventListener("change", () => {
+      const selected = themeSelect.value;
+      document.documentElement.setAttribute("data-theme", selected);
+      localStorage.setItem("bim_theme", selected);
+      sceneManager.syncPostProcessingWithTheme(selected);
+      applyCategoryColors().catch(() => {});
+      showToast(`Applied UI Theme: ${themeSelect.options[themeSelect.selectedIndex]?.text || selected}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M12 12 2.5 7.5M12 12l9.5-4.5"/></svg>`);
+    });
+  }
+}
+initThemeSystem();
+
 // --- DYNAMIC CLASSIFICATION TREE BINDINGS ---
 async function updateClassificationUI() {
   const treeContainer = document.getElementById("classification-tree");

@@ -92,6 +92,110 @@
   --theme-transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   ENTERPRISE THEME MATRIX (data-theme synchronized CSS tokens)
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* 1. Zen Minimalist (Warm Charcoal & Gold) */
+[data-theme="zen"],
+[data-theme="cozy"] {
+  --bg-app: #121316;
+  --bg-panel: rgba(24, 25, 30, 0.85);
+  --bg-panel-header: rgba(28, 29, 36, 0.95);
+  --bg-card: #18191E;
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-overlay: rgba(18, 19, 22, 0.9);
+  --bg-surface: #18191E;
+
+  --border-strong: rgba(245, 158, 11, 0.35);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(245, 158, 11, 0.5);
+  --border-accent: #F59E0B;
+
+  --accent-500: #F59E0B;
+  --accent-400: #FBBF24;
+  --accent-btn-text: #000000;
+  --accent-glow: rgba(245, 158, 11, 0.22);
+}
+
+/* 2. Cyberpunk Neon (Electric Midnight & Cyan) */
+[data-theme="cyberpunk"] {
+  --bg-app: #070913;
+  --bg-panel: rgba(12, 16, 32, 0.88);
+  --bg-panel-header: rgba(16, 22, 44, 0.95);
+  --bg-card: #0E1326;
+  --bg-input: rgba(0, 240, 255, 0.06);
+  --bg-hover: rgba(0, 240, 255, 0.12);
+  --bg-overlay: rgba(7, 9, 19, 0.92);
+  --bg-surface: #0E1326;
+
+  --border-strong: rgba(0, 240, 255, 0.4);
+  --border-subtle: rgba(0, 240, 255, 0.08);
+  --border-color: rgba(0, 240, 255, 0.15);
+  --border-hover: #00F0FF;
+  --border-accent: #00F0FF;
+
+  --accent-500: #00F0FF;
+  --accent-400: #38BDF8;
+  --accent-btn-text: #000000;
+  --accent-glow: rgba(0, 240, 255, 0.3);
+}
+
+/* 3. Architect Blueprint (CAD Navy & Drafting Cyan) */
+[data-theme="blueprint"] {
+  --bg-app: #0A192F;
+  --bg-panel: rgba(15, 32, 60, 0.88);
+  --bg-panel-header: rgba(18, 38, 72, 0.95);
+  --bg-card: #112240;
+  --bg-input: rgba(100, 255, 218, 0.06);
+  --bg-hover: rgba(100, 255, 218, 0.12);
+  --bg-overlay: rgba(10, 25, 47, 0.92);
+  --bg-surface: #112240;
+
+  --border-strong: rgba(100, 255, 218, 0.35);
+  --border-subtle: rgba(100, 255, 218, 0.08);
+  --border-color: rgba(100, 255, 218, 0.18);
+  --border-hover: #64FFDA;
+  --border-accent: #64FFDA;
+
+  --accent-500: #64FFDA;
+  --accent-400: #A7F3D0;
+  --accent-btn-text: #0A192F;
+  --accent-glow: rgba(100, 255, 218, 0.25);
+}
+
+/* 4. Light Studio (Clean Architectural Daylight) */
+[data-theme="light"],
+[data-theme="light-studio"] {
+  --bg-app: #F1F5F9;
+  --bg-panel: rgba(255, 255, 255, 0.92);
+  --bg-panel-header: rgba(248, 250, 252, 0.98);
+  --bg-card: #FFFFFF;
+  --bg-input: rgba(0, 0, 0, 0.04);
+  --bg-hover: rgba(0, 0, 0, 0.06);
+  --bg-overlay: rgba(241, 245, 249, 0.92);
+  --bg-surface: #FFFFFF;
+
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-hover: rgba(79, 70, 229, 0.4);
+  --border-accent: #4F46E5;
+
+  --accent-500: #4F46E5;
+  --accent-400: #6366F1;
+  --accent-btn-text: #FFFFFF;
+  --accent-glow: rgba(79, 70, 229, 0.2);
+
+  --text-primary: #0F172A;
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --text-dim: #94A3B8;
+  --text-dark: #FFFFFF;
+}
+
 
 /* ============================================================
    RESET & CORE BASE STYLING
