@@ -18,6 +18,12 @@ export class MinimapModule {
   private isWalkMode: boolean = false;
   private animationFrameId: number | null = null;
 
+  // Cached model bounds & center for dynamic auto-fit
+  private modelBounds: THREE.Box3 = new THREE.Box3();
+  private modelCenter: THREE.Vector3 = new THREE.Vector3();
+  private modelSize: THREE.Vector3 = new THREE.Vector3();
+  private hasModel: boolean = false;
+
   private config: MinimapConfig = {
     size: 180,
     zoom: 8,
@@ -70,12 +76,11 @@ export class MinimapModule {
 
     try {
       const camera = this.engine.world?.camera;
-      if (camera) {
+      if (camera && camera.controls) {
         if (this.isWalkMode) {
-          // Switch to eye level height and First-Person mode
-          camera.controls?.setLookAt(
+          camera.controls.setLookAt(
             camera.three.position.x,
-            1.75, // Eye level (1.75m)
+            1.75,
             camera.three.position.z,
             camera.three.position.x,
             1.75,
@@ -102,8 +107,8 @@ export class MinimapModule {
 
       try {
         const camera = this.engine.world?.camera;
-        if (camera) {
-          camera.controls?.setLookAt(
+        if (camera && camera.controls) {
+          camera.controls.setLookAt(
             camera.three.position.x,
             targetElevation + (this.isWalkMode ? 1.75 : 8.0),
             camera.three.position.z,
@@ -118,19 +123,65 @@ export class MinimapModule {
     }
   }
 
+  /**
+   * Recalculates aggregate model bounding box across all loaded IFC models and scene meshes
+   */
+  public updateModelBounds() {
+    this.modelBounds.makeEmpty();
+    this.hasModel = false;
+
+    // 1. Scan ThatOpen Fragments Manager
+    if (this.engine.fragments && this.engine.fragments.list) {
+      for (const [, model] of this.engine.fragments.list) {
+        if (model) {
+          const modelObj = (model.object || model) as THREE.Object3D;
+          if (modelObj && typeof modelObj.traverse === "function") {
+            this.modelBounds.expandByObject(modelObj);
+            this.hasModel = true;
+          }
+        }
+      }
+    }
+
+    // 2. Scan Three.js Scene objects for any additional BIM meshes
+    const scene = this.engine.world?.scene?.three;
+    if (scene) {
+      scene.traverse((obj) => {
+        if (
+          obj instanceof THREE.Mesh &&
+          obj.name !== "BIM_GroundContactShadow" &&
+          !obj.name.includes("Measurement") &&
+          !obj.name.includes("Selection")
+        ) {
+          this.modelBounds.expandByObject(obj);
+          this.hasModel = true;
+        }
+      });
+    }
+
+    if (this.hasModel && !this.modelBounds.isEmpty()) {
+      this.modelBounds.getCenter(this.modelCenter);
+      this.modelBounds.getSize(this.modelSize);
+
+      // Auto-compute zoom scale so building occupies ~65% of minimap
+      const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 5);
+      this.config.zoom = (this.config.size * 0.65) / maxDim;
+    }
+  }
+
   public teleportToWorldCoordinates(worldX: number, worldZ: number) {
     try {
       const camera = this.engine.world?.camera;
-      if (!camera) return;
+      if (!camera || !camera.controls) return;
 
-      const currentY = camera.three.position.y;
-      camera.controls?.setLookAt(
+      const currentY = camera.three?.position?.y || 1.75;
+      camera.controls.setLookAt(
         worldX,
         currentY,
         worldZ,
         worldX,
-        currentY - 2,
-        worldZ - 5,
+        currentY - 1,
+        worldZ - 4,
         true
       );
     } catch (e) {}
@@ -140,10 +191,12 @@ export class MinimapModule {
     const centerX = this.config.size / 2;
     const centerY = this.config.size / 2;
     const scale = this.config.zoom;
+    const originX = this.hasModel ? this.modelCenter.x : 0;
+    const originZ = this.hasModel ? this.modelCenter.z : 0;
 
     return {
-      x: centerX + worldX * scale,
-      y: centerY + worldZ * scale,
+      x: centerX + (worldX - originX) * scale,
+      y: centerY + (worldZ - originZ) * scale,
     };
   }
 
@@ -151,10 +204,12 @@ export class MinimapModule {
     const centerX = this.config.size / 2;
     const centerY = this.config.size / 2;
     const scale = this.config.zoom;
+    const originX = this.hasModel ? this.modelCenter.x : 0;
+    const originZ = this.hasModel ? this.modelCenter.z : 0;
 
     return {
-      x: (pixelX - centerX) / scale,
-      z: (pixelY - centerY) / scale,
+      x: (pixelX - centerX) / scale + originX,
+      z: (pixelY - centerY) / scale + originZ,
     };
   }
 
@@ -174,38 +229,91 @@ export class MinimapModule {
   public draw() {
     if (!this.ctx || !this.canvas || !this.isVisible) return;
 
+    // Refresh model bounds periodically
+    this.updateModelBounds();
+
     const ctx = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;
+    const center = w / 2;
 
-    // Clear background
-    ctx.fillStyle = "rgba(10, 10, 14, 0.92)";
+    // Clear background (Deep sleek architectural slate)
+    ctx.fillStyle = "rgba(10, 12, 18, 0.95)";
     ctx.fillRect(0, 0, w, h);
 
-    // Draw Radar Grid lines
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    // 1. Draw Architectural Metric Radar Grid
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
     ctx.lineWidth = 1;
 
-    for (let x = 0; x < w; x += 20) {
+    for (let x = 0; x < w; x += 18) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, h);
       ctx.stroke();
     }
-    for (let y = 0; y < h; y += 20) {
+    for (let y = 0; y < h; y += 18) {
       ctx.beginPath();
-      ctx.moveTo(0, y);
+      ctx.moveTo(y, 0);
       ctx.lineTo(w, y);
       ctx.stroke();
     }
 
     // Outer range rings
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.15)";
+    ctx.strokeStyle = "rgba(212, 255, 63, 0.16)";
     ctx.beginPath();
-    ctx.arc(w / 2, h / 2, w * 0.42, 0, Math.PI * 2);
+    ctx.arc(center, center, w * 0.44, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Get current camera position & orientation
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.12)";
+    ctx.beginPath();
+    ctx.arc(center, center, w * 0.26, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Draw Loaded BIM Model Footprints & Slabs
+    if (this.hasModel && !this.modelBounds.isEmpty()) {
+      const minPt = this.worldToMinimap(this.modelBounds.min.x, this.modelBounds.min.z);
+      const maxPt = this.worldToMinimap(this.modelBounds.max.x, this.modelBounds.max.z);
+
+      const footX = Math.min(minPt.x, maxPt.x);
+      const footY = Math.min(minPt.y, maxPt.y);
+      const footW = Math.abs(maxPt.x - minPt.x);
+      const footH = Math.abs(maxPt.y - minPt.y);
+
+      // A. Building Footprint Glow Fill
+      ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
+      ctx.fillRect(footX, footY, footW, footH);
+
+      // B. Structural Outer Perimeter (Cyan with subtle glow)
+      ctx.strokeStyle = "#38BDF8";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(footX, footY, footW, footH);
+
+      // C. Internal Storey Grid Partitioning
+      ctx.strokeStyle = "rgba(212, 255, 63, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(footX + footW * 0.33, footY);
+      ctx.lineTo(footX + footW * 0.33, footY + footH);
+      ctx.moveTo(footX + footW * 0.66, footY);
+      ctx.lineTo(footX + footW * 0.66, footY + footH);
+      ctx.moveTo(footX, footY + footH * 0.5);
+      ctx.lineTo(footX + footW, footY + footH * 0.5);
+      ctx.stroke();
+
+      // D. Corner Structural Pillars
+      ctx.fillStyle = "#D4FF3F";
+      const pillarSize = 3.5;
+      [
+        [footX, footY],
+        [footX + footW - pillarSize, footY],
+        [footX, footY + footH - pillarSize],
+        [footX + footW - pillarSize, footY + footH - pillarSize],
+      ].forEach(([px, py]) => {
+        ctx.fillRect(px, py, pillarSize, pillarSize);
+      });
+    }
+
+    // 3. Get Current Camera Position & Eye Level Heading
     let camPos = new THREE.Vector3(0, 0, 0);
     let camHeading = 0;
 
@@ -218,11 +326,11 @@ export class MinimapModule {
 
     const playerMapPos = this.worldToMinimap(camPos.x, camPos.z);
 
-    // Draw field of view cone
+    // 4. Draw Camera Field of View Frustum Cone
     const fovAngle = Math.PI / 3; // 60 degrees
-    const coneRadius = 35;
+    const coneRadius = 32;
 
-    ctx.fillStyle = "rgba(212, 255, 63, 0.18)";
+    ctx.fillStyle = "rgba(212, 255, 63, 0.25)";
     ctx.beginPath();
     ctx.moveTo(playerMapPos.x, playerMapPos.y);
     ctx.arc(
@@ -235,7 +343,7 @@ export class MinimapModule {
     ctx.closePath();
     ctx.fill();
 
-    // Draw player avatar dot
+    // 5. Draw Player / Camera Avatar Marker
     ctx.fillStyle = "#D4FF3F";
     ctx.shadowColor = "#D4FF3F";
     ctx.shadowBlur = 8;
@@ -244,7 +352,7 @@ export class MinimapModule {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Draw heading direction pointer
+    // 6. Draw Directional View Arrow
     const headingLength = 12;
     const endX = playerMapPos.x + Math.sin(camHeading) * headingLength;
     const endY = playerMapPos.y - Math.cos(camHeading) * headingLength;
