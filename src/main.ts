@@ -7295,8 +7295,8 @@ function initAppleDockMagnifier() {
   if (!dock) return;
 
   const items = Array.from(dock.querySelectorAll<HTMLElement>(".dock-item"));
-  const maxScale = 1.42;
-  const radius = 130; // influence radius in pixels
+  const maxScale = 1.32;
+  const radius = 120; // influence radius in pixels
 
   const onMouseMove = (e: MouseEvent) => {
     const mouseX = e.clientX;
@@ -7314,14 +7314,16 @@ function initAppleDockMagnifier() {
         // Continuous smooth cosine bell curve
         const factor = Math.cos((dist / radius) * (Math.PI / 2));
         const scale = 1 + (maxScale - 1) * Math.pow(factor, 1.4);
-        const translateY = -9 * factor;
+        const translateY = -5 * factor;
         btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
+        item.style.margin = `0 ${(factor * 3.5).toFixed(1)}px`;
         item.style.zIndex = Math.round(100 * factor + 10).toString();
         if (tooltip) {
-          tooltip.style.transform = `translateX(-50%) translateY(${(-translateY * 0.8).toFixed(1)}px)`;
+          tooltip.style.transform = `translateX(-50%) translateY(${(-translateY * 0.7).toFixed(1)}px)`;
         }
       } else {
         btn.style.transform = "scale(1) translateY(0px)";
+        item.style.margin = "0 0";
         item.style.zIndex = "1";
         if (tooltip) {
           tooltip.style.transform = "translateX(-50%) translateY(4px)";
@@ -7337,6 +7339,7 @@ function initAppleDockMagnifier() {
       if (btn) {
         btn.style.transform = "scale(1) translateY(0px)";
       }
+      item.style.margin = "0 0";
       item.style.zIndex = "1";
       if (tooltip) {
         tooltip.style.transform = "translateX(-50%) translateY(4px)";

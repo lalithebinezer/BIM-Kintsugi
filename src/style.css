@@ -2047,7 +2047,7 @@ input[type="color"]::-moz-color-swatch {
 /* Bottom-Center: MagicUI Apple Floating Dock */
 .hud-anchor-bottom-center {
   position: absolute;
-  bottom: 0.85rem;
+  bottom: 1.1rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483640;
@@ -2055,8 +2055,12 @@ input[type="color"]::-moz-color-swatch {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.65rem;
   max-width: 96vw;
+}
+
+#model-stats-hud {
+  margin-bottom: 0.15rem;
 }
 
 .bottom-toolbar.magic-dock {
@@ -2064,15 +2068,15 @@ input[type="color"]::-moz-color-swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  height: 56px;
-  background: var(--bg-surface, rgba(15, 17, 23, 0.82));
+  gap: 0.45rem;
+  height: 64px;
+  background: var(--bg-surface, rgba(14, 16, 22, 0.85));
   backdrop-filter: blur(28px) saturate(210%);
   -webkit-backdrop-filter: blur(28px) saturate(210%);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
   border-radius: 9999px;
-  padding: 0.35rem 0.85rem;
-  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  padding: 0 0.95rem;
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -2090,13 +2094,14 @@ input[type="color"]::-moz-color-swatch {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: margin 0.08s ease;
 }
 
 .dock-icon.btn-tool {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   color: var(--text-main, #FFFFFF);
   padding: 0;
@@ -2104,8 +2109,8 @@ input[type="color"]::-moz-color-swatch {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transform-origin: bottom center;
-  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transform-origin: center center;
+  transition: transform 0.08s cubic-bezier(0.2, 0, 0, 1), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   position: relative;
   will-change: transform;
 }
@@ -2113,32 +2118,32 @@ input[type="color"]::-moz-color-swatch {
 .dock-icon.btn-tool svg {
   width: 18px;
   height: 18px;
-  transition: transform 0.1s ease;
+  transition: transform 0.08s ease;
   flex-shrink: 0;
 }
 
 .dock-icon.btn-tool:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   border-color: var(--accent-500);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 12px var(--accent-glow);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), 0 0 14px var(--accent-glow);
 }
 
 .dock-icon.btn-tool.active {
   background: var(--accent-500);
   border-color: var(--accent-500);
   color: var(--accent-btn-text, #000000);
-  box-shadow: 0 0 16px var(--accent-500);
+  box-shadow: 0 0 18px var(--accent-500);
 }
 
 .dock-icon.btn-tool-accent {
-  background: var(--accent-glow2, rgba(212, 255, 63, 0.12));
-  border-color: var(--border-accent, rgba(212, 255, 63, 0.3));
+  background: rgba(212, 255, 63, 0.08);
+  border-color: rgba(212, 255, 63, 0.28);
   color: var(--accent-400, #D4FF3F);
 }
 
 .dock-separator {
   width: 1px;
-  height: 26px;
+  height: 28px;
   background: var(--border-color, rgba(255, 255, 255, 0.15));
   margin: 0 0.25rem;
   flex-shrink: 0;
@@ -2147,15 +2152,15 @@ input[type="color"]::-moz-color-swatch {
 /* MagicUI Floating Tooltips */
 .dock-tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 14px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   background: var(--bg-surface, rgba(12, 14, 18, 0.95));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.14));
   border-radius: 6px;
-  padding: 0.25rem 0.6rem;
+  padding: 0.28rem 0.65rem;
   font-family: var(--font-body, system-ui);
   font-size: 0.65rem;
   font-weight: 600;
@@ -2163,9 +2168,25 @@ input[type="color"]::-moz-color-swatch {
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
   z-index: 2147483647;
   transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dock-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: var(--border-color, rgba(255, 255, 255, 0.15)) transparent transparent transparent;
+}
+
+.dock-item:hover .dock-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .dock-tooltip::after {
