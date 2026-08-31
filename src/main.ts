@@ -36,6 +36,11 @@ import { PhasingTimelineModule } from "./modules/PhasingTimelineModule";
 import { SoundManager } from "./core/SoundManager";
 import { PresentationSheetModule } from "./modules/PresentationSheetModule";
 import { GraphicsVFXManager } from "./modules/GraphicsVFXManager";
+import { GanttPhasingModule } from "./modules/GanttPhasingModule";
+import { StoreyLevelSlicer } from "./modules/StoreyLevelSlicer";
+import { BcfIssueManager } from "./modules/BcfIssueManager";
+import { CinematicTourManager } from "./modules/CinematicTourManager";
+import { ClashToleranceInspector } from "./modules/ClashToleranceInspector";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -7365,6 +7370,13 @@ initAppleDockMagnifier();
 
 // Initialize Graphics VFX Manager (Ambient Ground Shadows & Tone Mapping)
 GraphicsVFXManager.getInstance();
+
+// Initialize 5 Advanced BIM Power Suites
+GanttPhasingModule.getInstance();
+StoreyLevelSlicer.getInstance();
+BcfIssueManager.getInstance();
+CinematicTourManager.getInstance();
+ClashToleranceInspector.getInstance();
 
 // Initialize theme from saved preference or default to obsidian
 const savedTheme = typeof localStorage !== "undefined" ? localStorage.getItem("bim_theme_preset") || "obsidian" : "obsidian";
