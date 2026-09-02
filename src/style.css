@@ -6502,11 +6502,22 @@ body.right-sidebar-collapsed .right-sidebar {
   border: 1.5px solid var(--border-strong, #2A2A35);
   border-radius: 12px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  z-index: 9990;
+  z-index: 600;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: drawerSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.minimap-radar-widget.collapsed .minimap-canvas-wrap,
+.minimap-radar-widget.collapsed .minimap-footer {
+  display: none !important;
+}
+
+.minimap-radar-widget.collapsed {
+  width: auto;
+  border-radius: 8px;
 }
 
 .minimap-radar-widget.hidden {

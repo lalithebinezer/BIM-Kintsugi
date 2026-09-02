@@ -2506,12 +2506,17 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
           <span>2D Radar</span>
         </div>
-        <select id="minimap-level-select" class="custom-select minimap-level-select">
-          <option value="0">L0 (Ground)</option>
-          <option value="1">L1 (First)</option>
-          <option value="2">L2 (Second)</option>
-          <option value="3">Roof</option>
-        </select>
+        <div style="display: flex; align-items: center; gap: 0.3rem;">
+          <select id="minimap-level-select" class="custom-select minimap-level-select">
+            <option value="0">L0 (Ground)</option>
+            <option value="1">L1 (First)</option>
+            <option value="2">L2 (Second)</option>
+            <option value="3">Roof</option>
+          </select>
+          <button id="btn-minimap-collapse" class="btn-icon-sm" title="Minimize / Expand 2D Radar" style="padding: 0.1rem; color: var(--text-muted); background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
       </div>
       <div class="minimap-canvas-wrap">
         <canvas id="minimap-canvas" width="180" height="180"></canvas>
