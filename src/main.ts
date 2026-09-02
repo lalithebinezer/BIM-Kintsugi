@@ -7030,6 +7030,43 @@ bindEnterpriseTrigger("btn-header-clash", "btn-dock-clash", "clash-panel", () =>
 bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => carbonManager.updateCarbonUI());
 bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
 bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
+bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", () => {
+  const bcfPanel = document.getElementById("bcf-issues-panel");
+  if (bcfPanel && !bcfPanel.classList.contains("hidden")) {
+    const bcfList = document.getElementById("bcf-issues-list");
+    const topics = BcfIssueManager.getInstance().getTopics();
+    const countBadge = document.getElementById("bcf-issue-count-badge");
+    const headerCount = document.getElementById("bcf-header-count");
+    if (countBadge) countBadge.innerText = String(topics.length);
+    if (headerCount) headerCount.innerText = String(topics.length);
+    if (bcfList) {
+      bcfList.innerHTML = topics.map((t) => `
+        <div class="bcf-issue-card" data-guid="${t.guid}">
+          <div class="bcf-card-header">
+            <span class="bcf-card-title">${t.title}</span>
+            <span class="bcf-priority-badge ${t.priority}">${t.priority}</span>
+          </div>
+          <p class="bcf-card-desc">${t.description}</p>
+          <div class="bcf-card-footer">
+            <span style="font-size: 0.6rem; color: rgba(255,255,255,0.5);">👤 ${t.assignedTo || "Unassigned"}</span>
+            <button class="btn-bcf-restore" data-guid="${t.guid}">📍 Restore View</button>
+          </div>
+        </div>
+      `).join("");
+
+      bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const guid = (e.currentTarget as HTMLElement).getAttribute("data-guid");
+          const topic = topics.find((item) => item.guid === guid);
+          if (topic) {
+            BcfIssueManager.getInstance().restoreViewpoint(topic);
+            showToast(`Restored Viewpoint: ${topic.title.substring(0, 28)}...`, "success");
+          }
+        });
+      });
+    }
+  }
+});
 
 // Drawer Close buttons
 document.querySelectorAll(".drawer-close-btn").forEach((btn) => {
