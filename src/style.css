@@ -6492,9 +6492,7 @@ body.right-sidebar-collapsed .right-sidebar {
    ═════════════════════════════════════════════════════════════════════ */
 
 .minimap-radar-widget {
-  position: fixed;
-  bottom: 84px;
-  right: 18px;
+  position: relative;
   width: 200px;
   background: var(--bg-surface, rgba(14, 14, 18, 0.92));
   backdrop-filter: blur(20px) saturate(180%);
@@ -6502,10 +6500,11 @@ body.right-sidebar-collapsed .right-sidebar {
   border: 1.5px solid var(--border-strong, #2A2A35);
   border-radius: 12px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  z-index: 600;
+  z-index: 50;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-bottom: 0.35rem;
   animation: drawerSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
   transition: width 0.2s ease, height 0.2s ease;
 }

@@ -475,8 +475,35 @@
         </div>
       </div>
 
-      <!-- ─── HUD ANCHOR: BOTTOM-RIGHT (Architectural Scale Bar) ─── -->
+      <!-- ─── HUD ANCHOR: BOTTOM-RIGHT (2D Radar & Architectural Scale Bar) ─── -->
       <div class="hud-anchor-bottom-right" id="hud-anchor-bottom-right">
+        <!-- 2D FLOOR PLAN RADAR MINIMAP & WALK NAVIGATION -->
+        <div id="minimap-container" class="minimap-radar-widget">
+          <div class="minimap-header">
+            <div class="minimap-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span>2D Radar</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.3rem;">
+              <select id="minimap-level-select" class="custom-select minimap-level-select">
+                <option value="0">L0 (Ground)</option>
+                <option value="1">L1 (First)</option>
+                <option value="2">L2 (Second)</option>
+                <option value="3">Roof</option>
+              </select>
+              <button id="btn-minimap-collapse" class="btn-icon-sm" title="Minimize / Expand 2D Radar" style="padding: 0.1rem; color: var(--text-muted); background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="minimap-canvas-wrap">
+            <canvas id="minimap-canvas" width="180" height="180"></canvas>
+          </div>
+          <div class="minimap-footer">
+            <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="width: 100%;">Orbit Mode</button>
+          </div>
+        </div>
+
         <!-- Architectural Metric Scale Ruler HUD -->
         <div id="viewport-scale-bar" class="viewport-scale-bar" title="3D Dynamic Architectural Scale & Elevation">
           <div class="scale-bar-header">
@@ -2496,33 +2523,6 @@
           <span>Active Coordination Issues (<span id="bcf-issue-count-badge">2</span>)</span>
         </div>
         <div id="bcf-issues-list" class="bcf-issues-list" style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;"></div>
-      </div>
-    </div>
-
-    <!-- ─── 2D FLOOR PLAN RADAR MINIMAP & WALK NAVIGATION ─── -->
-    <div id="minimap-container" class="minimap-radar-widget">
-      <div class="minimap-header">
-        <div class="minimap-title">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-          <span>2D Radar</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.3rem;">
-          <select id="minimap-level-select" class="custom-select minimap-level-select">
-            <option value="0">L0 (Ground)</option>
-            <option value="1">L1 (First)</option>
-            <option value="2">L2 (Second)</option>
-            <option value="3">Roof</option>
-          </select>
-          <button id="btn-minimap-collapse" class="btn-icon-sm" title="Minimize / Expand 2D Radar" style="padding: 0.1rem; color: var(--text-muted); background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="minimap-canvas-wrap">
-        <canvas id="minimap-canvas" width="180" height="180"></canvas>
-      </div>
-      <div class="minimap-footer">
-        <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="width: 100%;">Orbit Mode</button>
       </div>
     </div>
 
