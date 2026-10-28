@@ -217,7 +217,7 @@ Open `http://localhost:3000/` in your browser. Click **Sample Model** in the top
 ```bash
 npm run build
 ```
-Compiles TypeScript (`tsc`) and bundles optimized, deduplicated vendor chunks (`three-vendor`, `obc-vendor`, `ifc-vendor`, `pdf-vendor`) plus app chunks (`app-enterprise`, `app-modules`) into `./dist`.
+Compiles TypeScript (`tsc`) and bundles the app (`index`) plus vendor chunks (`thatopen-core`, including Three.js and web-ifc, and `thatopen-ui`) into `./dist`. `three` and `web-ifc` are deduplicated.
 
 ---
 
@@ -264,7 +264,7 @@ The latest audit also ran a headless Chrome (Playwright) pass at `1920×1080` an
 - **4D layout** – the selection bar moves above the Gantt timeline in 4D mode, so the two no longer overlap.
 - **Board** – the header button only opens the Presentation Sheet drawer. To download the PNG, run **Export 4K Presentation Board** from the command palette.
 - **Themes** – theme presets now save consistently, and changing theme shows only one toast.
-- **Build** – Vite chunk paths are normalized on Windows, and `three` / `web-ifc` are deduplicated.
+- **Build** – Windows path slashes are normalized in Vite `manualChunks`, and `three` / `web-ifc` are deduplicated.
 - **Cleaner console** – the postproduction lazy-init warning and the deprecated `THREE.Clock` warning are gone.
 
 ---
