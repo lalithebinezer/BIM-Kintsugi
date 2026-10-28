@@ -33,6 +33,10 @@ export class KeyboardController {
         if (activeEl && (activeEl as HTMLElement).blur) {
           (activeEl as HTMLElement).blur();
         }
+        const helpModal = document.getElementById('shortcuts-modal') || document.getElementById('help-modal');
+        if (helpModal && !helpModal.classList.contains('hidden')) {
+          helpModal.classList.add('hidden');
+        }
         // Clear all 3D element selections and close menus/modals
         if (typeof (window as any).clearAllSelections === 'function') {
           (window as any).clearAllSelections();

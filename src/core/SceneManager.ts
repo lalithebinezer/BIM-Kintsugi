@@ -25,11 +25,12 @@ export class SceneManager {
     if (postproduction) {
       const postProcToggle = document.getElementById("settings-toggle-postproc") as HTMLInputElement | null;
       const isEnabled = postProcToggle ? postProcToggle.checked : false;
-      try {
-        postproduction.enabled = isEnabled;
-      } catch (e) {
-        // Base pass initialized lazily by @thatopen/components
-        console.warn("Postproduction base pass lazy initialization:", e);
+      if (isEnabled || (postproduction as any)._basePass) {
+        try {
+          postproduction.enabled = isEnabled;
+        } catch {
+          // Base pass initialized lazily by @thatopen/components-front
+        }
       }
       if (postproduction.composer) {
         this.bluePenPass = new ShaderPass(BluePenShader as any);
@@ -63,12 +64,11 @@ export class SceneManager {
     const postProcToggle = document.getElementById("settings-toggle-postproc") as HTMLInputElement | null;
     const postproduction = this.postproduction;
     const isEnabled = postProcToggle ? postProcToggle.checked : false;
-    if (postproduction) {
+    if (postproduction && (isEnabled || (postproduction as any)._basePass)) {
       try {
         postproduction.enabled = isEnabled;
-      } catch (e) {
-        // Base pass initialized lazily by @thatopen/components
-        console.warn("Postproduction base pass lazy initialization:", e);
+      } catch {
+        // Base pass initialized lazily by @thatopen/components-front
       }
     }
     if (this.bluePenPass) {

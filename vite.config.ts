@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   base: "./",
+  resolve: {
+    dedupe: ["three", "web-ifc"],
+  },
   server: {
     host: "0.0.0.0",
     port: 3000,
@@ -13,13 +16,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          if (id.includes("node_modules/three") || id.includes("node_modules/camera-controls")) {
+          const norm = id.replace(/\\/g, "/");
+          if (norm.includes("node_modules/three") || norm.includes("node_modules/camera-controls")) {
             return "three-vendor";
           }
-          if (id.includes("node_modules/@thatopen/ui") || id.includes("node_modules/@thatopen/ui-obc")) {
+          if (norm.includes("node_modules/web-ifc")) {
+            return "web-ifc-vendor";
+          }
+          if (norm.includes("node_modules/@thatopen/ui") || norm.includes("node_modules/@thatopen/ui-obc")) {
             return "thatopen-ui";
           }
-          if (id.includes("node_modules/@thatopen")) {
+          if (norm.includes("node_modules/@thatopen")) {
             return "thatopen-core";
           }
         },

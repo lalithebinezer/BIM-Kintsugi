@@ -101,7 +101,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       })
       .join("");
 
-    bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
+      bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const guid = (e.currentTarget as HTMLElement).getAttribute("data-guid");
         const topic = topics.find((item) => item.guid === guid);
@@ -112,6 +112,8 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       });
     });
   };
+  (window as any).renderBcfIssues = renderBcfIssues;
+  renderBcfIssues();
 
   const bindEnterpriseTrigger = (headerId: string, dockId: string, panelId: string, onOpen?: () => void) => {
     const handler = () => {
@@ -419,6 +421,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     document.documentElement.setAttribute("data-theme", preset.name);
     try {
       localStorage.setItem("bim_theme_preset", preset.name);
+      localStorage.setItem("bim_theme", preset.name);
     } catch (e) {}
 
     try {
@@ -432,6 +435,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     try {
       if (world?.scene?.three) {
         world.scene.three.background = new THREE.Color(preset.background3D);
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof (window as any).applyCategoryColors === "function") {
+        (window as any).applyCategoryColors().catch?.(() => {});
       }
     } catch (e) {}
 

@@ -19,6 +19,8 @@ export class CommandPalette {
 
   private setupListeners() {
     window.addEventListener("keydown", (e) => {
+      // Defer to primary #command-palette-modal omnibar if present in DOM
+      if (document.getElementById("command-palette-modal")) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         this.toggle();

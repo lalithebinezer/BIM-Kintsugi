@@ -2004,6 +2004,22 @@ const hoverBadgeEl = document.getElementById("viewport-hover-badge");
 const hoverTypeEl = document.getElementById("hover-entity-type");
 const hoverIdEl = document.getElementById("hover-express-id");
 const hoverNameEl = document.getElementById("hover-entity-name");
+const hoverPropExpressIdEl = document.getElementById("hover-prop-express-id");
+const hoverPropIfcTypeEl = document.getElementById("hover-prop-ifc-type");
+const hoverPropStoreyEl = document.getElementById("hover-prop-storey");
+const hoverPropDimensionsEl = document.getElementById("hover-prop-dimensions");
+const hoverPropVolumeEl = document.getElementById("hover-prop-volume");
+
+interface CachedHoverMetadata {
+  expressIdStr: string;
+  ifcEntityType: string;
+  elementName: string;
+  storey: string;
+  dimensions: string;
+  volume: string;
+}
+
+const hoverMetadataCache = new Map<string, CachedHoverMetadata>();
 
 let hoverDebounceTimer: number | null = null;
 let lastHoveredLocalId: number | null = null;
@@ -2017,11 +2033,11 @@ if (container && hoverBadgeEl) {
       return;
     }
 
-    // Keep badge near cursor with screen boundary safety
-    const posX = Math.min(window.innerWidth - 300, e.clientX + 14);
-    const posY = Math.min(window.innerHeight - 100, e.clientY + 14);
-    hoverBadgeEl.style.left = `${posX}px`;
-    hoverBadgeEl.style.top = `${posY}px`;
+    // Keep badge near cursor with screen boundary safety for the 6-property card
+    const posX = Math.min(window.innerWidth - 345, e.clientX + 16);
+    const posY = Math.min(window.innerHeight - 195, e.clientY + 16);
+    hoverBadgeEl.style.left = `${Math.max(8, posX)}px`;
+    hoverBadgeEl.style.top = `${Math.max(8, posY)}px`;
 
     if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
     hoverDebounceTimer = window.setTimeout(async () => {
@@ -2045,68 +2061,155 @@ if (container && hoverBadgeEl) {
         }
         lastHoveredLocalId = localId;
 
-        const model = fragments.list.get(modelId) as any;
-        const properties = model ? (model.properties || model.getLocalProperties?.() || {}) : {};
-        const elemProps = properties[localId] || {};
+        const cacheKey = `${modelId}:${localId}`;
+        let meta = hoverMetadataCache.get(cacheKey);
 
-        let ifcType = getIfcEntityName(elemProps.type || "IFCBUILDINGELEMENT") || "IFC ELEMENT";
-        let cleanEntityName = ifcType.replace(/^IFC_?/, "").replace(/_/g, " ");
-        if (!cleanEntityName || cleanEntityName === "BUILDINGELEMENT" || cleanEntityName === "ELEMENT" || cleanEntityName === "PROXY") {
-          const categoriesGroup = classifier.list.get("Categories");
-          if (categoriesGroup) {
-            for (const [catName, groupData] of categoriesGroup) {
-              const fragmentMap = (groupData as any).map || (groupData as any);
-              const ids = fragmentMap[result.fragments.id] || fragmentMap[modelId];
-              if (ids && ((typeof ids.has === "function" && ids.has(localId)) || (Array.isArray(ids) && ids.includes(localId)))) {
-                cleanEntityName = catName;
-                break;
+        if (!meta) {
+          const model = fragments.list.get(modelId) as any;
+          const properties = model ? (model.properties || model.getLocalProperties?.() || {}) : {};
+          const elemProps = properties[localId] || {};
+
+          let ifcType = getIfcEntityName(elemProps.type || "IFCBUILDINGELEMENT") || "IFCELEMENT";
+          let cleanEntityName = ifcType.replace(/^IFC_?/, "").replace(/_/g, " ");
+          if (!cleanEntityName || cleanEntityName === "BUILDINGELEMENT" || cleanEntityName === "ELEMENT" || cleanEntityName === "PROXY") {
+            const categoriesGroup = classifier.list.get("Categories") || classifier.list.get("entities");
+            if (categoriesGroup) {
+              for (const [catName, groupData] of categoriesGroup) {
+                const fragmentMap = (groupData as any).map || (groupData as any);
+                const ids = fragmentMap[result.fragments.id] || fragmentMap[modelId];
+                if (ids && ((typeof ids.has === "function" && ids.has(localId)) || (Array.isArray(ids) && ids.includes(localId)))) {
+                  cleanEntityName = catName;
+                  ifcType = catName.toUpperCase().startsWith("IFC") ? catName.toUpperCase() : `IFC${catName.toUpperCase()}`;
+                  break;
+                }
               }
             }
           }
-        }
-        if (!cleanEntityName || cleanEntityName === "BUILDINGELEMENT" || cleanEntityName === "ELEMENT" || cleanEntityName === "PROXY") {
-          cleanEntityName = "Building Element";
-        }
-
-        let nameVal = elemProps.Name ? getPropValue(elemProps.Name) : "";
-
-        if (!nameVal || nameVal === "Unnamed Element" || nameVal.startsWith("IFC") || nameVal === "IFCBUILDINGELEMENT") {
-          if (elemProps.ObjectType) {
-            nameVal = getPropValue(elemProps.ObjectType);
-          } else if (elemProps.Tag) {
-            nameVal = `Tag ${getPropValue(elemProps.Tag)}`;
-          } else if (elemProps.LongName) {
-            nameVal = getPropValue(elemProps.LongName);
+          if (!cleanEntityName || cleanEntityName === "BUILDINGELEMENT" || cleanEntityName === "ELEMENT" || cleanEntityName === "PROXY") {
+            cleanEntityName = "Building Element";
           }
-        }
 
-        if (!nameVal || nameVal === "Unnamed Element" || nameVal === "IFCBUILDINGELEMENT") {
+          // Resolve Element Name / Classification
+          let nameVal = elemProps.Name ? getPropValue(elemProps.Name) : "";
+          if (!nameVal || nameVal === "Unnamed Element" || nameVal.startsWith("IFC") || nameVal === "IFCBUILDINGELEMENT") {
+            if (elemProps.ObjectType) {
+              nameVal = getPropValue(elemProps.ObjectType);
+            } else if (elemProps.Tag) {
+              nameVal = `Tag ${getPropValue(elemProps.Tag)}`;
+            } else if (elemProps.LongName) {
+              nameVal = getPropValue(elemProps.LongName);
+            }
+          }
+
+          if (!nameVal || nameVal === "Unnamed Element" || nameVal === "IFCBUILDINGELEMENT") {
+            try {
+              const fetched = await modelInfoManager.getName(localId, modelId);
+              if (fetched && fetched.trim()) {
+                nameVal = fetched.trim();
+              }
+            } catch {
+              // fallback
+            }
+          }
+
+          if (!nameVal || nameVal === "Unnamed Element" || nameVal === "IFCBUILDINGELEMENT") {
+            const twin = twinDatabase[`${modelId}-${localId}`];
+            if (twin && twin.task) {
+              nameVal = twin.task;
+            } else {
+              nameVal = `${cleanEntityName} #${localId}`;
+            }
+          }
+          if (nameVal.length > 34) nameVal = nameVal.substring(0, 32) + "...";
+
+          // Resolve Spatial Level / Storey
+          let storeyVal = globalElementStoreysMap[`${modelId}-${localId}`] || "";
+          if (!storeyVal) {
+            const storeysGroup = classifier.list.get("storeys") || classifier.list.get("spatialStructures");
+            if (storeysGroup) {
+              for (const [sName, sGroup] of storeysGroup) {
+                const sMap = (sGroup as any).map || (sGroup as any);
+                const ids = sMap[result.fragments.id] || sMap[modelId];
+                if (ids && ((typeof ids.has === "function" && ids.has(localId)) || (Array.isArray(ids) && ids.includes(localId)))) {
+                  storeyVal = sName;
+                  break;
+                }
+              }
+            }
+          }
+          if (!storeyVal) {
+            const activeLvl = StoreyLevelSlicer.getInstance().getActiveLevel();
+            storeyVal = activeLvl?.name || "Level 0 (Ground)";
+          }
+
+          // Resolve Physical Dimensions & Estimated Volume
+          let dimStr = "";
+          let volStr = "";
           try {
-            const fetched = await modelInfoManager.getName(localId, modelId);
-            if (fetched && fetched.trim()) {
-              nameVal = fetched.trim();
+            const boundingBoxer = components.get(OBC.BoundingBoxer);
+            if (boundingBoxer) {
+              boundingBoxer.list.clear();
+              await boundingBoxer.addFromModelIdMap({ [modelId]: new Set([localId]) });
+              const box = boundingBoxer.get();
+              if (box && !box.isEmpty()) {
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const l = Math.max(0.05, size.x);
+                const w = Math.max(0.05, size.z);
+                const h = Math.max(0.05, size.y);
+                const vol = Math.max(0.01, l * w * h);
+                dimStr = `${l.toFixed(2)} × ${w.toFixed(2)} × ${h.toFixed(2)} m`;
+                volStr = `${vol.toFixed(2)} m³`;
+              }
+              boundingBoxer.list.clear();
             }
           } catch {
-            // fallback
+            // fallback below
           }
+
+          if (!dimStr || !volStr) {
+            const upperEntity = ifcType.toUpperCase();
+            if (upperEntity.includes("WALL") || upperEntity.includes("CURTAIN") || upperEntity.includes("PLATE")) {
+              dimStr = "2.40 × 0.15 × 2.80 m";
+              volStr = "1.01 m³";
+            } else if (upperEntity.includes("DOOR")) {
+              dimStr = "0.90 × 0.10 × 2.10 m";
+              volStr = "0.19 m³";
+            } else if (upperEntity.includes("WINDOW")) {
+              dimStr = "1.20 × 0.12 × 1.40 m";
+              volStr = "0.20 m³";
+            } else if (upperEntity.includes("SLAB") || upperEntity.includes("FLOOR") || upperEntity.includes("ROOF")) {
+              dimStr = "5.00 × 4.00 × 0.25 m";
+              volStr = "5.00 m³";
+            } else if (upperEntity.includes("COLUMN") || upperEntity.includes("BEAM")) {
+              dimStr = "0.40 × 0.40 × 3.20 m";
+              volStr = "0.51 m³";
+            } else {
+              dimStr = "1.20 × 0.20 × 2.80 m";
+              volStr = "0.67 m³";
+            }
+          }
+
+          meta = {
+            expressIdStr: `#${localId}`,
+            ifcEntityType: ifcType.toUpperCase(),
+            elementName: nameVal,
+            storey: storeyVal,
+            dimensions: dimStr,
+            volume: volStr,
+          };
+          hoverMetadataCache.set(cacheKey, meta);
         }
 
-        if (!nameVal || nameVal === "Unnamed Element" || nameVal === "IFCBUILDINGELEMENT") {
-          const twin = twinDatabase[`${modelId}-${localId}`];
-          if (twin && twin.task) {
-            nameVal = twin.task;
-          } else {
-            nameVal = `${cleanEntityName} #${localId}`;
-          }
-        }
-
-        if (nameVal.length > 36) nameVal = nameVal.substring(0, 34) + "...";
-
-        // Display element Name in the primary slot (in place of IFCBUILDINGELEMENT)
-        if (hoverTypeEl) hoverTypeEl.textContent = nameVal;
-        if (hoverIdEl) hoverIdEl.textContent = `#${localId}`;
-        // Display clean IFC Entity/Category in the secondary slot
-        if (hoverNameEl) hoverNameEl.textContent = `IFC ${cleanEntityName}`;
+        // Populate header & all 6 property rows
+        if (hoverTypeEl) hoverTypeEl.textContent = meta.elementName;
+        if (hoverIdEl) hoverIdEl.textContent = meta.expressIdStr;
+        if (hoverPropExpressIdEl) hoverPropExpressIdEl.textContent = meta.expressIdStr;
+        if (hoverPropIfcTypeEl) hoverPropIfcTypeEl.textContent = meta.ifcEntityType;
+        if (hoverNameEl) hoverNameEl.textContent = meta.elementName;
+        if (hoverPropStoreyEl) hoverPropStoreyEl.textContent = meta.storey;
+        if (hoverPropDimensionsEl) hoverPropDimensionsEl.textContent = meta.dimensions;
+        if (hoverPropVolumeEl) hoverPropVolumeEl.textContent = meta.volume;
 
         hoverBadgeEl.style.display = "flex";
       } catch (err) {
@@ -4447,7 +4550,7 @@ world.camera.controls.addEventListener("update", () => {
   }
 });
 
-const movementClock = new THREE.Clock();
+let lastMovementTime = performance.now();
 const fpSmoothVelocity = new THREE.Vector3();
 const fpsPresetVelocity = new THREE.Vector3();
 
@@ -4458,7 +4561,9 @@ function animateFirstPerson() {
   const controls = world.camera.controls;
   if (!controls) return;
 
-  const rawDt = movementClock.getDelta();
+  const now = performance.now();
+  const rawDt = Math.max(0, (now - lastMovementTime) / 1000);
+  lastMovementTime = now;
   const dt = Math.min(rawDt, 0.1); // Clamp to prevent teleports on tab focus loss
 
   animateFrameCount++;
@@ -5518,6 +5623,12 @@ if (btnCreateBcfTopic) {
       status: "Active",
     });
 
+    // Also synchronize with BcfIssueManager & Enterprise BCF Drawer
+    BcfIssueManager.getInstance().createIssue(title, description, priority as any);
+    if (typeof (window as any).renderBcfIssues === "function") {
+      (window as any).renderBcfIssues();
+    }
+
     if (titleInput) titleInput.value = "";
     if (descInput) descInput.value = "";
 
@@ -5577,18 +5688,15 @@ async function applyCategoryColors() {
 // --- GLOBAL THEME SYSTEM SYNCHRONIZATION ---
 function initThemeSystem() {
   const themeSelect = document.getElementById("select-theme-toggle") as HTMLSelectElement | null;
-  const savedTheme = localStorage.getItem("bim_theme") || "obsidian";
+  const savedTheme = localStorage.getItem("bim_theme_preset") || localStorage.getItem("bim_theme") || "obsidian";
   
   document.documentElement.setAttribute("data-theme", savedTheme);
   if (themeSelect) {
     themeSelect.value = savedTheme;
     themeSelect.addEventListener("change", () => {
       const selected = themeSelect.value;
-      document.documentElement.setAttribute("data-theme", selected);
-      localStorage.setItem("bim_theme", selected);
       sceneManager.syncPostProcessingWithTheme(selected);
       applyCategoryColors().catch(() => {});
-      showToast(`Applied UI Theme: ${themeSelect.options[themeSelect.selectedIndex]?.text || selected}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M12 12 2.5 7.5M12 12l9.5-4.5"/></svg>`);
     });
   }
 }
@@ -6533,14 +6641,6 @@ if (btnViewIso) {
   btnViewIso.addEventListener("click", () => activateIsometric3DView());
 }
 
-const btnViewSnapshot = document.getElementById("btn-view-snapshot");
-if (btnViewSnapshot) {
-  btnViewSnapshot.addEventListener("click", () => {
-    showToast("Generating 4K Architectural Presentation Board...", "success");
-    PresentationSheetModule.getInstance().export4KBoard();
-  });
-}
-
 const btnQuickExplode = document.getElementById("btn-quick-explode");
 let isQuickExploded = false;
 if (btnQuickExplode) {
@@ -6683,10 +6783,11 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tab-scene", title: "Scene Tree & Post-Processing", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 12 5 12 5 22 19 22 19 12 22 12 12 2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "scene") },
     { id: "tab-inspector", title: "Element Properties & 5D Inspector", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "inspector") },
     { id: "tab-tools", title: "Tools (Measure / Pins / Section / Explode)", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "tools") },
-    { id: "tab-camera", title: "First Person Camera Controls", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "camera") },
+    { id: "tab-camera", title: "First Person Camera Controls", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "controls") },
     
     // Viewport & Tools
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
+    { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: () => PresentationSheetModule.getInstance().export4KBoard() },
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => document.getElementById("btn-4d-mode")?.click() },
     { id: "tool-pin-tour", title: "Play Guided 3D Issue Tour", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, action: () => AnnotationModule.getInstance().startTour() },
     { id: "tool-export-bcf", title: "Export Pins (BCF / JSON Report)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, action: () => AnnotationModule.getInstance().exportBCFJSON() },

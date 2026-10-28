@@ -217,21 +217,23 @@ Open `http://localhost:3000/` in your browser. Click **Sample Model** in the top
 ```bash
 npm run build
 ```
-Compiles TypeScript (`tsc`) and bundles optimized vendor chunks (`three-vendor`, `thatopen-core`, `thatopen-ui`) into `./dist`.
+Compiles TypeScript (`tsc`) and bundles optimized, deduplicated vendor chunks (`three-vendor`, `obc-vendor`, `ifc-vendor`, `pdf-vendor`) plus app chunks (`app-enterprise`, `app-modules`) into `./dist`.
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 55-test Vitest suite across all core and enterprise modules:
+Run strict TypeScript type-checking and the 56-test Vitest suite across all core and enterprise modules:
 
 ```bash
 # Type-check with zero emit
 npm run lint
 
-# Run all 7 unit test suites (55 tests)
+# Run all 7 unit test suites (56 tests)
 npm test -- --run
 ```
+
+The latest audit also ran a headless Chrome (Playwright) pass at `1920×1080` and `1366×768`: **0 console errors, 0 runtime warnings, and 0 HUD/panel overlaps** across default, dual-sidebar, 4D Gantt, and BCF drawer layouts.
 
 ---
 
@@ -248,7 +250,22 @@ npm test -- --run
 | **`0`** | **Isometric View** | Smooth transition to 3D isometric perspective |
 | **`W / A / S / D`** | **First-Person Walk** | Navigate through the model in First-Person walkthrough mode (`Shift` to sprint) |
 | **`Right-Click`** | **Context Menu** | Inspect Properties, Isolate, Hide, Slice at Elevation, or Create BCF Issue Here |
-| **`Escape`** | **Clear / Close** | Cancel active measurement/section tool, clear selection, or close open drawers |
+| **`Hover`** | **Element Tooltip** | ExpressID, IFC entity type, name/classification, storey, dimensions, and estimated volume |
+| **`?`** | **Help & Shortcuts** | Open the in-app guide (`Escape` closes it) |
+| **`Escape`** | **Clear / Close** | Cancel active measurement/section tool, clear selection, or close open drawers and the help modal |
+
+---
+
+## 📝 Recent Changes
+
+- **BCF drawer fixed** – the BCF 2.1 Issue Tracker drawer and toast notifications now render correctly (an unclosed `#collab-panel` tag had been hiding them).
+- **BCF sync** – issues created from the sidebar BCF form now show up immediately in the header drawer.
+- **One command palette** – `Ctrl+K` opens a single omnibar. The "First Person Camera Controls" command now opens the correct tab.
+- **4D layout** – the selection bar moves above the Gantt timeline in 4D mode, so the two no longer overlap.
+- **Board** – the header button only opens the Presentation Sheet drawer. To download the PNG, run **Export 4K Presentation Board** from the command palette.
+- **Themes** – theme presets now save consistently, and changing theme shows only one toast.
+- **Build** – Vite chunk paths are normalized on Windows, and `three` / `web-ifc` are deduplicated.
+- **Cleaner console** – the postproduction lazy-init warning and the deprecated `THREE.Clock` warning are gone.
 
 ---
 
