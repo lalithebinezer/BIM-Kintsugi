@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as OBC from "@thatopen/components";
 import { BimEngine } from "../core/BimEngine";
 import { SoundManager } from "../core/SoundManager";
 
@@ -29,6 +30,9 @@ export class BcfIssueManager {
   private static instance: BcfIssueManager | null = null;
   private engine: BimEngine;
   private topics: BcfTopic[] = [];
+  public nativeBcfTopics?: OBC.BCFTopics;
+  public nativeViewpoints?: OBC.Viewpoints;
+  private bcfMarkerIds: string[] = [];
 
   private constructor() {
     this.engine = BimEngine.getInstance();
@@ -67,6 +71,25 @@ export class BcfIssueManager {
         },
       },
     ];
+
+    this.initNativeBcfEngine();
+  }
+
+  private initNativeBcfEngine() {
+    try {
+      this.nativeBcfTopics = this.engine.bcfTopics || this.engine.components?.get(OBC.BCFTopics);
+      this.nativeViewpoints = this.engine.components?.get(OBC.Viewpoints);
+      if (this.nativeBcfTopics && !this.nativeBcfTopics.isSetup) {
+        this.nativeBcfTopics.setup({
+          author: "coordinator@bim-kintsugi.io",
+          version: "3",
+          strict: false,
+        });
+      }
+      if (this.nativeViewpoints && this.engine.world) {
+        this.nativeViewpoints.world = this.engine.world;
+      }
+    } catch (e) {}
   }
 
   public static getInstance(): BcfIssueManager {
@@ -86,9 +109,38 @@ export class BcfIssueManager {
     const camera = this.engine.world?.camera?.three;
     const camPos = camera?.position || new THREE.Vector3(0, 5, 10);
     const target = new THREE.Vector3(0, 0, 0);
+    try {
+      if (this.engine.world?.camera?.controls && typeof (this.engine.world.camera.controls as any).getTarget === "function") {
+        (this.engine.world.camera.controls as any).getTarget(target);
+      }
+    } catch (e) {}
+
+    let guid = `bcf-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // Sync with ThatOpen native OBC.BCFTopics & OBC.Viewpoints
+    try {
+      if (this.nativeBcfTopics) {
+        const obcTopic = this.nativeBcfTopics.create({
+          title,
+          description,
+          type: "Coordination",
+          status: "Open",
+          priority,
+          assignedTo,
+        });
+        if (obcTopic?.guid) {
+          guid = obcTopic.guid;
+        }
+        if (this.nativeViewpoints && this.engine.world) {
+          const vp = this.nativeViewpoints.create();
+          vp.world = this.engine.world;
+          obcTopic.viewpoints.add(vp.guid);
+        }
+      }
+    } catch (e) {}
 
     const newTopic: BcfTopic = {
-      guid: `bcf-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      guid,
       topicType: "Coordination",
       topicStatus: "Open",
       priority,
@@ -105,7 +157,79 @@ export class BcfIssueManager {
     };
 
     this.topics.unshift(newTopic);
+    this.registerTopicMarker(newTopic);
     return newTopic;
+  }
+
+  public createIssueFromClash(clash: {
+    id: string;
+    disciplineA: string;
+    disciplineB: string;
+    severity: string;
+    overlapDistance: number;
+    intersectionPoint: [number, number, number];
+    elementA: { modelId: string; expressId: number; name: string };
+    elementB: { modelId: string; expressId: number; name: string };
+  }): BcfTopic {
+    const priority: BcfPriority =
+      clash.severity === "critical"
+        ? "Critical"
+        : clash.severity === "major"
+        ? "Major"
+        : "Normal";
+    const title = `[CLASH] ${clash.elementA.name} × ${clash.elementB.name}`;
+    const description = `${clash.disciplineA} vs ${clash.disciplineB} collision (${(clash.overlapDistance * 1000).toFixed(0)}mm overlap) between #${clash.elementA.expressId} and #${clash.elementB.expressId}.`;
+
+    const p = clash.intersectionPoint;
+    const topic = this.createIssue(title, description, priority, `${clash.disciplineA} Lead`);
+    topic.topicType = "Clash";
+    topic.viewpoint = {
+      cameraPosition: { x: p[0] + 4.5, y: p[1] + 3.5, z: p[2] + 4.5 },
+      cameraTarget: { x: p[0], y: p[1], z: p[2] },
+      selectedElementGuids: [
+        `${clash.elementA.modelId}:${clash.elementA.expressId}`,
+        `${clash.elementB.modelId}:${clash.elementB.expressId}`,
+      ],
+    };
+    this.registerTopicMarker(topic);
+    return topic;
+  }
+
+  public registerTopicMarker(topic: BcfTopic) {
+    try {
+      if (this.engine.marker && this.engine.world && typeof document !== "undefined") {
+        const badge = document.createElement("div");
+        badge.className = "bim-bcf-3d-marker";
+        badge.style.cssText = `
+          background: rgba(59, 130, 246, 0.92);
+          color: #fff;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.45);
+          cursor: pointer;
+          pointer-events: auto;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+          white-space: nowrap;
+        `;
+        badge.textContent = `📌 ${topic.title.slice(0, 18)}`;
+        badge.title = `${topic.title} (${topic.priority})`;
+        badge.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.restoreViewpoint(topic);
+        });
+        const pt = topic.viewpoint.cameraTarget;
+        const id = this.engine.marker.create(
+          this.engine.world,
+          badge,
+          new THREE.Vector3(pt.x, pt.y, pt.z)
+        );
+        if (id) {
+          this.bcfMarkerIds.push(id);
+        }
+      }
+    } catch (e) {}
   }
 
   public restoreViewpoint(topic: BcfTopic) {
@@ -125,6 +249,24 @@ export class BcfIssueManager {
       );
       SoundManager.getInstance().playSnap();
     } catch (e) {}
+  }
+
+  public async exportNativeBcfZip(): Promise<boolean> {
+    try {
+      if (this.nativeBcfTopics && typeof this.nativeBcfTopics.export === "function") {
+        const blob = await this.nativeBcfTopics.export();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `BIM_Kintsugi_Topics_${Date.now()}.bcfzip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return true;
+      }
+    } catch (e) {}
+    return false;
   }
 
   public exportBcfJson() {

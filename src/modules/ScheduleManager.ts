@@ -209,6 +209,42 @@ export class ScheduleManager {
     return result;
   }
 
+  /**
+   * Partitions scheduled elements into completed, inProgress, and planned (future) ModelIdMaps at a given date.
+   */
+  getPhasingStateAtDate(date: Date): {
+    completed: Record<string, Set<number>>;
+    inProgress: Record<string, Set<number>>;
+    planned: Record<string, Set<number>>;
+  } {
+    const completed: Record<string, Set<number>> = {};
+    const inProgress: Record<string, Set<number>> = {};
+    const planned: Record<string, Set<number>> = {};
+    const dateMs = date.getTime();
+
+    const addIds = (bucket: Record<string, Set<number>>, modelId: string, ids: Set<number>) => {
+      if (!modelId) return;
+      if (!bucket[modelId]) bucket[modelId] = new Set<number>();
+      for (const id of ids) {
+        bucket[modelId].add(id);
+      }
+    };
+
+    for (const [, task] of this.tasks) {
+      const startMs = new Date(task.startDate).getTime();
+      const endMs = new Date(task.endDate).getTime();
+      if (dateMs > endMs) {
+        addIds(completed, task.modelId, task.elementIds);
+      } else if (dateMs >= startMs && dateMs <= endMs) {
+        addIds(inProgress, task.modelId, task.elementIds);
+      } else {
+        addIds(planned, task.modelId, task.elementIds);
+      }
+    }
+
+    return { completed, inProgress, planned };
+  }
+
   public static statusColors: Record<TaskStatus, string> = {
     'Planned': '#6B7280',
     'In Progress': '#F59E0B',

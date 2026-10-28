@@ -5,6 +5,9 @@
  * sets and custom property sets) and generates a downloadable CSV file.
  */
 
+import * as THREE from 'three';
+import { BimEngine } from '../core/BimEngine';
+
 export interface BOQLineItem {
   expressId: number;
   modelId: string;
@@ -257,4 +260,87 @@ export function exportBOQAsCSV(summary: BOQSummary, filename?: string): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Default unit cost benchmarks ($/unit) by IFC category when no manual cost is set.
+ */
+export const DEFAULT_CATEGORY_UNIT_COSTS: Record<string, number> = {
+  IFCWALL: 185,
+  IFCWALLSTANDARDCASE: 185,
+  IFCSLAB: 240,
+  IFCCOLUMN: 420,
+  IFCBEAM: 390,
+  IFCFOOTING: 310,
+  IFCDOOR: 650,
+  IFCWINDOW: 480,
+  IFCROOF: 215,
+  IFCSTAIR: 1200,
+  IFCDUCTSEGMENT: 145,
+  IFCPIPESEGMENT: 95,
+};
+
+/**
+ * Resolves a fallback unit cost for an IFC category when manual unitCost is 0.
+ */
+export function resolveCategoryUnitCost(category: string, manualUnitCost: number = 0): number {
+  if (manualUnitCost > 0) return manualUnitCost;
+  const upper = category.toUpperCase();
+  for (const [key, cost] of Object.entries(DEFAULT_CATEGORY_UNIT_COSTS)) {
+    if (upper.includes(key)) return cost;
+  }
+  return 125;
+}
+
+/**
+ * Highlights all 3D elements belonging to a specific BOQ category using ThatOpen OBF.Highlighter.
+ */
+export function highlightBoqCategory(category: string, summary: BOQSummary): Record<string, Set<number>> {
+  const modelIdMap: Record<string, Set<number>> = {};
+  const targetUpper = category.toUpperCase();
+
+  for (const item of summary.items) {
+    if (item.category.toUpperCase() === targetUpper) {
+      if (!modelIdMap[item.modelId]) modelIdMap[item.modelId] = new Set<number>();
+      modelIdMap[item.modelId].add(item.expressId);
+    }
+  }
+
+  try {
+    const engine = BimEngine.getInstance();
+    const highlighter = engine.highlighter;
+    if (highlighter && (engine.fragments as any)?.core && Object.keys(modelIdMap).length > 0) {
+      if (highlighter.styles && !highlighter.styles.has('BOQ_Highlight')) {
+        highlighter.styles.set('BOQ_Highlight', {
+          color: new THREE.Color('#10b981'),
+          opacity: 0.9,
+          transparent: true,
+          renderedFaces: 0 as any,
+        });
+      }
+      highlighter.highlightByID?.('BOQ_Highlight', modelIdMap, true, true)?.catch?.(() => {});
+    }
+  } catch (e) {}
+
+  return modelIdMap;
+}
+
+/**
+ * Isolates a subset of BOQ line items in the 3D viewport using ThatOpen OBC.Hider.
+ */
+export function isolateBoqItems(items: BOQLineItem[]): Record<string, Set<number>> {
+  const modelIdMap: Record<string, Set<number>> = {};
+  for (const item of items) {
+    if (!modelIdMap[item.modelId]) modelIdMap[item.modelId] = new Set<number>();
+    modelIdMap[item.modelId].add(item.expressId);
+  }
+
+  try {
+    const engine = BimEngine.getInstance();
+    if (engine.hider && Object.keys(modelIdMap).length > 0) {
+      engine.hider.isolate?.(modelIdMap)?.catch?.(() => {});
+    }
+  } catch (e) {}
+
+  return modelIdMap;
 }

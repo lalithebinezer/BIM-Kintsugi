@@ -26,21 +26,17 @@ import * as BUI from "@thatopen/ui";
 import CameraControls from "camera-controls";
 import { PropertyEditor, initPropertyEditorUI } from "./ui/PropertyEditor";
 import "./ui/BimViewCube";
-import { MeasurementSuite } from "./modules/MeasurementSuite";
-import { ClashDetector } from "./modules/ClashDetector";
-import { CarbonLcaManager } from "./modules/CarbonLcaManager";
-import { BimAiCopilot } from "./modules/BimAiCopilot";
-import { CollaborationManager } from "./modules/CollaborationManager";
-import { MinimapModule } from "./modules/MinimapModule";
-import { PhasingTimelineModule } from "./modules/PhasingTimelineModule";
-import { SoundManager } from "./core/SoundManager";
 import { PresentationSheetModule } from "./modules/PresentationSheetModule";
-import { GraphicsVFXManager } from "./modules/GraphicsVFXManager";
+import { showToast } from "./ui/ToastManager";
+import { initEnterpriseSuitesController } from "./ui/EnterpriseSuitesController";
 import { GanttPhasingModule } from "./modules/GanttPhasingModule";
 import { StoreyLevelSlicer } from "./modules/StoreyLevelSlicer";
+import { GraphicsVFXManager } from "./modules/GraphicsVFXManager";
+import { ClashDetector } from "./modules/ClashDetector";
+import { CarbonLcaManager } from "./modules/CarbonLcaManager";
 import { BcfIssueManager } from "./modules/BcfIssueManager";
-import { CinematicTourManager } from "./modules/CinematicTourManager";
-import { ClashToleranceInspector } from "./modules/ClashToleranceInspector";
+import { BimAiCopilot } from "./modules/BimAiCopilot";
+import { MeasurementSuite } from "./modules/MeasurementSuite";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -242,14 +238,20 @@ if (btnRibbonSavedViews && menuSavedViews) {
 }
 
 document.getElementById("btn-add-viewpoint")?.addEventListener("click", () => {
-  let name: string | null = null;
-  try {
-    name = prompt("Enter a name for this Custom View (stores camera, clustering, and visual settings):", `Custom View #${customViewManager.getAllViews().length + 1}`);
-  } catch {
-    name = null;
-  }
-  if (name && name.trim()) {
-    customViewManager.saveCurrentView(name.trim());
+  const menu = document.getElementById("menu-saved-views");
+  if (menu) {
+    customViewManager.renderRibbonDropdown();
+    menu.classList.remove("hidden");
+    const saveBar = document.getElementById("inline-save-view-bar");
+    const saveInput = document.getElementById("inline-save-view-name") as HTMLInputElement | null;
+    if (saveBar) saveBar.style.display = "flex";
+    if (saveInput) {
+      saveInput.value = `Custom View #${customViewManager.getAllViews().length + 1}`;
+      saveInput.focus();
+      saveInput.select();
+    }
+  } else {
+    customViewManager.saveCurrentView(`Custom View #${customViewManager.getAllViews().length + 1}`);
   }
 });
 
@@ -384,10 +386,7 @@ const commandPalette = new CommandPalette([
     }
   },
   { label: "Save Current Configuration as Custom View (Bookmark)", action: () => {
-      const name = prompt("Enter a name for this Custom View (stores camera, clustering, and visual settings):", `View #${CustomViewManager.getInstance().getAllViews().length + 1}`);
-      if (name && name.trim()) {
-        CustomViewManager.getInstance().saveCurrentView(name.trim());
-      }
+      document.getElementById("btn-add-viewpoint")?.click();
     }
   },
   { label: "Open Saved Custom Views Ribbon", action: () => {
@@ -414,6 +413,9 @@ world.onCameraChanged.add((camera) => {
 });
 
 // Dynamic Metric Scale Ruler HUD calculation (Architectural ISO Steps & Elevation)
+const lastScaleCamPos = new THREE.Vector3(NaN, NaN, NaN);
+const lastScaleCamTarget = new THREE.Vector3(NaN, NaN, NaN);
+
 function updateMetricScaleBar() {
   const scaleMaxEl = document.getElementById("scale-bar-label");
   const scaleMidEl = document.getElementById("scale-bar-mid-label");
@@ -424,6 +426,15 @@ function updateMetricScaleBar() {
   try {
     const target = new THREE.Vector3();
     world.camera.controls.getTarget(target);
+    if (
+      cam.position.distanceToSquared(lastScaleCamPos) < 0.0004 &&
+      target.distanceToSquared(lastScaleCamTarget) < 0.0004
+    ) {
+      return;
+    }
+    lastScaleCamPos.copy(cam.position);
+    lastScaleCamTarget.copy(target);
+
     const dist = cam.position.distanceTo(target);
     const fov = (cam as THREE.PerspectiveCamera).fov ?? 45;
     const fovRad = (fov * Math.PI) / 180;
@@ -508,9 +519,15 @@ document.getElementById("breadcrumb-project")?.addEventListener("click", () => {
   showToast("Showing Complete Project Model", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg>`);
 });
 
-document.getElementById("breadcrumb-storey")?.addEventListener("click", () => {
+document.getElementById("breadcrumb-storey")?.addEventListener("click", async () => {
   const activeStorey = document.getElementById("breadcrumb-storey")?.innerText || "Level 0";
-  showToast(`Storey Scope: ${activeStorey}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 20h20M5 20V8l7-5 7 5v12"/></svg>`);
+  await SelectionManager.getInstance().isolateStorey(activeStorey);
+  const slicer = StoreyLevelSlicer.getInstance();
+  const lvlIdx = slicer.levels.findIndex((l) => l.name.toLowerCase().includes(activeStorey.toLowerCase()));
+  if (lvlIdx >= 0) {
+    slicer.setStorey(lvlIdx);
+  }
+  showToast(`Isolated Storey Scope: ${activeStorey}`, "info");
 });
 
 // Update single & multi-selection batch cards and floating HUD
@@ -2771,6 +2788,19 @@ async function loadModelData(name: string, buffer: Uint8Array) {
       // Apply category-based theme colors to three.js mesh materials
       await applyCategoryColors();
 
+      // Synchronize OBC.Views 2D Floor Plan cuts & Minimap level selector with loaded IFC storeys
+      try {
+        const syncedLevels = await StoreyLevelSlicer.getInstance().syncIfcStoreyViews();
+        const minimapSelect = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
+        if (minimapSelect && syncedLevels.length > 0) {
+          minimapSelect.innerHTML = syncedLevels
+            .map((lvl, idx) => `<option value="${idx}">${lvl.name} (${lvl.elevation >= 0 ? "+" : ""}${lvl.elevation}m)</option>`)
+            .join("");
+        }
+      } catch (e) {
+        console.warn("StoreyLevelSlicer sync warning:", e);
+      }
+
       // Sync/generate local database twin properties using classifications
       await initializeModelTwinData(model);
 
@@ -2944,7 +2974,7 @@ if (exportFragBtn) {
     // We assume the first model in fragments is the current one
     const models = Array.from(fragments.list.values());
     if (models.length === 0) {
-      alert("No model loaded to export.");
+      showToast("No model loaded to export.", "warning");
       return;
     }
     // Export the primary model
@@ -4807,9 +4837,6 @@ function animateFirstPerson() {
     targetVal.add(displacement);
     controls.moveTo(targetVal.x, targetVal.y, targetVal.z, false);
   }
-
-  // Update real-time HUD overlays
-  AnnotationModule.getInstance().updateOverlayPositions();
 }
 animateFirstPerson();
 
@@ -5813,6 +5840,15 @@ function updateTimelineDateUI() {
     const day = String(currentTimelineDate.getDate()).padStart(2, '0');
     badge.innerText = `${year}-${month}-${day}`;
   }
+
+  // Synchronize Week (1..52), Milestones, EVM Budget, and % Complete in the unified 4D bar
+  if (timelineMinDate && timelineMaxDate) {
+    const totalMs = Math.max(1, timelineMaxDate.getTime() - timelineMinDate.getTime());
+    const elapsedMs = Math.max(0, Math.min(totalMs, currentTimelineDate.getTime() - timelineMinDate.getTime()));
+    const ratio = elapsedMs / totalMs;
+    const week = Math.max(1, Math.min(52, Math.round(1 + ratio * 51)));
+    GanttPhasingModule.getInstance().setWeek(week);
+  }
 }
 
 async function updateTimelineVisualState() {
@@ -6111,7 +6147,7 @@ function startTimelinePlayback() {
     timelinePlayBtn.classList.add("playing");
     timelinePlayBtn.innerHTML = `
       <span class="ctrl-icon">⏸</span>
-      <span>Pause Simulation</span>
+      <span>Pause 4D</span>
     `;
   }
 
@@ -6162,7 +6198,7 @@ function stopTimelinePlayback() {
     btn.classList.remove("playing");
     btn.innerHTML = `
       <span class="ctrl-icon">▶</span>
-      <span>Play Simulation</span>
+      <span>Play 4D</span>
     `;
   }
 }
@@ -6274,6 +6310,24 @@ if (btn4dToggle) {
 
 (window as any).toggle4DMode = (active?: boolean) => {
   apply4dMode(typeof active === 'boolean' ? active : !is4dMode);
+};
+
+(window as any).jumpTimelineToWeek = (week: number) => {
+  if (!timelineMinDate || !timelineMaxDate) {
+    calculateTimelineBounds();
+  }
+  if (!timelineMinDate || !timelineMaxDate) return;
+  const clampedWeek = Math.max(1, Math.min(52, week));
+  const ratio = (clampedWeek - 1) / 51;
+  const totalDays = Math.max(1, Math.ceil((timelineMaxDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const targetDay = Math.round(ratio * totalDays);
+  currentTimelineDate = new Date(timelineMinDate.getTime() + targetDay * 24 * 60 * 60 * 1000);
+  if (timelineSlider) {
+    timelineSlider.value = String(targetDay);
+  }
+  GanttPhasingModule.getInstance().setWeek(clampedWeek);
+  updateTimelineDateUI();
+  updateTimelineVisualState();
 };
 
 // --- 3D VIEW CUBE CONTROLLER ---
@@ -6585,43 +6639,7 @@ updateCumulative5DCost();
 // ============================================================
 // NEO-BRUTALIST TOAST NOTIFICATION QUEUE
 // ============================================================
-export function showToast(message: string, icon: string = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`, durationMs: number = 3200) {
-  const container = document.getElementById("bim-toast-container");
-  if (!container) return;
-
-  const toast = document.createElement("div");
-  toast.style.cssText = `
-    background: var(--bg-panel, #18181b);
-    color: var(--text-primary, #ffffff);
-    border: 2px solid var(--border-strong, #000000);
-    border-radius: 4px;
-    padding: 0.5rem 0.85rem;
-    box-shadow: var(--shadow-brutal, 4px 4px 0px #000000);
-    font-size: 0.72rem;
-    font-weight: 800;
-    font-family: var(--font-body, sans-serif);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    pointer-events: auto;
-    animation: popIn 0.15s ease-out;
-    max-width: 320px;
-  `;
-
-  toast.innerHTML = `
-    <span style="display: inline-flex; align-items: center; flex-shrink: 0;">${icon}</span>
-    <span style="flex: 1; line-height: 1.35;">${message}</span>
-  `;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.transition = "opacity 0.2s ease, transform 0.2s ease";
-    toast.style.opacity = "0";
-    toast.style.transform = "translateY(10px)";
-    setTimeout(() => toast.remove(), 220);
-  }, durationMs);
-}
+export { showToast };
 (window as any).showToast = showToast;
 
 // Wire Tour Button
@@ -6669,6 +6687,14 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tool-pin-tour", title: "Play Guided 3D Issue Tour", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, action: () => AnnotationModule.getInstance().startTour() },
     { id: "tool-export-bcf", title: "Export Pins (BCF / JSON Report)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, action: () => AnnotationModule.getInstance().exportBCFJSON() },
     { id: "tool-xray-toggle", title: "Toggle X-Ray Isolation Mode", category: "Display", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`, action: () => AnnotationModule.getInstance().toggleXRay() },
+    { id: "suite-clash-audit", title: "Run Multi-Discipline Clash Matrix Audit", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`, action: () => { document.getElementById("btn-header-clash")?.click(); ClashDetector.getInstance().runClashAudit(); } },
+    { id: "suite-carbon-heatmap", title: "Toggle 6D Embodied Carbon & LCA Heatmap", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>`, action: () => { document.getElementById("btn-header-carbon")?.click(); CarbonLcaManager.getInstance().toggleHeatmap(); } },
+    { id: "suite-bcf-issues", title: "Open BCF 2.1/3.0 Issue Coordination Drawer", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>`, action: () => document.getElementById("btn-header-bcf")?.click() },
+    { id: "suite-ai-copilot", title: "Open BIM AI Copilot Natural Language Assistant", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>`, action: () => { document.getElementById("btn-header-copilot")?.click(); BimAiCopilot.getInstance().updateCopilotUI(); } },
+    { id: "suite-measure-volume", title: "Start 3D Volume Measurement (OBF.VolumeMeasurement)", category: "Measurement", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`, action: () => { document.getElementById("btn-header-measure")?.click(); MeasurementSuite.getInstance().startMeasurement("volume"); } },
+    { id: "style-pen-shadows", title: "Render Style: Technical Pen + Shadows (PostproductionAspect)", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("pen-shadows"); showToast("Render Style: Technical Pen + Shadows", "info"); } },
+    { id: "style-gloss", title: "Render Style: Glossy Architectural Reflections", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("gloss"); showToast("Render Style: Glossy Architectural", "info"); } },
+    { id: "style-cinematic", title: "Render Style: Color + Pen Edges + Ambient Shadows", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("color-pen-shadows"); showToast("Render Style: Color + Pen + Shadows", "success"); } },
     { id: "tool-help", title: "Open Help & Tutorial Guide (?)", category: "Help", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`, action: () => (window as any).toggleShortcutsModal?.(true) },
 
   ];
@@ -6909,6 +6935,17 @@ if (ctxMenu) {
           ctxElementName
         );
         showToast(`3D Pin placed on ${ctxElementName || "Model"}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`);
+      } else if (action === "create-bcf" && ctxHitPoint) {
+        const bcfMgr = BcfIssueManager.getInstance();
+        const topic = bcfMgr.createIssue(
+          `Field Issue: ${ctxElementName || "3D Viewport Location"}`,
+          `Logged via 3D Context Menu at [${ctxHitPoint.x.toFixed(2)}, ${ctxHitPoint.y.toFixed(2)}, ${ctxHitPoint.z.toFixed(2)}].`,
+          "Major",
+          "BIM Coordinator"
+        );
+        topic.viewpoint.cameraTarget = { x: ctxHitPoint.x, y: ctxHitPoint.y, z: ctxHitPoint.z };
+        bcfMgr.registerTopicMarker(topic);
+        showToast(`Created BCF Issue & 3D Marker on ${ctxElementName || "Viewport"}`, "success");
       } else if (action === "properties" && ctxModelId && ctxExpressId !== undefined) {
         const fragments = components.get(OBC.FragmentsManager);
         const model = fragments.list.get(ctxModelId);
@@ -6992,660 +7029,8 @@ requestAnimationFrame(renderHUD);
 // ═════════════════════════════════════════════════════════════════════
 // ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
 // ═════════════════════════════════════════════════════════════════════
+initEnterpriseSuitesController(world, highlighter);
 
-const measurementSuite = MeasurementSuite.getInstance();
-const clashDetector = ClashDetector.getInstance();
-const carbonManager = CarbonLcaManager.getInstance();
-const bimAiCopilot = BimAiCopilot.getInstance();
-const collabManager = CollaborationManager.getInstance();
-
-function closeAllEnterpriseDrawers() {
-  document.querySelectorAll(".enterprise-drawer").forEach((drawer) => {
-    drawer.classList.add("hidden");
-  });
-}
-
-function toggleEnterpriseDrawer(panelId: string) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-  const isCurrentlyOpen = !panel.classList.contains("hidden");
-  closeAllEnterpriseDrawers();
-  if (!isCurrentlyOpen) {
-    panel.classList.remove("hidden");
-  }
-}
-
-// Header & Dock Buttons
-const bindEnterpriseTrigger = (headerId: string, dockId: string, panelId: string, onOpen?: () => void) => {
-  const handler = () => {
-    toggleEnterpriseDrawer(panelId);
-    if (onOpen) onOpen();
-  };
-  document.getElementById(headerId)?.addEventListener("click", handler);
-  document.getElementById(dockId)?.addEventListener("click", handler);
-};
-
-bindEnterpriseTrigger("btn-header-measure", "btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
-bindEnterpriseTrigger("btn-header-clash", "btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
-bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => carbonManager.updateCarbonUI());
-bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
-bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
-bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", () => {
-  const bcfPanel = document.getElementById("bcf-issues-panel");
-  if (bcfPanel && !bcfPanel.classList.contains("hidden")) {
-    const bcfList = document.getElementById("bcf-issues-list");
-    const topics = BcfIssueManager.getInstance().getTopics();
-    const countBadge = document.getElementById("bcf-issue-count-badge");
-    const headerCount = document.getElementById("bcf-header-count");
-    if (countBadge) countBadge.innerText = String(topics.length);
-    if (headerCount) headerCount.innerText = String(topics.length);
-    if (bcfList) {
-      bcfList.innerHTML = topics.map((t) => `
-        <div class="bcf-issue-card" data-guid="${t.guid}">
-          <div class="bcf-card-header">
-            <span class="bcf-card-title">${t.title}</span>
-            <span class="bcf-priority-badge ${t.priority}">${t.priority}</span>
-          </div>
-          <p class="bcf-card-desc">${t.description}</p>
-          <div class="bcf-card-footer">
-            <span style="font-size: 0.6rem; color: rgba(255,255,255,0.5);">👤 ${t.assignedTo || "Unassigned"}</span>
-            <button class="btn-bcf-restore" data-guid="${t.guid}">📍 Restore View</button>
-          </div>
-        </div>
-      `).join("");
-
-      bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const guid = (e.currentTarget as HTMLElement).getAttribute("data-guid");
-          const topic = topics.find((item) => item.guid === guid);
-          if (topic) {
-            BcfIssueManager.getInstance().restoreViewpoint(topic);
-            showToast(`Restored Viewpoint: ${topic.title.substring(0, 28)}...`, "success");
-          }
-        });
-      });
-    }
-  }
-});
-
-// Drawer Close buttons
-document.querySelectorAll(".drawer-close-btn").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    const target = (e.currentTarget as HTMLElement).dataset.target;
-    if (target) {
-      document.getElementById(target)?.classList.add("hidden");
-    }
-  });
-});
-
-// Measurement Tool Buttons
-document.querySelectorAll(".btn-drawer-tool").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    document.querySelectorAll(".btn-drawer-tool").forEach((b) => b.classList.remove("active"));
-    const targetBtn = e.currentTarget as HTMLElement;
-    targetBtn.classList.add("active");
-    const type = targetBtn.dataset.type as any;
-    measurementSuite.startMeasurement(type || "distance");
-    showToast(`Active Measurement: ${type?.toUpperCase() || "DISTANCE"}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/></svg>`);
-  });
-});
-
-document.getElementById("chk-measure-snap")?.addEventListener("change", (e) => {
-  measurementSuite.setSnapEnabled((e.target as HTMLInputElement).checked);
-});
-
-document.getElementById("btn-clear-all-measurements")?.addEventListener("click", () => {
-  measurementSuite.clearAllMeasurements();
-});
-
-// Clash Detection Actions
-document.getElementById("btn-run-clash-audit")?.addEventListener("click", async () => {
-  showToast("Scanning multi-discipline models for clashes...", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`);
-  const results = await clashDetector.runClashAudit();
-  const crit = results.filter((c) => c.severity === "critical").length;
-  showToast(`Clash Audit Complete: ${results.length} Clashes (${crit} Critical)`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`);
-});
-
-document.getElementById("btn-export-clash-bcf")?.addEventListener("click", () => {
-  const bcf = clashDetector.exportBcfIssues();
-  const blob = new Blob([bcf], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `BIM_Kintsugi_Clashes_${Date.now()}.bcf.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("Exported BCF 3.0 Clash Report", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>`);
-});
-
-// 6D Carbon Heatmap Actions
-document.getElementById("btn-toggle-carbon-heatmap")?.addEventListener("click", () => {
-  const active = carbonManager.toggleHeatmap();
-  showToast(active ? "6D Embodied Carbon Heatmap Active" : "Heatmap Disabled", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>`);
-});
-
-// AI Copilot Actions
-const copilotInput = document.getElementById("copilot-user-input") as HTMLInputElement;
-const copilotSendBtn = document.getElementById("btn-copilot-send");
-
-async function handleCopilotSend() {
-  if (!copilotInput || !copilotInput.value.trim()) return;
-  const q = copilotInput.value.trim();
-  copilotInput.value = "";
-  await bimAiCopilot.executeQuery(q);
-}
-
-copilotSendBtn?.addEventListener("click", handleCopilotSend);
-copilotInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    handleCopilotSend();
-  }
-});
-
-// Collaboration Follow Host
-document.getElementById("btn-follow-host")?.addEventListener("click", () => {
-  const active = collabManager.toggleFollowHost();
-  showToast(active ? "Camera Synced: Following Presenter" : "Independent Camera View", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/></svg>`);
-});
-
-// Collab Ping Location Beacon
-document.getElementById("btn-collab-ping-loc")?.addEventListener("click", () => {
-  const pos = collabManager.pingCurrentLocation();
-  showToast(`Dropped 3D Beacon at [${pos[0].toFixed(1)}, ${pos[1].toFixed(1)}, ${pos[2].toFixed(1)}]`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>`);
-});
-
-// Collab Mic Toggle
-document.getElementById("btn-collab-mic-toggle")?.addEventListener("click", () => {
-  const unmuted = collabManager.toggleMic();
-  showToast(unmuted ? "Microphone Active (Broadcasting Voice)" : "Microphone Muted", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${unmuted ? '#10B981' : '#F43F5E'}" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>`);
-});
-
-// Collab Copy Invite Link
-document.getElementById("btn-collab-copy-invite")?.addEventListener("click", () => {
-  const url = `${window.location.origin}/?room=KINTSUGI-PRO-8924`;
-  navigator.clipboard.writeText(url).then(() => {
-    showToast("Session Invite Link Copied to Clipboard!", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`);
-  }).catch(() => {
-    showToast("Room ID: KINTSUGI-PRO-8924", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/></svg>`);
-  });
-});
-
-// Collab Tabs Switching
-document.querySelectorAll(".collab-tab-btn").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    const targetTab = (e.currentTarget as HTMLElement).getAttribute("data-collab-tab");
-    document.querySelectorAll(".collab-tab-btn").forEach((b) => b.classList.remove("active"));
-    (e.currentTarget as HTMLElement).classList.add("active");
-
-    const peersPane = document.getElementById("collab-tab-peers-content");
-    const chatPane = document.getElementById("collab-tab-chat-content");
-
-    if (targetTab === "chat") {
-      peersPane?.classList.add("hidden");
-      chatPane?.classList.remove("hidden");
-    } else {
-      chatPane?.classList.add("hidden");
-      peersPane?.classList.remove("hidden");
-    }
-  });
-});
-
-// Collab Chat Send Message
-const collabChatInput = document.getElementById("collab-chat-input") as HTMLInputElement | null;
-const collabChatSendBtn = document.getElementById("btn-collab-chat-send");
-
-function handleSendCollabChat() {
-  if (!collabChatInput || !collabChatInput.value.trim()) return;
-  const txt = collabChatInput.value.trim();
-  collabChatInput.value = "";
-  collabManager.sendChatMessage(txt);
-}
-
-collabChatSendBtn?.addEventListener("click", handleSendCollabChat);
-collabChatInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    handleSendCollabChat();
-  }
-});
-
-// ─── 2D RADAR MINIMAP & WALK MODE ───
-const minimap = MinimapModule.getInstance();
-minimap.init("minimap-canvas");
-
-document.getElementById("btn-minimap-walk-toggle")?.addEventListener("click", () => {
-  const isWalk = minimap.toggleWalkMode();
-  showToast(isWalk ? "Walkthrough Mode: WASD Keys Active" : "Orbit Camera Mode", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg>`);
-});
-
-document.getElementById("minimap-level-select")?.addEventListener("change", (e) => {
-  const levelIdx = parseInt((e.target as HTMLSelectElement).value, 10);
-  minimap.setLevel(levelIdx);
-});
-
-// ─── 4D PHASING SIMULATION DOCK ───
-const phasingTimeline = PhasingTimelineModule.getInstance();
-
-const toggle4DTimeline = () => {
-  const dock = document.getElementById("phasing-timeline-dock");
-  if (dock) {
-    const isHidden = dock.classList.contains("hidden");
-    dock.classList.toggle("hidden", !isHidden);
-    if (isHidden) {
-      phasingTimeline.updateUI();
-    } else {
-      phasingTimeline.pause();
-    }
-  }
-};
-
-document.getElementById("btn-4d-mode")?.addEventListener("click", () => {
-  toggle4DTimeline();
-});
-
-document.getElementById("btn-close-phasing-dock")?.addEventListener("click", () => {
-  document.getElementById("phasing-timeline-dock")?.classList.add("hidden");
-  phasingTimeline.pause();
-});
-
-document.getElementById("btn-timeline-play")?.addEventListener("click", () => {
-  phasingTimeline.togglePlayPause();
-});
-
-document.getElementById("btn-timeline-reset")?.addEventListener("click", () => {
-  phasingTimeline.reset();
-  showToast("4D Timeline: Reset to Week 1", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/></svg>`);
-});
-
-document.getElementById("btn-timeline-step-back")?.addEventListener("click", () => {
-  phasingTimeline.stepBackward();
-});
-
-document.getElementById("btn-timeline-step-fwd")?.addEventListener("click", () => {
-  phasingTimeline.stepForward();
-});
-
-document.getElementById("timeline-week-slider")?.addEventListener("input", (e) => {
-  const val = parseInt((e.target as HTMLInputElement).value, 10);
-  phasingTimeline.setWeek(val);
-});
-
-document.getElementById("select-timeline-speed")?.addEventListener("change", (e) => {
-  const speed = parseInt((e.target as HTMLSelectElement).value, 10);
-  phasingTimeline.setSpeed(speed);
-});
-
-// ─── ENTERPRISE THEME SYNCHRONIZATION ENGINE ───
-interface ThemePresetConfig {
-  name: string;
-  label: string;
-  hover3D: string;
-  select3D: string;
-  background3D: number;
-}
-
-const THEME_PRESET_MAP: Record<string, ThemePresetConfig> = {
-  obsidian: { name: "obsidian", label: "Obsidian Dark", hover3D: "#D4FF3F", select3D: "#00D2FF", background3D: 0x0A0A0C },
-  zen: { name: "zen", label: "Zen Minimalist", hover3D: "#F59E0B", select3D: "#3B82F6", background3D: 0x121316 },
-  cyberpunk: { name: "cyberpunk", label: "Cyberpunk Neon", hover3D: "#00F0FF", select3D: "#EC4899", background3D: 0x070913 },
-  blueprint: { name: "blueprint", label: "CAD Blueprint", hover3D: "#64FFDA", select3D: "#38BDF8", background3D: 0x0A192F },
-  light: { name: "light", label: "Light Studio", hover3D: "#4F46E5", select3D: "#0284C7", background3D: 0xF8FAFC },
-};
-
-function applyGlobalTheme(themeKey: string) {
-  const preset = THEME_PRESET_MAP[themeKey] || THEME_PRESET_MAP.obsidian;
-  document.documentElement.setAttribute("data-theme", preset.name);
-  try {
-    localStorage.setItem("bim_theme_preset", preset.name);
-  } catch (e) {}
-
-  // Sync 3D Highlighter Hover & Select Colors in Three.js
-  try {
-    const hoverStyle = highlighter.styles.get("hover");
-    if (hoverStyle) {
-      hoverStyle.color = new THREE.Color(preset.hover3D);
-    }
-    const selectStyle = highlighter.styles.get("select");
-    if (selectStyle) {
-      selectStyle.color = new THREE.Color(preset.select3D);
-    }
-  } catch (e) {}
-
-  // Sync 3D Scene Background Color
-  try {
-    if (world?.scene?.three) {
-      world.scene.three.background = new THREE.Color(preset.background3D);
-    }
-  } catch (e) {}
-
-  // Sync all theme dropdown selectors across the entire DOM
-  document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((selector) => {
-    if (selector.value !== preset.name) {
-      selector.value = preset.name;
-    }
-  });
-}
-
-// Wire theme dropdown change event on all theme selectors
-document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((selector) => {
-  selector.addEventListener("change", (e) => {
-    const selected = (e.target as HTMLSelectElement).value;
-    applyGlobalTheme(selected);
-    const preset = THEME_PRESET_MAP[selected];
-    showToast(`Theme Switched: ${preset?.label || selected}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`);
-  });
-});
-
-// ─── MAGICUI APPLE DOCK SPRING MAGNIFIER ───
-function initAppleDockMagnifier() {
-  const dock = document.querySelector<HTMLElement>(".bottom-toolbar.magic-dock");
-  if (!dock) return;
-
-  const items = Array.from(dock.querySelectorAll<HTMLElement>(".dock-item"));
-  const maxScale = 1.32;
-  const radius = 120; // influence radius in pixels
-
-  const onMouseMove = (e: MouseEvent) => {
-    const mouseX = e.clientX;
-
-    items.forEach((item) => {
-      const btn = item.querySelector<HTMLElement>(".dock-icon");
-      if (!btn) return;
-
-      const rect = btn.getBoundingClientRect();
-      const btnCenterX = rect.left + rect.width / 2;
-      const dist = Math.abs(mouseX - btnCenterX);
-
-      if (dist < radius) {
-        // Continuous smooth cosine bell curve
-        const factor = Math.cos((dist / radius) * (Math.PI / 2));
-        const scale = 1 + (maxScale - 1) * Math.pow(factor, 1.4);
-        const translateY = -5 * factor;
-        btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
-        item.style.margin = `0 ${(factor * 3.5).toFixed(1)}px`;
-        item.style.zIndex = Math.round(100 * factor + 10).toString();
-      } else {
-        btn.style.transform = "scale(1) translateY(0px)";
-        item.style.margin = "0 0";
-        item.style.zIndex = "1";
-      }
-    });
-  };
-
-  const onMouseLeave = () => {
-    items.forEach((item) => {
-      const btn = item.querySelector<HTMLElement>(".dock-icon");
-      if (btn) {
-        btn.style.transform = "scale(1) translateY(0px)";
-      }
-      item.style.margin = "0 0";
-      item.style.zIndex = "1";
-    });
-  };
-
-  // Audio micro-haptics on dock hover
-  let lastHoveredItem: HTMLElement | null = null;
-  items.forEach((item) => {
-    item.addEventListener("mouseenter", () => {
-      if (lastHoveredItem !== item) {
-        lastHoveredItem = item;
-        SoundManager.getInstance().playHover();
-      }
-    }, { passive: true });
-    item.addEventListener("click", () => {
-      SoundManager.getInstance().playClick();
-    }, { passive: true });
-  });
-
-  dock.addEventListener("mousemove", onMouseMove, { passive: true });
-  dock.addEventListener("mouseleave", () => {
-    lastHoveredItem = null;
-    onMouseLeave();
-  }, { passive: true });
-}
-
-initAppleDockMagnifier();
-
-// Initialize Graphics VFX Manager (Ambient Ground Shadows & Tone Mapping)
-GraphicsVFXManager.getInstance();
-
-// ─── INITIALIZE 5 ADVANCED BIM POWER SUITES ───
-const ganttPhasing = GanttPhasingModule.getInstance();
-const storeySlicer = StoreyLevelSlicer.getInstance();
-const bcfIssueManager = BcfIssueManager.getInstance();
-const tourManager = CinematicTourManager.getInstance();
-ClashToleranceInspector.getInstance();
-
-// 1. Wire BCF Issues Drawer UI
-function initBcfIssuesUI() {
-  const bcfPanel = document.getElementById("bcf-issues-panel");
-  const btnHeaderBcf = document.getElementById("btn-header-bcf");
-  const btnDockBcf = document.getElementById("btn-dock-bcf");
-  const bcfList = document.getElementById("bcf-issues-list");
-  const btnExportBcf = document.getElementById("btn-export-bcf-json");
-  const btnCreateBcf = document.getElementById("btn-create-bcf-issue");
-
-  const toggleBcfDrawer = () => {
-    if (!bcfPanel) return;
-    const isHidden = bcfPanel.classList.contains("hidden");
-    // Close other drawers
-    document.querySelectorAll(".enterprise-drawer").forEach((d) => d.classList.add("hidden"));
-    if (isHidden) {
-      bcfPanel.classList.remove("hidden");
-      renderBcfIssues();
-      SoundManager.getInstance().playClick();
-    }
-  };
-
-  btnHeaderBcf?.addEventListener("click", toggleBcfDrawer);
-  btnDockBcf?.addEventListener("click", toggleBcfDrawer);
-
-  const renderBcfIssues = () => {
-    if (!bcfList) return;
-    const topics = bcfIssueManager.getTopics();
-    const countBadge = document.getElementById("bcf-issue-count-badge");
-    const headerCount = document.getElementById("bcf-header-count");
-    if (countBadge) countBadge.innerText = String(topics.length);
-    if (headerCount) headerCount.innerText = String(topics.length);
-
-    bcfList.innerHTML = topics
-      .map(
-        (t) => `
-      <div class="bcf-issue-card" data-guid="${t.guid}">
-        <div class="bcf-card-header">
-          <span class="bcf-card-title">${t.title}</span>
-          <span class="bcf-priority-badge ${t.priority}">${t.priority}</span>
-        </div>
-        <p class="bcf-card-desc">${t.description}</p>
-        <div class="bcf-card-footer">
-          <span style="font-size: 0.6rem; color: rgba(255,255,255,0.5);">👤 ${t.assignedTo || "Unassigned"}</span>
-          <button class="btn-bcf-restore" data-guid="${t.guid}">📍 Restore View</button>
-        </div>
-      </div>
-    `
-      )
-      .join("");
-
-    bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const guid = (e.currentTarget as HTMLElement).getAttribute("data-guid");
-        const topic = topics.find((item) => item.guid === guid);
-        if (topic) {
-          bcfIssueManager.restoreViewpoint(topic);
-          showToast(`Restored Viewpoint: ${topic.title.substring(0, 28)}...`, "success");
-        }
-      });
-    });
-  };
-
-  btnExportBcf?.addEventListener("click", () => {
-    bcfIssueManager.exportBcfJson();
-    showToast("Exported BCF Coordination Package (.json)", "success");
-  });
-
-  btnCreateBcf?.addEventListener("click", () => {
-    const titleInput = document.getElementById("bcf-new-title") as HTMLInputElement | null;
-    const prioSelect = document.getElementById("bcf-new-priority") as HTMLSelectElement | null;
-    const title = titleInput?.value.trim() || "Coordination Issue Markup";
-    const prio = (prioSelect?.value as any) || "Normal";
-
-    bcfIssueManager.createIssue(title, "Recorded in 3D WebGL viewport.", prio);
-    if (titleInput) titleInput.value = "";
-    renderBcfIssues();
-    showToast(`Created BCF Issue: ${title}`, "success");
-  });
-}
-initBcfIssuesUI();
-
-// 2. Wire 4D Gantt Timeline Bar UI
-function initGanttTimelineUI() {
-  const ganttBar = document.getElementById("gantt-phasing-bar");
-  const btnHeaderGantt = document.getElementById("btn-header-gantt");
-  const btnDockGantt = document.getElementById("btn-dock-gantt");
-  const btnCloseGantt = document.getElementById("btn-close-gantt-bar");
-  const btnGanttPlay = document.getElementById("btn-gantt-play");
-  const ganttSlider = document.getElementById("gantt-week-slider") as HTMLInputElement | null;
-
-  const toggleGanttBar = () => {
-    if (!ganttBar) return;
-    const isHidden = ganttBar.classList.contains("hidden");
-    ganttBar.classList.toggle("hidden", !isHidden);
-    SoundManager.getInstance().playClick();
-  };
-
-  btnHeaderGantt?.addEventListener("click", toggleGanttBar);
-  btnDockGantt?.addEventListener("click", toggleGanttBar);
-  btnCloseGantt?.addEventListener("click", () => ganttBar?.classList.add("hidden"));
-
-  btnGanttPlay?.addEventListener("click", () => {
-    ganttPhasing.togglePlay();
-  });
-
-  ganttSlider?.addEventListener("input", (e) => {
-    const week = Number((e.target as HTMLInputElement).value);
-    ganttPhasing.setWeek(week);
-  });
-
-  document.querySelectorAll(".gantt-pill").forEach((pill) => {
-    pill.addEventListener("click", (e) => {
-      const week = Number((e.currentTarget as HTMLElement).getAttribute("data-week"));
-      if (week) {
-        ganttPhasing.setWeek(week);
-        if (ganttSlider) ganttSlider.value = String(week);
-        document.querySelectorAll(".gantt-pill").forEach((p) => p.classList.remove("active"));
-        (e.currentTarget as HTMLElement).classList.add("active");
-        SoundManager.getInstance().playSnap();
-      }
-    });
-  });
-}
-initGanttTimelineUI();
-
-// 3. Wire Cinematic Drone Orbit & Tour UI
-function initCinematicTourUI() {
-  const btnDrone = document.getElementById("btn-drone-orbit");
-  const btnTour = document.getElementById("btn-play-tour");
-
-  btnDrone?.addEventListener("click", () => {
-    const isOrbiting = tourManager.toggleDroneOrbit();
-    btnDrone.classList.toggle("active", isOrbiting);
-    showToast(isOrbiting ? "360° Drone Orbit: ACTIVE" : "Drone Orbit: STOPPED", "success");
-  });
-
-  btnTour?.addEventListener("click", () => {
-    showToast("Starting Architectural Walkthrough Tour...", "success");
-    tourManager.playTour();
-  });
-}
-initCinematicTourUI();
-
-// 4. Wire Storey Slicer UI
-function initStoreySlicerUI() {
-  const btnSliceToolbar = document.getElementById("btn-toggle-storey-slice");
-  const btnSliceMinimap = document.getElementById("btn-minimap-slice-toggle");
-  const levelSelect = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
-
-  const toggleSlice = () => {
-    const active = storeySlicer.toggleSlicing();
-    btnSliceToolbar?.classList.toggle("active", active);
-    btnSliceMinimap?.classList.toggle("active", active);
-    const activeLevel = storeySlicer.getActiveLevel();
-    showToast(active ? `Storey Slice Active: ${activeLevel.name}` : "Storey Slice: Disabled", "success");
-  };
-
-  btnSliceToolbar?.addEventListener("click", toggleSlice);
-  btnSliceMinimap?.addEventListener("click", toggleSlice);
-
-  levelSelect?.addEventListener("change", (e) => {
-    const idx = Number((e.target as HTMLSelectElement).value);
-    storeySlicer.setStorey(idx);
-    const activeLevel = storeySlicer.getActiveLevel();
-    showToast(`Active Storey: ${activeLevel.name}`, "info");
-  });
-
-  const btnMinimapCollapse = document.getElementById("btn-minimap-collapse");
-  const minimapContainer = document.getElementById("minimap-container");
-  btnMinimapCollapse?.addEventListener("click", () => {
-    if (minimapContainer) {
-      const isCollapsed = minimapContainer.classList.toggle("collapsed");
-      btnMinimapCollapse.innerHTML = isCollapsed
-        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>`
-        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`;
-      SoundManager.getInstance().playClick();
-    }
-  });
-}
-initStoreySlicerUI();
-
-// Initialize theme from saved preference or default to obsidian
-const savedTheme = typeof localStorage !== "undefined" ? localStorage.getItem("bim_theme_preset") || "obsidian" : "obsidian";
-applyGlobalTheme(savedTheme);
-
-// ─── GLOBAL POWER SHORTCUTS LISTENER ───
-window.addEventListener("keydown", (e) => {
-  // Ignore typing inside inputs, textareas, and select elements
-  const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-  if (tag === "input" || tag === "textarea" || tag === "select" || (e.target as HTMLElement)?.isContentEditable) {
-    return;
-  }
-
-  const key = e.key.toLowerCase();
-
-  if (e.key === "?" || (e.shiftKey && key === "/")) {
-    e.preventDefault();
-    const helpModal = document.getElementById("help-modal");
-    if (helpModal) {
-      helpModal.classList.remove("hidden");
-      // Switch to shortcuts tab
-      document.querySelectorAll(".help-tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".help-tab-panel").forEach((p) => p.classList.remove("active"));
-      const tabBtn = document.querySelector('[data-help-tab="shortcuts"]');
-      const tabPane = document.getElementById("help-tab-shortcuts");
-      tabBtn?.classList.add("active");
-      tabPane?.classList.add("active");
-      SoundManager.getInstance().playClick();
-    }
-  } else if (key === "m" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    const btnMeasure = document.getElementById("btn-dock-measure");
-    btnMeasure?.click();
-  } else if (key === "b" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    const btnBox = document.getElementById("btn-box-select");
-    btnBox?.click();
-  } else if (key === "i" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    const btnIsolate = document.getElementById("btn-dock-isolate");
-    btnIsolate?.click();
-  } else if (key === "h" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    const btnHide = document.getElementById("btn-dock-hide");
-    btnHide?.click();
-  } else if (key === "f" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    const btnFit = document.getElementById("btn-view-fit");
-    btnFit?.click();
-  }
-});
 
 
 

@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import * as OBF from "@thatopen/components-front";
+import * as FRAGS from "@thatopen/fragments";
 import { BimEngine } from "../core/BimEngine";
 import { SoundManager } from "../core/SoundManager";
 
@@ -11,7 +13,7 @@ export interface MeasurementPoint {
 
 export interface DimensionItem {
   id: string;
-  type: "distance" | "angle" | "area" | "delta";
+  type: "distance" | "angle" | "area" | "delta" | "volume";
   start: MeasurementPoint;
   end?: MeasurementPoint;
   extraPoints?: MeasurementPoint[];
@@ -29,11 +31,17 @@ export class MeasurementSuite {
   private static instance: MeasurementSuite;
   private engine: BimEngine;
   private measurements: DimensionItem[] = [];
-  private activeType: "distance" | "angle" | "area" | "delta" = "distance";
+  private activeType: "distance" | "angle" | "area" | "delta" | "volume" = "distance";
   private isMeasuring: boolean = false;
   private snapEnabled: boolean = true;
   private snapTolerance: number = 0.35; // world units
   private currentPoints: MeasurementPoint[] = [];
+
+  // Native ThatOpen @thatopen/components-front measurers
+  public lengthMeasurer?: OBF.LengthMeasurement;
+  public areaMeasurer?: OBF.AreaMeasurement;
+  public angleMeasurer?: OBF.AngleMeasurement;
+  public volumeMeasurer?: OBF.VolumeMeasurement;
   
   private overlayGroup: THREE.Group;
   private snapMarker: THREE.Mesh;
@@ -79,6 +87,7 @@ export class MeasurementSuite {
     this.previewLine.renderOrder = 9998;
     this.overlayGroup.add(this.previewLine);
 
+    this.initNativeThatOpenMeasurers();
     this.bindPointerEvents();
   }
 
@@ -87,6 +96,151 @@ export class MeasurementSuite {
       MeasurementSuite.instance = new MeasurementSuite();
     }
     return MeasurementSuite.instance;
+  }
+
+  private initNativeThatOpenMeasurers() {
+    try {
+      const components = this.engine.components;
+      const world = this.engine.world;
+      if (!components || !world) return;
+
+      this.lengthMeasurer = components.get(OBF.LengthMeasurement);
+      this.areaMeasurer = components.get(OBF.AreaMeasurement);
+      this.angleMeasurer = components.get(OBF.AngleMeasurement);
+      this.volumeMeasurer = components.get(OBF.VolumeMeasurement);
+
+      const defaultSnaps = [
+        FRAGS.SnappingClass.POINT,
+        FRAGS.SnappingClass.LINE,
+        FRAGS.SnappingClass.FACE,
+      ];
+
+      if (this.lengthMeasurer) {
+        this.lengthMeasurer.world = world;
+        this.lengthMeasurer.color = new THREE.Color(0xd4ff3f);
+        this.lengthMeasurer.units = "m";
+        this.lengthMeasurer.rounding = 3;
+        this.lengthMeasurer.snappings = defaultSnaps;
+        this.lengthMeasurer.enabled = false;
+        this.lengthMeasurer.list?.onItemAdded?.add((line: OBF.Line) => {
+          const dist = line.value || line.distance();
+          const dx = Math.abs(line.end.x - line.start.x);
+          const dy = Math.abs(line.end.y - line.start.y);
+          const dz = Math.abs(line.end.z - line.start.z);
+          this.measurements.push({
+            id: line.id || `dim_obf_${Date.now()}`,
+            type: this.activeType === "delta" ? "delta" : "distance",
+            start: { position: line.start.clone(), snapType: "vertex" },
+            end: { position: line.end.clone(), snapType: "vertex" },
+            value: dist,
+            formattedValue: `${dist.toFixed(3)} m`,
+            deltaX: dx,
+            deltaY: dy,
+            deltaZ: dz,
+            createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+          this.updateMeasurementUI();
+        });
+      }
+
+      if (this.areaMeasurer) {
+        this.areaMeasurer.world = world;
+        this.areaMeasurer.color = new THREE.Color(0xa855f7);
+        this.areaMeasurer.units = "m2";
+        this.areaMeasurer.rounding = 2;
+        this.areaMeasurer.snappings = defaultSnaps;
+        this.areaMeasurer.enabled = false;
+        this.areaMeasurer.list?.onItemAdded?.add((area: OBF.Area) => {
+          const val = area.value || 0;
+          const pts = Array.from(area.points || []);
+          const startPos = pts[0] ? pts[0].clone() : new THREE.Vector3();
+          this.measurements.push({
+            id: area.id || `area_obf_${Date.now()}`,
+            type: "area",
+            start: { position: startPos, snapType: "vertex" },
+            value: val,
+            formattedValue: `${val.toFixed(2)} m²`,
+            createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+          this.updateMeasurementUI();
+        });
+      }
+
+      if (this.angleMeasurer) {
+        this.angleMeasurer.world = world;
+        this.angleMeasurer.color = new THREE.Color(0x38bdf8);
+        this.angleMeasurer.units = "deg";
+        this.angleMeasurer.rounding = 1;
+        this.angleMeasurer.snappings = defaultSnaps;
+        this.angleMeasurer.enabled = false;
+        this.angleMeasurer.list?.onItemAdded?.add((angle: OBF.Angle) => {
+          const deg = angle.value || 0;
+          this.measurements.push({
+            id: angle.id || `angle_obf_${Date.now()}`,
+            type: "angle",
+            start: { position: angle.start.clone(), snapType: "vertex" },
+            end: { position: angle.end.clone(), snapType: "vertex" },
+            extraPoints: [{ position: angle.vertex.clone(), snapType: "vertex" }],
+            value: deg,
+            formattedValue: `${deg.toFixed(1)}°`,
+            createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+          this.updateMeasurementUI();
+        });
+      }
+
+      if (this.volumeMeasurer) {
+        this.volumeMeasurer.world = world;
+        this.volumeMeasurer.color = new THREE.Color(0x10b981);
+        this.volumeMeasurer.units = "m3";
+        this.volumeMeasurer.rounding = 2;
+        this.volumeMeasurer.enabled = false;
+        this.volumeMeasurer.list?.onItemAdded?.add(async (vol: OBF.Volume) => {
+          const v = (await vol.getValue?.()) || 0;
+          const center = (await vol.getCenter?.()) || new THREE.Vector3();
+          this.measurements.push({
+            id: vol.id || `vol_obf_${Date.now()}`,
+            type: "volume",
+            start: { position: center.clone(), snapType: "face" },
+            value: v,
+            formattedValue: `${v.toFixed(2)} m³`,
+            createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+          this.updateMeasurementUI();
+        });
+      }
+    } catch (e) {
+      // Safe fallback in headless unit test environments
+    }
+  }
+
+  private getActiveNativeMeasurer(): OBF.Measurement<any, any> | undefined {
+    if (this.activeType === "distance" || this.activeType === "delta") return this.lengthMeasurer;
+    if (this.activeType === "area") return this.areaMeasurer;
+    if (this.activeType === "angle") return this.angleMeasurer;
+    if (this.activeType === "volume") return this.volumeMeasurer;
+    return undefined;
+  }
+
+  private syncNativeMeasurerState() {
+    try {
+      if (this.lengthMeasurer) this.lengthMeasurer.enabled = false;
+      if (this.areaMeasurer) this.areaMeasurer.enabled = false;
+      if (this.angleMeasurer) this.angleMeasurer.enabled = false;
+      if (this.volumeMeasurer) this.volumeMeasurer.enabled = false;
+
+      if (!this.isMeasuring) return;
+
+      const active = this.getActiveNativeMeasurer();
+      if (active) {
+        active.enabled = true;
+        if (this.activeType === "delta" && this.lengthMeasurer) {
+          this.lengthMeasurer.mode = this.snapEnabled ? "edge" : "free";
+        } else if (this.activeType === "distance" && this.lengthMeasurer) {
+          this.lengthMeasurer.mode = "free";
+        }
+      }
+    } catch (e) {}
   }
 
   private bindPointerEvents() {
@@ -106,15 +260,46 @@ export class MeasurementSuite {
       }
       this.handlePointerClick(e);
     });
+
+    window.addEventListener("dblclick", (e) => {
+      if (!this.isMeasuring) return;
+      const target = e.target as HTMLElement;
+      if (target.closest(".bim-toolbar, .bim-modal, .sidebar-panel, #viewport-selection-bar, #measurement-panel")) {
+        return;
+      }
+      try {
+        const active = this.getActiveNativeMeasurer();
+        if (active && active.enabled) {
+          active.create();
+        }
+      } catch (err) {}
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (!this.isMeasuring) return;
+      try {
+        const active = this.getActiveNativeMeasurer();
+        if (!active || !active.enabled) return;
+        if (e.key === "Enter") {
+          active.endCreation?.();
+        } else if (e.key === "Escape") {
+          active.cancelCreation?.();
+          this.stopMeasurement();
+        } else if (e.key === "Delete" || e.key === "Backspace") {
+          active.delete?.();
+        }
+      } catch (err) {}
+    });
   }
 
-  public startMeasurement(type: "distance" | "angle" | "area" | "delta" = "distance") {
+  public startMeasurement(type: "distance" | "angle" | "area" | "delta" | "volume" = "distance") {
     this.activeType = type;
     this.isMeasuring = true;
     this.currentPoints = [];
     this.snapMarker.visible = false;
     this.previewLine.visible = false;
 
+    this.syncNativeMeasurerState();
     this.updateMeasurementUI();
   }
 
@@ -123,11 +308,20 @@ export class MeasurementSuite {
     this.currentPoints = [];
     this.snapMarker.visible = false;
     this.previewLine.visible = false;
+    this.syncNativeMeasurerState();
     this.updateMeasurementUI();
   }
 
   public setSnapEnabled(enabled: boolean) {
     this.snapEnabled = enabled;
+    try {
+      const snaps = enabled
+        ? [FRAGS.SnappingClass.POINT, FRAGS.SnappingClass.LINE, FRAGS.SnappingClass.FACE]
+        : [];
+      if (this.lengthMeasurer) this.lengthMeasurer.snappings = snaps;
+      if (this.areaMeasurer) this.areaMeasurer.snappings = snaps;
+      if (this.angleMeasurer) this.angleMeasurer.snappings = snaps;
+    } catch (e) {}
   }
 
   public getSnapEnabled(): boolean {
@@ -147,6 +341,12 @@ export class MeasurementSuite {
         item.labelElement.parentElement.removeChild(item.labelElement);
       }
     }
+    try {
+      this.lengthMeasurer?.list?.clear();
+      this.areaMeasurer?.list?.clear();
+      this.angleMeasurer?.list?.clear();
+      this.volumeMeasurer?.list?.clear();
+    } catch (e) {}
     this.measurements = [];
     this.updateMeasurementUI();
   }
@@ -451,15 +651,41 @@ export class MeasurementSuite {
     const container = document.getElementById("container");
     if (!container) return null;
     const rect = container.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    const x = ((e.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
+    const y = -((e.clientY - rect.top) / (rect.height || 1)) * 2 + 1;
 
     const camera = this.engine.world?.camera?.three;
     if (!camera) return new THREE.Vector3(x * 10, 0, -y * 10);
 
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+
+    // Raycast against loaded 3D scene meshes first
+    const scene = this.engine.world?.scene?.three;
+    if (scene) {
+      const candidateMeshes: THREE.Object3D[] = [];
+      scene.traverse((obj) => {
+        if (
+          obj instanceof THREE.Mesh &&
+          obj.visible &&
+          obj !== this.snapMarker &&
+          !this.overlayGroup.children.includes(obj) &&
+          obj.name !== "BIM_GroundContactShadow"
+        ) {
+          candidateMeshes.push(obj);
+        }
+      });
+      if (candidateMeshes.length > 0) {
+        try {
+          const hits = raycaster.intersectObjects(candidateMeshes, false);
+          if (hits.length > 0) {
+            return hits[0].point.clone();
+          }
+        } catch (err) {}
+      }
+    }
+
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const target = new THREE.Vector3();
     raycaster.ray.intersectPlane(plane, target);
     return target;

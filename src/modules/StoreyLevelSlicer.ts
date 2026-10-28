@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import * as OBC from "@thatopen/components";
+import * as OBF from "@thatopen/components-front";
 import { BimEngine } from "../core/BimEngine";
 import { SoundManager } from "../core/SoundManager";
 
@@ -7,6 +9,7 @@ export interface StoreyLevel {
   name: string;
   elevation: number;
   height: number;
+  viewId?: string;
 }
 
 export class StoreyLevelSlicer {
@@ -15,6 +18,9 @@ export class StoreyLevelSlicer {
   private activeLevelIndex: number = 0;
   private isSlicingActive: boolean = false;
   private clipPlane: THREE.Plane | null = null;
+  public views?: OBC.Views;
+  public clipStyler?: OBF.ClipStyler;
+  private activeClipEdges?: OBF.ClipEdges;
 
   public levels: StoreyLevel[] = [
     { id: "L0", name: "Ground Floor (L0)", elevation: 0.0, height: 3.5 },
@@ -26,6 +32,13 @@ export class StoreyLevelSlicer {
   private constructor() {
     this.engine = BimEngine.getInstance();
     this.clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 3.5);
+    try {
+      this.views = this.engine.views || this.engine.components.get(OBC.Views);
+      if (this.views && this.engine.world) {
+        this.views.world = this.engine.world;
+      }
+      this.clipStyler = this.engine.clipStyler || this.engine.components.get(OBF.ClipStyler);
+    } catch (e) {}
   }
 
   public static getInstance(): StoreyLevelSlicer {
@@ -33,6 +46,33 @@ export class StoreyLevelSlicer {
       StoreyLevelSlicer.instance = new StoreyLevelSlicer();
     }
     return StoreyLevelSlicer.instance;
+  }
+
+  /**
+   * Synchronizes storey levels from loaded IFC BuildingStoreys via ThatOpen OBC.Views
+   */
+  public async syncIfcStoreyViews(): Promise<StoreyLevel[]> {
+    try {
+      if (!this.views || !this.engine.fragments || this.engine.fragments.list.size === 0) {
+        return this.levels;
+      }
+      const createdViews = await this.views.createFromIfcStoreys({
+        world: this.engine.world,
+        offset: 1.2,
+      });
+      if (createdViews && createdViews.length > 0) {
+        this.levels = createdViews.map((v: any, idx: number) => ({
+          id: v.id || `L${idx}`,
+          name: v.id || `Storey ${idx + 1}`,
+          elevation: v.plane ? -v.plane.constant : idx * 3.5,
+          height: v.range || 3.5,
+          viewId: v.id,
+        }));
+      }
+    } catch (e) {
+      // Keep default levels if model has no explicit IfcBuildingStorey entities
+    }
+    return this.levels;
   }
 
   public toggleSlicing(enable?: boolean): boolean {
@@ -61,6 +101,12 @@ export class StoreyLevelSlicer {
 
     if (!this.isSlicingActive) {
       renderer.clippingPlanes = [];
+      try {
+        this.views?.close();
+        if (this.activeClipEdges) {
+          this.activeClipEdges.visible = false;
+        }
+      } catch (e) {}
       return;
     }
 
@@ -75,6 +121,24 @@ export class StoreyLevelSlicer {
 
     renderer.clippingPlanes = [this.clipPlane];
     renderer.localClippingEnabled = true;
+
+    // Style the storey slice plane using OBF.ClipStyler if available
+    try {
+      if (this.clipStyler && this.clipPlane) {
+        if (!this.activeClipEdges) {
+          this.activeClipEdges = this.clipStyler.create(this.clipPlane, {
+            world: this.engine.world,
+            link: true,
+            items: {
+              default: { style: "ArchitecturalSection" },
+            },
+          });
+        } else {
+          this.activeClipEdges.visible = true;
+          this.activeClipEdges.update();
+        }
+      }
+    } catch (e) {}
   }
 
   private teleportCameraToStorey() {

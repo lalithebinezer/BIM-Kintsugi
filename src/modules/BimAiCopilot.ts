@@ -1,7 +1,11 @@
+import { BimEngine } from "../core/BimEngine";
 import { SelectionManager } from "./SelectionManager";
 import { ClashDetector } from "./ClashDetector";
 import { CarbonLcaManager } from "./CarbonLcaManager";
 import { MeasurementSuite } from "./MeasurementSuite";
+import { StoreyLevelSlicer } from "./StoreyLevelSlicer";
+import { GraphicsVFXManager } from "./GraphicsVFXManager";
+import { escapeHtml } from "../utils/formatters";
 
 export interface CopilotMessage {
   id: string;
@@ -127,10 +131,63 @@ export class BimAiCopilot {
       followUps.push("Measure surface area", "Clear measurements");
     }
 
-    // Default Fallback Intelligent Query Interpretation
+    // 6. Building Storey / Floor Slicing Queries
+    else if (q.includes("slice") || q.includes("storey") || q.includes("level") || q.includes("floor plan")) {
+      const slicer = StoreyLevelSlicer.getInstance();
+      const levels = slicer.levels;
+      let matchedIndex = 0;
+      const numMatch = q.match(/(\d+)/);
+      if (numMatch) {
+        const levelNum = parseInt(numMatch[1], 10);
+        matchedIndex = Math.min(Math.max(0, levelNum), levels.length - 1);
+      } else if (q.includes("roof")) {
+        matchedIndex = levels.length - 1;
+      }
+      slicer.setStorey(matchedIndex);
+      const activeLvl = levels[matchedIndex];
+      responseText = `Activated horizontal section cut and OBC.Views 2D plan for "${activeLvl?.name || "Level 0"}" at elevation ${activeLvl?.elevation ?? 0}m.`;
+      executed.push(`Slice Storey: ${activeLvl?.name || "Level 0"}`, "Sync OBC.Views Section Cut");
+      followUps.push("Clear floor slice", "Slice Level 1", "Slice Roof Level");
+    }
+
+    // 7. Postproduction Render Style Queries (Pen / Technical Drawing / Gloss / Cinematic)
+    else if (q.includes("pen") || q.includes("sketch") || q.includes("blueprint") || q.includes("technical") || q.includes("gloss") || q.includes("cinematic")) {
+      const vfx = GraphicsVFXManager.getInstance();
+      if (q.includes("pen") || q.includes("sketch") || q.includes("blueprint") || q.includes("technical")) {
+        vfx.setRenderStyle("pen-shadows");
+        responseText = "Switched ThatOpen PostproductionRenderer to Technical Pen + Shadows mode (OBF.PostproductionAspect.PEN_SHADOWS).";
+        executed.push("Render Style: Pen + Shadows");
+      } else if (q.includes("gloss")) {
+        vfx.setRenderStyle("gloss");
+        responseText = "Enabled Postproduction Gloss reflections pass with ambient shadows.";
+        executed.push("Render Style: Glossy Architectural");
+      } else {
+        vfx.setPreset("cinematic");
+        vfx.setRenderStyle("color-pen-shadows");
+        responseText = "Applied Cinematic ACES Filmic preset with Color + Pen Edges + Ambient Shadows.";
+        executed.push("Preset: Cinematic", "Render Style: Color + Pen + Shadows");
+      }
+      followUps.push("Switch to Pen drawing style", "Switch to Cinematic style", "Reset selection");
+    }
+
+    // Default Fallback: Query OBC.ItemsFinder + optional local Ollama LLM
     else {
-      responseText = `I analyzed your request: "${query}". I am ready to perform spatial operations, property filters, or automated quantity takeoff on the active BIM model.`;
-      followUps.push("Select all columns", "Run clash detection", "Calculate embodied carbon");
+      let finderSummary = "";
+      try {
+        const engine = BimEngine.getInstance();
+        if (engine.finder && engine.finder.list.size > 0) {
+          finderSummary = ` (${engine.finder.list.size} saved OBC.ItemsFinder queries available)`;
+        }
+      } catch (e) {}
+
+      const ollamaReply = await this.queryLocalOllama(query);
+      if (ollamaReply) {
+        responseText = ollamaReply;
+        executed.push("Local Ollama LLM Inference");
+      } else {
+        responseText = `I analyzed your request: "${query}"${finderSummary}. I am ready to perform spatial operations, property filters, storey slicing, or automated quantity takeoff on the active BIM model.`;
+      }
+      followUps.push("Select all columns", "Run clash detection", "Slice Level 1", "Switch to Pen drawing style");
     }
 
     const aiMsg: CopilotMessage = {
@@ -148,6 +205,38 @@ export class BimAiCopilot {
     return aiMsg;
   }
 
+  private async queryLocalOllama(prompt: string): Promise<string | null> {
+    if (typeof fetch === "undefined") return null;
+    if (
+      (globalThis as any).process?.env?.VITEST &&
+      (typeof localStorage === "undefined" || localStorage.getItem("bim_enable_ollama") !== "true")
+    ) {
+      return null;
+    }
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 900);
+      const res = await fetch("http://localhost:11434/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "llama3.2:latest",
+          prompt: `You are BIM Kintsugi AI Copilot inside a ThatOpen 3D IFC viewer. Answer concisely in 1-2 sentences: ${prompt}`,
+          stream: false,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data?.response === "string" && data.response.trim().length > 0
+        ? data.response.trim()
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
   public updateCopilotUI() {
     if (typeof document === "undefined") return;
 
@@ -161,17 +250,17 @@ export class BimAiCopilot {
       msgDiv.innerHTML = `
         <div class="msg-header">
           <span class="msg-sender-name">${msg.sender === "ai" ? "BIM AI Copilot" : "You"}</span>
-          <span class="msg-time">${msg.timestamp}</span>
+          <span class="msg-time">${escapeHtml(msg.timestamp)}</span>
         </div>
-        <div class="msg-body">${msg.text}</div>
+        <div class="msg-body">${escapeHtml(msg.text)}</div>
         ${msg.actionsExecuted && msg.actionsExecuted.length > 0 ? `
           <div class="msg-actions">
-            ${msg.actionsExecuted.map((a) => `<span class="action-tag">✓ ${a}</span>`).join("")}
+            ${msg.actionsExecuted.map((a) => `<span class="action-tag">✓ ${escapeHtml(a)}</span>`).join("")}
           </div>
         ` : ""}
         ${msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 ? `
           <div class="msg-chips">
-            ${msg.suggestedFollowUps.map((chip) => `<button class="copilot-prompt-chip" data-prompt="${chip}">${chip}</button>`).join("")}
+            ${msg.suggestedFollowUps.map((chip) => `<button class="copilot-prompt-chip" data-prompt="${escapeHtml(chip)}">${escapeHtml(chip)}</button>`).join("")}
           </div>
         ` : ""}
       `;

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as THREE from "three";
 import { CustomViewManager } from "../CustomViewManager";
 import { ExplosionModule } from "../../modules/ExplosionModule";
+import { escapeHtml } from "../../utils/formatters";
+import { resolveToastIcon } from "../../ui/ToastManager";
 
 describe("CustomViewManager — Autodesk Tandem-Style Saved Views Suite", () => {
   let customViewManager: CustomViewManager;
@@ -82,5 +84,15 @@ describe("CustomViewManager — Autodesk Tandem-Style Saved Views Suite", () => 
     const countAfter = customViewManager.getAllViews().length;
 
     expect(countAfter).toBe(countBefore - 1);
+  });
+
+  it("should escape HTML characters in escapeHtml utility and resolve semantic toast icons", () => {
+    expect(escapeHtml(`<script>alert("xss")</script>`)).toBe(
+      "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+    );
+    expect(resolveToastIcon("success")).toContain("<svg");
+    expect(resolveToastIcon("info")).toContain("<svg");
+    expect(resolveToastIcon("warning")).toContain("<svg");
+    expect(resolveToastIcon("error")).toContain("<svg");
   });
 });

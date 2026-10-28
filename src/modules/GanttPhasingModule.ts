@@ -162,5 +162,17 @@ export class GanttPhasingModule {
     if (progBadge) {
       progBadge.innerText = `${progressPercent}% Complete`;
     }
+
+    const pills = Array.from(document.querySelectorAll<HTMLElement>(".gantt-pill"));
+    if (pills.length > 0) {
+      let activePill = pills[0];
+      for (const pill of pills) {
+        const w = Number(pill.getAttribute("data-week") || "1");
+        if (this.currentWeek >= w) {
+          activePill = pill;
+        }
+      }
+      pills.forEach((p) => p.classList.toggle("active", p === activePill));
+    }
   }
 }

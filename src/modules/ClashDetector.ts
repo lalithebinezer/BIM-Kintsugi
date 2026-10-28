@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { BcfIssueManager, type BcfTopic } from "./BcfIssueManager";
+import { escapeHtml } from "../utils/formatters";
 
 export type ClashSeverity = "critical" | "major" | "minor" | "clearance";
 export type ClashStatus = "new" | "active" | "reviewed" | "resolved";
@@ -41,6 +43,7 @@ export class ClashDetector {
   private clashResults: ClashResult[] = [];
   private isScanning: boolean = false;
   private clashMarkerGroup: THREE.Group;
+  private markerIds: string[] = [];
 
   private rules: ClashRuleConfig[] = [
     {
@@ -136,10 +139,20 @@ export class ClashDetector {
             const expandedBoxA = elA.box.clone().expandByScalar(rule.softClearanceBuffer);
             if (expandedBoxA.intersectsBox(elB.box)) {
               const isHard = elA.box.intersectsBox(elB.box);
-              const overlap = isHard ? 0.08 : rule.softClearanceBuffer;
+              const interBox = expandedBoxA.clone().intersect(elB.box);
+              const interSize = new THREE.Vector3();
+              interBox.getSize(interSize);
+              const computedDepth = Math.min(interSize.x, interSize.y, interSize.z);
+              const overlap = isHard
+                ? Math.max(rule.hardClashTolerance, Number((computedDepth || 0.08).toFixed(3)))
+                : rule.softClearanceBuffer;
 
               const intersectionCenter = new THREE.Vector3();
-              elA.box.getCenter(intersectionCenter);
+              if (!interBox.isEmpty()) {
+                interBox.getCenter(intersectionCenter);
+              } else {
+                elA.box.getCenter(intersectionCenter);
+              }
 
               results.push({
                 id: `clash_${Date.now()}_${results.length + 1}`,
@@ -267,7 +280,22 @@ export class ClashDetector {
       if (this.engine.fragments && (this.engine.fragments as any).list) {
         const fragList = (this.engine.fragments as any).list;
         for (const [modelId, model] of fragList) {
+          // Collect real Three.js mesh bounds inside the fragment model if present
+          const meshBoxes: THREE.Box3[] = [];
+          try {
+            const rootObj = (model?.object || model) as THREE.Object3D;
+            if (rootObj && typeof rootObj.traverse === "function") {
+              rootObj.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                  const b = new THREE.Box3().setFromObject(child);
+                  if (!b.isEmpty()) meshBoxes.push(b);
+                }
+              });
+            }
+          } catch (e) {}
+
           if (model && model.properties) {
+            let propIndex = 0;
             for (const expressIdStr in model.properties) {
               const id = parseInt(expressIdStr, 10);
               const p = model.properties[id];
@@ -275,11 +303,18 @@ export class ClashDetector {
               const cat = p.type || p._category || p.typeStr || "IFC ELEMENT";
               const name = p.Name?.value || p.name || `Element #${id}`;
 
-              // Approximate element bounding volume
-              const box = new THREE.Box3(
-                new THREE.Vector3(-1 + (id % 10), 0 + (id % 4) * 3, -1 + (id % 8)),
-                new THREE.Vector3(1 + (id % 10), 0.5 + (id % 4) * 3, 1 + (id % 8))
-              );
+              let box: THREE.Box3;
+              if (p.boundingBox instanceof THREE.Box3) {
+                box = p.boundingBox.clone();
+              } else if (meshBoxes.length > 0) {
+                box = meshBoxes[propIndex % meshBoxes.length].clone();
+              } else {
+                box = new THREE.Box3(
+                  new THREE.Vector3(-1 + (id % 10), 0 + (id % 4) * 3, -1 + (id % 8)),
+                  new THREE.Vector3(1 + (id % 10), 0.5 + (id % 4) * 3, 1 + (id % 8))
+                );
+              }
+              propIndex++;
 
               list.push({
                 modelId,
@@ -300,21 +335,23 @@ export class ClashDetector {
     const clash = this.clashResults.find((c) => c.id === clashId);
     if (!clash) return;
 
-    const camera = this.engine.world?.camera;
-    if (camera && (camera as any).controls?.setLookAt) {
-      const p = clash.intersectionPoint;
-      (camera as any).controls.setLookAt(
-        p[0] + 5,
-        p[1] + 4,
-        p[2] + 5,
-        p[0],
-        p[1],
-        p[2],
-        true
-      );
-    }
+    try {
+      const camera = this.engine.world?.camera;
+      if (camera && (camera as any).controls?.setLookAt) {
+        const p = clash.intersectionPoint;
+        (camera as any).controls.setLookAt(
+          p[0] + 5,
+          p[1] + 4,
+          p[2] + 5,
+          p[0],
+          p[1],
+          p[2],
+          true
+        );
+      }
+    } catch (e) {}
 
-    // Highlight clash pair elements
+    // Highlight clash pair elements using OBF.Highlighter & OBF.Outliner
     const highlightMap: Record<string, Set<number>> = {};
     if (!highlightMap[clash.elementA.modelId]) highlightMap[clash.elementA.modelId] = new Set();
     highlightMap[clash.elementA.modelId].add(clash.elementA.expressId);
@@ -323,7 +360,43 @@ export class ClashDetector {
     highlightMap[clash.elementB.modelId].add(clash.elementB.expressId);
 
     try {
-      this.engine.highlighter?.highlightByID?.("select", highlightMap, true, false);
+      const highlighter = this.engine.highlighter;
+      if (highlighter) {
+        if (highlighter.styles && typeof highlighter.styles.set === "function") {
+          if (!highlighter.styles.has("ClashElementA")) {
+            highlighter.styles.set("ClashElementA", {
+              color: new THREE.Color(0xef4444),
+              opacity: 0.9,
+              transparent: true,
+              renderedFaces: 0 as any,
+            });
+          }
+          if (!highlighter.styles.has("ClashElementB")) {
+            highlighter.styles.set("ClashElementB", {
+              color: new THREE.Color(0xf59e0b),
+              opacity: 0.9,
+              transparent: true,
+              renderedFaces: 0 as any,
+            });
+          }
+        }
+
+        const mapA: Record<string, Set<number>> = {
+          [clash.elementA.modelId]: new Set([clash.elementA.expressId]),
+        };
+        const mapB: Record<string, Set<number>> = {
+          [clash.elementB.modelId]: new Set([clash.elementB.expressId]),
+        };
+
+        highlighter.highlightByID?.("ClashElementA", mapA, true, false)?.catch?.(() => {});
+        highlighter.highlightByID?.("ClashElementB", mapB, true, false)?.catch?.(() => {});
+        highlighter.highlightByID?.("select", highlightMap, true, false)?.catch?.(() => {});
+      }
+
+      if (this.engine.outliner && typeof this.engine.outliner.addItems === "function") {
+        this.engine.outliner.clean?.();
+        this.engine.outliner.addItems(highlightMap)?.catch?.(() => {});
+      }
     } catch (e) {}
   }
 
@@ -333,6 +406,15 @@ export class ClashDetector {
       clash.status = status;
       this.updateClashUI();
     }
+  }
+
+  public promoteClashToBcf(clashId: string): BcfTopic | null {
+    const clash = this.clashResults.find((c) => c.id === clashId);
+    if (!clash) return null;
+    const topic = BcfIssueManager.getInstance().createIssueFromClash(clash);
+    clash.status = "active";
+    this.updateClashUI();
+    return topic;
   }
 
   public exportBcfIssues(): string {
@@ -372,6 +454,41 @@ export class ClashDetector {
       pin.position.set(p[0], p[1], p[2]);
       pin.renderOrder = 9999;
       this.clashMarkerGroup.add(pin);
+
+      // Register clustered HTML 3D pin via ThatOpen OBF.Marker
+      try {
+        if (this.engine.marker && this.engine.world && typeof document !== "undefined") {
+          const badge = document.createElement("div");
+          badge.className = `bim-clash-3d-marker severity-${clash.severity}`;
+          badge.style.cssText = `
+            background: ${clash.severity === "critical" ? "rgba(239,68,68,0.92)" : "rgba(245,158,11,0.92)"};
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.4);
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+            white-space: nowrap;
+          `;
+          badge.textContent = `⚡ ${(clash.overlapDistance * 1000).toFixed(0)}mm`;
+          badge.title = `${clash.elementA.name} × ${clash.elementB.name}`;
+          badge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.focusClash(clash.id);
+          });
+          const id = this.engine.marker.create(
+            this.engine.world,
+            badge,
+            new THREE.Vector3(p[0], p[1], p[2])
+          );
+          if (id) {
+            this.markerIds.push(id);
+          }
+        }
+      } catch (e) {}
     }
   }
 
@@ -380,6 +497,14 @@ export class ClashDetector {
       const child = this.clashMarkerGroup.children[0];
       this.clashMarkerGroup.remove(child);
     }
+    try {
+      if (this.engine.marker) {
+        for (const id of this.markerIds) {
+          this.engine.marker.delete(id);
+        }
+      }
+    } catch (e) {}
+    this.markerIds = [];
   }
 
   public updateClashUI() {
@@ -408,13 +533,14 @@ export class ClashDetector {
               <span class="clash-status-tag ${c.status}">${c.status}</span>
             </div>
             <div class="clash-pair-title">
-              <strong>${c.elementA.name}</strong> × <strong>${c.elementB.name}</strong>
+              <strong>${escapeHtml(c.elementA.name)}</strong> × <strong>${escapeHtml(c.elementB.name)}</strong>
             </div>
             <div class="clash-disciplines">
-              <span>${c.disciplineA}</span> · <span>${c.disciplineB}</span>
+              <span>${escapeHtml(c.disciplineA)}</span> · <span>${escapeHtml(c.disciplineB)}</span>
             </div>
             <div class="clash-actions">
               <button class="btn-xs btn-accent focus-clash-btn" data-id="${c.id}">Zoom & Isolate</button>
+              <button class="btn-xs btn-outline promote-bcf-btn" data-id="${c.id}" title="Promote Clash to Tracked BCF Issue">+ BCF Issue</button>
               <select class="clash-status-select" data-id="${c.id}">
                 <option value="new" ${c.status === "new" ? "selected" : ""}>New</option>
                 <option value="active" ${c.status === "active" ? "selected" : ""}>Active</option>
@@ -426,6 +552,10 @@ export class ClashDetector {
 
           card.querySelector(".focus-clash-btn")?.addEventListener("click", () => {
             this.focusClash(c.id);
+          });
+
+          card.querySelector(".promote-bcf-btn")?.addEventListener("click", () => {
+            this.promoteClashToBcf(c.id);
           });
 
           card.querySelector(".clash-status-select")?.addEventListener("change", (e) => {

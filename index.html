@@ -216,38 +216,6 @@
       <!-- ─── HUD ANCHOR: BOTTOM-CENTER (Model Operations Toolbar) ─── -->
       <div class="hud-anchor-bottom-center" id="hud-anchor-bottom-center">
 
-        <!-- Floating 4D Construction Gantt Timeline Bar -->
-        <div id="gantt-phasing-bar" class="gantt-phasing-bar hidden">
-          <div class="gantt-bar-left">
-            <button id="btn-gantt-play" class="btn-gantt-action" title="Play / Pause 4D Schedule (Space)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>Play 4D</span>
-            </button>
-            <span id="gantt-week-badge" class="gantt-badge">Week 1 of 52</span>
-          </div>
-
-          <div class="gantt-bar-center">
-            <input type="range" id="gantt-week-slider" min="1" max="52" value="1" class="gantt-slider" />
-            <div class="gantt-milestones-row">
-              <span class="gantt-pill active" data-week="1">1. Foundations</span>
-              <span class="gantt-pill" data-week="8">2. Columns</span>
-              <span class="gantt-pill" data-week="14">3. Slabs</span>
-              <span class="gantt-pill" data-week="26">4. Facade</span>
-              <span class="gantt-pill" data-week="30">5. MEP</span>
-              <span class="gantt-pill" data-week="40">6. Fitout</span>
-            </div>
-          </div>
-
-          <div class="gantt-bar-right">
-            <div class="gantt-evm-info">
-              <span class="evm-label">EVM BUDGET:</span>
-              <span id="gantt-evm-cost" class="evm-val">$ 180,000</span>
-            </div>
-            <span id="gantt-progress-val" class="gantt-prog-badge">8% Complete</span>
-            <button id="btn-close-gantt-bar" class="btn-icon-sm" title="Close 4D Gantt Timeline"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-        </div>
-
         <!-- Model Statistics HUD -->
         <div id="model-stats-hud" class="model-stats-hud">
           <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent-500); font-weight: 700;">
@@ -1836,29 +1804,48 @@
         </div>
       </aside>
 
-      <!-- 4D Construction Timeline Playback (4D mode only) -->
+      <!-- Unified Compact 4D Construction Timeline & Gantt Bar (4D mode only) -->
       <div class="timeline-panel" id="timeline-panel" data-4d>
-        <div class="timeline-header-row">
-          <div class="timeline-title-group">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-400)" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span class="timeline-title">4D Construction Timeline</span>
+        <!-- Row 1: Play 4D + Week/Date + Scrubber & Milestones + EVM Budget + Progress + Close -->
+        <div class="unified-4d-top-row">
+          <div class="gantt-bar-left">
+            <button class="btn-gantt-action" id="timeline-play-btn" title="Play / Pause 4D Simulation (Space)">
+              <span class="ctrl-icon">▶</span>
+              <span>Play 4D</span>
+            </button>
+            <div class="unified-4d-badges">
+              <span id="gantt-week-badge" class="gantt-badge">Week 1 of 52</span>
+              <span class="timeline-date-badge" id="timeline-date-badge">2026-06-18</span>
+            </div>
           </div>
-          <div class="timeline-date-badge" id="timeline-date-badge">Not Started</div>
+
+          <div class="gantt-bar-center">
+            <input type="range" class="timeline-slider" id="timeline-slider" min="0" max="60" value="0" />
+            <div class="gantt-milestones-row">
+              <span class="gantt-pill active" data-week="1">1. Foundations</span>
+              <span class="gantt-pill" data-week="8">2. Columns</span>
+              <span class="gantt-pill" data-week="14">3. Slabs</span>
+              <span class="gantt-pill" data-week="26">4. Facade</span>
+              <span class="gantt-pill" data-week="30">5. MEP</span>
+              <span class="gantt-pill" data-week="40">6. Fitout</span>
+            </div>
+          </div>
+
+          <div class="gantt-bar-right">
+            <div class="gantt-evm-info">
+              <span class="evm-label">EVM BUDGET:</span>
+              <span id="gantt-evm-cost" class="evm-val">$ 180,000</span>
+            </div>
+            <span id="gantt-progress-val" class="gantt-prog-badge">8% Complete</span>
+            <button id="btn-close-gantt-bar" class="btn-icon-sm btn-close-4d" title="Exit 4D Mode">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="timeline-slider-row">
-          <input type="range" class="timeline-slider" id="timeline-slider" min="0" max="60" value="0" />
-        </div>
-
+        <!-- Row 2: Speed Pills + CSV Template/Import + Status Color Legend -->
         <div class="timeline-controls-row">
           <div class="timeline-left-controls">
-            <button class="btn-timeline-ctrl" id="timeline-play-btn">
-              <span class="ctrl-icon">▶</span>
-              <span>Play Simulation</span>
-            </button>
             <div class="speed-select-wrapper">
               <span class="speed-label">Speed:</span>
               <div class="speed-pills-group" id="timeline-speed-pills">
@@ -1876,12 +1863,12 @@
             </div>
 
             <button class="btn-timeline-csv" id="btn-export-4d-csv"
-              title="Download Auto-Generated 4D Schedule CSV Template" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV Template
+              title="Download Auto-Generated 4D Schedule CSV Template">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV Template
             </button>
 
-            <label class="btn-timeline-csv" title="Upload Custom 4D Schedule CSV with Adjusted Dates" style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV
+            <label class="btn-timeline-csv" title="Upload Custom 4D Schedule CSV with Adjusted Dates">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV
               <input type="file" id="btn-import-4d-csv-input" accept=".csv" style="display: none;" />
             </label>
           </div>
@@ -2289,6 +2276,7 @@
     <div id="bim-context-menu" style="position: fixed; display: none; z-index: 99999; background: var(--bg-panel); border: 2.5px solid var(--border-strong); border-radius: 4px; padding: 0.35rem; box-shadow: var(--shadow-md); min-width: 190px; flex-direction: column; gap: 0.2rem; font-family: var(--font-body);">
       <div id="ctx-element-title" style="font-size: 0.64rem; font-weight: 800; color: var(--accent-500); padding: 0.25rem 0.45rem; border-bottom: 1px solid var(--border-subtle); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Element #186559</div>
       <button class="ctx-item" data-action="drop-pin" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Drop 3D Pin Here</button>
+      <button class="ctx-item" data-action="create-bcf" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: #A855F7; text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg> Create BCF Issue Here</button>
       <button class="ctx-item" data-action="properties" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> View Properties</button>
       <button class="ctx-item" data-action="xray" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray Isolate</button>
       <button class="ctx-item" data-action="isolate" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Isolate Element</button>
@@ -2328,6 +2316,10 @@
           <button id="btn-measure-area" class="btn-drawer-tool" data-type="area">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             <span>Surface (m²)</span>
+          </button>
+          <button id="btn-measure-volume" class="btn-drawer-tool" data-type="volume">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>Volume (m³)</span>
           </button>
         </div>
         <div class="drawer-section-card">
@@ -2523,47 +2515,6 @@
           <span>Active Coordination Issues (<span id="bcf-issue-count-badge">2</span>)</span>
         </div>
         <div id="bcf-issues-list" class="bcf-issues-list" style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;"></div>
-      </div>
-    </div>
-
-    <!-- ─── 4D PHASING SIMULATION DOCK ─── -->
-    <div id="phasing-timeline-dock" class="phasing-timeline-bar hidden">
-      <div class="timeline-controls-left">
-        <button id="btn-timeline-reset" class="btn-icon" title="Reset to Week 1">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-        </button>
-        <button id="btn-timeline-step-back" class="btn-icon" title="Previous Week">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <button id="btn-timeline-play" class="btn-icon btn-timeline-play-btn" title="Play / Pause Simulation">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </button>
-        <button id="btn-timeline-step-fwd" class="btn-icon" title="Next Week">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-
-      <div class="timeline-slider-track-wrap">
-        <div class="timeline-meta-row">
-          <span id="timeline-phase-name" class="timeline-phase-label"><span style="color: #F59E0B; font-weight: 800;">Structure</span>: Substructure & Foundation</span>
-          <span id="timeline-week-label" class="timeline-week-badge">Week 1 / 52 (2%)</span>
-        </div>
-        <div class="timeline-track-container">
-          <div id="timeline-progress-fill" class="timeline-progress-bar" style="width: 2%;"></div>
-          <input type="range" id="timeline-week-slider" min="1" max="52" step="1" value="1" class="timeline-range-input" />
-        </div>
-      </div>
-
-      <div class="timeline-controls-right">
-        <select id="select-timeline-speed" class="custom-select timeline-speed-select">
-          <option value="1">1x Speed</option>
-          <option value="2">2x Speed</option>
-          <option value="5">5x Speed</option>
-          <option value="10">10x Speed</option>
-        </select>
-        <button id="btn-close-phasing-dock" class="btn-icon" title="Close 4D Timeline">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
       </div>
     </div>
 

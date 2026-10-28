@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { StorageCache } from "../utils/storageCache";
 import { ExplosionModule, type ExplosionStateSnapshot } from "../modules/ExplosionModule";
+import { BimEngine } from "./BimEngine";
+import { showToast } from "../ui/ToastManager";
+import { escapeHtml } from "../utils/formatters";
 
 export interface SavedCustomView {
   id: string;
@@ -9,6 +12,8 @@ export interface SavedCustomView {
   isPreset?: boolean;
   badge?: string;
   description?: string;
+  obcViewpointGuid?: string;
+  thumbnailDataUrl?: string;
   camera: {
     position: [number, number, number];
     target: [number, number, number];
@@ -19,6 +24,7 @@ export interface SavedCustomView {
   visual?: {
     themeId?: string;
     shadowsOn?: boolean;
+    renderStyle?: string;
   };
   filters?: {
     isolatedCategories?: string[];
@@ -169,12 +175,30 @@ export class CustomViewManager {
       ? `CLUSTER ${Math.round(explosionSnap.factor * 100)}%` 
       : "ASSEMBLED";
 
+    let obcViewpointGuid: string | undefined;
+    let thumbnailDataUrl: string | undefined;
+    try {
+      const engine = BimEngine.getInstance();
+      if (engine.viewpoints) {
+        const vp = engine.viewpoints.create({ title: vpName });
+        vp.world = this.world;
+        vp.updateClippingPlanes?.();
+        obcViewpointGuid = vp.guid;
+      }
+      const canvas = this.world?.renderer?.three?.domElement as HTMLCanvasElement | undefined;
+      if (canvas && typeof canvas.toDataURL === "function") {
+        thumbnailDataUrl = canvas.toDataURL("image/jpeg", 0.45);
+      }
+    } catch (e) {}
+
     const customView: SavedCustomView = {
       id: `view-${Date.now()}`,
       name: vpName,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       badge: badgeName,
       description: description || `Captured with ${explosionSnap.mode} at ${Math.round(explosionSnap.factor * 100)}% clustering`,
+      obcViewpointGuid,
+      thumbnailDataUrl,
       camera: {
         position: [pos.x, pos.y, pos.z],
         target: [target.x, target.y, target.z],
@@ -199,6 +223,17 @@ export class CustomViewManager {
   public restoreView(viewId: string) {
     const view = this.getAllViews().find((v) => v.id === viewId);
     if (!view || !this.world || !this.world.camera) return;
+
+    // 0. Restore native OBC.Viewpoint clipping planes if linked
+    try {
+      if (view.obcViewpointGuid) {
+        const engine = BimEngine.getInstance();
+        const obcVp = engine.viewpoints?.list?.get(view.obcViewpointGuid);
+        if (obcVp) {
+          obcVp.setClippingState?.(true);
+        }
+      }
+    } catch (e) {}
 
     // 1. Restore Camera Position & Target with Smooth Interpolation
     const controls = this.world.camera.controls;
@@ -302,24 +337,46 @@ export class CustomViewManager {
 
     const allViews = this.getAllViews();
 
-    container.innerHTML = allViews.map((vp) => `
-      <div class="viewpoint-chip" data-vpid="${vp.id}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.45rem; cursor: pointer; transition: transform 0.1s ease;">
-        <div class="vp-info" style="display: flex; align-items: center; gap: 0.4rem; flex: 1; overflow: hidden;" onclick="window.customViewManager.restoreView('${vp.id}')">
+    container.innerHTML = allViews.map((vp) => {
+      const safeId = escapeHtml(vp.id);
+      const safeName = escapeHtml(vp.name);
+      const safeBadge = vp.badge ? escapeHtml(vp.badge) : "";
+      const safeDesc = vp.description ? escapeHtml(vp.description) : "";
+      const safeTime = escapeHtml(vp.timestamp);
+      return `
+      <div class="viewpoint-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.45rem; cursor: pointer; transition: transform 0.1s ease;">
+        <div class="vp-info" data-restore-vpid="${safeId}" style="display: flex; align-items: center; gap: 0.4rem; flex: 1; overflow: hidden;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="${vp.isPreset ? 'var(--accent-500)' : 'none'}" stroke="var(--accent-500)" stroke-width="2" style="flex-shrink:0;">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
           <div style="display: flex; flex-direction: column; overflow: hidden;">
             <div style="display: flex; align-items: center; gap: 0.3rem;">
-              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${vp.name}</span>
-              ${vp.badge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${vp.badge}</span>` : ""}
+              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeName}</span>
+              ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
             </div>
-            ${vp.description ? `<span style="font-size: 0.58rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${vp.description}</span>` : ""}
+            ${safeDesc ? `<span style="font-size: 0.58rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeDesc}</span>` : ""}
           </div>
-          <span style="font-size: 0.6rem; color: var(--text-muted); margin-left: auto; font-family: var(--font-mono);">${vp.timestamp}</span>
+          <span style="font-size: 0.6rem; color: var(--text-muted); margin-left: auto; font-family: var(--font-mono);">${safeTime}</span>
         </div>
-        ${!vp.isPreset ? `<button onclick="event.stopPropagation(); window.customViewManager.deleteView('${vp.id}')" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.4rem;" title="Delete View">✕</button>` : ""}
+        ${!vp.isPreset ? `<button data-delete-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.4rem;" title="Delete View">✕</button>` : ""}
       </div>
-    `).join("");
+    `;
+    }).join("");
+
+    container.querySelectorAll<HTMLElement>("[data-restore-vpid]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.getAttribute("data-restore-vpid");
+        if (id) this.restoreView(id);
+      });
+    });
+
+    container.querySelectorAll<HTMLElement>("[data-delete-vpid]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute("data-delete-vpid");
+        if (id) this.deleteView(id);
+      });
+    });
   }
 
   /**
@@ -353,23 +410,52 @@ export class CustomViewManager {
           </button>
         </div>
       </div>
+      <div id="inline-save-view-bar" class="hidden" style="padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.4rem; background: rgba(212, 255, 63, 0.06);">
+        <input id="input-save-view-name" type="text" placeholder="Enter custom view name..." value="Custom View #${this.customViews.length + 1}" style="flex: 1; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.7rem; outline: none;" />
+        <button id="btn-confirm-save-view" class="btn-save-ribbon" style="padding: 0.3rem 0.6rem;">Save</button>
+      </div>
       <div class="saved-views-scroll-list thin-scrollbar" style="max-height: 280px; overflow-y: auto; padding: 0.5rem;">
-        ${allViews.map((vp) => `
-          <div class="view-card-chip" data-vpid="${vp.id}" onclick="window.customViewManager.restoreView('${vp.id}')" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.4rem; cursor: pointer; transition: all 0.1s ease;">
+        ${allViews.map((vp) => {
+          const safeId = escapeHtml(vp.id);
+          const safeName = escapeHtml(vp.name);
+          const safeBadge = vp.badge ? escapeHtml(vp.badge) : "";
+          const safeDesc = escapeHtml(vp.description || "Custom configuration");
+          const thumbHtml = vp.thumbnailDataUrl
+            ? `<img src="${vp.thumbnailDataUrl}" alt="" style="width: 34px; height: 24px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); margin-right: 0.45rem; flex-shrink: 0;" />`
+            : "";
+          return `
+          <div class="view-card-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.4rem; cursor: pointer; transition: all 0.1s ease;">
+            ${thumbHtml}
             <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
               <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary);">${vp.name}</span>
-                ${vp.badge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${vp.badge}</span>` : ""}
+                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary);">${safeName}</span>
+                ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
               </div>
-              <span style="font-size: 0.58rem; color: var(--text-muted);">${vp.description || "Custom configuration"}</span>
+              <span style="font-size: 0.58rem; color: var(--text-muted);">${safeDesc}</span>
             </div>
             ${!vp.isPreset ? `
-              <button onclick="event.stopPropagation(); window.customViewManager.deleteView('${vp.id}')" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.25rem; font-size: 0.75rem;" title="Delete View">✕</button>
+              <button data-delete-ribbon-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.25rem; font-size: 0.75rem;" title="Delete View">✕</button>
             ` : `<span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono);">PRESET</span>`}
           </div>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     `;
+
+    container.querySelectorAll<HTMLElement>(".view-card-chip[data-vpid]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = card.getAttribute("data-vpid");
+        if (id) this.restoreView(id);
+      });
+    });
+
+    container.querySelectorAll<HTMLElement>("[data-delete-ribbon-vpid]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute("data-delete-ribbon-vpid");
+        if (id) this.deleteView(id);
+      });
+    });
 
     const closeBtn = document.getElementById("btn-close-saved-views-flyout");
     if (closeBtn) {
@@ -381,14 +467,43 @@ export class CustomViewManager {
     }
 
     const saveBtn = document.getElementById("btn-save-current-from-ribbon");
+    const inlineBar = document.getElementById("inline-save-view-bar");
+    const nameInput = document.getElementById("input-save-view-name") as HTMLInputElement | null;
+    const confirmSaveBtn = document.getElementById("btn-confirm-save-view");
+
+    const commitSaveView = () => {
+      const name = nameInput?.value.trim() || `Custom View #${this.customViews.length + 1}`;
+      const saved = this.saveCurrentView(name);
+      if (saved) {
+        showToast(`Saved Viewpoint: ${saved.name}`, "success");
+      }
+    };
+
     if (saveBtn) {
       saveBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const name = prompt("Enter a name for this Custom View (stores camera, clustering, and visual settings):", `View #${allViews.length + 1}`);
-        if (name && name.trim()) {
-          this.saveCurrentView(name.trim());
+        if (inlineBar && inlineBar.classList.contains("hidden")) {
+          inlineBar.classList.remove("hidden");
+          nameInput?.focus();
+          nameInput?.select();
+        } else {
+          commitSaveView();
         }
       });
     }
+
+    confirmSaveBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      commitSaveView();
+    });
+
+    nameInput?.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        commitSaveView();
+      } else if (e.key === "Escape") {
+        inlineBar?.classList.add("hidden");
+      }
+    });
   }
 }

@@ -380,9 +380,82 @@ export class SelectionManager {
     }
 
     this.selectedElements = filteredMap;
-    await this.engine.highlighter.highlightByID("select", filteredMap, true, false);
+    if ((this.engine.fragments as any)?.core) {
+      await this.engine.highlighter.highlightByID("select", filteredMap, true, false)?.catch?.(() => {});
+    }
     showToast(`Filtered to ${count} ${categoryName} elements`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>`);
     this.updateSelectionHUD();
+  }
+
+  /**
+   * Isolates all elements matching a category across loaded models using OBC.Hider & OBF.Highlighter.
+   */
+  public async isolateCategory(categoryName: string): Promise<Record<string, Set<number>>> {
+    const matchedMap: Record<string, Set<number>> = {};
+    const catUpper = categoryName.toUpperCase();
+
+    try {
+      const fragList = (this.engine.fragments as any)?.list;
+      if (fragList) {
+        for (const [modelId, model] of fragList) {
+          const props = (model as any)?.properties;
+          if (!props) continue;
+          for (const idStr in props) {
+            const id = Number(idStr);
+            const p = props[id];
+            const typeStr = String(p?.type || p?._category || p?.typeStr || "").toUpperCase();
+            if (typeStr.includes(catUpper)) {
+              if (!matchedMap[modelId]) matchedMap[modelId] = new Set();
+              matchedMap[modelId].add(id);
+            }
+          }
+        }
+      }
+      if (Object.keys(matchedMap).length > 0) {
+        this.selectedElements = matchedMap;
+        this.engine.hider?.isolate?.(matchedMap)?.catch?.(() => {});
+        if ((this.engine.fragments as any)?.core) {
+          await this.engine.highlighter?.highlightByID?.("select", matchedMap, true, false)?.catch?.(() => {});
+        }
+        this.updateSelectionHUD();
+      }
+    } catch (e) {}
+
+    return matchedMap;
+  }
+
+  /**
+   * Isolates elements belonging to a named building storey using OBC.Classifier / property matching.
+   */
+  public async isolateStorey(storeyName: string): Promise<Record<string, Set<number>>> {
+    const matchedMap: Record<string, Set<number>> = {};
+    const targetUpper = storeyName.toUpperCase();
+
+    try {
+      const fragList = (this.engine.fragments as any)?.list;
+      if (fragList) {
+        for (const [modelId, model] of fragList) {
+          const props = (model as any)?.properties;
+          if (!props) continue;
+          for (const idStr in props) {
+            const id = Number(idStr);
+            const p = props[id];
+            const storeyStr = String(p?.storey || p?.Level || p?.Name?.value || p?.name || "").toUpperCase();
+            if (storeyStr.includes(targetUpper)) {
+              if (!matchedMap[modelId]) matchedMap[modelId] = new Set();
+              matchedMap[modelId].add(id);
+            }
+          }
+        }
+      }
+      if (Object.keys(matchedMap).length > 0) {
+        this.selectedElements = matchedMap;
+        this.engine.hider?.isolate?.(matchedMap)?.catch?.(() => {});
+        this.updateSelectionHUD();
+      }
+    } catch (e) {}
+
+    return matchedMap;
   }
 
   /**

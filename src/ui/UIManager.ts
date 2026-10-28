@@ -174,6 +174,7 @@ export class UIManager {
         document.body.classList.toggle('right-sidebar-collapsed');
         if (!document.body.classList.contains('right-sidebar-collapsed')) {
           document.body.classList.add('left-sidebar-collapsed');
+          document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
         }
       } else {
         const rightSidebar = document.querySelector('.right-sidebar');

@@ -64,6 +64,18 @@ export class KeyboardController {
       }
 
 
+      // Help & Shortcuts Modal (?)
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        if (typeof (window as any).toggleShortcutsModal === 'function') {
+          (window as any).toggleShortcutsModal();
+        } else {
+          const helpModal = document.getElementById('shortcuts-modal') || document.getElementById('help-modal');
+          helpModal?.classList.toggle('hidden');
+        }
+        return;
+      }
+
       // BIM Feature Hotkeys
       const keyLower = e.key.toLowerCase();
       if ((e.ctrlKey || e.metaKey) && keyLower === 'a') {
@@ -72,27 +84,32 @@ export class KeyboardController {
       } else if ((e.ctrlKey || e.metaKey) && keyLower === 'i') {
         e.preventDefault();
         document.getElementById('btn-invert-select')?.click();
-      } else if (keyLower === 'b') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'b') {
+        e.preventDefault();
         document.getElementById('btn-box-select')?.click();
-      } else if (keyLower === 'c') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'c') {
         document.getElementById('btn-selection-hud-category')?.click();
-      } else if (keyLower === 'f') {
-        document.getElementById('btn-focus')?.click();
-      } else if (keyLower === 'h') {
-        document.getElementById('btn-hide-selected')?.click();
-      } else if (keyLower === 'i') {
-        document.getElementById('btn-isolate')?.click();
-      } else if (keyLower === 'u') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'f') {
+        e.preventDefault();
+        (document.getElementById('btn-focus') || document.getElementById('btn-view-fit'))?.click();
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'h') {
+        e.preventDefault();
+        (document.getElementById('btn-hide-selected') || document.getElementById('btn-dock-hide'))?.click();
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'i') {
+        e.preventDefault();
+        (document.getElementById('btn-isolate') || document.getElementById('btn-dock-isolate'))?.click();
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'u') {
         document.getElementById('btn-show-all')?.click();
-      } else if (keyLower === 'x') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'x') {
         document.getElementById('btn-section-cut')?.click();
-      } else if (keyLower === 'm') {
-        document.getElementById('btn-header-measure')?.click();
-      } else if (keyLower === 'z') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'm') {
+        e.preventDefault();
+        (document.getElementById('btn-header-measure') || document.getElementById('btn-dock-measure'))?.click();
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'z') {
         document.getElementById('btn-view-fit')?.click();
-      } else if (keyLower === 't') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 't') {
         document.getElementById('btn-view-top')?.click();
-      } else if (keyLower === 'p') {
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'p') {
         document.getElementById('btn-view-iso')?.click();
       } else if (e.key === ' ' || e.code === 'Space') {
         const btn4dPlay = document.getElementById('timeline-play-btn');

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
 
 export interface ConstructionPhase {
@@ -169,9 +170,73 @@ export class PhasingTimelineModule {
     try {
       if (!this.engine.hider || !this.engine.fragments) return;
 
+      const visibleMap: Record<string, Set<number>> = {};
+      const inProgressMap: Record<string, Set<number>> = {};
+      const plannedMap: Record<string, Set<number>> = {};
+
       const activePhase = this.getActivePhase();
-      if (activePhase) {
-        // High-level phase status synchronization
+      const completedCats = new Set<string>();
+      const activeCats = new Set<string>();
+      const plannedCats = new Set<string>();
+
+      for (const phase of this.phases) {
+        const status = this.getPhaseStatus(phase);
+        for (const cat of phase.categories) {
+          if (status === "completed") completedCats.add(cat.toUpperCase());
+          else if (status === "active") activeCats.add(cat.toUpperCase());
+          else plannedCats.add(cat.toUpperCase());
+        }
+      }
+
+      const fragList = (this.engine.fragments as any).list;
+      if (fragList) {
+        for (const [modelId, model] of fragList) {
+          const props = (model as any)?.properties;
+          if (!props) continue;
+
+          for (const expressIdStr in props) {
+            const id = Number(expressIdStr);
+            const p = props[id];
+            const cat = String(p?.type || p?._category || p?.typeStr || "").toUpperCase();
+
+            if (Array.from(plannedCats).some((c) => cat.includes(c))) {
+              if (!plannedMap[modelId]) plannedMap[modelId] = new Set();
+              plannedMap[modelId].add(id);
+            } else if (Array.from(activeCats).some((c) => cat.includes(c))) {
+              if (!visibleMap[modelId]) visibleMap[modelId] = new Set();
+              visibleMap[modelId].add(id);
+              if (!inProgressMap[modelId]) inProgressMap[modelId] = new Set();
+              inProgressMap[modelId].add(id);
+            } else {
+              if (!visibleMap[modelId]) visibleMap[modelId] = new Set();
+              visibleMap[modelId].add(id);
+            }
+          }
+        }
+      }
+
+      if (Object.keys(visibleMap).length > 0) {
+        this.engine.hider.set?.(true, visibleMap)?.catch?.(() => {});
+      }
+      if (Object.keys(plannedMap).length > 0) {
+        this.engine.hider.set?.(false, plannedMap)?.catch?.(() => {});
+      }
+
+      const highlighter = this.engine.highlighter;
+      if (highlighter && (this.engine.fragments as any)?.core) {
+        const styleName = "Phase_InProgress";
+        if (highlighter.styles && typeof highlighter.styles.set === "function") {
+          highlighter.styles.set(styleName, {
+            color: new THREE.Color(activePhase?.colorHex || "#F59E0B"),
+            opacity: 0.85,
+            transparent: true,
+            renderedFaces: 0 as any,
+          });
+        }
+        highlighter.clear?.(styleName)?.catch?.(() => {});
+        if (Object.keys(inProgressMap).length > 0) {
+          highlighter.highlightByID?.(styleName, inProgressMap, false, false)?.catch?.(() => {});
+        }
       }
     } catch (e) {}
   }

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
 
 export interface MaterialCarbonProfile {
@@ -188,7 +189,16 @@ export class CarbonLcaManager {
                 ? profile.sustainableAlternative.embodiedCarbonPerM3
                 : profile.embodiedCarbonPerM3;
 
-              const vol = 0.65 + ((id % 7) * 0.25);
+              let vol = Number(p.NetVolume?.value ?? p.GrossVolume?.value ?? p.Volume?.value ?? 0);
+              if (!vol || isNaN(vol) || vol <= 0) {
+                if (p.boundingBox instanceof THREE.Box3 && !p.boundingBox.isEmpty()) {
+                  const sz = new THREE.Vector3();
+                  p.boundingBox.getSize(sz);
+                  vol = Math.max(0.05, sz.x * sz.y * sz.z * 0.45);
+                } else {
+                  vol = 0.65 + ((id % 7) * 0.25);
+                }
+              }
               const kg = vol * coeff;
 
               let grade: "A" | "B" | "C" | "D" | "E" = "C";
@@ -250,26 +260,60 @@ export class CarbonLcaManager {
   }
 
   private applyHeatmapVisuals() {
-    // Toggles color-ramp representation
+    // Toggles 5-band traffic-light color-ramp representation via ThatOpen OBF.Highlighter
     try {
+      const highlighter = this.engine.highlighter;
+      const bandColors: Record<string, string> = {
+        Carbon_A: "#22c55e",
+        Carbon_B: "#84cc16",
+        Carbon_C: "#eab308",
+        Carbon_D: "#f97316",
+        Carbon_E: "#ef4444",
+      };
+
+      if (highlighter?.styles && typeof highlighter.styles.set === "function") {
+        for (const [styleId, hex] of Object.entries(bandColors)) {
+          if (!highlighter.styles.has(styleId)) {
+            highlighter.styles.set(styleId, {
+              color: new THREE.Color(hex),
+              opacity: 0.88,
+              transparent: true,
+              renderedFaces: 0 as any,
+            });
+          }
+        }
+      }
+
       if (this.isHeatmapActive) {
-        // Highlighting in green / amber / red groups
         const elements = this.getAnalyzedElements();
-        const lowCarbonMap: Record<string, Set<number>> = {};
-        const highCarbonMap: Record<string, Set<number>> = {};
+        const bandMaps: Record<string, Record<string, Set<number>>> = {
+          Carbon_A: {},
+          Carbon_B: {},
+          Carbon_C: {},
+          Carbon_D: {},
+          Carbon_E: {},
+        };
 
         for (const el of elements) {
-          const map = el.embodiedCarbonKg < 250 ? lowCarbonMap : highCarbonMap;
-          if (!map[el.modelId]) map[el.modelId] = new Set();
-          map[el.modelId].add(el.expressId);
+          const styleKey = `Carbon_${el.intensityRating}`;
+          const targetMap = bandMaps[styleKey] || bandMaps.Carbon_C;
+          if (!targetMap[el.modelId]) targetMap[el.modelId] = new Set();
+          targetMap[el.modelId].add(el.expressId);
         }
 
-        if (this.engine.highlighter?.highlightByID && (this.engine.fragments as any)?.core) {
-          this.engine.highlighter.highlightByID("select", lowCarbonMap, true, false).catch(() => {});
+        if (highlighter?.highlightByID && (this.engine.fragments as any)?.core) {
+          for (const [styleKey, modelMap] of Object.entries(bandMaps)) {
+            if (Object.keys(modelMap).length > 0) {
+              highlighter.highlightByID(styleKey, modelMap, false, false)?.catch?.(() => {});
+            }
+          }
         }
       } else {
-        if (this.engine.highlighter?.clear && (this.engine.fragments as any)?.core) {
-          this.engine.highlighter.clear("select").catch(() => {});
+        if (highlighter?.clear && (this.engine.fragments as any)?.core) {
+          for (const styleKey of Object.keys(bandColors)) {
+            highlighter.clear(styleKey)?.catch?.(() => {});
+          }
+          highlighter.clear("select")?.catch?.(() => {});
         }
       }
     } catch (e) {}

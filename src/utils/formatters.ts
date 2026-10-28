@@ -25,3 +25,15 @@ export function formatItemCount(count: number): string {
 export function formatProgressPct(pct: number): string {
   return `${Math.round(pct)}%`;
 }
+
+/**
+ * Escapes HTML special characters to prevent XSS and broken markup in templates.
+ */
+export function escapeHtml(raw: string): string {
+  return String(raw)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
+import * as OBF from "@thatopen/components-front";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { BimEngine } from "../core/BimEngine";
 import { SectionPlaneGizmo } from "./SectionPlaneGizmo";
 
@@ -8,6 +10,7 @@ export class ClippingModule {
   private engine: BimEngine;
   private sectionPlanes: THREE.Plane[] = [];
   public sectionBoxEnabled: boolean = false;
+  public clipStyler?: OBF.ClipStyler;
   
   // Tracking active cutting plane and animations
   private activePlane: any | null = null;
@@ -20,6 +23,7 @@ export class ClippingModule {
   constructor() {
     this.engine = BimEngine.getInstance();
     this.initSectionPlanes();
+    this.initClipStyler();
     this.setupClipperHooks();
     // Pulse animation starts lazily on first plane creation, not in constructor,
     // to avoid a hot rAF loop running before any clipping plane exists.
@@ -30,6 +34,34 @@ export class ClippingModule {
       ClippingModule.instance = new ClippingModule();
     }
     return ClippingModule.instance;
+  }
+
+  private initClipStyler() {
+    try {
+      this.clipStyler = this.engine.clipStyler || this.engine.components.get(OBF.ClipStyler);
+      if (this.clipStyler && this.engine.world) {
+        this.clipStyler.world = this.engine.world;
+        this.clipStyler.enabled = true;
+
+        const linesMaterial = new LineMaterial({
+          color: 0xd4ff3f,
+          linewidth: 0.0025,
+        });
+        const fillsMaterial = new THREE.MeshBasicMaterial({
+          color: 0x1e293b,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+
+        this.clipStyler.styles.set("ArchitecturalSection", {
+          linesMaterial,
+          fillsMaterial,
+        });
+      }
+    } catch (e) {
+      // Safe fallback in headless test environments
+    }
   }
 
   private initSectionPlanes() {
@@ -129,6 +161,32 @@ export class ClippingModule {
 
     // Attach custom glowing border to the plane helper
     this.attachGlowBorder(plane);
+
+    // Attach ThatOpen ClipStyler architectural cut edges & hatch fills
+    try {
+      if (this.clipStyler) {
+        const planeId = plane.id || (plane as any)._id;
+        if (planeId && typeof this.clipStyler.createFromClipping === "function") {
+          this.clipStyler.createFromClipping(planeId, {
+            world: this.engine.world,
+            link: true,
+            items: {
+              default: { style: "ArchitecturalSection" },
+            },
+          });
+        } else if (plane.three instanceof THREE.Plane && typeof this.clipStyler.create === "function") {
+          this.clipStyler.create(plane.three, {
+            world: this.engine.world,
+            link: true,
+            items: {
+              default: { style: "ArchitecturalSection" },
+            },
+          });
+        }
+      }
+    } catch (e) {
+      // Safe fallback if no classified model geometry is present yet
+    }
 
     // Save final target origin and normal
     const targetOrigin = plane.origin ? plane.origin.clone() : new THREE.Vector3();
