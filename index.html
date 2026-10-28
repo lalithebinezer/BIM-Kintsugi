@@ -2492,7 +2492,11 @@
           <h3>BCF Issue Coordination</h3>
         </div>
         <div class="drawer-header-actions">
-          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
+          <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import
+            <input type="file" id="btn-import-bcf-input" accept=".bcfzip,.bcf,.json" style="display: none;" />
+          </label>
+          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
           <button class="btn-icon drawer-close-btn" data-target="bcf-issues-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>

@@ -140,6 +140,19 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     showToast("Exported BCF Coordination Package", "success");
   });
 
+  const bcfImportInput = document.getElementById("btn-import-bcf-input") as HTMLInputElement | null;
+  bcfImportInput?.addEventListener("change", async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const count = await bcfIssueManager.importBcfData(file);
+    renderBcfIssues();
+    bcfImportInput.value = "";
+    showToast(
+      count > 0 ? `Imported ${count} BCF Coordination Issue(s) from ${file.name}` : `No new BCF topics found in ${file.name}`,
+      count > 0 ? "success" : "warning"
+    );
+  });
+
   document.getElementById("btn-view-snapshot")?.addEventListener("click", () => {
     const vfx = GraphicsVFXManager.getInstance();
     const activeLevel = storeySlicer.getActiveLevel();

@@ -2387,6 +2387,10 @@ const initBim = async () => {
 
       // Reset explosion state for fresh model
       ExplosionModule.getInstance().reset();
+      FederationModule.getInstance().registerModel(
+        model,
+        String((model as any).name || (model as any).modelId || "BIM_Model")
+      );
       const expSlider = document.getElementById("settings-explosion-slider") as HTMLInputElement | null;
       if (expSlider) expSlider.value = "0";
       const expVal = document.getElementById("val-explosion-factor");
@@ -6695,6 +6699,21 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "style-pen-shadows", title: "Render Style: Technical Pen + Shadows (PostproductionAspect)", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("pen-shadows"); showToast("Render Style: Technical Pen + Shadows", "info"); } },
     { id: "style-gloss", title: "Render Style: Glossy Architectural Reflections", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("gloss"); showToast("Render Style: Glossy Architectural", "info"); } },
     { id: "style-cinematic", title: "Render Style: Color + Pen Edges + Ambient Shadows", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("color-pen-shadows"); showToast("Render Style: Color + Pen + Shadows", "success"); } },
+    { id: "ids-export-xml", title: "Export buildingSMART IDS 1.0 Specification (.ids XML)", category: "Compliance", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`, action: () => {
+      const xml = new IDSChecker(components).exportIdsXml();
+      const blob = new Blob([xml], { type: "application/xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `BIM_Kintsugi_Readiness_${Date.now()}.ids`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Exported buildingSMART IDS 1.0 Specification (.ids)", "success");
+    } },
+    { id: "fed-isolate-arq", title: "Federation: Isolate Architectural (ARQ) Models", category: "Federation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>`, action: () => { FederationModule.getInstance().isolateDiscipline("ARQ"); showToast("Isolated Discipline: Architectural (ARQ)", "info"); } },
+    { id: "fed-isolate-str", title: "Federation: Isolate Structural (STR) Models", category: "Federation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>`, action: () => { FederationModule.getInstance().isolateDiscipline("STR"); showToast("Isolated Discipline: Structural (STR)", "info"); } },
+    { id: "fed-isolate-mep", title: "Federation: Isolate MEP Models", category: "Federation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>`, action: () => { FederationModule.getInstance().isolateDiscipline("MEP"); showToast("Isolated Discipline: MEP", "info"); } },
+    { id: "fed-reset", title: "Federation: Reset All Model Visibility & Opacity", category: "Federation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`, action: () => { FederationModule.getInstance().resetAllVisibility(); showToast("Restored All Federated Models", "success"); } },
     { id: "tool-help", title: "Open Help & Tutorial Guide (?)", category: "Help", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`, action: () => (window as any).toggleShortcutsModal?.(true) },
 
   ];

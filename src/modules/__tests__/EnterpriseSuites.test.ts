@@ -14,6 +14,9 @@ import { CustomViewManager } from "../../core/CustomViewManager";
 import { ScheduleManager } from "../ScheduleManager";
 import { generateBOQSummary, highlightBoqCategory, isolateBoqItems, resolveCategoryUnitCost } from "../BoqGenerator";
 import { SelectionManager } from "../SelectionManager";
+import { CinematicTourManager } from "../CinematicTourManager";
+import { FederationModule } from "../FederationModule";
+import { IDSChecker } from "../IdsChecker";
 
 describe("Enterprise BIM Kintsugi Suites", () => {
   beforeEach(() => {
@@ -302,6 +305,44 @@ describe("Enterprise BIM Kintsugi Suites", () => {
       const classified = await BimEngine.getInstance().classifyModelByStoreyAndCategory();
       expect(Array.isArray(classified.categories)).toBe(true);
       await expect(SelectionManager.getInstance().isolateCategory("IFCWALL")).resolves.toBeDefined();
+    });
+
+    it("should support BCF JSON import, model-aware drone tour bounds, federation transforms, and IDS XML export", async () => {
+      const tour = CinematicTourManager.getInstance();
+      const bounds = tour.getModelCenterAndRadius();
+      expect(bounds.radius).toBeGreaterThan(0);
+
+      const bcf = BcfIssueManager.getInstance();
+      const imported = await bcf.importBcfData(
+        JSON.stringify([
+          {
+            guid: "ext-bcf-999",
+            title: "External Solibri Issue",
+            priority: "Major",
+            description: "Imported external coordination topic",
+            viewpoint: {
+              cameraPosition: { x: 8, y: 4, z: 8 },
+              cameraTarget: { x: 0, y: 1, z: 0 },
+            },
+          },
+        ])
+      );
+      expect(imported).toBe(1);
+      expect(bcf.getTopics().some((t) => t.guid === "ext-bcf-999")).toBe(true);
+
+      const fed = FederationModule.getInstance();
+      const dummyObj = new THREE.Group();
+      fed.registerModel({ modelId: "m-str", object: dummyObj }, "Tower_Structure.ifc");
+      fed.setModelTransform("m-str", { x: 2.5, y: 1.0, z: -1.5, rotationY: 90 });
+      expect(dummyObj.position.x).toBeCloseTo(2.5);
+      expect(dummyObj.position.y).toBeCloseTo(1.0);
+      expect(dummyObj.position.z).toBeCloseTo(-1.5);
+
+      const idsChecker = new IDSChecker(BimEngine.getInstance().components);
+      const xml = idsChecker.exportIdsXml();
+      expect(xml).toContain("<ids");
+      expect(xml).toContain("IFCWALL");
+      expect(xml).toContain("IFCDOOR");
     });
   });
 });

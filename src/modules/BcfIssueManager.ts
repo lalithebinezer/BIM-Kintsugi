@@ -279,4 +279,137 @@ export class BcfIssueManager {
     downloadAnchor.click();
     downloadAnchor.remove();
   }
+
+  /**
+   * Imports BCF topics from a .bcfzip/.bcf binary archive (via OBC.BCFTopics.load)
+   * or a .json/.bcf.json file, registers 3D OBF.Marker pins, and returns the imported count.
+   */
+  public async importBcfData(input: File | ArrayBuffer | string): Promise<number> {
+    let importedCount = 0;
+
+    try {
+      // 1. Handle JSON string or JSON file
+      let jsonText: string | null = null;
+      if (typeof input === "string") {
+        jsonText = input;
+      } else if (typeof File !== "undefined" && input instanceof File) {
+        const lowerName = input.name.toLowerCase();
+        if (lowerName.endsWith(".json")) {
+          jsonText = await input.text();
+        } else {
+          const buffer = await input.arrayBuffer();
+          return this.importBcfBinaryBuffer(buffer);
+        }
+      } else if (input instanceof ArrayBuffer) {
+        return this.importBcfBinaryBuffer(input);
+      }
+
+      if (jsonText) {
+        const parsed = JSON.parse(jsonText);
+        const list: any[] = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.topics)
+          ? parsed.topics
+          : [];
+
+        for (const item of list) {
+          if (!item || !item.title) continue;
+          if (this.topics.some((t) => t.guid === item.guid)) continue;
+
+          const vp = item.viewpoint || {};
+          const camPos = vp.cameraPosition || vp.camera_view_point || { x: 10, y: 6, z: 10 };
+          const camTarget = vp.cameraTarget || vp.direction || { x: 0, y: 2, z: 0 };
+
+          const topic: BcfTopic = {
+            guid: item.guid || `bcf-imp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            topicType: item.topicType || item.topic_type || "Coordination",
+            topicStatus: item.topicStatus || item.topic_status || "Open",
+            priority: (["Critical", "Major", "Normal", "Minor"].includes(item.priority) ? item.priority : "Normal") as BcfPriority,
+            title: String(item.title),
+            description: String(item.description || "Imported BCF Coordination Issue"),
+            creationDate: item.creationDate || item.creation_date || new Date().toISOString(),
+            creationAuthor: item.creationAuthor || item.creation_author || "External BCF",
+            assignedTo: item.assignedTo || item.assigned_to || "BIM Coordinator",
+            viewpoint: {
+              cameraPosition: {
+                x: Number(camPos.x) || 10,
+                y: Number(camPos.y) || 6,
+                z: Number(camPos.z) || 10,
+              },
+              cameraTarget: {
+                x: Number(camTarget.x) || 0,
+                y: Number(camTarget.y) || 2,
+                z: Number(camTarget.z) || 0,
+              },
+              selectedElementGuids: Array.isArray(vp.selectedElementGuids)
+                ? vp.selectedElementGuids
+                : Array.isArray(vp.components)
+                ? vp.components
+                : [],
+            },
+          };
+
+          this.topics.unshift(topic);
+          this.registerTopicMarker(topic);
+          importedCount++;
+        }
+      }
+    } catch (e) {
+      console.warn("BCF import error:", e);
+    }
+
+    if (importedCount > 0) {
+      SoundManager.getInstance().playSnap();
+    }
+    return importedCount;
+  }
+
+  private async importBcfBinaryBuffer(buffer: ArrayBuffer): Promise<number> {
+    let importedCount = 0;
+    try {
+      if (this.nativeBcfTopics && typeof (this.nativeBcfTopics as any).load === "function") {
+        const bytes = new Uint8Array(buffer);
+        await (this.nativeBcfTopics as any).load(bytes);
+
+        const list = (this.nativeBcfTopics as any).list;
+        if (list && typeof list.values === "function") {
+          for (const obcTopic of list.values()) {
+            const guid = obcTopic.guid || `bcf-${Date.now()}`;
+            if (this.topics.some((t) => t.guid === guid)) continue;
+
+            const topic: BcfTopic = {
+              guid,
+              topicType: obcTopic.type || "Coordination",
+              topicStatus: (obcTopic.status as BcfStatus) || "Open",
+              priority: (["Critical", "Major", "Normal", "Minor"].includes(obcTopic.priority)
+                ? obcTopic.priority
+                : "Normal") as BcfPriority,
+              title: obcTopic.title || "Imported BCF Topic",
+              description: obcTopic.description || "Imported from .bcfzip package",
+              creationDate: obcTopic.creationDate ? new Date(obcTopic.creationDate).toISOString() : new Date().toISOString(),
+              creationAuthor: obcTopic.creationAuthor || "BCF Author",
+              assignedTo: obcTopic.assignedTo || "BIM Coordinator",
+              viewpoint: {
+                cameraPosition: { x: 12, y: 6, z: 12 },
+                cameraTarget: { x: 0, y: 2, z: 0 },
+                selectedElementGuids: [],
+              },
+            };
+            this.topics.unshift(topic);
+            this.registerTopicMarker(topic);
+            importedCount++;
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback: check if the ArrayBuffer is actually UTF-8 JSON
+      try {
+        const text = new TextDecoder().decode(buffer);
+        if (text.trim().startsWith("{") || text.trim().startsWith("[")) {
+          return this.importBcfData(text);
+        }
+      } catch (err) {}
+    }
+    return importedCount;
+  }
 }
