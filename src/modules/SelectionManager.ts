@@ -603,6 +603,9 @@ export class SelectionManager {
 
     const bar = document.getElementById("viewport-selection-bar");
     if (bar) bar.style.display = "none";
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.remove("has-viewport-selection");
+    }
 
     const batchCard = document.getElementById("multi-selection-batch-card");
     if (batchCard) batchCard.style.display = "none";
@@ -681,10 +684,16 @@ export class SelectionManager {
 
     if (info.totalCount === 0) {
       bar.style.display = "none";
+      if (typeof document !== "undefined" && document.body) {
+        document.body.classList.remove("has-viewport-selection");
+      }
       return;
     }
 
     bar.style.display = "flex";
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.add("has-viewport-selection");
+    }
 
     if (info.totalCount === 1 && info.primaryExpressId !== undefined) {
       titleEl.innerText = `${info.primaryCategory || "Element"} #${info.primaryExpressId}`;

@@ -17,17 +17,20 @@ export default defineConfig({
       output: {
         manualChunks(id: string) {
           const norm = id.replace(/\\/g, "/");
+          if (norm.includes("node_modules/@thatopen/ui") || norm.includes("node_modules/@thatopen/ui-obc")) {
+            return "thatopen-ui";
+          }
+          if (norm.includes("node_modules/@thatopen/components-front")) {
+            return "thatopen-front";
+          }
+          if (norm.includes("node_modules/@thatopen/components") || norm.includes("node_modules/@thatopen/fragments")) {
+            return "thatopen-core";
+          }
           if (norm.includes("node_modules/three") || norm.includes("node_modules/camera-controls")) {
             return "three-vendor";
           }
           if (norm.includes("node_modules/web-ifc")) {
-            return "web-ifc-vendor";
-          }
-          if (norm.includes("node_modules/@thatopen/ui") || norm.includes("node_modules/@thatopen/ui-obc")) {
-            return "thatopen-ui";
-          }
-          if (norm.includes("node_modules/@thatopen")) {
-            return "thatopen-core";
+            return "webifc-vendor";
           }
         },
       },

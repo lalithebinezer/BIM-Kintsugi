@@ -216,6 +216,45 @@
       <!-- ─── HUD ANCHOR: BOTTOM-CENTER (Model Operations Toolbar) ─── -->
       <div class="hud-anchor-bottom-center" id="hud-anchor-bottom-center">
 
+        <!-- Viewport Active Selection Floating HUD -->
+        <div id="viewport-selection-bar" class="viewport-selection-bar" style="display: none;">
+          <div class="selection-bar-info">
+            <span class="selection-bar-dot"></span>
+            <span id="selection-bar-title" class="selection-bar-title">1 Element Selected</span>
+          </div>
+          <div class="selection-bar-actions">
+            <button type="button" id="btn-selection-hud-focus" class="btn-hud-action" title="Focus Camera on Selection (F)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>Focus (F)</span>
+            </button>
+            <button type="button" id="btn-selection-hud-isolate" class="btn-hud-action" title="Isolate Selection (I)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>
+              <span>Isolate (I)</span>
+            </button>
+            <button type="button" id="btn-selection-hud-category" class="btn-hud-action" title="Select All Elements of Same Category (C)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>
+              <span>Category</span>
+            </button>
+            <button type="button" id="btn-selection-hud-xray" class="btn-hud-action" title="Ghost unselected elements (X-Ray)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/></svg>
+              <span>X-Ray</span>
+            </button>
+            <button type="button" id="btn-selection-hud-hide" class="btn-hud-action" title="Hide Selected (H)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <span>Hide</span>
+            </button>
+            <button type="button" id="btn-selection-hud-inspect" class="btn-hud-action" title="View Properties in Inspector">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Inspect</span>
+            </button>
+            <button type="button" id="btn-viewport-esc-selection" class="btn-hud-esc" title="Exit from selection (Esc)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>Exit</span>
+              <kbd class="hud-kbd">Esc</kbd>
+            </button>
+          </div>
+        </div>
+
         <!-- Model Statistics HUD -->
         <div id="model-stats-hud" class="model-stats-hud">
           <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent-500); font-weight: 700;">
@@ -446,29 +485,68 @@
       <!-- ─── HUD ANCHOR: BOTTOM-RIGHT (2D Radar & Architectural Scale Bar) ─── -->
       <div class="hud-anchor-bottom-right" id="hud-anchor-bottom-right">
         <!-- 2D FLOOR PLAN RADAR MINIMAP & WALK NAVIGATION -->
-        <div id="minimap-container" class="minimap-radar-widget">
+        <div id="minimap-container" class="minimap-radar-widget" title="2D Tactical Floor Plan Radar">
           <div class="minimap-header">
             <div class="minimap-title">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
               <span>2D Radar</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.3rem;">
-              <select id="minimap-level-select" class="custom-select minimap-level-select">
+            <div class="minimap-header-actions">
+              <select id="minimap-level-select" class="custom-select minimap-level-select" title="Active Storey Level">
                 <option value="0">L0 (Ground)</option>
                 <option value="1">L1 (First)</option>
                 <option value="2">L2 (Second)</option>
                 <option value="3">Roof</option>
               </select>
-              <button id="btn-minimap-collapse" class="btn-icon-sm" title="Minimize / Expand 2D Radar" style="padding: 0.1rem; color: var(--text-muted); background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <button id="btn-minimap-slice-toggle" class="btn-minimap-tool" title="Slice 3D Model at this Floor">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
+              </button>
+              <button id="btn-minimap-autolevel" class="btn-minimap-tool active" title="Toggle Auto-Track Camera Storey Elevation">
+                <span style="font-size: 0.52rem; font-weight: 800;">AUTO</span>
+              </button>
+              <button id="btn-minimap-expand" class="btn-minimap-tool" title="Expand / Shrink Radar Size">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              </button>
+              <button id="btn-minimap-collapse" class="btn-minimap-tool" title="Minimize / Expand 2D Radar">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
             </div>
           </div>
           <div class="minimap-canvas-wrap">
             <canvas id="minimap-canvas" width="180" height="180"></canvas>
+
+            <!-- Floating Compass North Button -->
+            <button id="btn-minimap-north" class="minimap-floating-btn compass-north-btn" title="Face True North (0°)">
+              <span class="compass-needle">▲</span>
+              <span class="compass-label">N</span>
+            </button>
+
+            <!-- Floating Quick Zoom & Fit Group -->
+            <div class="minimap-floating-controls">
+              <button id="btn-minimap-zoom-in" class="minimap-floating-btn" title="Zoom In (+)">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <button id="btn-minimap-zoom-out" class="minimap-floating-btn" title="Zoom Out (-)">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <button id="btn-minimap-fit" class="minimap-floating-btn" title="Reset View & Fit Model">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              </button>
+            </div>
+
+            <!-- Live Metric Coordinates Readout Pill -->
+            <div id="minimap-coords-badge" class="minimap-coords-badge" style="display: none;">
+              <span id="minimap-coords-text">X: +0.0m Z: +0.0m</span>
+              <span id="minimap-coords-dist" class="minimap-coords-dist">0m</span>
+            </div>
           </div>
           <div class="minimap-footer">
-            <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="width: 100%;">Orbit Mode</button>
+            <div style="display: flex; gap: 0.3rem; align-items: center;">
+              <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="flex: 1;" title="Toggle First-Person WASD Walk Navigation">Orbit Mode</button>
+              <button id="btn-minimap-pins-toggle" class="btn-minimap-tool active" title="Toggle Clash & Selection Pins on Radar">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1837,6 +1915,7 @@
               <span id="gantt-evm-cost" class="evm-val">$ 180,000</span>
             </div>
             <span id="gantt-progress-val" class="gantt-prog-badge">8% Complete</span>
+            <span id="gantt-spi-val" class="gantt-spi-badge" title="Schedule Performance Index (EV / PV)">SPI 1.00</span>
             <button id="btn-close-gantt-bar" class="btn-icon-sm btn-close-4d" title="Exit 4D Mode">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -1871,6 +1950,27 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV
               <input type="file" id="btn-import-4d-csv-input" accept=".csv" style="display: none;" />
             </label>
+
+            <label class="btn-timeline-csv" title="Import MS Project (.xml) or Primavera (.xer) Schedule">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> MSP / P6
+              <input type="file" id="btn-import-schedule-advanced" accept=".xml,.xer" style="display: none;" />
+            </label>
+
+            <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg> Gantt Chart
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg> Variance Mode
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-record" title="Record 4D simulation playback to WebM video">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg> Record 4D
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-export-cobie-csv" title="Export 7D COBie Facility Management Lifecycle Data">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg> 7D COBie
+            </button>
           </div>
 
           <div class="timeline-legend">
@@ -2228,44 +2328,7 @@
       </div>
     </div>
 
-    <!-- Viewport Active Selection Floating HUD -->
-    <div id="viewport-selection-bar" class="viewport-selection-bar" style="display: none;">
-      <div class="selection-bar-info">
-        <span class="selection-bar-dot"></span>
-        <span id="selection-bar-title" class="selection-bar-title">1 Element Selected</span>
-      </div>
-      <div class="selection-bar-actions">
-        <button type="button" id="btn-selection-hud-focus" class="btn-hud-action" title="Focus Camera on Selection (F)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span>Focus (F)</span>
-        </button>
-        <button type="button" id="btn-selection-hud-isolate" class="btn-hud-action" title="Isolate Selection (I)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>
-          <span>Isolate (I)</span>
-        </button>
-        <button type="button" id="btn-selection-hud-category" class="btn-hud-action" title="Select All Elements of Same Category (C)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>
-          <span>Category</span>
-        </button>
-        <button type="button" id="btn-selection-hud-xray" class="btn-hud-action" title="Ghost unselected elements (X-Ray)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/></svg>
-          <span>X-Ray</span>
-        </button>
-        <button type="button" id="btn-selection-hud-hide" class="btn-hud-action" title="Hide Selected (H)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          <span>Hide</span>
-        </button>
-        <button type="button" id="btn-selection-hud-inspect" class="btn-hud-action" title="View Properties in Inspector">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span>Inspect</span>
-        </button>
-        <button type="button" id="btn-viewport-esc-selection" class="btn-hud-esc" title="Exit from selection (Esc)">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          <span>Exit</span>
-          <kbd class="hud-kbd">Esc</kbd>
-        </button>
-      </div>
-    </div>
+
 
     <!-- Viewport Hover Entity Badge HUD -->
     <div id="viewport-hover-badge" class="viewport-hover-badge" style="display: none;">
@@ -2395,6 +2458,7 @@
             <span>BCF</span>
           </button>
         </div>
+        <div id="clash-matrix-container" class="clash-matrix-wrap"></div>
         <div class="drawer-section-header">
           <span>Clash Results (<span id="clash-total-badge">0 Total</span>)</span>
         </div>

@@ -47,6 +47,36 @@ describe("Minimap & 4D Phasing Modules", () => {
       minimap.setLevel(3);
       expect(minimap.getConfig().currentLevelIndex).toBe(3);
     });
+
+    it("should zoom in, zoom out and reset view", () => {
+      const initialZoom = minimap.getConfig().zoom;
+      minimap.zoomIn();
+      expect(minimap.getConfig().zoom).toBeGreaterThan(initialZoom);
+      minimap.zoomOut();
+      minimap.zoomOut();
+      expect(minimap.getConfig().zoom).toBeLessThan(initialZoom);
+      minimap.resetView();
+      expect(minimap.getConfig().zoom).toBe(8);
+    });
+
+    it("should toggle auto-track level, clash pins and expanded size", () => {
+      expect(minimap.toggleAutoTrackLevel(false)).toBe(false);
+      expect(minimap.toggleAutoTrackLevel(true)).toBe(true);
+
+      expect(minimap.toggleClashPins(false)).toBe(false);
+      expect(minimap.toggleClashPins(true)).toBe(true);
+
+      expect(minimap.toggleExpanded(true)).toBe(true);
+      expect(minimap.getConfig().size).toBe(280);
+      expect(minimap.toggleExpanded(false)).toBe(false);
+      expect(minimap.getConfig().size).toBe(180);
+    });
+
+    it("should set and clear selected element position", () => {
+      minimap.setSelectedElement({ x: 10, y: 3.5, z: -15 }, 999);
+      // Verify no throw and correct state
+      minimap.setSelectedElement(null);
+    });
   });
 
   describe("PhasingTimelineModule", () => {

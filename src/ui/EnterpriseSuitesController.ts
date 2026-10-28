@@ -357,20 +357,28 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     SoundManager.getInstance().playClick();
   });
 
-  document.querySelectorAll(".gantt-pill").forEach((pill) => {
-    pill.addEventListener("click", (e) => {
-      const week = Number((e.currentTarget as HTMLElement).getAttribute("data-week"));
+  const milestonesRow = document.querySelector(".gantt-milestones-row");
+  milestonesRow?.addEventListener("click", (e) => {
+    const pill = (e.target as HTMLElement).closest(".gantt-pill") as HTMLElement | null;
+    if (!pill) return;
+    const startMs = Number(pill.getAttribute("data-start"));
+    if (Number.isFinite(startMs) && startMs > 0) {
+      if (typeof (window as any).jumpTimelineToDate === "function") {
+        (window as any).jumpTimelineToDate(new Date(startMs));
+      }
+    } else {
+      const week = Number(pill.getAttribute("data-week"));
       if (week) {
         ganttPhasing.setWeek(week);
         phasingTimeline.setWeek(week);
         if (typeof (window as any).jumpTimelineToWeek === "function") {
           (window as any).jumpTimelineToWeek(week);
         }
-        document.querySelectorAll(".gantt-pill").forEach((p) => p.classList.remove("active"));
-        (e.currentTarget as HTMLElement).classList.add("active");
-        SoundManager.getInstance().playSnap();
       }
-    });
+    }
+    document.querySelectorAll(".gantt-pill").forEach((p) => p.classList.remove("active"));
+    pill.classList.add("active");
+    SoundManager.getInstance().playSnap();
   });
 
   // Cinematic Drone Orbit & Tour UI

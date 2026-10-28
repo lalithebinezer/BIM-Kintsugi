@@ -37,6 +37,7 @@ import { CarbonLcaManager } from "./modules/CarbonLcaManager";
 import { BcfIssueManager } from "./modules/BcfIssueManager";
 import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { MeasurementSuite } from "./modules/MeasurementSuite";
+import { MinimapModule } from "./modules/MinimapModule";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -63,6 +64,7 @@ function getCategoryColor(_theme: string, category: string): string {
   return categoryColorMap[category.toUpperCase()] ?? "#a78bfa";
 }
 import { ScheduleManager } from "./modules/ScheduleManager";
+import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
 
 import { BCFManager } from "./modules/BcfManager";
@@ -91,6 +93,12 @@ import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
 import { SelectionManager } from "./modules/SelectionManager";
 import { formatCurrency, formatItemCount } from "./utils/formatters";
+import { TimelapseRecorderModule } from "./modules/TimelapseRecorderModule";
+import { InteractiveGanttDrawer } from "./ui/InteractiveGanttDrawer";
+import { ScheduleImportParsers } from "./modules/ScheduleImportParsers";
+import { CobieExportModule } from "./modules/CobieExportModule";
+import { ModelDiffModule } from "./modules/ModelDiffModule";
+import { PlanOverlayModule } from "./modules/PlanOverlayModule";
 
 BUI.Manager.init();
 
@@ -259,6 +267,9 @@ document.getElementById("btn-add-viewpoint")?.addEventListener("click", () => {
 const scheduleManager = new ScheduleManager();
 (window as any).scheduleManager = scheduleManager;
 
+const schedule4DEngine = new Schedule4DEngine();
+(window as any).schedule4DEngine = schedule4DEngine;
+
 const bcfManager = new BCFManager(components, world);
 bcfManager.init();
 (window as any).bcfManager = bcfManager;
@@ -277,6 +288,7 @@ const clippingModule = new ClippingModule();
 const queryModule = new QueryModule();
 const idsModule = new IdsModule();
 const timeline4DModule = new Timeline4DModule();
+(window as any).timeline4DModule = timeline4DModule;
 const boq5DModule = new Boq5DModule();
 const federationModule = new FederationModule();
 
@@ -552,9 +564,10 @@ function updateViewportSelectionBar(customTitle?: string) {
     }
   }
 
-  if (totalCount > 0 || activeExpressId !== null || hasHighlighterSelection) {
+  if (customTitle || totalCount > 0 || activeExpressId !== null || hasHighlighterSelection) {
     if (bar) bar.style.display = "flex";
     if (panelEscBtn) panelEscBtn.style.display = "inline-flex";
+    document.body.classList.add("has-viewport-selection");
     if (titleEl) {
       if (customTitle) {
         titleEl.innerText = customTitle;
@@ -570,6 +583,7 @@ function updateViewportSelectionBar(customTitle?: string) {
   } else {
     if (bar) bar.style.display = "none";
     if (panelEscBtn) panelEscBtn.style.display = "none";
+    document.body.classList.remove("has-viewport-selection");
   }
 }
 (window as any).updateViewportSelectionBar = updateViewportSelectionBar;
@@ -824,6 +838,24 @@ highlighter.styles.set("timeline-completed", {
   transparent: true,
   renderedFaces: true as any,
 });
+highlighter.styles.set("timeline-variance-ahead", {
+  color: new THREE.Color("#38bdf8"), // Sky Blue Ahead
+  opacity: 0.8,
+  transparent: true,
+  renderedFaces: true as any,
+});
+highlighter.styles.set("timeline-variance-delayed", {
+  color: new THREE.Color("#f59e0b"), // Amber Delayed
+  opacity: 0.85,
+  transparent: true,
+  renderedFaces: true as any,
+});
+highlighter.styles.set("timeline-variance-critical", {
+  color: new THREE.Color("#ef4444"), // Red Critical Delay
+  opacity: 0.9,
+  transparent: true,
+  renderedFaces: true as any,
+});
 
 // --- ITEMS FINDER / SEMANTIC QUERIES ---
 const finder = components.get(OBC.ItemsFinder);
@@ -892,6 +924,8 @@ let currentTimelineDate: Date | null = null;
 let timelineTimer: number | null = null;
 let timelineIsPlaying = false;
 let timelineSpeed = 2; // Days per second
+let lastRenderedBoundaryIndex = -1;
+let isVarianceMode = false;
 
 // Define sequencing helpers globally
 function getStoreyIndex(storeyName: string): number {
@@ -1965,6 +1999,22 @@ async function displayElementProperties(model: any, expressId: number) {
   // 15. Update Floating Viewport Selection Bar, Breadcrumbs & Esc Buttons
   updateViewportSelectionBar(`${entityName}: ${nameVal} (#${expressId})`);
   updateBreadcrumbs(storeyName || "All Storeys", nameVal, activeModelId || undefined, expressId);
+
+  // 16. Synchronize selected element location onto 2D Radar floor plan
+  try {
+    const boxer = components.get(OBC.BoundingBoxer);
+    boxer.list.clear();
+    await boxer.addFromModelIdMap({ [activeModelId || "default"]: new Set([expressId]) });
+    const box = boxer.get();
+    if (!box.isEmpty()) {
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      MinimapModule.getInstance().setSelectedElement(center, expressId);
+    }
+    boxer.list.clear();
+  } catch (e) {
+    MinimapModule.getInstance().setSelectedElement(null);
+  }
 }
 (window as any).displayElementProperties = displayElementProperties;
 
@@ -1991,6 +2041,8 @@ function resetPropertiesPanel() {
 
   const viewportBar = document.getElementById("viewport-selection-bar");
   if (viewportBar) viewportBar.style.display = "none";
+  document.body.classList.remove("has-viewport-selection");
+  MinimapModule.getInstance().setSelectedElement(null);
 
   if (propertyEditor) {
     propertyEditor.deselect();
@@ -2301,9 +2353,33 @@ if (btnImport4dCsvInput) {
       const text = await file.text();
       const count = scheduleManager.importScheduleFromCSV(text);
       if (count > 0) {
+        // Sync imported schedule tasks into twin database elements
+        for (const [, task] of scheduleManager.tasks) {
+          for (const expressId of task.elementIds) {
+            const mId = task.modelId || "default-model";
+            const dbKey = `${mId}-${expressId}`;
+            const existing = twinDatabase[dbKey] || {
+              modelId: mId,
+              expressId,
+              quantity: 1,
+              calculatedCost: 0,
+            };
+            existing.task = task.name;
+            existing.startDate = task.startDate;
+            existing.endDate = task.endDate;
+            existing.status = task.status;
+            existing.isCustomized = true;
+            if (task.unitCost > 0) {
+              existing.unitCost = task.unitCost;
+              existing.calculatedCost = task.unitCost * (existing.quantity || 1);
+            }
+            twinDatabase[dbKey] = existing as any;
+          }
+        }
+        saveDatabase();
         calculateTimelineBounds();
         if (currentTimelineDate) {
-          await updateTimelineVisualState();
+          await updateTimelineVisualState(true);
         }
         alert(`Imported ${count} custom 4D schedule tasks from CSV!\nTimeline and simulation playback updated.`);
         updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated)`);
@@ -2314,6 +2390,66 @@ if (btnImport4dCsvInput) {
     }
   });
 }
+
+// 4D Video Recording
+const btn4dRecord = document.getElementById("btn-4d-record");
+btn4dRecord?.addEventListener("click", () => {
+  TimelapseRecorderModule.getInstance().toggleRecording();
+});
+
+// Interactive Gantt Chart Drawer
+const btn4dGantt = document.getElementById("btn-4d-gantt-chart");
+btn4dGantt?.addEventListener("click", () => {
+  InteractiveGanttDrawer.getInstance().toggle();
+});
+
+// Planned vs Actual Variance Toggle
+const btn4dVariance = document.getElementById("btn-4d-variance-toggle");
+btn4dVariance?.addEventListener("click", () => {
+  isVarianceMode = !isVarianceMode;
+  btn4dVariance.classList.toggle("active", isVarianceMode);
+  showToast(
+    isVarianceMode ? "4D Variance Mode: Ahead (Blue), Delayed (Amber), Critical (Red)" : "Standard 4D Phasing Mode Active",
+    isVarianceMode ? "info" : "success"
+  );
+  updateTimelineVisualState(true);
+});
+
+// Advanced Schedule Import (MS Project XML & Primavera P6 XER)
+const btnImportScheduleAdv = document.getElementById("btn-import-schedule-advanced") as HTMLInputElement | null;
+btnImportScheduleAdv?.addEventListener("change", async (e) => {
+  const target = e.target as HTMLInputElement;
+  if (target.files && target.files[0]) {
+    const file = target.files[0];
+    const text = await file.text();
+    let res = null;
+    if (file.name.toLowerCase().endsWith(".xml")) {
+      res = ScheduleImportParsers.parseMSPDI(text);
+    } else if (file.name.toLowerCase().endsWith(".xer")) {
+      res = ScheduleImportParsers.parsePrimaveraP6(text);
+    }
+    if (res && res.tasks.length > 0) {
+      for (const t of res.tasks) {
+        scheduleManager.tasks.set(t.id, t);
+      }
+      calculateTimelineBounds();
+      if (currentTimelineDate) {
+        await updateTimelineVisualState(true);
+      }
+      showToast(`Imported ${res.tasks.length} tasks from ${res.format} (${file.name})!`, "success");
+    } else {
+      showToast("Could not parse schedule tasks from selected file.", "warning");
+    }
+    target.value = "";
+  }
+});
+
+// 7D COBie Facility Management Export
+const btnExportCobie = document.getElementById("btn-export-cobie-csv");
+btnExportCobie?.addEventListener("click", () => {
+  CobieExportModule.getInstance().exportCobieCSV();
+  showToast("Exported 7D Asset Management Lifecycle Package (COBie.csv)", "success");
+});
 
 // ============================================================
 // 5D CUMULATIVE PROJECT COST CALCULATOR
@@ -2904,6 +3040,7 @@ async function loadModelData(name: string, buffer: Uint8Array) {
             .map((lvl, idx) => `<option value="${idx}">${lvl.name} (${lvl.elevation >= 0 ? "+" : ""}${lvl.elevation}m)</option>`)
             .join("");
         }
+        MinimapModule.getInstance().syncLevelsFromStoreySlicer();
       } catch (e) {
         console.warn("StoreyLevelSlicer sync warning:", e);
       }
@@ -5858,10 +5995,8 @@ const timelineSlider = document.getElementById("timeline-slider") as HTMLInputEl
 const timelinePlayBtn = document.getElementById("timeline-play-btn");
 const timelineSpeedSelect = document.getElementById("timeline-speed") as HTMLSelectElement | null;
 
-function calculateTimelineBounds() {
-  let minTime = Infinity;
-  let maxTime = -Infinity;
-  let hasDates = false;
+function syncScheduleEngine() {
+  const elements: ElementSchedule[] = [];
 
   for (const [, model] of fragments.list) {
     const anyModel = model as any;
@@ -5878,69 +6013,71 @@ function calculateTimelineBounds() {
       const ifcType = String(elementProps.type ?? "").toUpperCase();
       const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
 
-      if (twinData.startDate) {
+      if (twinData.startDate && twinData.endDate) {
         const start = new Date(twinData.startDate).getTime();
-        if (start < minTime) minTime = start;
-        hasDates = true;
-      }
-      if (twinData.endDate) {
         const end = new Date(twinData.endDate).getTime();
-        if (end > maxTime) maxTime = end;
-        hasDates = true;
+        if (Number.isFinite(start) && Number.isFinite(end)) {
+          elements.push({
+            modelId,
+            expressId,
+            task: twinData.task || "General Construction Works",
+            group: twinData.task || "General Construction Works",
+            start,
+            end,
+            cost: twinData.calculatedCost || (twinData.unitCost * (twinData.quantity || 1)) || 0,
+            statusOverride: twinData.isCustomized ? twinData.status : undefined,
+          });
+        }
       }
     }
   }
 
-  if (hasDates && minTime !== Infinity && maxTime !== -Infinity) {
-    timelineMinDate = new Date(minTime);
-    timelineMaxDate = new Date(maxTime);
-    
-    // Add buffer: 1 day before start, 1 day after end
+  schedule4DEngine.setElements(elements);
+  const bounds = schedule4DEngine.getBounds();
+
+  if (bounds) {
+    timelineMinDate = new Date(bounds.min);
+    timelineMaxDate = new Date(bounds.max);
+    // 1-day safety buffer
     timelineMinDate.setDate(timelineMinDate.getDate() - 1);
     timelineMaxDate.setDate(timelineMaxDate.getDate() + 1);
 
-    currentTimelineDate = new Date(timelineMinDate);
-
-    // Enable inputs
-    const slider = document.getElementById("timeline-slider") as HTMLInputElement;
-    const playBtn = document.getElementById("timeline-play-btn");
-
-    if (slider) {
-      slider.removeAttribute("disabled");
-      const diffDays = Math.ceil((timelineMaxDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24));
-      slider.max = String(diffDays);
-      slider.value = "0";
-    }
-    if (playBtn) {
-      playBtn.removeAttribute("disabled");
-    }
-
-    updateTimelineDateUI();
-    updateTimelineVisualState();
+    const totalWeeks = Schedule4DEngine.totalWeeks(bounds.min, bounds.max);
+    GanttPhasingModule.getInstance().setTotalWeeks(totalWeeks);
+    GanttPhasingModule.getInstance().setMilestones(schedule4DEngine.getMilestones());
   } else {
-    // Generate default sample construction schedule bounds (60 days) so Play button & timeline scrubber are always active
     const start = new Date("2026-06-18");
     const end = new Date("2026-08-18");
     timelineMinDate = start;
     timelineMaxDate = end;
-    currentTimelineDate = new Date(start);
-
-    const slider = document.getElementById("timeline-slider") as HTMLInputElement;
-    const playBtn = document.getElementById("timeline-play-btn");
-
-    if (slider) {
-      slider.removeAttribute("disabled");
-      const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      slider.max = String(diffDays);
-      slider.value = "0";
-    }
-    if (playBtn) {
-      playBtn.removeAttribute("disabled");
-    }
-
-    updateTimelineDateUI();
-    updateTimelineVisualState();
+    GanttPhasingModule.getInstance().setTotalWeeks(9);
   }
+
+  if (!currentTimelineDate || currentTimelineDate < timelineMinDate || currentTimelineDate > timelineMaxDate) {
+    currentTimelineDate = new Date(timelineMinDate);
+  }
+
+  const slider = document.getElementById("timeline-slider") as HTMLInputElement;
+  const playBtn = document.getElementById("timeline-play-btn");
+
+  if (slider && timelineMinDate && timelineMaxDate) {
+    slider.removeAttribute("disabled");
+    const diffDays = Math.ceil((timelineMaxDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24));
+    slider.max = String(diffDays);
+    const currDiff = Math.max(0, Math.floor((currentTimelineDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24)));
+    slider.value = String(currDiff);
+  }
+  if (playBtn) {
+    playBtn.removeAttribute("disabled");
+  }
+
+  lastRenderedBoundaryIndex = -1;
+  updateTimelineDateUI();
+}
+
+function calculateTimelineBounds() {
+  syncScheduleEngine();
+  updateTimelineVisualState(true);
 }
 
 function updateTimelineDateUI() {
@@ -5953,19 +6090,32 @@ function updateTimelineDateUI() {
     badge.innerText = `${year}-${month}-${day}`;
   }
 
-  // Synchronize Week (1..52), Milestones, EVM Budget, and % Complete in the unified 4D bar
+  const dateMs = currentTimelineDate.getTime();
+  const gantt = GanttPhasingModule.getInstance();
+
   if (timelineMinDate && timelineMaxDate) {
-    const totalMs = Math.max(1, timelineMaxDate.getTime() - timelineMinDate.getTime());
-    const elapsedMs = Math.max(0, Math.min(totalMs, currentTimelineDate.getTime() - timelineMinDate.getTime()));
-    const ratio = elapsedMs / totalMs;
-    const week = Math.max(1, Math.min(52, Math.round(1 + ratio * 51)));
-    GanttPhasingModule.getInstance().setWeek(week);
+    const week = Schedule4DEngine.weekOf(currentTimelineDate, timelineMinDate, timelineMaxDate);
+    gantt.setWeek(week);
   }
+
+  gantt.setCurrentDate(dateMs);
+
+  const evm = schedule4DEngine.getEarnedValue(dateMs);
+  gantt.updateEarnedValue(evm);
 }
 
-async function updateTimelineVisualState() {
+async function updateTimelineVisualState(force: boolean = false) {
   if (!currentTimelineDate) return;
   if (!is4dMode) return;
+
+  const dateMs = currentTimelineDate.getTime();
+  const currentBoundary = schedule4DEngine.getBoundaryIndex(dateMs);
+
+  // Skip heavy WebGL highlighter scene mutation if boundary hasn't changed
+  if (!force && currentBoundary === lastRenderedBoundaryIndex) {
+    return;
+  }
+  lastRenderedBoundaryIndex = currentBoundary;
 
   const hider = components.get(OBC.Hider);
   
@@ -5988,84 +6138,37 @@ async function updateTimelineVisualState() {
   const completeStyle = highlighter.styles.get("timeline-completed");
   if (completeStyle) completeStyle.color.set(completeColor);
 
-  const plannedMap: Record<string, Set<number>> = {};
-  const inProgressMap: Record<string, Set<number>> = {};
-  const completedMap: Record<string, Set<number>> = {};
+  if (isVarianceMode) {
+    await highlighter.clear("timeline-variance-ahead");
+    await highlighter.clear("timeline-variance-delayed");
+    await highlighter.clear("timeline-variance-critical");
 
-  let hasPlanned = false;
-  let hasInProgress = false;
-  let hasCompleted = false;
-
-  for (const [, model] of fragments.list) {
-    const anyModel = model as any;
-    const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || anyModel.object?.uuid || "default-model";
-    const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
-
-    const plannedIds = new Set<number>();
-    const inProgressIds = new Set<number>();
-    const completedIds = new Set<number>();
-
-    for (const expressIdStr in properties) {
-      const expressId = Number(expressIdStr);
-      if (isNaN(expressId)) continue;
-
-      const elementProps = properties[expressId];
-      if (!elementProps) continue;
-
-      const ifcType = String(elementProps.type ?? "").toUpperCase();
-      const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
-
-      const start = new Date(twinData.startDate);
-      const end = new Date(twinData.endDate);
-
-      // Compare dates (midnight boundary)
-      const currentMs = currentTimelineDate.getTime();
-      const startMs = start.getTime();
-      const endMs = end.getTime();
-
-      let status: "Planned" | "In Progress" | "Completed" = "Planned";
-      if (currentMs < startMs) {
-        plannedIds.add(expressId);
-        status = "Planned";
-      } else if (currentMs >= startMs && currentMs <= endMs) {
-        inProgressIds.add(expressId);
-        status = "In Progress";
-      } else {
-        completedIds.add(expressId);
-        status = "Completed";
-      }
-
-      // Dynamic 4D properties update — preserve user-customized statuses
-      if (!twinData.isCustomized) {
-        twinData.status = status;
-      }
+    const vBuckets = schedule4DEngine.getVarianceBuckets(dateMs);
+    await hider.set(true); // make all visible in variance audit mode
+    if (vBuckets.counts.ahead > 0) {
+      await highlighter.highlightByID("timeline-variance-ahead", vBuckets.ahead, false, false);
     }
+    if (vBuckets.counts.delayed > 0) {
+      await highlighter.highlightByID("timeline-variance-delayed", vBuckets.delayed, false, false);
+    }
+    if (vBuckets.counts.critical > 0) {
+      await highlighter.highlightByID("timeline-variance-critical", vBuckets.critical, false, false);
+    }
+  } else {
+    const buckets = schedule4DEngine.getStatusBuckets(dateMs);
 
-    if (plannedIds.size > 0) {
-      plannedMap[modelId] = plannedIds;
-      hasPlanned = true;
+    // Update visibility & highlight with status colors
+    if (buckets.counts.planned > 0) {
+      await hider.set(false, buckets.planned);
     }
-    if (inProgressIds.size > 0) {
-      inProgressMap[modelId] = inProgressIds;
-      hasInProgress = true;
+    if (buckets.counts.inProgress > 0) {
+      await hider.set(true, buckets.inProgress);
+      await highlighter.highlightByID("timeline-inprogress", buckets.inProgress, false, false);
     }
-    if (completedIds.size > 0) {
-      completedMap[modelId] = completedIds;
-      hasCompleted = true;
+    if (buckets.counts.completed > 0) {
+      await hider.set(true, buckets.completed);
+      await highlighter.highlightByID("timeline-completed", buckets.completed, false, false);
     }
-  }
-
-  // Update visibility & highlight with status colors
-  if (hasPlanned) {
-    await hider.set(false, plannedMap);
-  }
-  if (hasInProgress) {
-    await hider.set(true, inProgressMap);
-    await highlighter.highlightByID("timeline-inprogress", inProgressMap, false, false);
-  }
-  if (hasCompleted) {
-    await hider.set(true, completedMap);
-    await highlighter.highlightByID("timeline-completed", completedMap, false, false);
   }
 
   // Sync selected element inputs dynamically if properties panel is open for it
@@ -6252,9 +6355,10 @@ function updateScheduleWidgetUI() {
   }
 }
 
-function startTimelinePlayback() {
+function startTimelinePlayback(onStep?: (dateStr: string) => void) {
   if (timelineIsPlaying || !timelineMinDate) return;
   timelineIsPlaying = true;
+  (window as any).isTimelinePlaying = true;
   if (timelinePlayBtn) {
     timelinePlayBtn.classList.add("playing");
     timelinePlayBtn.innerHTML = `
@@ -6281,7 +6385,8 @@ function startTimelinePlayback() {
         timelineSlider.value = timelineSlider.max;
       }
       updateTimelineDateUI();
-      updateTimelineVisualState();
+      updateTimelineVisualState(true);
+      if (onStep) onStep(currentTimelineDate.toISOString().split("T")[0]);
       stopTimelinePlayback();
     } else {
       currentTimelineDate = new Date(newMs);
@@ -6292,6 +6397,7 @@ function startTimelinePlayback() {
       }
       updateTimelineDateUI();
       updateTimelineVisualState();
+      if (onStep) onStep(currentTimelineDate.toISOString().split("T")[0]);
       timelineTimer = requestAnimationFrame(tick);
     }
   };
@@ -6301,9 +6407,13 @@ function startTimelinePlayback() {
 
 function stopTimelinePlayback() {
   timelineIsPlaying = false;
+  (window as any).isTimelinePlaying = false;
   if (timelineTimer) {
     cancelAnimationFrame(timelineTimer);
     timelineTimer = null;
+  }
+  if (TimelapseRecorderModule.getInstance().isRecording()) {
+    TimelapseRecorderModule.getInstance().stopRecording();
   }
   const btn = document.getElementById("timeline-play-btn");
   if (btn) {
@@ -6327,8 +6437,9 @@ if (timelineSlider) {
 }
 
 if (timelinePlayBtn) {
-  const handleTogglePlay = () => {
-    if (timelineIsPlaying) {
+  const handleTogglePlay = (forceState?: boolean) => {
+    const shouldPlay = typeof forceState === "boolean" ? forceState : !timelineIsPlaying;
+    if (!shouldPlay) {
       stopTimelinePlayback();
     } else {
       // If we are at the end, restart from beginning
@@ -6341,9 +6452,37 @@ if (timelinePlayBtn) {
       startTimelinePlayback();
     }
   };
-  timelinePlayBtn.addEventListener("click", handleTogglePlay);
+  timelinePlayBtn.addEventListener("click", () => handleTogglePlay());
   (window as any).toggleTimelinePlayback = handleTogglePlay;
 }
+
+(window as any).startTimelinePlayback = startTimelinePlayback;
+(window as any).stopTimelinePlayback = stopTimelinePlayback;
+(window as any).isTimelinePlaying = false;
+
+(window as any).setTimelinePlaybackSpeed = (speed: number) => {
+  timelineSpeed = speed;
+  const speedPills = document.querySelectorAll(".btn-speed-pill");
+  speedPills.forEach((p) => {
+    p.classList.toggle("active", Number((p as HTMLElement).dataset.speed) === speed);
+  });
+  if (timelineSpeedSelect) timelineSpeedSelect.value = String(speed);
+};
+
+(window as any).jumpTimelineToDate = (targetDate: Date) => {
+  if (!timelineMinDate || !timelineMaxDate) {
+    calculateTimelineBounds();
+  }
+  if (!timelineMinDate || !timelineMaxDate) return;
+  const clampedMs = Math.max(timelineMinDate.getTime(), Math.min(timelineMaxDate.getTime(), targetDate.getTime()));
+  currentTimelineDate = new Date(clampedMs);
+  if (timelineSlider) {
+    const diffDays = Math.floor((clampedMs - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24));
+    timelineSlider.value = String(diffDays);
+  }
+  updateTimelineDateUI();
+  updateTimelineVisualState(true);
+};
 
 if (timelineSpeedSelect) {
   timelineSpeedSelect.addEventListener("change", () => {
@@ -6429,8 +6568,9 @@ if (btn4dToggle) {
     calculateTimelineBounds();
   }
   if (!timelineMinDate || !timelineMaxDate) return;
-  const clampedWeek = Math.max(1, Math.min(52, week));
-  const ratio = (clampedWeek - 1) / 51;
+  const totalWeeks = GanttPhasingModule.getInstance().getTotalWeeks() || 52;
+  const clampedWeek = Math.max(1, Math.min(totalWeeks, week));
+  const ratio = totalWeeks > 1 ? (clampedWeek - 1) / (totalWeeks - 1) : 0;
   const totalDays = Math.max(1, Math.ceil((timelineMaxDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24)));
   const targetDay = Math.round(ratio * totalDays);
   currentTimelineDate = new Date(timelineMinDate.getTime() + targetDay * 24 * 60 * 60 * 1000);
@@ -6439,7 +6579,7 @@ if (btn4dToggle) {
   }
   GanttPhasingModule.getInstance().setWeek(clampedWeek);
   updateTimelineDateUI();
-  updateTimelineVisualState();
+  updateTimelineVisualState(true);
 };
 
 // --- 3D VIEW CUBE CONTROLLER ---
@@ -6789,6 +6929,19 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
     { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: () => PresentationSheetModule.getInstance().export4KBoard() },
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => document.getElementById("btn-4d-mode")?.click() },
+    { id: "tool-4d-record", title: "Record 4D Simulation Video (WebM)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`, action: () => TimelapseRecorderModule.getInstance().toggleRecording() },
+    { id: "tool-4d-gantt", title: "Toggle Interactive 4D Construction Gantt Chart", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`, action: () => InteractiveGanttDrawer.getInstance().toggle() },
+    { id: "tool-4d-variance", title: "Toggle Planned vs. Actual Variance Mode", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>`, action: () => document.getElementById("btn-4d-variance-toggle")?.click() },
+    { id: "tool-export-cobie", title: "Export 7D COBie Facility Management Handover Data (CSV)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>`, action: () => CobieExportModule.getInstance().exportCobieCSV() },
+    { id: "tool-model-diff", title: "Run 3D Visual Model Revision Diff (Added / Removed / Modified)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/></svg>`, action: async () => {
+      if (fragments.list.size < 2) {
+        showToast("Please load at least 2 IFC models to run 3D Revision Diff.", "warning");
+        return;
+      }
+      const ids = Array.from(fragments.list.keys());
+      await ModelDiffModule.getInstance().compareModels(ids[0], ids[1]);
+    }},
+    { id: "tool-2d-plan-overlay", title: "Toggle 2D Storey Drawing Sheet Overlay", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>`, action: () => PlanOverlayModule.getInstance().toggleVisibility() },
     { id: "tool-pin-tour", title: "Play Guided 3D Issue Tour", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, action: () => AnnotationModule.getInstance().startTour() },
     { id: "tool-export-bcf", title: "Export Pins (BCF / JSON Report)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, action: () => AnnotationModule.getInstance().exportBCFJSON() },
     { id: "tool-xray-toggle", title: "Toggle X-Ray Isolation Mode", category: "Display", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`, action: () => AnnotationModule.getInstance().toggleXRay() },

@@ -507,16 +507,76 @@ export class ClashDetector {
     this.markerIds = [];
   }
 
+  public getClashMatrix(): { disciplines: string[]; matrix: Record<string, Record<string, number>> } {
+    const discSet = new Set<string>();
+    for (const c of this.clashResults) {
+      if (c.disciplineA) discSet.add(c.disciplineA);
+      if (c.disciplineB) discSet.add(c.disciplineB);
+    }
+    const disciplines = Array.from(discSet).sort();
+    if (disciplines.length === 0) {
+      disciplines.push("Architecture", "Structure", "MEP");
+    }
+
+    const matrix: Record<string, Record<string, number>> = {};
+    for (const d1 of disciplines) {
+      matrix[d1] = {};
+      for (const d2 of disciplines) {
+        matrix[d1][d2] = 0;
+      }
+    }
+
+    for (const c of this.clashResults) {
+      const a = c.disciplineA;
+      const b = c.disciplineB;
+      if (matrix[a] && matrix[a][b] !== undefined) {
+        matrix[a][b]++;
+      }
+      if (a !== b && matrix[b] && matrix[b][a] !== undefined) {
+        matrix[b][a]++;
+      }
+    }
+
+    return { disciplines, matrix };
+  }
+
   public updateClashUI() {
     if (typeof document === "undefined") return;
 
     const listEl = document.getElementById("clash-results-list");
     const countBadge = document.getElementById("clash-total-badge");
     const critBadge = document.getElementById("clash-critical-badge");
+    const matrixContainer = document.getElementById("clash-matrix-container");
 
     const criticalCount = this.clashResults.filter((c) => c.severity === "critical").length;
     if (countBadge) countBadge.innerText = `${this.clashResults.length} Total`;
     if (critBadge) critBadge.innerText = `${criticalCount} Critical`;
+
+    // Render Multi-Discipline Clash Matrix Grid
+    if (matrixContainer) {
+      const { disciplines, matrix } = this.getClashMatrix();
+      let tableHtml = `<table class="clash-matrix-table"><thead><tr><th>Discipline</th>`;
+      disciplines.forEach((d) => {
+        tableHtml += `<th>${escapeHtml(d.slice(0, 5).toUpperCase())}</th>`;
+      });
+      tableHtml += `</tr></thead><tbody>`;
+
+      disciplines.forEach((d1) => {
+        tableHtml += `<tr><td class="row-header">${escapeHtml(d1)}</td>`;
+        disciplines.forEach((d2) => {
+          if (d1 === d2) {
+            tableHtml += `<td class="cell-diag">—</td>`;
+          } else {
+            const count = matrix[d1]?.[d2] || 0;
+            const heatClass = count > 5 ? "heat-high" : (count > 0 ? "heat-med" : "heat-none");
+            tableHtml += `<td class="cell-count ${heatClass}" title="${d1} × ${d2}: ${count} clashes">${count}</td>`;
+          }
+        });
+        tableHtml += `</tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      matrixContainer.innerHTML = tableHtml;
+    }
 
     if (listEl) {
       listEl.innerHTML = "";

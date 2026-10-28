@@ -105,7 +105,7 @@ BIM Kintsugi deeply integrates native `@thatopen/components` (`OBC`) and `@thato
 | **🌿 6. 6D Embodied Carbon & LCA** | • ICE Database v3.0 embodied carbon engine (`kgCO₂e/m³`) using real IFC `Qto_*NetVolume` properties and 3D bounding volumes<br>• **5-Band 3D Carbon Intensity Heatmap** (`Grade A` Emerald → `Grade E` Crimson) painted directly onto 3D model geometry via `OBF.Highlighter`<br>• Material optimization simulator (*Fly-Ash Concrete*, *Cross-Laminated Timber*, *EAF Recycled Steel*) and LEED / EN 15978 CSV report export |
 | **🤖 7. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Highlight high carbon elements"*, *"Cost summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
 | **🎨 8. VFX Studio & 4K Drawing Sheet** | • 6 `OBF.PostproductionAspect` render styles: **Shaded**, **Pen / Technical Drawing**, **Color + Pen**, **Shaded + Pen + AO**, **Clay / Ambient Occlusion**, and **Wireframe**<br>• Dynamic Solar Azimuth & Elevation shadow simulation<br>• **4K Technical Drawing Sheet Generator** (`3840×2160` PNG with ISO architectural border, project title block, scale bar, north arrow, and revision metadata) |
-| **🧭 9. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Click & Drag on Minimap** to teleport the 3D camera to any X/Z coordinate while preserving camera elevation<br>• Automatic IFC `IfcBuildingStorey` extraction with 1-click horizontal section slicing and 2D floor plan orthographic lock |
+| **🧭 9. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Interactive Navigation**: Click to teleport camera, drag avatar/cone to rotate gaze in real time, or toggle First-Person WASD Walk mode<br>• **Compass Rose & Face North**: True North indicator button with 1-click camera orientation snap<br>• **Storey Sync & Auto-Tracking**: Automatic IFC `IfcBuildingStorey` detection with live elevation auto-tracking and 1-click horizontal floor slicing<br>• **Clash & Selection Layer**: Live pulsing reticle for selected elements and interactive hazard pins for multi-discipline clashes on the active floor<br>• **Tactical Pan & Zoom**: Scroll wheel zoom, Shift/right-click pan, quick Zoom In/Out/Fit controls, live metric coordinate readout (`X/Z/Dist`), and expandable size preset (180px ↔ 290px) |
 
 ---
 
@@ -217,19 +217,19 @@ Open `http://localhost:3000/` in your browser. Click **Sample Model** in the top
 ```bash
 npm run build
 ```
-Compiles TypeScript (`tsc`) and bundles the app (`index`) plus vendor chunks (`thatopen-core`, including Three.js and web-ifc, and `thatopen-ui`) into `./dist`. `three` and `web-ifc` are deduplicated.
+Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor chunks (`thatopen-front`, `thatopen-ui`, and `thatopen-core`, including Three.js and web-ifc) into `./dist`. `three` and `web-ifc` are deduplicated.
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 56-test Vitest suite across all core and enterprise modules:
+Run strict TypeScript type-checking and the 66-test Vitest suite across all core and enterprise modules:
 
 ```bash
 # Type-check with zero emit
 npm run lint
 
-# Run all 7 unit test suites (56 tests)
+# Run all 11 unit test suites (66 tests)
 npm test -- --run
 ```
 
@@ -258,14 +258,17 @@ The latest audit also ran a headless Chrome (Playwright) pass at `1920×1080` an
 
 ## 📝 Recent Changes
 
-- **BCF drawer fixed** – the BCF 2.1 Issue Tracker drawer and toast notifications now render correctly (an unclosed `#collab-panel` tag had been hiding them).
-- **BCF sync** – issues created from the sidebar BCF form now show up immediately in the header drawer.
-- **One command palette** – `Ctrl+K` opens a single omnibar. The "First Person Camera Controls" command now opens the correct tab.
-- **4D layout** – the selection bar moves above the Gantt timeline in 4D mode, so the two no longer overlap.
-- **Board** – the header button only opens the Presentation Sheet drawer. To download the PNG, run **Export 4K Presentation Board** from the command palette.
-- **Themes** – theme presets now save consistently, and changing theme shows only one toast.
-- **Build** – Windows path slashes are normalized in Vite `manualChunks`, and `three` / `web-ifc` are deduplicated.
-- **Cleaner console** – the postproduction lazy-init warning and the deprecated `THREE.Clock` warning are gone.
+- **4D Simulation Single Source of Truth** – [`Schedule4DEngine`](src/modules/Schedule4DEngine.ts) drives all 4D simulation states, dynamic milestone pills, real EVM budget formulas, SPI metrics, and boundary-cached 60 FPS playback.
+- **4D Video / Timelapse Recording** – Record WebM simulation playback directly from the viewport canvas using the MediaRecorder API (`#btn-4d-record`).
+- **Planned vs. Actual Variance Mode** – Interactive 4D variance coloring highlighting ahead (sky blue), on schedule (emerald), delayed (amber), and critical delays (red).
+- **Interactive 4D Gantt Chart Drawer** – Slide-up horizontal Gantt timeline drawer with task filtering, progress bars, and bi-directional 3D element cross-selection.
+- **MS Project (MSPDI XML) & Primavera (P6 XER) Importers** – Direct import of enterprise scheduling files (`.xml`, `.xer`) mapping tasks, dates, and costs to IFC classifications.
+- **Multi-Discipline Clash Matrix** – Grid table summarizing clash density across Architecture, Structure, and MEP models with instant pair filtering.
+- **3D Visual Model Diff / Revision Comparison** – Compare two model revisions with visual color-coded ghosting: Added (Green), Removed (Red), Modified (Yellow).
+- **2D Drawing Sheet (CAD/PDF) Overlay** – Projects 2D plan drawings onto 3D storey slice cut planes with opacity blending and elevation alignment.
+- **7D COBie Facility Management Export** – Generates standard ISO 19650 / BS 1192-4 COBie spreadsheets (Facility, Floor, Component) for building handover.
+- **Vite Rolldown Chunk Splitting** – Dedicated `@thatopen/components-front` (941 kB) and `@thatopen/ui` vendor chunks reducing bundle overhead.
+- **BCF drawer & DOM alignment** – BCF 2.1 Issue Tracker drawer and toast notifications render reliably; issues sync immediately between sidebar and header drawer.
 
 ---
 
