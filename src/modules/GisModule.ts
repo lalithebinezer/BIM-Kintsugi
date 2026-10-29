@@ -129,6 +129,8 @@ export class GisModule {
   private cadastreGroup: THREE.Group | null = null;
   private basemapCanvas: HTMLCanvasElement | null = null;
   private basemapTexture: THREE.CanvasTexture | null = null;
+  private currentTileFetchId: number = 0;
+  private tileFetchTimer: any = null;
 
   // Features list
   private geoJsonFeatures: GisGeoJsonFeature[] = [];
@@ -236,11 +238,19 @@ export class GisModule {
   }
 
   public setBasemapElevation(elevationOffset: number) {
-    this.setBasemapConfig({ elevationOffset });
+    this.basemapConfig.elevationOffset = elevationOffset;
+    if (this.basemapMesh) {
+      this.basemapMesh.position.y = elevationOffset;
+      this.triggerRender();
+    }
   }
 
   public setBasemapOpacity(opacity: number) {
-    this.setBasemapConfig({ opacity });
+    this.basemapConfig.opacity = opacity;
+    if (this.basemapMesh && this.basemapMesh.material instanceof THREE.MeshBasicMaterial) {
+      this.basemapMesh.material.opacity = opacity;
+      this.triggerRender();
+    }
   }
 
   public clearCadastre() {
@@ -545,7 +555,7 @@ export class GisModule {
   /**
    * Reconstructs or updates the 3D ground basemap mesh.
    */
-  public rebuildBasemap() {
+  public rebuildBasemap(immediateTiles: boolean = false) {
     if (!this.basemapGroup) return;
 
     if (!this.basemapConfig.enabled) {
@@ -583,7 +593,7 @@ export class GisModule {
       this.basemapMesh = new THREE.Mesh(geo, mat);
       this.basemapGroup.add(this.basemapMesh);
     } else {
-      // Update dimensions
+      // Update dimensions to match exact radius
       this.basemapMesh.geometry.dispose();
       const geo = new THREE.PlaneGeometry(diameter, diameter, 32, 32);
       geo.rotateX(-Math.PI / 2);
@@ -598,13 +608,25 @@ export class GisModule {
     // Position and orient to true north
     this.basemapMesh.position.set(0, this.basemapConfig.elevationOffset, 0);
     this.basemapMesh.rotation.y = (-this.location.trueNorthAngle * Math.PI) / 180;
+    this.triggerRender();
 
-    // Trigger asynchronous satellite/map tile loading
-    this.fetchTileImagery();
+    // Debounce network tile fetching
+    if (this.tileFetchTimer) {
+      clearTimeout(this.tileFetchTimer);
+      this.tileFetchTimer = null;
+    }
+
+    if (immediateTiles) {
+      this.fetchTileImagery();
+    } else {
+      this.tileFetchTimer = setTimeout(() => {
+        this.fetchTileImagery();
+      }, 200);
+    }
   }
 
   /**
-   * Generates crisp procedural architectural basemap patterns and initiates tile stitching.
+   * Generates crisp procedural architectural basemap patterns and concentric metric distance markers.
    */
   private renderBasemapTextureContent() {
     if (!this.basemapCanvas) return;
@@ -621,7 +643,7 @@ export class GisModule {
     let bgFill = "#0c0e14";
     let gridMajor = "rgba(56, 189, 248, 0.25)";
     let gridMinor = "rgba(56, 189, 248, 0.08)";
-    let ringColor = "rgba(212, 255, 63, 0.35)";
+    let ringColor = "rgba(212, 255, 63, 0.4)";
 
     if (provider === "satellite") {
       bgFill = "#0f171c";
@@ -644,44 +666,41 @@ export class GisModule {
     ctx.fillStyle = bgFill;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw coordinate grid
-    const step = w / 16;
-    ctx.lineWidth = 1;
-
-    for (let x = 0; x <= w; x += step) {
-      ctx.strokeStyle = x % (step * 4) === 0 ? gridMajor : gridMinor;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-
-    for (let y = 0; y <= h; y += step) {
-      ctx.strokeStyle = y % (step * 4) === 0 ? gridMajor : gridMinor;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-
-    // Concentric range circles (Radius markers)
+    // Draw metric coordinate grid centered on project origin (0, 0, 0)
     const centerX = w / 2;
     const centerY = h / 2;
-    const radii = [0.25, 0.5, 0.75, 0.95];
+    const radius = this.basemapConfig.radius;
+    const pxPerMeter = (w / 2) / radius;
 
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = ringColor;
-    radii.forEach((rRatio) => {
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, (w / 2) * rRatio, 0, Math.PI * 2);
-      ctx.stroke();
+    let gridStep = 50; // meters
+    if (radius >= 1600) gridStep = 200;
+    else if (radius >= 800) gridStep = 100;
+    else if (radius <= 250) gridStep = 25;
 
-      // Range text
-      const meters = Math.round(this.basemapConfig.radius * rRatio);
-      ctx.fillStyle = ringColor;
-      ctx.font = "bold 14px monospace";
-      ctx.fillText(`${meters}m`, centerX + (w / 2) * rRatio + 4, centerY - 4);
-    });
+    for (let d = 0; d <= radius; d += gridStep) {
+      const isMajor = Math.round(d / gridStep) % 4 === 0;
+      ctx.strokeStyle = isMajor ? gridMajor : gridMinor;
+      ctx.lineWidth = isMajor ? 1.5 : 1;
+
+      // Positive & negative offsets from center
+      const offsets = d === 0 ? [0] : [d, -d];
+      offsets.forEach((offset) => {
+        const x = centerX + offset * pxPerMeter;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+
+        const y = centerY + offset * pxPerMeter;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      });
+    }
+
+    // Draw metric range rings
+    this.drawMetricRangeRings(ctx, w, h, ringColor);
 
     // North arrow mark at top
     ctx.fillStyle = "#D4FF3F";
@@ -712,10 +731,45 @@ export class GisModule {
     }
   }
 
+  private drawMetricRangeRings(ctx: CanvasRenderingContext2D, w: number, h: number, ringColor: string) {
+    const centerX = w / 2;
+    const centerY = h / 2;
+    const radius = this.basemapConfig.radius;
+    const pxPerMeter = (w / 2) / radius;
+
+    let interval = 100;
+    if (radius >= 2000) interval = 500;
+    else if (radius >= 800) interval = 250;
+    else if (radius <= 250) interval = 50;
+
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = ringColor;
+
+    for (let d = interval; d <= radius; d += interval) {
+      const rPx = d * pxPerMeter;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, rPx, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = ringColor;
+      ctx.font = "bold 13px monospace";
+      ctx.fillText(`${d}m`, centerX + rPx + 4, centerY - 4);
+    }
+
+    // Outer boundary ring
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, (w / 2) * 0.98, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   /**
-   * Asynchronously fetches slippy map tiles and paints them onto the basemap canvas.
+   * Asynchronously fetches georeferenced slippy map tiles matching the exact geographic
+   * bounding box of the current basemap radius, ensuring 1:1 true metric scale.
    */
   private async fetchTileImagery() {
+    const fetchId = ++this.currentTileFetchId;
     const provider = this.basemapConfig.provider;
     let tileUrlTemplate = "";
 
@@ -731,29 +785,74 @@ export class GisModule {
 
     if (!tileUrlTemplate) return;
 
-    // Slippy tile math at zoom level 16
-    const zoom = 16;
-    const lat = this.location.latitude;
-    const lon = this.location.longitude;
+    const R = this.basemapConfig.radius;
+    const lat0 = this.location.latitude;
+    const lon0 = this.location.longitude;
+    const R_earth = 6378137.0;
 
-    const latRad = (lat * Math.PI) / 180;
-    const n = Math.pow(2, zoom);
-    const tileX = Math.floor(((lon + 180) / 360) * n);
-    const tileY = Math.floor(((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n);
+    // Geographic bounding box for this radius extent in meters
+    const dLatDeg = (R / R_earth) * (180 / Math.PI);
+    const latMin = Math.max(-85.0511, lat0 - dLatDeg);
+    const latMax = Math.min(85.0511, lat0 + dLatDeg);
 
-    // Fetch 3x3 tiles centered on project
-    const imgPromises: Promise<{ img: HTMLImageElement; dx: number; dy: number } | null>[] = [];
+    const cosLat = Math.cos((lat0 * Math.PI) / 180);
+    const dLonDeg = (R / (R_earth * Math.max(0.01, cosLat))) * (180 / Math.PI);
+    const lonMin = Math.max(-180, lon0 - dLonDeg);
+    const lonMax = Math.min(180, lon0 + dLonDeg);
 
-    for (let ox = -1; ox <= 1; ox++) {
-      for (let oy = -1; oy <= 1; oy++) {
-        const curX = tileX + ox;
-        const curY = tileY + oy;
-        const url = tileUrlTemplate.replace("{z}", String(zoom)).replace("{x}", String(curX)).replace("{y}", String(curY));
+    if (!this.basemapCanvas) return;
+    const canvasWidth = this.basemapCanvas.width;
+    const canvasHeight = this.basemapCanvas.height;
 
-        const p = new Promise<{ img: HTMLImageElement; dx: number; dy: number } | null>((resolve) => {
+    // Desired ground resolution in meters per pixel
+    const groundRes = (2 * R) / canvasWidth;
+
+    // Optimal Web Mercator zoom level for this extent
+    let zoom = Math.round(Math.log2((156543.03 * Math.max(0.1, cosLat)) / groundRes));
+    zoom = Math.max(12, Math.min(18, zoom));
+
+    const lonToTileX = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
+    const latToTileY = (lat: number, z: number) => {
+      const latRad = (lat * Math.PI) / 180;
+      return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * Math.pow(2, z);
+    };
+
+    let xStart = lonToTileX(lonMin, zoom);
+    let xEnd = lonToTileX(lonMax, zoom);
+    let yStart = latToTileY(latMax, zoom); // latMax (North) -> smaller tile Y
+    let yEnd = latToTileY(latMin, zoom);   // latMin (South) -> larger tile Y
+
+    let tileXMin = Math.floor(xStart);
+    let tileXMax = Math.floor(xEnd);
+    let tileYMin = Math.floor(yStart);
+    let tileYMax = Math.floor(yEnd);
+
+    // Limit maximum tiles to fetch in one pass to avoid rate limits or browser stalls
+    while ((tileXMax - tileXMin + 1) * (tileYMax - tileYMin + 1) > 20 && zoom > 10) {
+      zoom--;
+      xStart = lonToTileX(lonMin, zoom);
+      xEnd = lonToTileX(lonMax, zoom);
+      yStart = latToTileY(latMax, zoom);
+      yEnd = latToTileY(latMin, zoom);
+      tileXMin = Math.floor(xStart);
+      tileXMax = Math.floor(xEnd);
+      tileYMin = Math.floor(yStart);
+      tileYMax = Math.floor(yEnd);
+    }
+
+    const imgPromises: Promise<{ img: HTMLImageElement; tx: number; ty: number } | null>[] = [];
+
+    for (let tx = tileXMin; tx <= tileXMax; tx++) {
+      for (let ty = tileYMin; ty <= tileYMax; ty++) {
+        const url = tileUrlTemplate
+          .replace("{z}", String(zoom))
+          .replace("{x}", String(tx))
+          .replace("{y}", String(ty));
+
+        const p = new Promise<{ img: HTMLImageElement; tx: number; ty: number } | null>((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          img.onload = () => resolve({ img, dx: ox + 1, dy: oy + 1 });
+          img.onload = () => resolve({ img, tx, ty });
           img.onerror = () => resolve(null);
           img.src = url;
         });
@@ -763,30 +862,39 @@ export class GisModule {
 
     try {
       const results = await Promise.all(imgPromises);
+      // Discard if a newer fetch was initiated
+      if (fetchId !== this.currentTileFetchId) return;
+
       if (!this.basemapCanvas) return;
       const ctx = this.basemapCanvas.getContext("2d");
       if (!ctx) return;
 
-      const w = this.basemapCanvas.width;
-      const tileSize = w / 3;
+      // Re-render base background and grid
+      this.renderBasemapTextureContent();
+
+      const spanX = xEnd - xStart;
+      const spanY = yEnd - yStart;
 
       results.forEach((res) => {
         if (res && res.img) {
-          ctx.globalAlpha = 0.85;
-          ctx.drawImage(res.img, res.dx * tileSize, res.dy * tileSize, tileSize, tileSize);
+          const destX = ((res.tx - xStart) / spanX) * canvasWidth;
+          const destY = ((res.ty - yStart) / spanY) * canvasHeight;
+          const destW = (1 / spanX) * canvasWidth;
+          const destH = (1 / spanY) * canvasHeight;
+
+          ctx.globalAlpha = 0.88;
+          ctx.drawImage(res.img, destX, destY, destW, destH);
         }
       });
       ctx.globalAlpha = 1.0;
 
-      // Re-overlay range markings and reticle
-      this.overlayCadastralMarks(ctx, w, w);
+      // Re-overlay metric range markings and reticle
+      this.overlayCadastralMarks(ctx, canvasWidth, canvasHeight);
 
       if (this.basemapTexture) {
         this.basemapTexture.needsUpdate = true;
       }
-      if (this.world?.renderer?.three && this.world?.scene?.three && this.world?.camera?.three) {
-        this.world.renderer.three.render(this.world.scene.three, this.world.camera.three);
-      }
+      this.triggerRender();
     } catch {
       // Offline fallback: keep high-contrast procedural grid intact
     }
@@ -796,14 +904,9 @@ export class GisModule {
     const centerX = w / 2;
     const centerY = h / 2;
 
-    // Outer boundary ring
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.6)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, w * 0.48, 0, Math.PI * 2);
-    ctx.stroke();
+    this.drawMetricRangeRings(ctx, w, h, "rgba(212, 255, 63, 0.65)");
 
-    // Center crosshair
+    // Center crosshair / origin reticle
     ctx.strokeStyle = "#D4FF3F";
     ctx.lineWidth = 2.5;
     ctx.beginPath();
@@ -813,6 +916,19 @@ export class GisModule {
     ctx.moveTo(centerX, centerY - 18);
     ctx.lineTo(centerX, centerY + 18);
     ctx.stroke();
+  }
+
+  private triggerRender() {
+    if (this.world?.renderer?.three && (this.world.renderer.three as any).render) {
+      try {
+        const threeRenderer = this.world.renderer.three;
+        if (this.world.scene?.three && this.world.camera?.three) {
+          threeRenderer.render(this.world.scene.three, this.world.camera.three);
+        }
+      } catch (e) {
+        // Ignore in test or headless envs
+      }
+    }
   }
 
   // ============================================================
@@ -1214,15 +1330,6 @@ export class GisModule {
     });
 
     // Trigger Three.js render
-    if (this.world?.renderer?.three && (this.world.renderer.three as any).render) {
-      try {
-        const threeRenderer = this.world.renderer.three;
-        if (this.world.scene?.three && this.world.camera?.three) {
-          threeRenderer.render(this.world.scene.three, this.world.camera.three);
-        }
-      } catch (e) {
-        // Ignore render exceptions in head-less or test environments
-      }
-    }
+    this.triggerRender();
   }
 }
