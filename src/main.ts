@@ -2083,6 +2083,68 @@ const hoverMetadataCache = new Map<string, CachedHoverMetadata>();
 
 let hoverDebounceTimer: number | null = null;
 let lastHoveredLocalId: number | null = null;
+let lastPointerX = 0;
+let lastPointerY = 0;
+
+function updateHoverBadgePosition(cursorX: number, cursorY: number) {
+  if (!hoverBadgeEl) return;
+
+  // Use actual rendered dimensions or safe fallback defaults
+  const badgeRect = hoverBadgeEl.getBoundingClientRect();
+  const badgeW = (badgeRect.width > 60) ? badgeRect.width : 300;
+  const badgeH = (badgeRect.height > 60) ? badgeRect.height : 205;
+
+  // Header bottom boundary clearance
+  const headerEl = document.querySelector("header");
+  const topSafe = headerEl ? (headerEl.getBoundingClientRect().bottom + 12) : 58;
+
+  // Bottom HUD obstacle clearance (dock + stats HUD)
+  const bottomAnchor = document.querySelector(".hud-anchor-bottom-center") as HTMLElement | null;
+  const bottomObstacle = bottomAnchor 
+    ? (bottomAnchor.getBoundingClientRect().top - 14) 
+    : (window.innerHeight - 135);
+
+  // Left sidebar clearance
+  const leftSidebar = document.querySelector(".sidebar-left") as HTMLElement | null;
+  const isLeftOpen = leftSidebar && !document.body.classList.contains("left-sidebar-collapsed");
+  const leftSafe = isLeftOpen ? (leftSidebar.getBoundingClientRect().right + 14) : 16;
+
+  // Right sidebar clearance
+  const rightSidebar = document.querySelector(".sidebar-right") as HTMLElement | null;
+  const isRightOpen = rightSidebar && !document.body.classList.contains("right-sidebar-collapsed");
+  const rightSafe = isRightOpen ? (rightSidebar.getBoundingClientRect().left - 14) : (window.innerWidth - 16);
+
+  // Y-axis positioning:
+  // Default placement is below cursor (+16px).
+  // If placing below cursor would overlap the bottom HUD obstacle or viewport bottom, flip ABOVE cursor and obstacle!
+  let posY = cursorY + 16;
+  if (posY + badgeH > bottomObstacle || posY + badgeH > window.innerHeight - 16) {
+    posY = Math.min(cursorY - badgeH - 16, bottomObstacle - badgeH);
+  }
+  // Clamp within vertical bounds
+  if (posY < topSafe) {
+    // If placing above cursor hit top header, position where it has maximum breathing room
+    if (cursorY - topSafe > bottomObstacle - cursorY) {
+      posY = Math.max(topSafe, cursorY - badgeH - 12);
+    } else {
+      posY = Math.min(bottomObstacle - badgeH, cursorY + 16);
+    }
+    posY = Math.max(topSafe, posY);
+  }
+
+  // X-axis positioning:
+  // Default placement is right of cursor (+16px).
+  // If placing right of cursor would overflow right boundary, flip LEFT of cursor!
+  let posX = cursorX + 16;
+  if (posX + badgeW > rightSafe) {
+    posX = cursorX - badgeW - 16;
+  }
+  // Clamp within horizontal safe area
+  posX = Math.max(leftSafe, Math.min(rightSafe - badgeW, posX));
+
+  hoverBadgeEl.style.left = `${Math.round(posX)}px`;
+  hoverBadgeEl.style.top = `${Math.round(posY)}px`;
+}
 
 if (container && hoverBadgeEl) {
   container.addEventListener("pointermove", (e: PointerEvent) => {
@@ -2093,11 +2155,9 @@ if (container && hoverBadgeEl) {
       return;
     }
 
-    // Keep badge near cursor with screen boundary safety for the 6-property card
-    const posX = Math.min(window.innerWidth - 345, e.clientX + 16);
-    const posY = Math.min(window.innerHeight - 195, e.clientY + 16);
-    hoverBadgeEl.style.left = `${Math.max(8, posX)}px`;
-    hoverBadgeEl.style.top = `${Math.max(8, posY)}px`;
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+    updateHoverBadgePosition(e.clientX, e.clientY);
 
     if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
     hoverDebounceTimer = window.setTimeout(async () => {
@@ -2272,6 +2332,8 @@ if (container && hoverBadgeEl) {
         if (hoverPropVolumeEl) hoverPropVolumeEl.textContent = meta.volume;
 
         hoverBadgeEl.style.display = "flex";
+        // Recalculate position with actual rendered element dimensions
+        updateHoverBadgePosition(lastPointerX, lastPointerY);
       } catch (err) {
         hoverBadgeEl.style.display = "none";
       }

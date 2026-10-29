@@ -2122,7 +2122,7 @@ input[type="color"]::-moz-color-swatch {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   max-width: none;
   overflow: visible !important;
   transition: left var(--ease-normal), right var(--ease-normal), bottom var(--ease-normal);
@@ -2131,6 +2131,7 @@ input[type="color"]::-moz-color-swatch {
 #model-stats-hud {
   margin: 0;
   flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity var(--ease-normal);
 }
 
 .bottom-toolbar.magic-dock {
@@ -5012,21 +5013,33 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 .viewport-hover-badge {
   position: fixed;
   pointer-events: none;
-  z-index: 100005;
+  z-index: 2147483646;
   background: var(--bg-panel, #121214);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1.5px solid var(--border-strong, #3f3f46);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
   font-family: var(--font-body);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), var(--shadow-sm, 2px 2px 0px #000);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-width: 330px;
-  min-width: 245px;
-  animation: popIn 0.1s ease-out;
+  max-width: 340px;
+  min-width: 250px;
+  animation: hoverBadgeFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: left, top;
+}
+
+@keyframes hoverBadgeFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .hover-badge-header {
