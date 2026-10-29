@@ -2586,6 +2586,87 @@
       </div>
     </div>
 
+    <!-- 7. 5D Project Cost Control Drawer -->
+    <div id="cost-control-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <h3>5D Project Cost Control</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="drawer-cost-currency-badge" class="carbon-grade-badge grade-A" style="background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">USD $</span>
+          <button class="btn-icon drawer-close-btn" data-target="cost-control-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <!-- Budget & EVM KPI Highlights -->
+        <div class="drawer-section-card" style="border-left: 3px solid #10b981;">
+          <div style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+            <span>Cumulative 5D Budget</span>
+            <span id="drawer-cost-elements-count" style="font-size: 0.58rem; background: var(--accent-500); color: var(--accent-btn-text, #000000); font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0 items</span>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 900; color: #10b981; line-height: 1.2;" id="drawer-cost-grand-total">$0.00</div>
+
+          <!-- Visual Trade Distribution Bar -->
+          <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.2rem;">
+            <div style="display: flex; height: 8px; border-radius: 2px; overflow: hidden; border: 1px solid var(--border-strong);">
+              <div id="drawer-bar-trade-concrete" title="Structural Concrete" style="width: 42%; background: #3b82f6;"></div>
+              <div id="drawer-bar-trade-steel" title="Structural Steel" style="width: 28%; background: #f59e0b;"></div>
+              <div id="drawer-bar-trade-mep" title="MEP & Services" style="width: 18%; background: #10b981;"></div>
+              <div id="drawer-bar-trade-finishes" title="Finishes & Facade" style="width: 12%; background: #a855f7;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.55rem; font-weight: 700; color: var(--text-muted); flex-wrap: wrap; gap: 0.2rem;">
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #3b82f6; border-radius: 50%;"></span>Concrete</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%;"></span>Steel</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></span>MEP</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #a855f7; border-radius: 50%;"></span>Finishes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cost Action Toolbar -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.4rem;">
+          <button type="button" class="btn-cost-action rates" id="drawer-btn-open-cost-rates"
+            onclick="window.openCostRateModal && window.openCostRateModal()"
+            title="Edit custom unit rates, volume/area multipliers, and project currency">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Rates & Currency</span>
+          </button>
+          <button type="button" class="btn-cost-action boq" id="drawer-btn-export-boq"
+            title="Export complete Bills of Quantities as CSV">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export BOQ</span>
+          </button>
+        </div>
+
+        <button type="button" class="btn-cost-action ids" id="drawer-btn-run-ids"
+          style="width: 100%; margin-top: 0.35rem;"
+          title="Validate BuildingSMART IDS data readiness">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          <span>Validate IDS 4D/5D Readiness</span>
+        </button>
+
+        <!-- Category Cost Breakdown Section -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Category Breakdown</span>
+        </div>
+        <div id="drawer-cost-breakdown-container" style="width: 100%; margin-top: 0.35rem;"></div>
+
+        <!-- 4D/5D Earned Value Management (EVM) S-Curve -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>4D/5D EVM S-Curve</span>
+        </div>
+        <div id="drawer-scurve-container" style="width: 100%; margin-top: 0.35rem;"></div>
+      </div>
+    </div>
+
     <!-- Toast Notification Feed -->
     <div id="bim-toast-container" style="position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100010; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;"></div>
 

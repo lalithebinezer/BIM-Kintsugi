@@ -3075,6 +3075,21 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   border: 1px solid rgba(156, 163, 175, 0.35);
 }
 
+[data-theme="light"] #cost-control-panel {
+  background: var(--bg-surface, #ffffff);
+  border-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+}
+
+[data-theme="light"] #cost-control-panel .drawer-header {
+  background: var(--bg-panel-header, #f8fafc);
+  border-bottom-color: var(--border-color, rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="light"] #cost-control-panel .drawer-section-card {
+  background: #ffffff;
+  border-color: var(--border-subtle, rgba(0, 0, 0, 0.08));
+}
+
 /* 5D Modal Theme Adaptation */
 [data-theme="light"] .cost-rate-modal-container {
   background: var(--bg-surface, #ffffff);

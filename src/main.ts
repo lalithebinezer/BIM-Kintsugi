@@ -2314,64 +2314,68 @@ btnOpenCostRates?.addEventListener("click", triggerCostRateModal);
 
 // Document-level delegated click handler for resilience
 document.addEventListener("click", (e) => {
-  const target = (e.target as HTMLElement)?.closest("#btn-open-cost-rates-modal");
+  const target = (e.target as HTMLElement)?.closest("#btn-open-cost-rates-modal, #drawer-btn-open-cost-rates");
   if (target) {
     e.preventDefault();
     triggerCostRateModal();
   }
 });
 
-// Wire BOQ CSV export button
-const btnExportBoqCsv = document.getElementById("btn-export-boq-csv");
-if (btnExportBoqCsv) {
-  btnExportBoqCsv.addEventListener("click", () => {
-    const items: BOQLineItem[] = [];
-    for (const key in twinDatabase) {
-      const data = twinDatabase[key];
-      const [modelId, expressIdStr] = key.split("-");
-      const expressId = Number(expressIdStr);
-      items.push({
-        expressId,
-        modelId,
-        category: data.task ? data.task.split(" ")[0] : "IFCELEMENT",
-        elementName: `Element #${expressId}`,
-        materialNumber: "",
-        unit: "ea",
-        quantity: data.quantity,
-        unitCost: data.unitCost,
-        totalCost: data.calculatedCost,
-        propertySetName: "Pset_TwinData",
-        quantityType: "Count",
-      });
-    }
-    const summary = generateBOQSummary(items);
-    exportBOQAsCSV(summary);
-  });
+// Wire BOQ CSV export buttons
+function triggerBoqExport() {
+  const items: BOQLineItem[] = [];
+  for (const key in twinDatabase) {
+    const data = twinDatabase[key];
+    const [modelId, expressIdStr] = key.split("-");
+    const expressId = Number(expressIdStr);
+    items.push({
+      expressId,
+      modelId,
+      category: data.task ? data.task.split(" ")[0] : "IFCELEMENT",
+      elementName: `Element #${expressId}`,
+      materialNumber: "",
+      unit: "ea",
+      quantity: data.quantity,
+      unitCost: data.unitCost,
+      totalCost: data.calculatedCost,
+      propertySetName: "Pset_TwinData",
+      quantityType: "Count",
+    });
+  }
+  const summary = generateBOQSummary(items);
+  exportBOQAsCSV(summary);
 }
+(window as any).triggerBoqExport = triggerBoqExport;
 
-// Wire IDS 4D/5D Data Readiness Validation button
-const btnRunIdsAudit = document.getElementById("btn-run-ids-audit");
-if (btnRunIdsAudit) {
-  btnRunIdsAudit.addEventListener("click", async () => {
-    if (fragments.list.size === 0) {
-      alert("Please load an IFC or Frag model first to validate IDS 4D/5D data readiness.");
-      return;
+const btnExportBoqCsv = document.getElementById("btn-export-boq-csv");
+btnExportBoqCsv?.addEventListener("click", triggerBoqExport);
+document.getElementById("drawer-btn-export-boq")?.addEventListener("click", triggerBoqExport);
+
+// Wire IDS 4D/5D Data Readiness Validation buttons
+async function triggerIdsAudit() {
+  if (fragments.list.size === 0) {
+    alert("Please load an IFC or Frag model first to validate IDS 4D/5D data readiness.");
+    return;
+  }
+  updateViewportHint("Running IDS 4D/5D Data Readiness Audit...");
+  try {
+    const result = await idsChecker.validateBimDataReadiness();
+    if (result.passed) {
+      alert(`✅ IDS Validation Passed!\n\nAll ${result.totalChecked} checked elements conform to standard 4D scheduling and 5D quantity takeoff specifications.`);
+    } else {
+      const issues = result.failingCategories.length > 0 ? `\n\nIdentified deficiencies:\n• ${result.failingCategories.join("\n• ")}` : "";
+      alert(`⚠️ IDS Validation Complete:\n• Total Elements Evaluated: ${result.totalChecked}\n• Compliant: ${result.passCount}\n• Missing Parameters: ${result.failCount}${issues}\n\nYou can use the 5D Cost & 4D Task editor in Key 5 INSPECTOR to enrich non-compliant items.`);
     }
-    updateViewportHint("Running IDS 4D/5D Data Readiness Audit...");
-    try {
-      const result = await idsChecker.validateBimDataReadiness();
-      if (result.passed) {
-        alert(`✅ IDS Validation Passed!\n\nAll ${result.totalChecked} checked elements conform to standard 4D scheduling and 5D quantity takeoff specifications.`);
-      } else {
-        const issues = result.failingCategories.length > 0 ? `\n\nIdentified deficiencies:\n• ${result.failingCategories.join("\n• ")}` : "";
-        alert(`⚠️ IDS Validation Complete:\n• Total Elements Evaluated: ${result.totalChecked}\n• Compliant: ${result.passCount}\n• Missing Parameters: ${result.failCount}${issues}\n\nYou can use the 5D Cost & 4D Task editor in Key 5 INSPECTOR to enrich non-compliant items.`);
-      }
-    } catch (err: any) {
-      console.error("IDS Audit Error:", err);
-      alert(`IDS Audit completed with notice: ${err?.message || "All loaded elements processed."}`);
-    }
-  });
+  } catch (err: any) {
+    console.error("IDS Audit Error:", err);
+    alert(`IDS Audit completed with notice: ${err?.message || "All loaded elements processed."}`);
+  }
 }
+(window as any).triggerIdsAudit = triggerIdsAudit;
+
+const btnRunIdsAudit = document.getElementById("btn-run-ids-audit");
+btnRunIdsAudit?.addEventListener("click", triggerIdsAudit);
+document.getElementById("drawer-btn-run-ids")?.addEventListener("click", triggerIdsAudit);
 
 // Wire 4D Schedule CSV Template Export & Import Listeners
 const btnExport4dCsv = document.getElementById("btn-export-4d-csv");
@@ -2541,6 +2545,19 @@ export function updateCumulative5DCost() {
   CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap);
   CostChartComponent.getInstance().renderSCurveProgressChart();
 
+  // Also synchronize the Unified 5D Project Cost Control Drawer
+  const drawerGrandTotal = document.getElementById("drawer-cost-grand-total");
+  const drawerCount = document.getElementById("drawer-cost-elements-count");
+  const drawerCurrencyBadge = document.getElementById("drawer-cost-currency-badge");
+  if (drawerGrandTotal) drawerGrandTotal.textContent = formatCurrency(grandTotal);
+  if (drawerCount) drawerCount.textContent = formatItemCount(elementCount);
+  if (drawerCurrencyBadge) {
+    const cur = CostRateManager.getInstance().getCurrency();
+    drawerCurrencyBadge.textContent = `${cur.code} ${cur.symbol}`;
+  }
+  CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap, "drawer-cost-breakdown-container");
+  CostChartComponent.getInstance().renderSCurveProgressChart("drawer-scurve-container");
+
   // Dynamically update the Trade Budget Distribution stacked bar
   let concreteCost = 0;
   let steelCost = 0;
@@ -2575,6 +2592,17 @@ export function updateCumulative5DCost() {
     if (bSteel) { bSteel.style.width = `${pSteel}%`; bSteel.title = `Structural Steel: ${pSteel}% (${formatCurrency(steelCost)})`; }
     if (bMep) { bMep.style.width = `${pMep}%`; bMep.title = `MEP & Services: ${pMep}% (${formatCurrency(mepCost)})`; }
     if (bFin) { bFin.style.width = `${pFin}%`; bFin.title = `Finishes & Facade: ${pFin}% (${formatCurrency(finishesCost)})`; }
+
+    // Also update drawer bars
+    const dbConc = document.getElementById("drawer-bar-trade-concrete");
+    const dbSteel = document.getElementById("drawer-bar-trade-steel");
+    const dbMep = document.getElementById("drawer-bar-trade-mep");
+    const dbFin = document.getElementById("drawer-bar-trade-finishes");
+
+    if (dbConc) { dbConc.style.width = `${pConc}%`; dbConc.title = `Structural Concrete: ${pConc}% (${formatCurrency(concreteCost)})`; }
+    if (dbSteel) { dbSteel.style.width = `${pSteel}%`; dbSteel.title = `Structural Steel: ${pSteel}% (${formatCurrency(steelCost)})`; }
+    if (dbMep) { dbMep.style.width = `${pMep}%`; dbMep.title = `MEP & Services: ${pMep}% (${formatCurrency(mepCost)})`; }
+    if (dbFin) { dbFin.style.width = `${pFin}%`; dbFin.title = `Finishes & Facade: ${pFin}% (${formatCurrency(finishesCost)})`; }
   }
 }
 (window as any).updateCumulative5DCost = updateCumulative5DCost;

@@ -133,6 +133,11 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
   bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
   bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", renderBcfIssues);
+  bindEnterpriseTrigger("btn-header-cost", "btn-dock-cost", "cost-control-panel", () => {
+    if (typeof (window as any).updateCumulative5DCost === "function") {
+      (window as any).updateCumulative5DCost();
+    }
+  });
 
   document.getElementById("btn-export-bcf-json")?.addEventListener("click", async () => {
     const exportedZip = await bcfIssueManager.exportNativeBcfZip();
@@ -351,29 +356,22 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("btn-header-gantt")?.addEventListener("click", toggleUnified4DBar);
   document.getElementById("btn-dock-gantt")?.addEventListener("click", toggleUnified4DBar);
 
-  // 5D Cost Estimating Dock Trigger
-  document.getElementById("btn-dock-cost")?.addEventListener("click", () => {
+  // 5D Project Cost Control Unified Suite Trigger
+  const toggleUnifiedCostControl = () => {
     SoundManager.getInstance().playClick();
-    if (typeof (window as any).switchSidebarTab === "function") {
-      (window as any).switchSidebarTab("right-tab-bar", "inspector");
-    }
-    // Expand right sidebar if collapsed
-    if (document.body.classList.contains("right-sidebar-collapsed")) {
-      document.body.classList.remove("right-sidebar-collapsed");
-    }
-    const rightSidebar = document.querySelector(".right-sidebar");
-    if (rightSidebar && !rightSidebar.classList.contains("open")) {
-      rightSidebar.classList.add("open");
-    }
-    // Smoothly scroll the 5D Cost Estimating section into view
-    setTimeout(() => {
-      const costSection = document.getElementById("btn-open-cost-rates-modal");
-      if (costSection) {
-        costSection.scrollIntoView({ behavior: "smooth", block: "center" });
-        costSection.focus();
+    toggleEnterpriseDrawer("cost-control-panel");
+    const panel = document.getElementById("cost-control-panel");
+    if (panel && !panel.classList.contains("hidden")) {
+      if (typeof (window as any).updateCumulative5DCost === "function") {
+        (window as any).updateCumulative5DCost();
       }
-    }, 150);
-  });
+      showToast("5D Project Cost Control: Budget & Rates Active", "success");
+    }
+  };
+  (window as any).toggleUnifiedCostControl = toggleUnifiedCostControl;
+
+  document.getElementById("btn-dock-cost")?.addEventListener("click", toggleUnifiedCostControl);
+  document.getElementById("btn-header-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
     if (typeof (window as any).toggle4DMode === "function") {
       (window as any).toggle4DMode(false);
