@@ -476,12 +476,86 @@ function initAppleDockMagnifier() {
   const dock = document.querySelector<HTMLElement>(".bottom-toolbar.magic-dock");
   if (!dock) return;
 
+  const btnScrollLeft = document.getElementById("btn-dock-scroll-left") as HTMLButtonElement | null;
+  const btnScrollRight = document.getElementById("btn-dock-scroll-right") as HTMLButtonElement | null;
+
+  const updateScrollArrows = () => {
+    if (!dock) return;
+    const canScroll = dock.scrollWidth > dock.clientWidth + 4;
+    if (!canScroll) {
+      btnScrollLeft?.classList.add("hidden");
+      btnScrollRight?.classList.add("hidden");
+      return;
+    }
+    const atStart = dock.scrollLeft <= 4;
+    const atEnd = dock.scrollLeft + dock.clientWidth >= dock.scrollWidth - 6;
+    btnScrollLeft?.classList.toggle("hidden", atStart);
+    btnScrollRight?.classList.toggle("hidden", atEnd);
+  };
+
+  dock.addEventListener("scroll", updateScrollArrows, { passive: true });
+  window.addEventListener("resize", updateScrollArrows, { passive: true });
+  setTimeout(updateScrollArrows, 300);
+
+  btnScrollLeft?.addEventListener("click", () => {
+    dock.scrollBy({ left: -160, behavior: "smooth" });
+  });
+
+  btnScrollRight?.addEventListener("click", () => {
+    dock.scrollBy({ left: 160, behavior: "smooth" });
+  });
+
+  // Mouse wheel horizontal scroll translation
+  dock.addEventListener("wheel", (e: WheelEvent) => {
+    if (e.deltaY !== 0 || e.deltaX !== 0) {
+      e.preventDefault();
+      dock.scrollLeft += e.deltaY !== 0 ? e.deltaY * 1.2 : e.deltaX;
+      updateScrollArrows();
+    }
+  }, { passive: false });
+
+  // Pointer drag-to-scroll for fluid mouse and touch panning
+  let isDown = false;
+  let startX = 0;
+  let initialScroll = 0;
+  let totalDragDist = 0;
+
+  dock.addEventListener("pointerdown", (e: PointerEvent) => {
+    if (e.button !== 0) return;
+    isDown = true;
+    totalDragDist = 0;
+    startX = e.clientX;
+    initialScroll = dock.scrollLeft;
+  });
+
+  window.addEventListener("pointermove", (e: PointerEvent) => {
+    if (!isDown) return;
+    const delta = e.clientX - startX;
+    totalDragDist += Math.abs(delta);
+    dock.scrollLeft = initialScroll - delta;
+    updateScrollArrows();
+  });
+
+  window.addEventListener("pointerup", () => {
+    isDown = false;
+  });
+
+  dock.addEventListener("click", (e: MouseEvent) => {
+    if (totalDragDist > 8) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+
   const items = Array.from(dock.querySelectorAll<HTMLElement>(".dock-item"));
-  const maxScale = 1.32;
-  const radius = 120;
 
   const onMouseMove = (e: MouseEvent) => {
+    if (isDown) return;
+    const isSmall = window.innerWidth <= 768;
+    const maxScale = isSmall ? 1.15 : 1.32;
+    const radius = isSmall ? 85 : 120;
     const mouseX = e.clientX;
+
     items.forEach((item) => {
       const btn = item.querySelector<HTMLElement>(".dock-icon");
       if (!btn) return;
@@ -494,21 +568,22 @@ function initAppleDockMagnifier() {
         const scale = 1 + (maxScale - 1) * Math.pow(factor, 1.4);
         const translateY = -5 * factor;
         btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
-        item.style.margin = `0 ${(factor * 3.5).toFixed(1)}px`;
+        item.style.margin = isSmall ? "0 1px" : `0 ${(factor * 3.5).toFixed(1)}px`;
         item.style.zIndex = Math.round(100 * factor + 10).toString();
       } else {
         btn.style.transform = "scale(1) translateY(0px)";
-        item.style.margin = "0 0";
+        item.style.margin = isSmall ? "0 1px" : "0 0";
         item.style.zIndex = "1";
       }
     });
   };
 
   const onMouseLeave = () => {
+    const isSmall = window.innerWidth <= 768;
     items.forEach((item) => {
       const btn = item.querySelector<HTMLElement>(".dock-icon");
       if (btn) btn.style.transform = "scale(1) translateY(0px)";
-      item.style.margin = "0 0";
+      item.style.margin = isSmall ? "0 1px" : "0 0";
       item.style.zIndex = "1";
     });
   };

@@ -2133,6 +2133,57 @@ input[type="color"]::-moz-color-swatch {
   flex-shrink: 0;
 }
 
+/* Magic Dock Wrapper with Horizontal Navigation Controls */
+.magic-dock-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.dock-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-surface, rgba(18, 20, 28, 0.94));
+  border: 1px solid var(--border-accent, rgba(255, 255, 255, 0.22));
+  color: var(--text-primary, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.2s ease, transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  pointer-events: auto;
+}
+
+.dock-scroll-btn:hover {
+  background: var(--accent-500, #38bdf8);
+  color: #0b0f19;
+  border-color: var(--accent-400, #60a5fa);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.dock-scroll-btn.left {
+  left: -14px;
+}
+
+.dock-scroll-btn.right {
+  right: -14px;
+}
+
+.dock-scroll-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .bottom-toolbar.magic-dock {
   pointer-events: auto;
   display: inline-flex;
@@ -3765,16 +3816,26 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
     align-items: center;
   }
 
+  .magic-dock-wrapper {
+    max-width: min(94vw, 760px);
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .bottom-toolbar.magic-dock {
     display: inline-flex !important;
     pointer-events: auto;
     height: 48px;
-    max-width: min(94vw, 760px);
-    padding: 0 0.65rem;
+    max-width: 100%;
+    padding: 0 0.85rem;
     gap: 0.25rem;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
     border-radius: 9999px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -3946,16 +4007,26 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
     align-items: center;
   }
 
+  .magic-dock-wrapper {
+    max-width: min(94vw, 540px);
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .bottom-toolbar.magic-dock {
     display: inline-flex !important;
     pointer-events: auto;
     height: 44px;
-    max-width: min(94vw, 540px);
-    padding: 0 0.5rem;
+    max-width: 100%;
+    padding: 0 0.85rem;
     gap: 0.2rem;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
     border-radius: 9999px;
   }
