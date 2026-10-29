@@ -1794,7 +1794,10 @@ async function displayElementProperties(model: any, expressId: number) {
   }
 
   const badgePropsIdEl = document.getElementById("badge-props-id");
-  if (badgePropsIdEl) badgePropsIdEl.innerText = `#${expressId}`;
+  if (badgePropsIdEl) {
+    badgePropsIdEl.innerText = `#${expressId}`;
+    badgePropsIdEl.style.display = "inline-block";
+  }
 
   // 11. Calculate and populate physical bounding dimensions
   try {
@@ -2036,7 +2039,8 @@ function resetPropertiesPanel() {
   }
   const badgePropsIdEl = document.getElementById("badge-props-id");
   if (badgePropsIdEl) {
-    badgePropsIdEl.innerText = "#--";
+    badgePropsIdEl.innerText = "";
+    badgePropsIdEl.style.display = "none";
   }
   const emptyState = document.getElementById("properties-empty-state");
   if (emptyState) emptyState.style.display = "flex";

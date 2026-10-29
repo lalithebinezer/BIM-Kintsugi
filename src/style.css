@@ -328,7 +328,7 @@ html, body {
 body {
   --header-bottom: 4.15rem;
   --left-panel-w: 310px;
-  --right-panel-w: 340px;
+  --right-panel-w: 360px;
   --radar-w: 200px;
   --left-safe-offset: calc(var(--left-panel-w) + 1.35rem);
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
@@ -959,55 +959,74 @@ body.mode-4d::after {
 /* Sidebar Module Segmented Tabs Header */
 .sidebar-tab-bar {
   display: flex;
-  gap: 0.35rem;
-  padding: 1rem 1rem 0.5rem 1rem;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  margin: 0.5rem 0.5rem 0.25rem 0.5rem;
   flex-shrink: 0;
-  background: transparent;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
 }
 
 .sidebar-tab-btn {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  padding: 10px 0;
-  min-width: 0;
+  gap: 0.25rem;
+  padding: 5px 3px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 800;
+  font-size: 0.62rem;
+  font-weight: 700;
   text-transform: uppercase;
-  border-radius: 12px;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
   cursor: pointer;
   transition: all var(--ease-fast);
   white-space: nowrap;
 }
 
+.sidebar-tab-btn svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-btn span {
+  white-space: nowrap;
+}
+
 .sidebar-tab-btn:hover {
-  background: var(--bg-card);
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 
 .sidebar-tab-btn.active {
-  background: rgba(255,255,255,0.05) !important;
+  background: var(--bg-card) !important;
   color: var(--accent-500) !important;
-  border-color: transparent !important;
-  box-shadow: none;
+  border-color: var(--border-subtle) !important;
+  box-shadow: var(--shadow-xs) !important;
 }
 
 .tab-key-badge {
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   font-weight: 800;
-  background: var(--bg-input);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-muted);
-  padding: 0.08rem 0.28rem;
-  border-radius: 4px;
+  padding: 1px 3.5px;
+  border-radius: 3px;
   border: 1px solid var(--border-subtle);
   line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-tab-btn.active .tab-key-badge {
@@ -1018,18 +1037,24 @@ body.mode-4d::after {
 
 .sidebar-tab-badge {
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   font-weight: 800;
   background: var(--bg-input);
   color: var(--text-muted);
-  padding: 0.08rem 0.35rem;
-  border-radius: 10px;
+  padding: 1px 3px;
+  border-radius: 6px;
   border: 1px solid var(--border-subtle);
   line-height: 1;
   max-width: 44px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-badge:empty,
+.sidebar-tab-badge[style*="display: none"] {
+  display: none !important;
 }
 
 .sidebar-tab-btn.active .sidebar-tab-badge {
@@ -1095,17 +1120,17 @@ body.mode-4d::after {
 
 /* Panel Header */
 .panel-header {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.85rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
   flex-shrink: 0;
   user-select: none;
   background: transparent;
@@ -1116,6 +1141,11 @@ body.mode-4d::after {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.header-title-group svg {
+  color: var(--accent-500);
+  flex-shrink: 0;
 }
 
 .header-title-group svg {
@@ -3309,18 +3339,25 @@ body[data-theme="light"] {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1) !important;
 }
 
+[data-theme="light"] .sidebar-tab-bar {
+  background: #F1F5F9 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
 [data-theme="light"] .sidebar-tab-btn {
   color: #64748B;
 }
 
 [data-theme="light"] .sidebar-tab-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.7);
   color: #0F172A;
 }
 
 [data-theme="light"] .sidebar-tab-btn.active {
-  background: rgba(79, 70, 229, 0.08) !important;
+  background: #FFFFFF !important;
   color: #4F46E5 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 [data-theme="light"] .tab-key-badge {
@@ -3345,6 +3382,15 @@ body[data-theme="light"] {
   background: rgba(79, 70, 229, 0.15);
   color: #4F46E5;
   border-color: rgba(79, 70, 229, 0.3);
+}
+
+[data-theme="light"] .panel-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  color: #0F172A;
+}
+
+[data-theme="light"] .header-title-group svg {
+  color: #4F46E5;
 }
 
 /* Navigation HUD Capsule (Top-Left) */
