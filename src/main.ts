@@ -38,6 +38,7 @@ import { BcfIssueManager } from "./modules/BcfIssueManager";
 import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
+import { GisModule } from "./modules/GisModule";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -209,6 +210,10 @@ UIManager.getInstance().init();
 const customViewManager = CustomViewManager.getInstance();
 customViewManager.init(world);
 (window as any).customViewManager = customViewManager;
+
+const gisModule = GisModule.getInstance();
+gisModule.init(world);
+(window as any).gisModule = gisModule;
 
 
 
@@ -2195,6 +2200,32 @@ if (container && hoverBadgeEl) {
     lastPointerY = e.clientY;
     updateHoverBadgePosition(e.clientX, e.clientY);
 
+    // Live GIS Spatial Telemetry
+    const gisPanel = document.getElementById("gis-panel");
+    if (gisPanel && !gisPanel.classList.contains("hidden")) {
+      const rect = container.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const cam = world?.camera?.three;
+      if (cam) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), cam);
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const intersection = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
+          const localTelemetry = document.getElementById("gis-telemetry-local");
+          const gpsTelemetry = document.getElementById("gis-telemetry-gps");
+          if (localTelemetry) {
+            localTelemetry.textContent = `X: ${intersection.x.toFixed(2)}m, Z: ${intersection.z.toFixed(2)}m`;
+          }
+          if (gpsTelemetry) {
+            const wgs = GisModule.getInstance().localToGeodetic(intersection.x, intersection.z);
+            gpsTelemetry.textContent = `${wgs.lat.toFixed(6)}°, ${wgs.lon.toFixed(6)}°`;
+          }
+        }
+      }
+    }
+
     if (hoverDebounceTimer) clearTimeout(hoverDebounceTimer);
     hoverDebounceTimer = window.setTimeout(async () => {
       try {
@@ -3263,6 +3294,16 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
       // Sync/generate local database twin properties using classifications
       await initializeModelTwinData(model);
+
+      // Parse IfcSite georeference coordinates if present
+      try {
+        const siteCoords = await GisModule.getInstance().parseIfcSiteMetadata(model);
+        if (siteCoords && typeof (window as any).refreshGisUI === "function") {
+          (window as any).refreshGisUI();
+        }
+      } catch (gisErr) {
+        console.warn("GisModule parseIfcSiteMetadata warning:", gisErr);
+      }
 
       // Auto-populate 4D Schedule tasks for all elements and categories in loaded model
       const categoriesGroup = classifier.list.get("Categories");
@@ -7180,6 +7221,10 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "suite-carbon-heatmap", title: "Toggle 6D Embodied Carbon & LCA Heatmap", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>`, action: () => { document.getElementById("btn-header-carbon")?.click(); CarbonLcaManager.getInstance().toggleHeatmap(); } },
     { id: "suite-bcf-issues", title: "Open BCF 2.1/3.0 Issue Coordination Drawer", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>`, action: () => document.getElementById("btn-header-bcf")?.click() },
     { id: "suite-ai-copilot", title: "Open BIM AI Copilot Natural Language Assistant", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>`, action: () => { document.getElementById("btn-header-copilot")?.click(); BimAiCopilot.getInstance().updateCopilotUI(); } },
+    { id: "suite-gis", title: "Open GeoBIM GIS & Site Georeferencing Drawer (G)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`, action: () => document.getElementById("btn-dock-gis")?.click() },
+    { id: "gis-toggle-basemap", title: "Toggle 3D Satellite / Ground Basemap Plane", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>`, action: () => { const cb = document.getElementById("gis-toggle-basemap") as HTMLInputElement | null; if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); } } },
+    { id: "gis-align-sun", title: "Align Directional Sun Light to NOAA Solar Position", category: "Environment", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>`, action: () => document.getElementById("gis-btn-align-sun")?.click() },
+    { id: "gis-demo-cadastre", title: "Overlay Municipal Cadastre Parcels & Utility Pipelines", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`, action: () => document.getElementById("gis-btn-demo-cadastre")?.click() },
     { id: "suite-measure-volume", title: "Start 3D Volume Measurement (OBF.VolumeMeasurement)", category: "Measurement", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`, action: () => { document.getElementById("btn-header-measure")?.click(); MeasurementSuite.getInstance().startMeasurement("volume"); } },
     { id: "style-pen-shadows", title: "Render Style: Technical Pen + Shadows (PostproductionAspect)", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("pen-shadows"); showToast("Render Style: Technical Pen + Shadows", "info"); } },
     { id: "style-gloss", title: "Render Style: Glossy Architectural Reflections", category: "Render Style", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg>`, action: () => { GraphicsVFXManager.getInstance().setRenderStyle("gloss"); showToast("Render Style: Glossy Architectural", "info"); } },

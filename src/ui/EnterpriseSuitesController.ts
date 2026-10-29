@@ -14,6 +14,7 @@ import { StoreyLevelSlicer } from "../modules/StoreyLevelSlicer";
 import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
+import { GisModule } from "../modules/GisModule";
 import { showToast } from "./ToastManager";
 import { escapeHtml } from "../utils/formatters";
 
@@ -43,6 +44,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const storeySlicer = StoreyLevelSlicer.getInstance();
   const bcfIssueManager = BcfIssueManager.getInstance();
   const tourManager = CinematicTourManager.getInstance();
+  const gisModule = GisModule.getInstance();
   ClashToleranceInspector.getInstance();
   GraphicsVFXManager.getInstance();
 
@@ -368,6 +370,165 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("btn-dock-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-header-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-timeline-cost-control")?.addEventListener("click", toggleUnifiedCostControl);
+
+  // GeoBIM GIS & Site Georeference Suite Trigger
+  const refreshGisUI = () => {
+    const geo = gisModule.getGeoreference();
+    const latInput = document.getElementById("gis-input-lat") as HTMLInputElement | null;
+    const lonInput = document.getElementById("gis-input-lon") as HTMLInputElement | null;
+    const elevInput = document.getElementById("gis-input-elev") as HTMLInputElement | null;
+    const northInput = document.getElementById("gis-input-north") as HTMLInputElement | null;
+    const dmsBadge = document.getElementById("gis-dms-badge");
+    const utmBadge = document.getElementById("gis-utm-badge");
+
+    if (latInput) latInput.value = String(geo.latitude);
+    if (lonInput) lonInput.value = String(geo.longitude);
+    if (elevInput) elevInput.value = String(geo.elevation);
+    if (northInput) northInput.value = String(geo.trueNorthRotation);
+
+    const dms = gisModule.formatDMS(geo.latitude, geo.longitude);
+    if (dmsBadge) dmsBadge.textContent = `${dms.latDms} ${dms.lonDms}`;
+    if (utmBadge) utmBadge.textContent = gisModule.getUtmZone(geo.latitude, geo.longitude);
+  };
+  (window as any).refreshGisUI = refreshGisUI;
+
+  const toggleGisSuite = () => {
+    SoundManager.getInstance().playClick();
+    toggleEnterpriseDrawer("gis-panel");
+    const panel = document.getElementById("gis-panel");
+    if (panel && !panel.classList.contains("hidden")) {
+      refreshGisUI();
+      showToast("GeoBIM GIS: 3D Georeference & Basemap Active", "info");
+    }
+  };
+  (window as any).toggleGisSuite = toggleGisSuite;
+
+  document.getElementById("btn-dock-gis")?.addEventListener("click", toggleGisSuite);
+  document.getElementById("btn-header-gis")?.addEventListener("click", toggleGisSuite);
+
+  // Apply Georeference Datum
+  document.getElementById("gis-btn-apply-coords")?.addEventListener("click", () => {
+    const lat = parseFloat((document.getElementById("gis-input-lat") as HTMLInputElement)?.value || "0");
+    const lon = parseFloat((document.getElementById("gis-input-lon") as HTMLInputElement)?.value || "0");
+    const elev = parseFloat((document.getElementById("gis-input-elev") as HTMLInputElement)?.value || "0");
+    const north = parseFloat((document.getElementById("gis-input-north") as HTMLInputElement)?.value || "0");
+    gisModule.setGeoreference({ latitude: lat, longitude: lon, elevation: elev, trueNorthRotation: north });
+    refreshGisUI();
+    showToast(`Georeference updated: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`, "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Preset Select
+  document.getElementById("gis-preset-select")?.addEventListener("change", (e) => {
+    const val = (e.target as HTMLSelectElement).value;
+    const applied = gisModule.applyPreset(val);
+    if (applied) {
+      refreshGisUI();
+      showToast(`Applied Site Preset: ${val.toUpperCase()}`, "info");
+      SoundManager.getInstance().playClick();
+    }
+  });
+
+  // Align Sun to Site Coordinates
+  document.getElementById("gis-btn-align-sun")?.addEventListener("click", () => {
+    const sun = gisModule.calculateSolarPosition();
+    if (typeof (window as any).updateSunPosition === "function") {
+      (window as any).updateSunPosition(sun.azimuth, sun.elevation);
+    }
+    const azSlider = document.getElementById("slider-sun-azimuth") as HTMLInputElement | null;
+    const elSlider = document.getElementById("slider-sun-elevation") as HTMLInputElement | null;
+    const azBadge = document.getElementById("val-sun-azimuth");
+    const elBadge = document.getElementById("val-sun-elevation");
+    if (azSlider) azSlider.value = String(Math.round(sun.azimuth));
+    if (elSlider) elSlider.value = String(Math.round(sun.elevation));
+    if (azBadge) azBadge.textContent = `${Math.round(sun.azimuth)}°`;
+    if (elBadge) elBadge.textContent = `${Math.round(sun.elevation)}°`;
+    showToast(`NOAA Solar Position: Azimuth ${sun.azimuth.toFixed(1)}°, Elevation ${sun.elevation.toFixed(1)}°`, "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  // 3D Basemap Controls
+  document.getElementById("gis-toggle-basemap")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    gisModule.setBasemapVisible(checked);
+    const statusBadge = document.getElementById("gis-basemap-status");
+    if (statusBadge) {
+      statusBadge.textContent = checked ? "Active" : "Hidden";
+      statusBadge.style.color = checked ? "#06b6d4" : "var(--text-muted)";
+    }
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-select-provider")?.addEventListener("change", (e) => {
+    const prov = (e.target as HTMLSelectElement).value as any;
+    gisModule.setBasemapProvider(prov);
+    showToast(`Basemap Provider: ${prov}`, "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-slider-radius")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setBasemapRadius(val);
+    const badge = document.getElementById("gis-radius-val");
+    if (badge) badge.textContent = `${val} m`;
+  });
+
+  document.getElementById("gis-slider-elev")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setBasemapElevation(val);
+    const badge = document.getElementById("gis-elev-val");
+    if (badge) badge.textContent = `${val >= 0 ? "+" : ""}${val.toFixed(2)} m`;
+  });
+
+  document.getElementById("gis-slider-opacity")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setBasemapOpacity(val);
+    const badge = document.getElementById("gis-opacity-val");
+    if (badge) badge.textContent = `${Math.round(val * 100)}%`;
+  });
+
+  // Demo Cadastre
+  document.getElementById("gis-btn-demo-cadastre")?.addEventListener("click", () => {
+    const res = gisModule.loadDemoCadastre();
+    showToast(`Demo Cadastre Loaded: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Clear Cadastre
+  document.getElementById("gis-btn-clear-cadastre")?.addEventListener("click", () => {
+    gisModule.clearCadastre();
+    showToast("GIS Cadastral & Utility layers cleared", "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Import GeoJSON File
+  document.getElementById("gis-file-geojson")?.addEventListener("change", async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = gisModule.loadGeoJSON(parsed);
+      showToast(`GeoJSON Imported: ${res.featureCount} Features`, "success");
+      SoundManager.getInstance().playClick();
+    } catch (err: any) {
+      showToast(`Failed to parse GeoJSON: ${err.message}`, "error");
+    }
+  });
+
+  // Export Site GeoJSON
+  document.getElementById("gis-btn-export-geojson")?.addEventListener("click", () => {
+    const jsonStr = gisModule.exportSiteGeoJson();
+    const blob = new Blob([jsonStr], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Site_Georeference_${Date.now()}.geojson`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Exported Site GeoJSON FeatureCollection", "success");
+    SoundManager.getInstance().playClick();
+  });
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
     if (typeof (window as any).toggle4DMode === "function") {
       (window as any).toggle4DMode(false);

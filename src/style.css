@@ -975,25 +975,26 @@ body.mode-4d::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  padding: 5px 3px;
+  gap: 0.18rem;
+  padding: 5px 2px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   border-radius: 6px;
   cursor: pointer;
   transition: all var(--ease-fast);
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .sidebar-tab-btn svg {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   flex-shrink: 0;
 }
 
@@ -1015,11 +1016,11 @@ body.mode-4d::after {
 
 .tab-key-badge {
   font-family: var(--font-mono);
-  font-size: 0.52rem;
+  font-size: 0.50rem;
   font-weight: 800;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-muted);
-  padding: 1px 3.5px;
+  padding: 1px 2.5px;
   border-radius: 3px;
   border: 1px solid var(--border-subtle);
   line-height: 1;

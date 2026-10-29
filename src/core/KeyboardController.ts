@@ -96,6 +96,9 @@ export class KeyboardController {
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'f') {
         e.preventDefault();
         (document.getElementById('btn-focus') || document.getElementById('btn-view-fit'))?.click();
+      } else if (!e.ctrlKey && !e.metaKey && keyLower === 'g') {
+        e.preventDefault();
+        document.getElementById('btn-dock-gis')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'h') {
         e.preventDefault();
         (document.getElementById('btn-hide-selected') || document.getElementById('btn-dock-hide'))?.click();
