@@ -2207,14 +2207,14 @@ input[type="color"]::-moz-color-swatch {
   position: absolute;
   bottom: 0.85rem;
   left: var(--left-safe-offset);
-  right: calc(var(--right-safe-offset) + var(--radar-w) + 0.75rem);
+  right: var(--right-safe-offset);
   transform: none;
   z-index: 2147483645;
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1.1rem;
   max-width: none;
   overflow: visible !important;
   transition: left var(--ease-normal), right var(--ease-normal), bottom var(--ease-normal);
@@ -2222,6 +2222,7 @@ input[type="color"]::-moz-color-swatch {
 
 #model-stats-hud {
   margin: 0;
+  margin-bottom: 0.35rem;
   flex-shrink: 0;
   z-index: 2147483642;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity var(--ease-normal);
@@ -2472,7 +2473,7 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 /* Bottom-Right: Architectural Scale Ruler HUD & 2D Minimap Radar */
 .hud-anchor-bottom-right {
   position: absolute;
-  bottom: 0.85rem;
+  bottom: calc(var(--dock-h, 64px) + 1.25rem);
   right: var(--right-safe-offset);
   display: flex;
   flex-direction: column;
@@ -2481,6 +2482,12 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   z-index: 50;
   pointer-events: auto;
   transition: right var(--ease-normal), bottom var(--ease-normal);
+}
+
+@media (min-width: 1550px) {
+  body.right-sidebar-collapsed .hud-anchor-bottom-right {
+    bottom: 0.85rem;
+  }
 }
 
 .viewport-scale-bar {
@@ -4866,7 +4873,7 @@ body[data-theme="light"] {
   .hud-anchor-bottom-right {
     display: flex !important;
     position: fixed;
-    bottom: 0.75rem;
+    bottom: 4.8rem !important;
     right: 0.75rem;
     z-index: 9990;
     --radar-w: 135px;
@@ -5630,8 +5637,8 @@ body[data-theme="light"] {
 /* Viewport Interactive Hover HUD Badge */
 .viewport-hover-badge {
   position: fixed;
-  pointer-events: none;
-  z-index: 2147483600;
+  pointer-events: none !important;
+  z-index: 2147483648 !important;
   background: var(--bg-panel, #121214);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -6098,23 +6105,39 @@ body.right-sidebar-collapsed .right-sidebar {
   }
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1380px) {
   body {
     --left-panel-w: 250px;
     --right-panel-w: 275px;
-    --radar-w: 150px;
+    --radar-w: 145px;
   }
   .brand-badge {
     display: none;
   }
-  .btn-quick-view span:not(#quick-explode-text) {
-    display: none;
+  .btn-quick-view span,
+  #quick-explode-text {
+    display: none !important;
   }
   .btn-quick-view {
-    padding: 0.35rem 0.45rem;
+    padding: 0.35rem 0.45rem !important;
   }
   .speed-label {
     display: none;
+  }
+  .bottom-toolbar.magic-dock {
+    height: 54px !important;
+    min-height: 54px !important;
+    gap: 0.22rem !important;
+    padding: 0 0.75rem !important;
+  }
+  .dock-icon.btn-tool {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+  }
+  .dock-icon.btn-tool svg {
+    width: 15px !important;
+    height: 15px !important;
   }
 }
 
@@ -9918,3 +9941,91 @@ body.right-sidebar-collapsed .right-sidebar {
     margin: 1.5cm;
   }
 }
+
+/* ============================================================
+   ENTERPRISE RESPONSIVE & THEME SYNC ENHANCEMENTS
+   ============================================================ */
+
+/* Guarantee 100% suppression of bottom stats HUD during 4D playback & selection HUD */
+body.mode-4d .hud-anchor-bottom-center,
+body.mode-4d #model-stats-hud,
+body:has(#timeline-panel[style*="display: flex"]) .hud-anchor-bottom-center,
+body:has(#timeline-panel[style*="display: flex"]) #model-stats-hud,
+body:has(#timeline-panel:not([style*="display: none"])) #model-stats-hud,
+body.has-viewport-selection #model-stats-hud,
+body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud {
+  display: none !important;
+}
+
+/* Light Theme Sync for Model Stats HUD & Hover Tooltip */
+[data-theme="light"] #model-stats-hud {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0F172A !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] #model-stats-hud strong {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .viewport-hover-badge {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .hover-prop-label {
+  color: #64748B !important;
+}
+
+[data-theme="light"] .hover-prop-val {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .hover-badge-header {
+  border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .hover-badge-id {
+  color: #64748B !important;
+}
+
+/* Zen Theme Sync for Model Stats HUD & Hover Tooltip */
+[data-theme="zen"] #model-stats-hud {
+  background: rgba(28, 25, 23, 0.94) !important;
+  border-color: rgba(234, 179, 8, 0.25) !important;
+  color: #FAFAF9 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="zen"] #model-stats-hud strong {
+  color: #FAFAF9 !important;
+}
+
+[data-theme="zen"] .viewport-hover-badge {
+  background: rgba(28, 25, 23, 0.96) !important;
+  border-color: rgba(234, 179, 8, 0.35) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  color: #FAFAF9 !important;
+}
+
+[data-theme="zen"] .hover-prop-label {
+  color: #A8A29E !important;
+}
+
+[data-theme="zen"] .hover-prop-val {
+  color: #FAFAF9 !important;
+}
+
+[data-theme="zen"] #dock-global-tooltip {
+  background: rgba(28, 25, 23, 0.96) !important;
+  border-color: rgba(234, 179, 8, 0.3) !important;
+  color: #FAFAF9 !important;
+}
+
+[data-theme="zen"] #dock-global-tooltip::after {
+  border-color: #1C1917 transparent transparent transparent !important;
+}
+

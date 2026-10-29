@@ -1798,8 +1798,8 @@ async function displayElementProperties(model: any, expressId: number) {
 
   const badgePropsIdEl = document.getElementById("badge-props-id");
   if (badgePropsIdEl) {
-    badgePropsIdEl.innerText = `#${expressId}`;
-    badgePropsIdEl.style.display = "inline-block";
+    badgePropsIdEl.innerText = "";
+    badgePropsIdEl.style.display = "none";
   }
 
   // 11. Calculate and populate physical bounding dimensions
@@ -2098,57 +2098,79 @@ function updateHoverBadgePosition(cursorX: number, cursorY: number) {
 
   // Use actual rendered dimensions or safe fallback defaults
   const badgeRect = hoverBadgeEl.getBoundingClientRect();
-  const badgeW = (badgeRect.width > 60) ? badgeRect.width : 300;
-  const badgeH = (badgeRect.height > 60) ? badgeRect.height : 205;
+  const badgeW = Math.max(hoverBadgeEl.offsetWidth || 0, badgeRect.width || 0, 310);
+  const badgeH = Math.max(hoverBadgeEl.offsetHeight || 0, badgeRect.height || 0, 245);
 
   // Header bottom boundary clearance
   const headerEl = document.querySelector("header");
   const topSafe = headerEl ? (headerEl.getBoundingClientRect().bottom + 12) : 58;
 
-  // Bottom HUD obstacle clearance (dock + stats HUD)
+  // Dynamic bottom HUD obstacle clearance (dock, stats HUD, selection bar, 4D timeline)
+  let bottomObstacle = window.innerHeight - 20;
+
   const bottomAnchor = document.querySelector(".hud-anchor-bottom-center") as HTMLElement | null;
-  if (bottomAnchor) {
+  if (bottomAnchor && bottomAnchor.offsetParent !== null) {
     const bRect = bottomAnchor.getBoundingClientRect();
-    if (cursorY >= bRect.top - 16 && cursorX >= bRect.left - 24 && cursorX <= bRect.right + 24) {
-      hoverBadgeEl.style.display = "none";
-      return;
+    if (bRect.top > 0) {
+      if (cursorY >= bRect.top - 12 && cursorX >= bRect.left - 24 && cursorX <= bRect.right + 24) {
+        hoverBadgeEl.style.display = "none";
+        return;
+      }
+      bottomObstacle = Math.min(bottomObstacle, bRect.top - 16);
     }
   }
-  const bottomObstacle = bottomAnchor 
-    ? (bottomAnchor.getBoundingClientRect().top - 14) 
-    : (window.innerHeight - 135);
+
+  const statsHud = document.getElementById("model-stats-hud");
+  if (statsHud && statsHud.offsetParent !== null) {
+    const sRect = statsHud.getBoundingClientRect();
+    if (sRect.top > 0) {
+      bottomObstacle = Math.min(bottomObstacle, sRect.top - 16);
+    }
+  }
+
+  const timelinePanel = document.getElementById("timeline-panel");
+  if (timelinePanel && timelinePanel.offsetParent !== null) {
+    const tRect = timelinePanel.getBoundingClientRect();
+    if (tRect.top > 0) {
+      bottomObstacle = Math.min(bottomObstacle, tRect.top - 16);
+    }
+  }
 
   // Left sidebar clearance
-  const leftSidebar = document.querySelector(".sidebar-left") as HTMLElement | null;
+  const leftSidebar = document.querySelector(".sidebar.left-sidebar, .sidebar-left") as HTMLElement | null;
   const isLeftOpen = leftSidebar && !document.body.classList.contains("left-sidebar-collapsed");
   const leftSafe = isLeftOpen ? (leftSidebar.getBoundingClientRect().right + 14) : 16;
 
   // Right sidebar clearance
-  const rightSidebar = document.querySelector(".sidebar-right") as HTMLElement | null;
+  const rightSidebar = document.querySelector(".sidebar.right-sidebar, .sidebar-right") as HTMLElement | null;
   const isRightOpen = rightSidebar && !document.body.classList.contains("right-sidebar-collapsed");
   const rightSafe = isRightOpen ? (rightSidebar.getBoundingClientRect().left - 14) : (window.innerWidth - 16);
 
   // Y-axis positioning:
   // Default placement is below cursor (+16px).
-  // If placing below cursor would overlap the bottom HUD obstacle or viewport bottom, flip ABOVE cursor and obstacle!
+  // If placing below cursor exceeds bottomObstacle, place ABOVE cursor!
   let posY = cursorY + 16;
-  if (posY + badgeH > bottomObstacle || posY + badgeH > window.innerHeight - 16) {
-    posY = Math.min(cursorY - badgeH - 16, bottomObstacle - badgeH);
+  if (posY + badgeH > bottomObstacle) {
+    posY = cursorY - badgeH - 18;
   }
-  // Clamp within vertical bounds
+
+  // If placing above cursor went under the top header:
   if (posY < topSafe) {
-    // If placing above cursor hit top header, position where it has maximum breathing room
-    if (cursorY - topSafe > bottomObstacle - cursorY) {
-      posY = Math.max(topSafe, cursorY - badgeH - 12);
+    if (bottomObstacle - topSafe >= badgeH) {
+      posY = Math.max(topSafe, Math.min(bottomObstacle - badgeH, cursorY - badgeH / 2));
     } else {
-      posY = Math.min(bottomObstacle - badgeH, cursorY + 16);
+      posY = topSafe;
     }
-    posY = Math.max(topSafe, posY);
+  }
+
+  // Absolute hard clamp to guarantee zero overlap with bottom obstacles
+  if (posY + badgeH > bottomObstacle) {
+    posY = Math.max(topSafe, bottomObstacle - badgeH);
   }
 
   // X-axis positioning:
   // Default placement is right of cursor (+16px).
-  // If placing right of cursor would overflow right boundary, flip LEFT of cursor!
+  // If placing right of cursor overflows rightSafe boundary, flip LEFT of cursor!
   let posX = cursorX + 16;
   if (posX + badgeW > rightSafe) {
     posX = cursorX - badgeW - 16;
