@@ -2073,9 +2073,9 @@
         <div class="help-modal-body thin-scrollbar">
           <div class="help-tab-panel active" id="help-tab-welcome">
             <div class="welcome-hero">
-              <div class="welcome-badge">BIM VIEWER PRO 4D / 5D</div>
-              <p class="welcome-tagline">Real-time 3D/4D/5D construction twin viewer. Load IFC models, inspect elements,
-                simulate construction timelines, and estimate project costs all in the browser.</p>
+              <div class="welcome-badge">BIM VIEWER PRO 4D / 5D / 6D</div>
+              <p class="welcome-tagline">Enterprise 3D/4D/5D/6D digital twin platform. Load IFC/FRAG models, inspect elements,
+                simulate 4D construction phasing, estimate 5D project costs, audit 6D carbon lifecycle, and coordinate BCF issues all in the browser.</p>
             </div>
             <div class="help-section-title">QUICK START -- 6 CORE STEPS</div>
             <div class="step-list">
@@ -2083,110 +2083,103 @@
                 <div class="step-num">01</div>
                 <div class="step-body">
                   <div class="step-name">Load a Model</div>
-                  <div class="step-desc">Click <strong>Load Sample</strong> in the Files panel (Key <kbd>1</kbd>) or upload your own <code>.ifc</code> or <code>.frag</code> file. The model loads with full element classification and twin data.</div>
+                  <div class="step-desc">Click <strong>Load Sample</strong> in the Files panel (Key <kbd>1</kbd>) or upload your own <code>.ifc</code> or <code>.frag</code> file from the bottom dock. The model loads with full element classification and twin metadata.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">02</div>
                 <div class="step-body">
                   <div class="step-name">Inspect Elements &amp; Properties</div>
-                  <div class="step-desc"><strong>Double-click</strong> any 3D element to open the Properties panel (Key <kbd>5</kbd>). See IFC type, name, storey, category, 4D task dates, and live 5D cost fields.</div>
+                  <div class="step-desc"><strong>Double-click</strong> any 3D element to open the Properties panel (Key <kbd>5</kbd>). View IFC type, name, storey, category, 4D task dates, material volumes, and live 5D unit cost fields.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">03</div>
                 <div class="step-body">
-                  <div class="step-name">Navigate &amp; 3D ViewCube</div>
-                  <div class="step-desc"><strong>Orbit</strong> by dragging, <strong>Zoom</strong> with scroll, <strong>Pan</strong> with right-click. Click any face on the <strong>3D ViewCube</strong> (top-right) to snap to standard elevations or switch to <strong>First Person</strong> (<kbd>6</kbd>).</div>
+                  <div class="step-name">Navigate, ViewCube &amp; Tactical 2D Radar</div>
+                  <div class="step-desc"><strong>Orbit</strong> by dragging, <strong>Zoom</strong> with scroll, <strong>Pan</strong> with right-click. Click faces on the <strong>3D ViewCube</strong> to snap views. Use the <strong>Tactical 2D Radar</strong> (bottom-right) for click-to-teleport, floor plan slicing, and True North compass snap.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">Simulate 4D Construction</div>
-                  <div class="step-desc">Press <strong>ACTIVATE 4D</strong> in the header. Drag the timeline scrubber to simulate the build sequence. Use speed pills 1x 2x 5x 10x to control playback rate.</div>
+                  <div class="step-name">Simulate 4D Construction Phasing</div>
+                  <div class="step-desc">Press <strong>Activate 4D</strong> in the top ribbon or click the 4D icon on the bottom dock. Drag the timeline scrubber to simulate the build sequence with dynamic planned vs. actual progress coloring and WebM recording.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">05</div>
                 <div class="step-body">
-                  <div class="step-name">Estimate 5D Project Cost</div>
-                  <div class="step-desc">Select an element, open <kbd>5</kbd> INSPECT panel, enter <strong>Unit Cost</strong> and <strong>Quantity</strong>. The calculated cost and project grand total update live across all elements.</div>
+                  <div class="step-name">Unified 5D Project Cost Control &amp; BOQ</div>
+                  <div class="step-desc">Click the green <strong>$</strong> button on the bottom dock or inside the 4D timeline. View the cumulative budget, live EVM S-Curve (PV/EV/AC), category cost breakdown, currency converter, and 1-click <strong>Export BOQ</strong> spreadsheet.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">06</div>
                 <div class="step-body">
-                  <div class="step-name">3D Pins, Field Issues &amp; BCF Export</div>
-                  <div class="step-desc">Switch to <kbd>7</kbd> TOOLS -> Measure / Pins. Drop pins directly on building surfaces, record defect/safety notes with auto-snapshots, and export buildingSMART <strong>BCF/JSON</strong> reports.</div>
+                  <div class="step-name">Clash Matrix, BCF Coordination &amp; Carbon LCA</div>
+                  <div class="step-desc">Launch the <strong>Clash Matrix</strong>, <strong>BCF Issue Tracker</strong>, or <strong>6D Embodied Carbon</strong> directly from the bottom dock. Run automated interference checks, capture viewpoints, and export buildingSMART <strong>BCF/JSON</strong> reports.</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="help-tab-panel" id="help-tab-tools">
-            <div class="help-section-title">SPECIALIZED TOOLS &amp; ANALYSIS</div>
+            <div class="help-section-title">SPECIALIZED TOOLS &amp; ENTERPRISE SUITES</div>
             <div class="tool-grid">
               <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">3D Pin Annotations &amp; Field Issues</div>
-                  <div class="tool-desc">Drop 3D pins directly onto model surfaces. Categorize into <strong>Inspect, Defect, Safety, RFI, Sign-off</strong>. Features auto-viewport snapshots, element tagging, category filtering, and <strong>BCF/JSON export</strong>.</div>
+                  <div class="tool-name">5D Project Cost Control &amp; BOQ Suite</div>
+                  <div class="tool-desc">Accessible via the bottom dock <strong>$</strong> icon. Features cumulative budget tracking, live 4D/5D EVM S-Curve (Planned Value vs Earned Value), category cost bars, multi-currency conversion (USD, EUR, GBP, JPY, INR, CAD, AUD), and <strong>Export BOQ</strong> spreadsheet.</div>
                 </div>
               </div>
               <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">Solar Sun Study &amp; Dynamic Shadows</div>
-                  <div class="tool-desc">Adjust <strong>Sun Azimuth (0°-360°)</strong> and <strong>Sun Elevation (0°-90°)</strong> in Key <kbd>4</kbd> SCENE panel to simulate solar shading and cast dynamic PCF shadows across the BIM geometry.</div>
+                  <div class="tool-name">Tactical 2D Radar &amp; Floor Slicer</div>
+                  <div class="tool-desc">Floating HUD on the bottom-right projecting the building footprint. Supports click-to-teleport, camera orientation tracking, True North compass snap, automated storey slicing, and live clash reticle display.</div>
+                </div>
+              </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">4D Phasing &amp; Gantt Timeline</div>
+                  <div class="tool-desc">Full 4D construction simulator driven by <code>Schedule4DEngine</code>. Includes timeline scrubber, milestone pills, planned vs. actual variance mode, MSPDI XML / Primavera P6 XER file import, and WebM video recording.</div>
+                </div>
+              </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">Multi-Discipline Clash Matrix</div>
+                  <div class="tool-desc">Real 3D mesh intersection and clearance tolerance audit. Filter by discipline pair (Architecture, Structure, MEP) with 1-click BCF issue promotion, isolated ghosting, and viewpoint capture.</div>
+                </div>
+              </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">6D Embodied Carbon &amp; LCA Heatmap</div>
+                  <div class="tool-desc">ICE v3.0 embodied carbon database engine. Renders a 5-band 3D carbon intensity heatmap (Grade A to E) directly onto building elements with material substitution simulation and sustainability report export.</div>
+                </div>
+              </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><polyline points="9 9 15 15"/><polyline points="15 9 9 15"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">Magic Dock &amp; Apple Magnifier</div>
+                  <div class="tool-desc">Centralized bottom toolbar serving as the single source of truth for all tools. Fluid Apple-style icon magnification, mouse-wheel &amp; touch drag scrolling, and elevated global floating tooltips.</div>
                 </div>
               </div>
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></div>
                 <div class="tool-info">
                   <div class="tool-name">Model Explosion Analysis</div>
-                  <div class="tool-desc">Drag the <strong>Explosion Slider</strong> in Key <kbd>7</kbd> TOOLS panel to smoothly disassemble building storeys, structural slabs, and MEP assemblies along their centroids.</div>
+                  <div class="tool-desc">Smoothly disassemble building storeys, structural slabs, and MEP assemblies along their centroids using the Explosion Slider.</div>
                 </div>
               </div>
               <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">X-Ray &amp; Element Ghosting</div>
-                  <div class="tool-desc">Click <strong>X-Ray</strong> in the pin inspector to turn surrounding geometry semi-transparent (20% opacity) while highlighting the tagged IFC element in full color.</div>
-                </div>
-              </div>
-              <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 20h20M5 20V8l7-5 7 5v12"/></svg></div>
-                <div class="tool-info">
-                  <div class="tool-name">Tape Measure</div>
-                  <div class="tool-desc">Enable in Key <kbd>7</kbd> TOOLS tab. Click two points in the 3D viewport to measure real-world distance. Results appear as 3D laser annotations on the model.</div>
-                </div>
-              </div>
-              <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-                <div class="tool-info">
-                  <div class="tool-name">4D Timeline Simulation</div>
-                  <div class="tool-desc">Activate 4D mode from the header. Elements appear, progress, and complete according to their scheduled dates. Use speed pills 1x to 10x.</div>
-                </div>
-              </div>
-              <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-                <div class="tool-info">
-                  <div class="tool-name">5D Cost Estimator</div>
-                  <div class="tool-desc">Select any element in the INSPECT panel. Set Unit Cost and Quantity. The calculated cost and running project grand total update live.</div>
-                </div>
-              </div>
-              <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
-                <div class="tool-info">
-                  <div class="tool-name">Interactive 3D ViewCube</div>
-                  <div class="tool-desc">Snap camera to Top, Front, Right, Isometric, or corner views with smooth animation. Cardinal compass ring rotates in sync with scene orientation.</div>
-                </div>
-              </div>
-              <div class="tool-card">
-                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18"/></svg></div>
-                <div class="tool-info">
-                  <div class="tool-name">Theme &amp; Post-Processing Engine</div>
-                  <div class="tool-desc">Select from 9 architectural themes in the header. Customize Bloom, Vignette, Chromatic Aberration, and GLSL Shader FX in Key <kbd>4</kbd> SCENE panel.</div>
+                  <div class="tool-name">Precision 3D Dimensions</div>
+                  <div class="tool-desc">Snap-to-vertex point-to-point measurement, angle, area, and bounding box volume with live on-screen laser callouts.</div>
                 </div>
               </div>
             </div>
@@ -2194,24 +2187,24 @@
           <div class="help-tab-panel" id="help-tab-shortcuts">
             <div class="shortcuts-two-col">
               <div>
-                <div class="help-section-title">SIDEBAR MODULE TABS</div>
+                <div class="help-section-title">SIDEBAR &amp; DOCK ACTIONS</div>
                 <div class="shortcut-group">
                   <div class="shortcut-row"><kbd>1</kbd> - <kbd>7</kbd> <span>Switch Sidebar Modules</span></div>
-                  <div class="shortcut-row"><kbd>M</kbd> <span>Smart 3D Dimensions (Distance/Angle/Area)</span></div>
-                  <div class="shortcut-row"><kbd>B</kbd> <span>Box Marquee Select Tool</span></div>
+                  <div class="shortcut-row"><kbd>M</kbd> <span>Smart 3D Dimensions Tool</span></div>
+                  <div class="shortcut-row"><kbd>B</kbd> <span>Box Marquee Drag Select</span></div>
                   <div class="shortcut-row"><kbd>I</kbd> <span>Isolate Selected Elements</span></div>
                   <div class="shortcut-row"><kbd>H</kbd> <span>Hide Selected Elements</span></div>
-                  <div class="shortcut-row"><kbd>F</kbd> <span>Fit &amp; Focus Camera</span></div>
+                  <div class="shortcut-row"><kbd>F</kbd> <span>Zoom Fit &amp; Focus Camera</span></div>
                   <div class="shortcut-row"><kbd>Ctrl+K</kbd> <span>Omni Command Palette</span></div>
-                  <div class="shortcut-row"><kbd>?</kbd> <span>Toggle Keyboard Shortcuts &amp; Help</span></div>
-                  <div class="shortcut-row"><kbd>Esc</kbd> <span>Close Modals / Clear Selection</span></div>
+                  <div class="shortcut-row"><kbd>?</kbd> <span>Toggle Help &amp; Shortcuts Guide</span></div>
+                  <div class="shortcut-row"><kbd>Esc</kbd> <span>Clear Selection / Close Drawers</span></div>
                 </div>
-                <div class="help-section-title" style="margin-top:1.2rem;">VIEWPORT ACTIONS</div>
+                <div class="help-section-title" style="margin-top:1.2rem;">DOCK &amp; VIEWPORT GESTURES</div>
                 <div class="shortcut-group">
-                  <div class="shortcut-row"><kbd>Hover</kbd> <span>Element Tooltip (ExpressID, IFC Type, Storey, Dimensions, Volume)</span></div>
-                  <div class="shortcut-row"><kbd>Dbl Click</kbd> <span>Inspect Element Properties</span></div>
+                  <div class="shortcut-row"><kbd>Dock Scroll</kbd> <span>Mouse Wheel or Pointer Drag to pan dock horizontally</span></div>
+                  <div class="shortcut-row"><kbd>Hover Dock</kbd> <span>Apple magnification with elevated floating tooltip</span></div>
+                  <div class="shortcut-row"><kbd>Dbl Click</kbd> <span>Inspect 3D Element Properties &amp; 5D Cost</span></div>
                   <div class="shortcut-row"><kbd>Right Click</kbd> <span>Context Menu (Isolate, Hide, Slice, BCF Issue)</span></div>
-                  <div class="shortcut-row"><kbd>Click Pin</kbd> <span>Select 3D Pin &amp; Open Notes</span></div>
                   <div class="shortcut-row"><kbd>Scroll</kbd> <span>Zoom In / Out</span></div>
                   <div class="shortcut-row"><kbd>Left Drag</kbd> <span>Orbit Camera</span></div>
                   <div class="shortcut-row"><kbd>Right Drag</kbd> <span>Pan Camera</span></div>
@@ -2230,32 +2223,38 @@
                   <div class="shortcut-row"><kbd>Q</kbd> <span>Elevate Up</span></div>
                   <div class="shortcut-row"><kbd>E</kbd> <span>Descend Down</span></div>
                 </div>
-                <div class="help-section-title" style="margin-top:1.2rem;">QUICK VIEW TOOLBAR</div>
+                <div class="help-section-title" style="margin-top:1.2rem;">TACTICAL 2D RADAR</div>
                 <div class="shortcut-group">
-                  <div class="shortcut-row"><span class="kbd-label">FIT</span> <span>Zoom fit all geometry</span></div>
-                  <div class="shortcut-row"><span class="kbd-label">TOP</span> <span>2D Orthographic plan</span></div>
-                  <div class="shortcut-row"><span class="kbd-label">ISO</span> <span>3D Perspective orbit</span></div>
+                  <div class="shortcut-row"><span class="kbd-label">CLICK</span> <span>Teleport camera to location</span></div>
+                  <div class="shortcut-row"><span class="kbd-label">DRAG CONE</span> <span>Rotate camera gaze orientation</span></div>
+                  <div class="shortcut-row"><span class="kbd-label">N BUTTON</span> <span>Snap camera to True North (0°)</span></div>
+                  <div class="shortcut-row"><span class="kbd-label">AUTO</span> <span>Toggle automatic storey elevation tracking</span></div>
                 </div>
               </div>
             </div>
           </div>
           <div class="help-tab-panel" id="help-tab-navigate">
-            <div class="help-section-title">CAMERA MODES</div>
+            <div class="help-section-title">CAMERA &amp; NAVIGATION MODES</div>
             <div class="nav-mode-grid">
               <div class="nav-mode-card">
                 <div class="nav-mode-name"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -1px; margin-right: 3px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> Orbit Mode</div>
                 <div class="nav-mode-desc">Default mode. Left-click drag to orbit around a pivot point. Scroll to zoom. Right-click drag to pan. Best for inspecting models from all angles.</div>
-                <div class="nav-mode-tip">Activate: Key <kbd>4</kbd> Navigation Mode Orbit</div>
+                <div class="nav-mode-tip">Activate: Key <kbd>4</kbd> Navigation Mode Orbit or Bottom Dock</div>
               </div>
               <div class="nav-mode-card">
                 <div class="nav-mode-name"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -1px; margin-right: 3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg> First Person Mode</div>
-                <div class="nav-mode-desc">Walk through the building as if you were inside it. Use <kbd>W A S D</kbd> to move, mouse to look around. Stair-climbing is simulated on elevation changes.</div>
+                <div class="nav-mode-desc">Walk through the building as if you were inside it. Use <kbd>W A S D</kbd> to move, mouse to look around. Automatic step elevation handling.</div>
                 <div class="nav-mode-tip">Activate: Key <kbd>6</kbd> Camera First Person</div>
               </div>
               <div class="nav-mode-card">
                 <div class="nav-mode-name"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -1px; margin-right: 3px;"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Top Plan Mode</div>
                 <div class="nav-mode-desc">2D orthographic view locked top-down. Ideal for reviewing floor plans, measuring distances, and checking room layouts without perspective distortion.</div>
                 <div class="nav-mode-tip">Activate: Quick View TOP button</div>
+              </div>
+              <div class="nav-mode-card">
+                <div class="nav-mode-name"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2" style="vertical-align: -1px; margin-right: 3px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg> Tactical 2D Radar</div>
+                <div class="nav-mode-desc">Real-time dynamic architectural minimap. Provides elevation auto-tracking, floor slicing, True North orientation snap, and clash marker reticles.</div>
+                <div class="nav-mode-tip">Located at bottom-right viewport corner</div>
               </div>
             </div>
             <div class="help-section-title" style="margin-top:1.4rem;">TIPS &amp; BEST PRACTICES</div>
