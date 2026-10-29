@@ -824,7 +824,7 @@ body.mode-4d .bottom-toolbar.magic-dock {
 }
 
 body.mode-4d .hud-anchor-bottom-center {
-  bottom: 8.5rem;
+  display: none !important;
 }
 
 body.mode-4d::after {
@@ -2530,17 +2530,44 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
   padding-top: 0.35rem;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .timeline-left-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.timeline-left-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.timeline-left-controls .btn-timeline-csv,
+.timeline-left-controls label.btn-timeline-csv {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.68rem;
+}
+
+.timeline-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .btn-timeline-ctrl {
@@ -4890,6 +4917,9 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   box-shadow: var(--shadow-float);
   border-radius: 12px;
   overflow: hidden;
+  max-width: min(360px, 92vw);
+  max-height: calc(100vh - var(--header-bottom) - 1.5rem);
+  overflow-y: auto;
   animation: modalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -6607,9 +6637,9 @@ body.right-sidebar-collapsed .right-sidebar {
   position: fixed;
   top: var(--header-bottom);
   right: 0.75rem;
-  width: var(--right-panel-w);
+  width: min(380px, calc(100vw - 1.5rem));
   max-width: calc(100vw - 1.5rem);
-  max-height: calc(100vh - var(--header-bottom) - 1rem);
+  max-height: calc(100vh - var(--header-bottom) - 1.25rem);
   background: var(--bg-surface, #121216);
   border: 2px solid var(--border-strong, #2A2A35);
   border-radius: 16px;
@@ -8412,7 +8442,9 @@ body.right-sidebar-collapsed .right-sidebar {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 380px;
+  height: min(380px, 46vh);
+  max-height: 50vh;
+  min-height: 220px;
   background: var(--bg-surface, #0E0E12);
   border-top: 2px solid var(--accent-500, #D4FF3F);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65);

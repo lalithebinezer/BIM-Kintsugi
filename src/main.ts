@@ -7360,8 +7360,8 @@ container.addEventListener("contextmenu", async (e: MouseEvent) => {
   }
 
   ctxMenu.style.display = "flex";
-  ctxMenu.style.left = `${Math.min(window.innerWidth - 200, e.clientX)}px`;
-  ctxMenu.style.top = `${Math.min(window.innerHeight - 200, e.clientY)}px`;
+  ctxMenu.style.left = `${Math.max(12, Math.min(window.innerWidth - 220, e.clientX))}px`;
+  ctxMenu.style.top = `${Math.max(12, Math.min(window.innerHeight - 220, e.clientY))}px`;
 });
 
 // Close context menu on outside click
