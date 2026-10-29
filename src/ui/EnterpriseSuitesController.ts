@@ -494,11 +494,52 @@ function initAppleDockMagnifier() {
   const dock = document.querySelector<HTMLElement>(".bottom-toolbar.magic-dock");
   if (!dock) return;
 
+  // Global floating body-level tooltip (guarantees highest z-index and zero overflow clipping)
+  let globalTooltip = document.getElementById("dock-global-tooltip");
+  if (!globalTooltip) {
+    globalTooltip = document.createElement("div");
+    globalTooltip.id = "dock-global-tooltip";
+    globalTooltip.setAttribute("role", "tooltip");
+    globalTooltip.setAttribute("aria-hidden", "true");
+    document.body.appendChild(globalTooltip);
+  }
+
+  let activeItem: HTMLElement | null = null;
+
+  const hideGlobalTooltip = () => {
+    if (globalTooltip) {
+      globalTooltip.classList.remove("visible");
+      globalTooltip.setAttribute("aria-hidden", "true");
+    }
+  };
+
+  const showGlobalTooltip = (item: HTMLElement) => {
+    if (!globalTooltip) return;
+    const text = item.getAttribute("data-tooltip") || item.querySelector<HTMLElement>(".dock-tooltip")?.textContent?.trim();
+    if (!text) {
+      hideGlobalTooltip();
+      return;
+    }
+    globalTooltip.textContent = text;
+    globalTooltip.setAttribute("aria-hidden", "false");
+
+    const btn = item.querySelector<HTMLElement>(".dock-icon") || item;
+    const rect = btn.getBoundingClientRect();
+    const tooltipW = globalTooltip.offsetWidth || 80;
+    const posX = Math.max(tooltipW / 2 + 10, Math.min(window.innerWidth - tooltipW / 2 - 10, rect.left + rect.width / 2));
+    const posY = Math.max(10, rect.top - 18);
+
+    globalTooltip.style.left = `${posX}px`;
+    globalTooltip.style.top = `${posY}px`;
+    globalTooltip.classList.add("visible");
+  };
+
   // Mouse wheel horizontal scroll translation
   dock.addEventListener("wheel", (e: WheelEvent) => {
     if (e.deltaY !== 0 || e.deltaX !== 0) {
       e.preventDefault();
       dock.scrollLeft += e.deltaY !== 0 ? e.deltaY * 1.25 : e.deltaX;
+      if (activeItem) showGlobalTooltip(activeItem);
     }
   }, { passive: false });
 
@@ -516,6 +557,7 @@ function initAppleDockMagnifier() {
     initialScroll = dock.scrollLeft;
     dock.style.cursor = "grabbing";
     dock.style.userSelect = "none";
+    hideGlobalTooltip();
   });
 
   window.addEventListener("pointermove", (e: PointerEvent) => {
@@ -523,6 +565,7 @@ function initAppleDockMagnifier() {
     const delta = e.clientX - startX;
     totalDragDist += Math.abs(delta);
     dock.scrollLeft = initialScroll - delta;
+    hideGlobalTooltip();
   });
 
   const onPointerEnd = () => {
@@ -546,8 +589,8 @@ function initAppleDockMagnifier() {
 
   const onMouseMove = (e: MouseEvent) => {
     if (isDown) return;
-    const isSmall = window.innerWidth <= 768;
-    const maxScale = isSmall ? 1.15 : 1.32;
+    const isSmall = window.innerWidth <= 768 || !document.body.classList.contains("left-sidebar-collapsed") || !document.body.classList.contains("right-sidebar-collapsed");
+    const maxScale = isSmall ? 1.18 : 1.28;
     const radius = isSmall ? 85 : 120;
     const mouseX = e.clientX;
 
@@ -561,7 +604,7 @@ function initAppleDockMagnifier() {
       if (dist < radius) {
         const factor = Math.cos((dist / radius) * (Math.PI / 2));
         const scale = 1 + (maxScale - 1) * Math.pow(factor, 1.4);
-        const translateY = -5 * factor;
+        const translateY = -4 * factor;
         btn.style.transform = `scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`;
         item.style.margin = isSmall ? "0 1px" : `0 ${(factor * 3.5).toFixed(1)}px`;
         item.style.zIndex = Math.round(100 * factor + 10).toString();
@@ -571,6 +614,10 @@ function initAppleDockMagnifier() {
         item.style.zIndex = "1";
       }
     });
+
+    if (activeItem) {
+      showGlobalTooltip(activeItem);
+    }
   };
 
   const onMouseLeave = () => {
@@ -581,16 +628,41 @@ function initAppleDockMagnifier() {
       item.style.margin = isSmall ? "0 1px" : "0 0";
       item.style.zIndex = "1";
     });
+    activeItem = null;
+    hideGlobalTooltip();
   };
 
-  let lastHoveredItem: HTMLElement | null = null;
   items.forEach((item) => {
+    const btn = item.querySelector<HTMLElement>(".dock-icon");
+
     item.addEventListener("mouseenter", () => {
-      if (lastHoveredItem !== item) {
-        lastHoveredItem = item;
+      if (activeItem !== item) {
+        activeItem = item;
         SoundManager.getInstance().playHover();
       }
+      showGlobalTooltip(item);
     }, { passive: true });
+
+    item.addEventListener("mouseleave", () => {
+      if (activeItem === item) {
+        activeItem = null;
+        hideGlobalTooltip();
+      }
+    }, { passive: true });
+
+    if (btn) {
+      btn.addEventListener("focus", () => {
+        activeItem = item;
+        showGlobalTooltip(item);
+      });
+      btn.addEventListener("blur", () => {
+        if (activeItem === item) {
+          activeItem = null;
+          hideGlobalTooltip();
+        }
+      });
+    }
+
     item.addEventListener("click", () => {
       SoundManager.getInstance().playClick();
     }, { passive: true });
@@ -598,7 +670,6 @@ function initAppleDockMagnifier() {
 
   dock.addEventListener("mousemove", onMouseMove, { passive: true });
   dock.addEventListener("mouseleave", () => {
-    lastHoveredItem = null;
     onMouseLeave();
   }, { passive: true });
 }

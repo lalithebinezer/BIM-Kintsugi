@@ -2104,6 +2104,13 @@ function updateHoverBadgePosition(cursorX: number, cursorY: number) {
 
   // Bottom HUD obstacle clearance (dock + stats HUD)
   const bottomAnchor = document.querySelector(".hud-anchor-bottom-center") as HTMLElement | null;
+  if (bottomAnchor) {
+    const bRect = bottomAnchor.getBoundingClientRect();
+    if (cursorY >= bRect.top - 16 && cursorX >= bRect.left - 24 && cursorX <= bRect.right + 24) {
+      hoverBadgeEl.style.display = "none";
+      return;
+    }
+  }
   const bottomObstacle = bottomAnchor 
     ? (bottomAnchor.getBoundingClientRect().top - 14) 
     : (window.innerHeight - 135);
