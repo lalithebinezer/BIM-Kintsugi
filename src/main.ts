@@ -2285,8 +2285,7 @@ if (container && hoverBadgeEl) {
 }
 
 // Wire Custom Cost Rates & Multi-Currency Modal button
-const btnOpenCostRates = document.getElementById("btn-open-cost-rates-modal");
-btnOpenCostRates?.addEventListener("click", () => {
+function triggerCostRateModal() {
   CostRateManager.getInstance().openCostRateModal(() => {
     // Re-evaluate twin database costs with updated rates
     for (const key in twinDatabase) {
@@ -2307,6 +2306,19 @@ btnOpenCostRates?.addEventListener("click", () => {
     updateDashboardMetrics();
     showToast(`Applied ${CostRateManager.getInstance().getCurrency().code} Cost Rates & Currency!`, "success");
   });
+}
+(window as any).openCostRateModal = triggerCostRateModal;
+
+const btnOpenCostRates = document.getElementById("btn-open-cost-rates-modal");
+btnOpenCostRates?.addEventListener("click", triggerCostRateModal);
+
+// Document-level delegated click handler for resilience
+document.addEventListener("click", (e) => {
+  const target = (e.target as HTMLElement)?.closest("#btn-open-cost-rates-modal");
+  if (target) {
+    e.preventDefault();
+    triggerCostRateModal();
+  }
 });
 
 // Wire BOQ CSV export button
