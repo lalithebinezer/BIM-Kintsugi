@@ -1,15 +1,20 @@
 /**
  * Pure Utility Formatting Functions (Separation of Concerns)
  */
+import { CostRateManager } from "../modules/CostRateManager";
 
 /**
- * Formats a numeric value into a USD currency string.
+ * Formats a numeric value into an active project currency string.
  */
 export function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  try {
+    return CostRateManager.getInstance().formatPrice(amount);
+  } catch {
+    return `$${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
 }
 
 /**

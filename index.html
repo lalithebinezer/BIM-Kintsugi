@@ -1286,15 +1286,23 @@
                   </div>
                 </div>
 
-                <button class="btn-secondary" id="btn-export-boq-csv"
-                  style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.35rem; font-size: 0.72rem; color: #10b981; border-color: #10b981; margin-bottom: 0.35rem; cursor: pointer;">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Export Bills of Quantities (BOQ CSV)
-                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.35rem;">
+                  <button class="btn-secondary" id="btn-open-cost-rates-modal"
+                    style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem; font-size: 0.7rem; color: var(--accent-500); border-color: var(--accent-500); cursor: pointer;"
+                    title="Edit custom unit rates, volume/area multipliers, and project currency">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Rates & Currency
+                  </button>
+                  <button class="btn-secondary" id="btn-export-boq-csv"
+                    style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem; font-size: 0.7rem; color: #10b981; border-color: #10b981; cursor: pointer;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export BOQ
+                  </button>
+                </div>
 
                 <button class="btn-secondary" id="btn-run-ids-audit"
                   style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.35rem; font-size: 0.72rem; color: var(--accent-300); border-color: var(--border-accent); margin-bottom: 0.5rem; cursor: pointer;">

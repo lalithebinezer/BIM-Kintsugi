@@ -2819,6 +2819,192 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
+
+/* ============================================================
+   5D CUSTOM COST RATE TABLE & MULTI-CURRENCY MODAL
+   ============================================================ */
+.cost-rate-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 10005;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.cost-rate-modal-overlay.hidden {
+  display: none !important;
+}
+
+.cost-rate-modal-container {
+  width: 720px;
+  max-width: 95vw;
+  max-height: 86vh;
+  background: var(--bg-surface, #141418);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  border-radius: 14px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cost-rate-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.15rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.cost-modal-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(212, 255, 63, 0.12);
+  color: var(--accent-500, #D4FF3F);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cost-rate-modal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1.15rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.cost-currency-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+
+.cost-currency-select option {
+  background: #141418;
+  color: #fff;
+}
+
+.cost-rate-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 58vh;
+  padding: 0.2rem 1.15rem 1rem 1.15rem;
+}
+
+.cost-rate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.cost-rate-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface, #141418);
+  color: var(--text-muted, #a1a1aa);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--border-strong, rgba(255, 255, 255, 0.12));
+  z-index: 2;
+}
+
+.cost-rate-table td {
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.cost-rate-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cost-unit-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-main, #e4e4e7);
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.68rem;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+}
+
+.cost-rate-input {
+  width: 90px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cost-rate-input:focus {
+  border-color: var(--accent-500, #D4FF3F);
+}
+
+.cost-trade-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cost-trade-badge.trade-concrete {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.cost-trade-badge.trade-steel {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.cost-trade-badge.trade-mep {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.cost-trade-badge.trade-finishes {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.cost-trade-badge.trade-general {
+  background: rgba(156, 163, 175, 0.18);
+  color: #d1d5db;
+  border: 1px solid rgba(156, 163, 175, 0.35);
+}
   background: var(--bg-panel-header);
   border-bottom: 1px solid var(--border-color);
 }

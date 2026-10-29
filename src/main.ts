@@ -66,6 +66,7 @@ function getCategoryColor(_theme: string, category: string): string {
 import { ScheduleManager } from "./modules/ScheduleManager";
 import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
+import { CostRateManager } from "./modules/CostRateManager";
 
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
@@ -1294,10 +1295,7 @@ function updateDashboardMetrics() {
 
   // Bind to UI elements (only if they exist — they're optional dashboard stats)
   const elTotalCost = document.getElementById("stat-total-cost");
-  if (elTotalCost) elTotalCost.innerText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(totalCost);
+  if (elTotalCost) elTotalCost.innerText = formatCurrency(totalCost);
 
   const elCount = document.getElementById("stat-elements-count");
   if (elCount) elCount.innerText = String(elementCount);
@@ -1967,8 +1965,20 @@ async function displayElementProperties(model: any, expressId: number) {
   const twinData = getOrGenerateTwinData(activeModelId || "default-model", expressId, ifcType);
 
   const qtoData = extractQuantityData(elementProps, psets);
-  if (qtoData.quantity > 0 && !twinData.isCustomized) {
-    twinData.quantity = qtoData.quantity;
+  if (!twinData.isCustomized) {
+    const rateConfig = CostRateManager.getInstance().getRate(ifcType);
+    twinData.unitCost = rateConfig.unitRate;
+
+    // Use real volume or area multiplier if found in IFC Qto
+    if (rateConfig.unit === "m³" && qtoData.quantityType.includes("Volume") && qtoData.quantity > 0) {
+      twinData.quantity = qtoData.quantity;
+    } else if (rateConfig.unit === "m²" && qtoData.quantityType.includes("Area") && qtoData.quantity > 0) {
+      twinData.quantity = qtoData.quantity;
+    } else if (rateConfig.unit === "m" && qtoData.quantityType.includes("Length") && qtoData.quantity > 0) {
+      twinData.quantity = qtoData.quantity;
+    } else if (qtoData.quantity > 0) {
+      twinData.quantity = qtoData.quantity;
+    }
     twinData.calculatedCost = twinData.unitCost * twinData.quantity;
   }
 
@@ -1976,9 +1986,7 @@ async function displayElementProperties(model: any, expressId: number) {
   if (costUnit) costUnit.value = String(twinData.unitCost);
   if (costQty) costQty.value = String(twinData.quantity);
   if (costCalc) {
-    costCalc.innerText = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-      twinData.calculatedCost
-    );
+    costCalc.innerText = formatCurrency(twinData.calculatedCost);
   }
 
   // Populate 4D Schedule inputs
@@ -2276,6 +2284,31 @@ if (container && hoverBadgeEl) {
   });
 }
 
+// Wire Custom Cost Rates & Multi-Currency Modal button
+const btnOpenCostRates = document.getElementById("btn-open-cost-rates-modal");
+btnOpenCostRates?.addEventListener("click", () => {
+  CostRateManager.getInstance().openCostRateModal(() => {
+    // Re-evaluate twin database costs with updated rates
+    for (const key in twinDatabase) {
+      const data = twinDatabase[key];
+      if (!data.isCustomized) {
+        const [modelId, expressIdStr] = key.split("-");
+        const expressId = Number(expressIdStr);
+        const model = fragments.list.get(modelId) as any;
+        const properties = model?.properties || model?.getLocalProperties?.() || {};
+        const elementProps = properties[expressId];
+        const ifcType = String(elementProps?.type ?? "").toUpperCase();
+        const rateInfo = CostRateManager.getInstance().getRate(ifcType);
+        data.unitCost = rateInfo.unitRate;
+        data.calculatedCost = data.unitCost * (data.quantity || 1);
+      }
+    }
+    updateCumulative5DCost();
+    updateDashboardMetrics();
+    showToast(`Applied ${CostRateManager.getInstance().getCurrency().code} Cost Rates & Currency!`, "success");
+  });
+});
+
 // Wire BOQ CSV export button
 const btnExportBoqCsv = document.getElementById("btn-export-boq-csv");
 if (btnExportBoqCsv) {
@@ -2495,6 +2528,42 @@ export function updateCumulative5DCost() {
   countEl.textContent = formatItemCount(elementCount);
   CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap);
   CostChartComponent.getInstance().renderSCurveProgressChart();
+
+  // Dynamically update the Trade Budget Distribution stacked bar
+  let concreteCost = 0;
+  let steelCost = 0;
+  let mepCost = 0;
+  let finishesCost = 0;
+
+  for (const [cat, data] of categoryMap) {
+    const rate = CostRateManager.getInstance().getRate(cat);
+    switch (rate.trade) {
+      case 'Concrete': concreteCost += data.cost; break;
+      case 'Steel': steelCost += data.cost; break;
+      case 'MEP': mepCost += data.cost; break;
+      case 'Finishes':
+      case 'General':
+      default: finishesCost += data.cost; break;
+    }
+  }
+
+  const tradeTotal = concreteCost + steelCost + mepCost + finishesCost;
+  if (tradeTotal > 0) {
+    const pConc = Math.round((concreteCost / tradeTotal) * 100);
+    const pSteel = Math.round((steelCost / tradeTotal) * 100);
+    const pMep = Math.round((mepCost / tradeTotal) * 100);
+    const pFin = Math.max(0, 100 - (pConc + pSteel + pMep));
+
+    const bConc = document.getElementById("bar-trade-concrete");
+    const bSteel = document.getElementById("bar-trade-steel");
+    const bMep = document.getElementById("bar-trade-mep");
+    const bFin = document.getElementById("bar-trade-finishes");
+
+    if (bConc) { bConc.style.width = `${pConc}%`; bConc.title = `Structural Concrete: ${pConc}% (${formatCurrency(concreteCost)})`; }
+    if (bSteel) { bSteel.style.width = `${pSteel}%`; bSteel.title = `Structural Steel: ${pSteel}% (${formatCurrency(steelCost)})`; }
+    if (bMep) { bMep.style.width = `${pMep}%`; bMep.title = `MEP & Services: ${pMep}% (${formatCurrency(mepCost)})`; }
+    if (bFin) { bFin.style.width = `${pFin}%`; bFin.title = `Finishes & Facade: ${pFin}% (${formatCurrency(finishesCost)})`; }
+  }
 }
 (window as any).updateCumulative5DCost = updateCumulative5DCost;
 
@@ -2504,7 +2573,7 @@ const updateCalculatedCost = () => {
   const qty = Number(costQty.value) || 0;
   const calculatedCost = unit * qty;
 
-  costCalc.innerText = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(calculatedCost);
+  costCalc.innerText = formatCurrency(calculatedCost);
 
   if (activeModelId && activeExpressId !== null) {
     const dbKey = `${activeModelId}-${activeExpressId}`;
@@ -6185,10 +6254,7 @@ async function updateTimelineVisualState(force: boolean = false) {
       if (elStatus) elStatus.value = twinData.status;
 
       const elCostTotal = document.getElementById("cost-calculated-total");
-      if (elCostTotal) elCostTotal.innerText = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD"
-      }).format(twinData.calculatedCost);
+      if (elCostTotal) elCostTotal.innerText = formatCurrency(twinData.calculatedCost);
     }
   }
 
