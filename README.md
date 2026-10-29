@@ -6,9 +6,10 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.4.3-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-83%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
+**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
 
 🌐 **Live Demo**: [https://lalithebinezer.github.io/BIM-Kintsugi/](https://lalithebinezer.github.io/BIM-Kintsugi/)
 
@@ -24,7 +25,8 @@
 6. [Getting Started](#-getting-started)
 7. [Testing & Quality Assurance](#-testing--quality-assurance)
 8. [Keyboard Shortcuts & Command Palette](#-keyboard-shortcuts--command-palette)
-9. [Production Deployment](#-production-deployment)
+9. [Recent Enhancements](#-recent-changes--enhancements)
+10. [Production Deployment](#-production-deployment)
 
 ---
 
@@ -229,20 +231,21 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 80-test Vitest suite across all core and enterprise modules:
+Run strict TypeScript type-checking and the 83-test Vitest suite across all core and enterprise modules:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 12 unit test suites (80 tests)
+# Run all 13 unit test suites (83 tests)
 npm test -- --run
 ```
 
 The automated testing harness also executes a headless Chrome (Playwright) visual audit:
 - **0 runtime page errors**, **0 duplicate DOM IDs**.
+- **83/83 unit tests passing** across 13 test suites (100% green).
 - **100% WCAG 2.2 AA Compliance** across 199 interactive buttons and 78 form inputs.
-- **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), and mobile viewports.
+- **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), netbook (`1100×750`), and mobile viewports (`640px`).
 
 ---
 
@@ -251,9 +254,11 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
 | **`Ctrl + K` / `Cmd + K`** | **Command Palette** | Fuzzy search across 30+ BIM tools, suites, cameras, themes, and render styles |
+| **`Ctrl + P`** | **Executive Twin Report** | Open boardroom-ready executive construction report modal with vector print / PDF export |
 | **`F`** | **Fit to Screen** | Frame all visible BIM geometry in the viewport |
 | **`H`** | **Reset Visibility** | Unhide all isolated/hidden elements and clear active highlights |
 | **`I`** | **Isolate Selection** | Isolate currently selected BIM elements |
+| **`C`** | **Category Select** | Select all visible elements sharing the same IFC category as current selection |
 | **`B`** | **Box Marquee Select** | Toggle drag marquee rectangle selection mode |
 | **`M`** | **3D Dimensions** | Toggle snap-to-vertex 3D distance, angle, and area dimensioning |
 | **`X`** | **X-Ray Ghost Mode** | Toggle translucent X-Ray ghosting on unselected geometry |
@@ -269,11 +274,21 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 
 ## 📝 Recent Changes & Enhancements
 
+- **Boardroom-Ready Executive Twin Report Module** – Generates a comprehensive project status modal synthesizing 4D construction schedule milestones, 5D EVM S-Curve (Planned Value PV vs. Earned Value EV vs. Actual Cost AC), category trade cost breakdown, 3D clash matrix, 6D embodied carbon rating, and BCF coordination status. Features `@media print` vector styling for paper/PDF export and raw JSON schema export for BI ingestion.
+- **PWA & Offline Jobsite Mode** – Progressive Web App with custom Service Worker caching WebAssembly binaries (`web-ifc.wasm`, `web-ifc-mt.wasm`) and static assets for high-speed offline 3D model navigation on construction site iPads and field tablets.
+- **Synthesized Web Audio Soundscape** – Native Web Audio API synthesizer generating tactile auditory feedback for measurement clicks, vertex snaps, spatial beacons, and camera snapshots. Master volume slider (0%–100%) and instant mute toggle in Gaming & Controls Settings.
+- **Zero-Collision Responsive UI Architecture** – Complete responsive overhaul preventing HUD collisions across all viewport widths:
+  - **2D Minimap Radar Elevation**: Elevated positioning (`bottom: calc(var(--dock-h, 64px) + 1.25rem)`) floats cleanly above the Magic Dock on viewports <= 1450px and when the right sidebar is open, preventing pointer occlusion.
+  - **Magic Dock Compacting**: Fluid icon scaling (`40px` → `34px` → `30px`) and gaps on screens <= 1380px and <= 1080px with smooth touch drag and mouse-wheel scrolling.
+  - **Quick-View Toolbar**: Responsive icon-only compacting hiding label text under 1380px.
+  - **4D Simulation Mode**: Full suppression of `#model-stats-hud` during 4D playback across all media queries.
+  - **Hover Tooltip Bounds**: Accurate dynamic height measurement (`245px`) and obstacle clearance guaranteeing zero overlap with bottom HUD elements.
+- **Symmetrical Right Sidebar Tab Header** – Removed truncated `[#]` badge from the INSPECT tab, maintaining balanced layout across `[4] SCENE`, `[5] INSPECT`, `[6] CTRLS`, and `[7] TOOLS`.
+- **5-Theme Color Synchronization** – Harmonized UI and 3D viewport backgrounds, ground grids, sidebars, segmented tab tracks, floating HUDs, and drawer controls across Obsidian Dark, Light Studio, Zen Minimalist, Cyberpunk, and Blueprint.
 - **Unified Magic Dock & Apple Magnifier** – Centralized bottom toolbar serving as the single source of truth for all tools (visibility, file cluster, dimensions, clashes, 6D carbon, AI copilot, live peers, BCF issues, 4D Gantt, 5D cost, marquee selection, isolation, and section cut). Features fluid Apple-style icon magnification, mouse-wheel and touch drag horizontal panning, dynamic responsive heights, and a body-level floating tooltip system (`#dock-global-tooltip`, `z-index: 2147483647`) with zero overflow clipping.
 - **5D Project Cost Control Suite & Unified BOQ** – Click the green **$** button on the bottom dock or 4D timeline to open comprehensive project cost control. Features live Earned Value Management (EVM) S-Curve (Planned Value PV vs. Earned Value EV), category cost breakdown (Concrete, Steel, MEP, Finishes), multi-currency support (USD, EUR, GBP, JPY, INR, CAD, AUD) with custom unit rates, 1-click **Export BOQ** spreadsheet, and buildingSMART IDS 4D/5D data readiness validation.
 - **Tactical 2D Radar & Minimap** – High-tech dynamic architectural minimap on bottom-right viewport. Features click-to-teleport, camera cone gaze orientation tracking, 1-click True North compass snap, automated IFC storey elevation tracking with floor plan slicing, and live clash reticle display.
 - **Full WCAG 2.2 AA Accessibility Compliance** – Audited and updated 199 interactive buttons and 78 form inputs with explicit accessible names (`aria-label`, `title`), proper semantic roles, and focus outlines.
-- **Multi-Theme Color Synchronization** – Complete visual harmonization across all 5 themes (`dark/obsidian`, `light`, `zen`, `cyberpunk`, `blueprint`) across 3D canvas backgrounds, ground grids, sidebars, segmented tab tracks, floating HUDs, and drawer controls.
 - **4D Simulation Single Source of Truth** – [`Schedule4DEngine`](src/modules/Schedule4DEngine.ts) drives all 4D simulation states, dynamic milestone pills, real EVM budget formulas, SPI metrics, and boundary-cached 60 FPS playback.
 - **4D Video / Timelapse Recording** – Record WebM simulation playback directly from the viewport canvas using the MediaRecorder API (`#btn-4d-record`).
 - **Planned vs. Actual Variance Mode** – Interactive 4D variance coloring highlighting ahead (sky blue), on schedule (emerald), delayed (amber), and critical delays (red).
@@ -283,7 +298,6 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 - **3D Visual Model Diff / Revision Comparison** – Compare two model revisions with visual color-coded ghosting: Added (Green), Removed (Red), Modified (Yellow).
 - **2D Drawing Sheet (CAD/PDF) Overlay** – Projects 2D plan drawings onto 3D storey slice cut planes with opacity blending and elevation alignment.
 - **7D COBie Facility Management Export** – Generates standard ISO 19650 / BS 1192-4 COBie spreadsheets (Facility, Floor, Component) for building handover.
-- **Vite Rolldown Chunk Splitting** – Dedicated `@thatopen/components-front` (941 kB) and `@thatopen/ui` vendor chunks reducing bundle overhead.
 
 ---
 
