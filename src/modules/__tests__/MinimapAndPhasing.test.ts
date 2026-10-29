@@ -201,12 +201,18 @@ describe("Minimap & 4D Phasing Modules", () => {
       const { InteractiveGanttDrawer } = await import("../../ui/InteractiveGanttDrawer");
       const drawer = InteractiveGanttDrawer.getInstance();
       drawer.init("test-gantt-panel");
-      drawer.render();
 
       (window as any).getTimelineBounds = () => ({
         min: new Date("2026-06-01"),
         max: new Date("2026-07-01"),
       });
+
+      // Clear existing scheduleManager tasks to test bounds
+      if ((window as any).scheduleManager) {
+        (window as any).scheduleManager.tasks.clear();
+      }
+
+      drawer.render();
 
       // Advance to 50% midpoint (15 days in)
       const midDateMs = new Date("2026-06-16").getTime();

@@ -140,24 +140,33 @@ export class InteractiveGanttDrawer {
   }
 
   /**
-   * Helper to retrieve active timeline bounds from scheduleManager, window getter, or fallback.
+   * Helper to retrieve active timeline bounds.
+   * Derives bounds from either schedule tasks or simulation bounds to enclose all activities.
    */
   public getTimelineBounds(): { min: Date; max: Date } {
+    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+    const mgrBounds = scheduleManager?.getProjectDateRange();
+    let simBounds: { min: Date; max: Date } | null = null;
     if (typeof (window as any).getTimelineBounds === "function") {
       const tb = (window as any).getTimelineBounds();
       if (tb && tb.min && tb.max) {
         const dMin = new Date(tb.min);
         const dMax = new Date(tb.max);
         if (!isNaN(dMin.getTime()) && !isNaN(dMax.getTime())) {
-          return { min: dMin, max: dMax };
+          simBounds = { min: dMin, max: dMax };
         }
       }
     }
-    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
-    const mgrBounds = scheduleManager?.getProjectDateRange();
-    if (mgrBounds && mgrBounds.min && mgrBounds.max && !isNaN(mgrBounds.min.getTime())) {
-      return mgrBounds;
+
+    if (mgrBounds && simBounds) {
+      // Enclose both so that neither task bars nor the timeline scrubber get clipped
+      return {
+        min: new Date(Math.min(mgrBounds.min.getTime(), simBounds.min.getTime())),
+        max: new Date(Math.max(mgrBounds.max.getTime(), simBounds.max.getTime())),
+      };
     }
+    if (mgrBounds) return mgrBounds;
+    if (simBounds) return simBounds;
     return { min: new Date("2026-06-18"), max: new Date("2026-08-18") };
   }
 
@@ -187,7 +196,7 @@ export class InteractiveGanttDrawer {
 
       defaultPhases.forEach((p, idx) => {
         const start = new Date(minMs + p.offset * stepMs);
-        const end = new Date(start.getTime() + p.dur * stepMs);
+        const end = new Date(Math.min(bounds.max.getTime(), start.getTime() + p.dur * stepMs));
         const taskId = `phasing-task-${idx + 1}`;
         scheduleManager.tasks.set(taskId, {
           id: taskId,

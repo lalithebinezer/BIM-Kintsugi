@@ -3060,7 +3060,7 @@ async function loadModelData(name: string, buffer: Uint8Array) {
           }
           catMap.set(catName, itemsArr);
         }
-        scheduleManager.generateFromCategories(catMap);
+        scheduleManager.generateFromCategories(catMap, "2026-06-18");
       }
 
       // Update 5D cumulative project budget now that twin data is populated
