@@ -82,52 +82,6 @@
               <div id="saved-views-dropdown-content"></div>
             </div>
           </div>
-          <button class="btn-4d-mode" id="btn-4d-mode" title="Toggle 4D Construction Simulation Mode">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span id="btn-4d-label">Activate 4D</span>
-          </button>
-          
-
-          <!-- Enterprise BIM Suites Quick-Launch -->
-          <button class="btn-shortcuts-toggle" id="btn-header-measure" title="Smart 3D Dimensioning & Snap Tool (M)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
-            <span>DIMENSIONS</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-clash" title="Real-Time Multi-Discipline Clash Matrix">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span>CLASHES</span>
-            <span id="clash-header-count" style="font-size: 0.55rem; background: #F43F5E; color: #FFFFFF; font-weight: 900; padding: 0.05rem 0.25rem; border-radius: 2px;">3</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-bcf" title="BCF 2.1/3.0 Issue Coordination Tracker">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>
-            <span>BCF ISSUES</span>
-            <span id="bcf-header-count" style="font-size: 0.55rem; background: #A855F7; color: #FFFFFF; font-weight: 900; padding: 0.05rem 0.25rem; border-radius: 2px;">2</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-gantt" title="4D Construction Gantt Timeline Bar">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
-            <span>4D GANTT</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-carbon" title="6D Embodied Carbon & LCA Heatmap">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
-            <span>6D CARBON</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-copilot" title="AI BIM Copilot Natural Language Assistant" style="border-color: var(--accent-500);">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
-            <span>AI COPILOT</span>
-          </button>
-
-          <button class="btn-shortcuts-toggle" id="btn-header-collab" title="Live Collaboration & Active Peers">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span id="collab-header-count">4 LIVE</span>
-          </button>
 
           <button class="btn-sidebar-toggle" id="btn-toggle-right" title="Toggle Scene & Properties">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -376,6 +330,13 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
             </button>
             <span class="dock-tooltip">4D Gantt</span>
+          </div>
+
+          <div class="dock-item" data-tooltip="5D Cost Estimating & Rates">
+            <button class="btn-tool dock-icon" id="btn-dock-cost" aria-label="5D Cost Estimating & Rates">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </button>
+            <span class="dock-tooltip">5D Cost</span>
           </div>
 
           <div class="dock-separator"></div>

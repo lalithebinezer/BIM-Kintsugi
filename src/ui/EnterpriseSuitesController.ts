@@ -350,6 +350,30 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   document.getElementById("btn-header-gantt")?.addEventListener("click", toggleUnified4DBar);
   document.getElementById("btn-dock-gantt")?.addEventListener("click", toggleUnified4DBar);
+
+  // 5D Cost Estimating Dock Trigger
+  document.getElementById("btn-dock-cost")?.addEventListener("click", () => {
+    SoundManager.getInstance().playClick();
+    if (typeof (window as any).switchSidebarTab === "function") {
+      (window as any).switchSidebarTab("right-tab-bar", "inspector");
+    }
+    // Expand right sidebar if collapsed
+    if (document.body.classList.contains("right-sidebar-collapsed")) {
+      document.body.classList.remove("right-sidebar-collapsed");
+    }
+    const rightSidebar = document.querySelector(".right-sidebar");
+    if (rightSidebar && !rightSidebar.classList.contains("open")) {
+      rightSidebar.classList.add("open");
+    }
+    // Smoothly scroll the 5D Cost Estimating section into view
+    setTimeout(() => {
+      const costSection = document.getElementById("btn-open-cost-rates-modal");
+      if (costSection) {
+        costSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        costSection.focus();
+      }
+    }, 150);
+  });
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
     if (typeof (window as any).toggle4DMode === "function") {
       (window as any).toggle4DMode(false);
