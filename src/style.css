@@ -2821,6 +2821,72 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   padding: 1rem 1.25rem;
 
 /* ============================================================
+   5D COST ESTIMATING ACTIONS & BUTTONS
+   ============================================================ */
+.btn-cost-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: var(--text-primary, #ffffff);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.btn-cost-action span {
+  display: inline-block;
+  color: inherit;
+}
+
+.btn-cost-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.btn-cost-action.rates {
+  border-color: rgba(212, 255, 63, 0.45);
+  color: var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.08);
+}
+
+.btn-cost-action.rates:hover {
+  background: rgba(212, 255, 63, 0.18);
+  border-color: var(--accent-500, #D4FF3F);
+  box-shadow: 0 0 12px rgba(212, 255, 63, 0.25);
+}
+
+.btn-cost-action.boq {
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.btn-cost-action.boq:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+
+.btn-cost-action.ids {
+  border-color: rgba(229, 255, 122, 0.35);
+  color: var(--accent-300, #e5ff7a);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-cost-action.ids:hover {
+  background: rgba(212, 255, 63, 0.1);
+  border-color: var(--accent-500, #D4FF3F);
+}
+
+/* ============================================================
    5D CUSTOM COST RATE TABLE & MULTI-CURRENCY MODAL
    ============================================================ */
 .cost-rate-modal-overlay {
@@ -7793,8 +7859,7 @@ body.right-sidebar-collapsed .right-sidebar {
   flex-shrink: 0;
 }
 
-.btn-query-execute,
-.btn-secondary {
+.btn-query-execute {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7813,16 +7878,14 @@ body.right-sidebar-collapsed .right-sidebar {
   transition: all 0.15s ease;
 }
 
-.btn-query-execute:hover,
-.btn-secondary:hover {
+.btn-query-execute:hover {
   background: var(--accent-400, #E5FF7A);
   border-color: var(--accent-400, #E5FF7A);
   transform: translateY(-1px);
   box-shadow: 0 0 10px var(--accent-glow, rgba(212, 255, 63, 0.3));
 }
 
-.btn-query-execute:active,
-.btn-secondary:active {
+.btn-query-execute:active {
   transform: translateY(0);
 }
 
