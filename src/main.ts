@@ -6003,6 +6003,11 @@ function initThemeSystem() {
     themeSelect.value = savedTheme;
     themeSelect.addEventListener("change", () => {
       const selected = themeSelect.value;
+      document.documentElement.setAttribute("data-theme", selected);
+      try {
+        localStorage.setItem("bim_theme_preset", selected);
+        localStorage.setItem("bim_theme", selected);
+      } catch (e) {}
       sceneManager.syncPostProcessingWithTheme(selected);
       applyCategoryColors().catch(() => {});
     });
