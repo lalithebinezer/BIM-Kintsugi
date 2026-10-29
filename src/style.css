@@ -2172,11 +2172,11 @@ input[type="color"]::-moz-color-swatch {
 }
 
 .dock-scroll-btn.left {
-  left: -14px;
+  left: 6px;
 }
 
 .dock-scroll-btn.right {
-  right: -14px;
+  right: 6px;
 }
 
 .dock-scroll-btn.hidden {
@@ -3830,7 +3830,7 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
     pointer-events: auto;
     height: 48px;
     max-width: 100%;
-    padding: 0 0.85rem;
+    padding: 0 2.2rem;
     gap: 0.25rem;
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -3996,7 +3996,7 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   .hud-anchor-bottom-center {
     display: flex !important;
     position: fixed !important;
-    bottom: max(0.45rem, env(safe-area-inset-bottom)) !important;
+    bottom: max(0.85rem, env(safe-area-inset-bottom)) !important;
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
@@ -4021,7 +4021,7 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
     pointer-events: auto;
     height: 44px;
     max-width: 100%;
-    padding: 0 0.85rem;
+    padding: 0 2.2rem;
     gap: 0.2rem;
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -4042,11 +4042,25 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
     min-width: 32px !important;
   }
 
-  /* Non-colliding elevated 2D radar */
+  .dock-scroll-btn {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .dock-scroll-btn.left {
+    left: 5px !important;
+  }
+
+  .dock-scroll-btn.right {
+    right: 5px !important;
+  }
+
+  /* Non-colliding elevated 2D radar positioned cleanly on right under ViewCube */
   .hud-anchor-bottom-right {
     display: flex !important;
     position: fixed !important;
-    bottom: calc(44px + 1.15rem) !important;
+    top: calc(var(--header-bottom) + 85px) !important;
+    bottom: auto !important;
     right: 0.5rem !important;
     z-index: 9990;
     --radar-w: 115px;
@@ -4076,7 +4090,8 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   }
 
   .hud-anchor-bottom-right {
-    bottom: calc(44px + 0.85rem) !important;
+    top: calc(var(--header-bottom) + 85px) !important;
+    bottom: auto !important;
     right: 0.5rem !important;
   }
 }
