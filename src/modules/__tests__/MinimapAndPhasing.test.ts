@@ -196,5 +196,32 @@ describe("Minimap & 4D Phasing Modules", () => {
       expect(playBtn?.classList.contains("playing")).toBe(false);
       expect(document.getElementById("gantt-play-text")?.textContent).toBe("Play");
     });
+
+    it("should advance seekbar position and playhead line smoothly when updateSeekbarPosition is called", async () => {
+      const { InteractiveGanttDrawer } = await import("../../ui/InteractiveGanttDrawer");
+      const drawer = InteractiveGanttDrawer.getInstance();
+      drawer.init("test-gantt-panel");
+      drawer.render();
+
+      (window as any).getTimelineBounds = () => ({
+        min: new Date("2026-06-01"),
+        max: new Date("2026-07-01"),
+      });
+
+      // Advance to 50% midpoint (15 days in)
+      const midDateMs = new Date("2026-06-16").getTime();
+      drawer.updateSeekbarPosition(midDateMs, true);
+
+      const slider = document.getElementById("gantt-seekbar-slider") as HTMLInputElement;
+      const marker = document.getElementById("gantt-playhead-marker") as HTMLElement;
+      const line = document.getElementById("gantt-playhead-line") as HTMLElement;
+      const dateBadge = document.getElementById("gantt-current-date-badge") as HTMLElement;
+
+      expect(Number(slider.value)).toBeGreaterThanOrEqual(490);
+      expect(Number(slider.value)).toBeLessThanOrEqual(510);
+      expect(marker.style.left).toMatch(/50(\.\d+)?%/);
+      expect(line.style.display).toBe("block");
+      expect(dateBadge.textContent).toBe("2026-06-16");
+    });
   });
 });

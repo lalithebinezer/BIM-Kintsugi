@@ -106,8 +106,7 @@ export class InteractiveGanttDrawer {
       this.seekbarInput.addEventListener("input", (e) => {
         this.isUserDraggingSeekbar = true;
         const val = Number((e.target as HTMLInputElement).value); // 0 to 1000
-        const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
-        const bounds = scheduleManager?.getProjectDateRange();
+        const bounds = this.getTimelineBounds();
         if (bounds) {
           const minMs = bounds.min.getTime();
           const maxMs = bounds.max.getTime();
@@ -140,6 +139,72 @@ export class InteractiveGanttDrawer {
     });
   }
 
+  /**
+   * Helper to retrieve active timeline bounds from scheduleManager, window getter, or fallback.
+   */
+  public getTimelineBounds(): { min: Date; max: Date } {
+    if (typeof (window as any).getTimelineBounds === "function") {
+      const tb = (window as any).getTimelineBounds();
+      if (tb && tb.min && tb.max) {
+        const dMin = new Date(tb.min);
+        const dMax = new Date(tb.max);
+        if (!isNaN(dMin.getTime()) && !isNaN(dMax.getTime())) {
+          return { min: dMin, max: dMax };
+        }
+      }
+    }
+    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+    const mgrBounds = scheduleManager?.getProjectDateRange();
+    if (mgrBounds && mgrBounds.min && mgrBounds.max && !isNaN(mgrBounds.min.getTime())) {
+      return mgrBounds;
+    }
+    return { min: new Date("2026-06-18"), max: new Date("2026-08-18") };
+  }
+
+  /**
+   * Ensures default schedule tasks are generated if none exist so the Gantt chart can be used.
+   */
+  private ensureDefaultTasks(): void {
+    let scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+    if (!scheduleManager) {
+      scheduleManager = new ScheduleManager();
+      (window as any).scheduleManager = scheduleManager;
+    }
+    if (scheduleManager.tasks.size === 0) {
+      const bounds = this.getTimelineBounds();
+      const minMs = bounds.min.getTime();
+      const spanMs = Math.max(14 * 86400000, bounds.max.getTime() - minMs);
+      const stepMs = Math.floor(spanMs / 6);
+
+      const defaultPhases = [
+        { name: "Substructure & Excavation", cat: "IFCFOOTING", offset: 0, dur: 1.5 },
+        { name: "Structural Concrete Framing", cat: "IFCCOLUMN", offset: 1, dur: 2.0 },
+        { name: "Floor Slabs & Decks", cat: "IFCSLAB", offset: 2.2, dur: 1.8 },
+        { name: "Exterior Enclosure & Walls", cat: "IFCWALL", offset: 3.5, dur: 2.0 },
+        { name: "MEP Rough-in & Services", cat: "IFCFLOWTERMINAL", offset: 4.2, dur: 1.8 },
+        { name: "Interior Architectural Fitout", cat: "IFCCOVERING", offset: 5.0, dur: 1.5 },
+      ];
+
+      defaultPhases.forEach((p, idx) => {
+        const start = new Date(minMs + p.offset * stepMs);
+        const end = new Date(start.getTime() + p.dur * stepMs);
+        const taskId = `phasing-task-${idx + 1}`;
+        scheduleManager.tasks.set(taskId, {
+          id: taskId,
+          name: p.name,
+          category: p.cat,
+          startDate: start.toISOString().split("T")[0],
+          endDate: end.toISOString().split("T")[0],
+          status: "Planned",
+          elementIds: new Set(),
+          modelId: "default-model",
+          unitCost: 0,
+          quantity: 1,
+        });
+      });
+    }
+  }
+
   public show(): void {
     if (!this.container) this.init();
     this.container?.classList.remove("hidden");
@@ -164,6 +229,7 @@ export class InteractiveGanttDrawer {
 
   public render(): void {
     if (!this.tasksList) return;
+    this.ensureDefaultTasks();
     const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
     if (!scheduleManager || scheduleManager.tasks.size === 0) {
       this.tasksList.innerHTML = `<div class="empty-state">No active construction tasks. Load an IFC model or import a schedule to generate Gantt chart.</div>`;
@@ -174,9 +240,7 @@ export class InteractiveGanttDrawer {
     const countBadge = document.getElementById("gantt-task-count-badge");
     if (countBadge) countBadge.innerText = `${tasks.length} Tasks`;
 
-    const bounds = scheduleManager.getProjectDateRange();
-    if (!bounds) return;
-
+    const bounds = this.getTimelineBounds();
     const minTime = bounds.min.getTime();
     const maxTime = bounds.max.getTime();
     const totalDuration = Math.max(1, maxTime - minTime);
@@ -250,10 +314,7 @@ export class InteractiveGanttDrawer {
    * Update the seekbar position and vertical playhead line during 4D animation playback.
    */
   public updateSeekbarPosition(currentDateMs: number, forceSliderSync: boolean = false): void {
-    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
-    const bounds = scheduleManager?.getProjectDateRange();
-    if (!bounds) return;
-
+    const bounds = this.getTimelineBounds();
     const minMs = bounds.min.getTime();
     const maxMs = bounds.max.getTime();
     const totalDuration = Math.max(1, maxMs - minMs);

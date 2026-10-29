@@ -6467,6 +6467,12 @@ if (timelinePlayBtn) {
 (window as any).getTimelineDate = () => currentTimelineDate;
 (window as any).getTimelineBounds = () => ({ min: timelineMinDate, max: timelineMaxDate });
 
+// Expose current timeline date state for external drawers (e.g. InteractiveGanttDrawer)
+Object.defineProperty(window as any, "currentTimelineDate", {
+  get: () => currentTimelineDate,
+  configurable: true
+});
+
 (window as any).setTimelinePlaybackSpeed = (speed: number) => {
   timelineSpeed = speed;
   const speedPills = document.querySelectorAll(".btn-speed-pill");
