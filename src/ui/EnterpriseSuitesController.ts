@@ -374,6 +374,8 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   // GeoBIM GIS & Site Georeference Suite Trigger
   const refreshGisUI = () => {
     const geo = gisModule.getGeoreference();
+    const cfg = gisModule.getBasemapConfig();
+
     const latInput = document.getElementById("gis-input-lat") as HTMLInputElement | null;
     const lonInput = document.getElementById("gis-input-lon") as HTMLInputElement | null;
     const elevInput = document.getElementById("gis-input-elev") as HTMLInputElement | null;
@@ -389,6 +391,30 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const dms = gisModule.formatDMS(geo.latitude, geo.longitude);
     if (dmsBadge) dmsBadge.textContent = `${dms.latDms} ${dms.lonDms}`;
     if (utmBadge) utmBadge.textContent = gisModule.getUtmZone(geo.latitude, geo.longitude);
+
+    // Synchronize 3D Basemap controls
+    const toggleBasemap = document.getElementById("gis-toggle-basemap") as HTMLInputElement | null;
+    const statusBadge = document.getElementById("gis-basemap-status");
+    const selectProvider = document.getElementById("gis-select-provider") as HTMLSelectElement | null;
+    const sliderRadius = document.getElementById("gis-slider-radius") as HTMLInputElement | null;
+    const badgeRadius = document.getElementById("gis-radius-val");
+    const sliderElev = document.getElementById("gis-slider-elev") as HTMLInputElement | null;
+    const badgeElev = document.getElementById("gis-elev-val");
+    const sliderOpacity = document.getElementById("gis-slider-opacity") as HTMLInputElement | null;
+    const badgeOpacity = document.getElementById("gis-opacity-val");
+
+    if (toggleBasemap) toggleBasemap.checked = cfg.enabled;
+    if (statusBadge) {
+      statusBadge.textContent = cfg.enabled ? "Active" : "Hidden";
+      statusBadge.style.color = cfg.enabled ? "#06b6d4" : "var(--text-muted)";
+    }
+    if (selectProvider) selectProvider.value = cfg.provider;
+    if (sliderRadius) sliderRadius.value = String(cfg.radius);
+    if (badgeRadius) badgeRadius.textContent = `${cfg.radius} m`;
+    if (sliderElev) sliderElev.value = String(cfg.elevationOffset);
+    if (badgeElev) badgeElev.textContent = `${cfg.elevationOffset >= 0 ? "+" : ""}${cfg.elevationOffset.toFixed(2)} m`;
+    if (sliderOpacity) sliderOpacity.value = String(cfg.opacity);
+    if (badgeOpacity) badgeOpacity.textContent = `${Math.round(cfg.opacity * 100)}%`;
   };
   (window as any).refreshGisUI = refreshGisUI;
 
@@ -490,6 +516,8 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   // Demo Cadastre
   document.getElementById("gis-btn-demo-cadastre")?.addEventListener("click", () => {
     const res = gisModule.loadDemoCadastre();
+    refreshGisUI();
+    gisModule.fitToCadastre();
     showToast(`Demo Cadastre Loaded: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
     SoundManager.getInstance().playClick();
   });
@@ -503,16 +531,21 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   // Import GeoJSON File
   document.getElementById("gis-file-geojson")?.addEventListener("change", async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
       const res = gisModule.loadGeoJSON(parsed);
-      showToast(`GeoJSON Imported: ${res.featureCount} Features`, "success");
+      refreshGisUI();
+      gisModule.fitToCadastre();
+      showToast(`GeoJSON Imported: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
       SoundManager.getInstance().playClick();
     } catch (err: any) {
       showToast(`Failed to parse GeoJSON: ${err.message}`, "error");
+    } finally {
+      input.value = "";
     }
   });
 

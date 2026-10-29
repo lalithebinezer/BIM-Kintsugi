@@ -116,11 +116,11 @@ export class GisModule {
   // State
   private location: GisProjectLocation = { ...GIS_LOCATION_PRESETS.sanfrancisco };
   private basemapConfig: GisBasemapConfig = {
-    enabled: false,
+    enabled: true,
     provider: "satellite",
     radius: 400,
-    elevationOffset: -0.15,
-    opacity: 0.9,
+    elevationOffset: -0.05,
+    opacity: 0.95,
   };
 
   // 3D Scene Objects
@@ -156,6 +156,10 @@ export class GisModule {
       this.cadastreGroup = new THREE.Group();
       this.cadastreGroup.name = "gis-cadastre-group";
       this.world.scene.three.add(this.cadastreGroup);
+    }
+
+    if (this.basemapConfig.enabled) {
+      this.rebuildBasemap();
     }
   }
 
@@ -718,7 +722,7 @@ export class GisModule {
     if (provider === "satellite") {
       tileUrlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     } else if (provider === "streets") {
-      tileUrlTemplate = "https://tile.openstreetmap.org/{z}/{y}/{x}.png";
+      tileUrlTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
     } else if (provider === "dark") {
       tileUrlTemplate = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
     } else if (provider === "topo") {
@@ -780,6 +784,9 @@ export class GisModule {
       if (this.basemapTexture) {
         this.basemapTexture.needsUpdate = true;
       }
+      if (this.world?.renderer?.three && this.world?.scene?.three && this.world?.camera?.three) {
+        this.world.renderer.three.render(this.world.scene.three, this.world.camera.three);
+      }
     } catch {
       // Offline fallback: keep high-contrast procedural grid intact
     }
@@ -833,45 +840,188 @@ export class GisModule {
 
   /**
    * Loads a GeoJSON FeatureCollection or Geometry object.
+   * Automatically parses Polygons, MultiPolygons, LineStrings, MultiLineStrings, and Points.
+   * If autoCenter is true, updates the site georeference location to the centroid of the imported data.
    */
-  public loadGeoJson(data: any): number {
+  public loadGeoJson(data: any, autoCenter: boolean = true): number {
     this.clearGeoJsonFeatures();
     if (!data) return 0;
 
-    const features = data.type === "FeatureCollection" ? data.features : [data];
-    let loadedCount = 0;
+    let rawFeatures: any[] = [];
+    if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
+      rawFeatures = data.features;
+    } else if (Array.isArray(data)) {
+      rawFeatures = data;
+    } else if (data.type === "Feature") {
+      rawFeatures = [data];
+    } else if (data.type && data.coordinates) {
+      // Raw Geometry
+      rawFeatures = [{ type: "Feature", geometry: data, properties: {} }];
+    }
 
-    features.forEach((feat: any, idx: number) => {
+    if (rawFeatures.length === 0) return 0;
+
+    interface ExtractedGeometry {
+      name: string;
+      category: string;
+      color: string;
+      depthOffset: number;
+      type: "polygon" | "line" | "point";
+      coordinates: [number, number][];
+    }
+
+    const extractedList: ExtractedGeometry[] = [];
+    const allPoints: [number, number][] = [];
+
+    rawFeatures.forEach((feat: any, idx: number) => {
       const geom = feat.geometry || feat;
       if (!geom || !geom.coordinates) return;
 
       const props = feat.properties || {};
-      const cat = props.category || (geom.type.includes("Polygon") ? "parcel" : "utility-water");
-      const name = props.name || `GIS Feature #${idx + 1}`;
-      const color = props.color || this.getDefaultColorForCategory(cat);
+      const cat = props.category || (String(geom.type).includes("Polygon") ? "parcel" : (String(geom.type).includes("Line") ? "utility-water" : "survey-point"));
+      const name = props.name || props.title || props.id || `GIS Feature #${idx + 1}`;
+      const color = props.color || props.stroke || props.fill || this.getDefaultColorForCategory(cat);
+      const depthOffset = props.depthOffset || (cat.startsWith("utility") ? -1.5 : 0.05);
 
-      let coords: [number, number][] = [];
-      if (geom.type === "Polygon" && Array.isArray(geom.coordinates[0])) {
-        coords = geom.coordinates[0];
-      } else if (geom.type === "LineString") {
-        coords = geom.coordinates;
-      }
+      const typeStr = (geom.type || "").toLowerCase();
 
-      if (coords.length > 1) {
-        this.geoJsonFeatures.push({
-          id: `feat-${idx}`,
-          name,
-          category: cat,
-          color,
-          coordinates: coords,
-          depthOffset: props.depthOffset || (cat.startsWith("utility") ? -1.5 : 0.05),
-        });
-        loadedCount++;
+      if (typeStr === "polygon") {
+        if (Array.isArray(geom.coordinates) && Array.isArray(geom.coordinates[0])) {
+          const ring: [number, number][] = geom.coordinates[0]
+            .filter((pt: any) => Array.isArray(pt) && pt.length >= 2)
+            .map((pt: any) => [Number(pt[0]), Number(pt[1])]);
+          if (ring.length > 2) {
+            extractedList.push({ name, category: cat, color, depthOffset, type: "polygon", coordinates: ring });
+            allPoints.push(...ring);
+          }
+        }
+      } else if (typeStr === "multipolygon") {
+        if (Array.isArray(geom.coordinates)) {
+          geom.coordinates.forEach((poly: any, pIdx: number) => {
+            if (Array.isArray(poly) && Array.isArray(poly[0])) {
+              const ring: [number, number][] = poly[0]
+                .filter((pt: any) => Array.isArray(pt) && pt.length >= 2)
+                .map((pt: any) => [Number(pt[0]), Number(pt[1])]);
+              if (ring.length > 2) {
+                extractedList.push({
+                  name: `${name} (Part ${pIdx + 1})`,
+                  category: cat,
+                  color,
+                  depthOffset,
+                  type: "polygon",
+                  coordinates: ring,
+                });
+                allPoints.push(...ring);
+              }
+            }
+          });
+        }
+      } else if (typeStr === "linestring") {
+        if (Array.isArray(geom.coordinates)) {
+          const line: [number, number][] = geom.coordinates
+            .filter((pt: any) => Array.isArray(pt) && pt.length >= 2)
+            .map((pt: any) => [Number(pt[0]), Number(pt[1])]);
+          if (line.length > 1) {
+            extractedList.push({ name, category: cat, color, depthOffset, type: "line", coordinates: line });
+            allPoints.push(...line);
+          }
+        }
+      } else if (typeStr === "multilinestring") {
+        if (Array.isArray(geom.coordinates)) {
+          geom.coordinates.forEach((lineArr: any, lIdx: number) => {
+            if (Array.isArray(lineArr)) {
+              const line: [number, number][] = lineArr
+                .filter((pt: any) => Array.isArray(pt) && pt.length >= 2)
+                .map((pt: any) => [Number(pt[0]), Number(pt[1])]);
+              if (line.length > 1) {
+                extractedList.push({
+                  name: `${name} (Segment ${lIdx + 1})`,
+                  category: cat,
+                  color,
+                  depthOffset,
+                  type: "line",
+                  coordinates: line,
+                });
+                allPoints.push(...line);
+              }
+            }
+          });
+        }
+      } else if (typeStr === "point") {
+        if (Array.isArray(geom.coordinates) && geom.coordinates.length >= 2) {
+          const pt: [number, number] = [Number(geom.coordinates[0]), Number(geom.coordinates[1])];
+          extractedList.push({ name, category: cat, color, depthOffset, type: "point", coordinates: [pt] });
+          allPoints.push(pt);
+        }
       }
     });
 
+    if (extractedList.length === 0 || allPoints.length === 0) return 0;
+
+    // Auto-Centering to GeoJSON centroid if distant or requested
+    if (autoCenter) {
+      let sumLon = 0;
+      let sumLat = 0;
+      let validCount = 0;
+      allPoints.forEach(([lon, lat]) => {
+        if (!isNaN(lon) && !isNaN(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
+          sumLon += lon;
+          sumLat += lat;
+          validCount++;
+        }
+      });
+
+      if (validCount > 0) {
+        const centerLon = sumLon / validCount;
+        const centerLat = sumLat / validCount;
+
+        // Approximate distance to current project origin in meters
+        const currentDist = Math.hypot(
+          (centerLon - this.location.longitude) * 111320 * Math.cos((centerLat * Math.PI) / 180),
+          (centerLat - this.location.latitude) * 110540
+        );
+
+        // If distance exceeds 50 meters, re-anchor location datum to GeoJSON centroid
+        if (currentDist > 50) {
+          this.setLocation({
+            latitude: Number(centerLat.toFixed(6)),
+            longitude: Number(centerLon.toFixed(6)),
+            source: "manual",
+            address: data.name || (data.metadata?.title) || "Imported Cadastre Site",
+          });
+        }
+
+        // Compute max radius to encompass all imported features
+        let maxRadiusMeters = 200;
+        allPoints.forEach(([lon, lat]) => {
+          const dMeters = Math.hypot(
+            (lon - centerLon) * 111320 * Math.cos((centerLat * Math.PI) / 180),
+            (lat - centerLat) * 110540
+          );
+          if (dMeters > maxRadiusMeters) maxRadiusMeters = dMeters;
+        });
+
+        const optimalRadius = Math.max(300, Math.min(2500, Math.ceil((maxRadiusMeters * 1.3) / 50) * 50));
+        this.setBasemapConfig({
+          enabled: true,
+          radius: optimalRadius,
+        });
+      }
+    }
+
+    extractedList.forEach((item, idx) => {
+      this.geoJsonFeatures.push({
+        id: `feat-${idx}`,
+        name: item.name,
+        category: item.category as any,
+        color: item.color,
+        coordinates: item.coordinates,
+        depthOffset: item.depthOffset,
+      });
+    });
+
     this.rebuildCadastreMesh();
-    return loadedCount;
+    return this.geoJsonFeatures.length;
   }
 
   /**
@@ -970,7 +1120,30 @@ export class GisModule {
   }
 
   /**
-   * Renders 3D polylines and tube geometries for cadastral parcel boundaries & utilities.
+   * Fits camera view to cadastre or basemap geometry.
+   */
+  public fitToCadastre() {
+    if (!this.world || !this.world.camera?.controls) return;
+    const box = new THREE.Box3();
+    if (this.cadastreGroup && this.cadastreGroup.children.length > 0) {
+      box.setFromObject(this.cadastreGroup);
+    } else if (this.basemapMesh) {
+      box.setFromObject(this.basemapMesh);
+    }
+    if (!box.isEmpty()) {
+      try {
+        const controls = this.world.camera.controls as any;
+        if (typeof controls.fitToBox === "function") {
+          controls.fitToBox(box, true);
+        }
+      } catch (e) {
+        console.warn("fitToCadastre failed:", e);
+      }
+    }
+  }
+
+  /**
+   * Renders 3D polylines, pin markers, and tube geometries for cadastral parcel boundaries & utilities.
    */
   private rebuildCadastreMesh() {
     if (!this.cadastreGroup) return;
@@ -979,7 +1152,10 @@ export class GisModule {
     while (this.cadastreGroup.children.length > 0) {
       const child = this.cadastreGroup.children[0] as any;
       if (child.geometry) child.geometry.dispose();
-      if (child.material) child.material.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach((m: any) => m.dispose());
+        else child.material.dispose();
+      }
       this.cadastreGroup.remove(child);
     }
 
@@ -990,13 +1166,28 @@ export class GisModule {
         points.push(new THREE.Vector3(local.x, feat.depthOffset || 0.05, local.z));
       });
 
-      if (points.length < 2) return;
+      if (points.length === 0) return;
+
+      if (points.length === 1) {
+        // Point landmark / survey marker pin
+        const pinGeo = new THREE.ConeGeometry(1.2, 3.5, 8);
+        pinGeo.rotateX(Math.PI);
+        pinGeo.translate(0, 1.75, 0);
+        const pinMat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(feat.color),
+        });
+        const pinMesh = new THREE.Mesh(pinGeo, pinMat);
+        pinMesh.position.copy(points[0]);
+        pinMesh.name = feat.name;
+        this.cadastreGroup?.add(pinMesh);
+        return;
+      }
 
       if (feat.category.startsWith("utility")) {
         // Create 3D underground pipeline tube
         const curve = new THREE.CatmullRomCurve3(points);
         curve.curveType = "catmullrom";
-        const tubeGeo = new THREE.TubeGeometry(curve, points.length * 6, 0.22, 8, false);
+        const tubeGeo = new THREE.TubeGeometry(curve, Math.max(12, points.length * 6), 0.25, 8, false);
         const tubeMat = new THREE.MeshBasicMaterial({
           color: new THREE.Color(feat.color),
           wireframe: false,
@@ -1005,16 +1196,33 @@ export class GisModule {
         tubeMesh.name = feat.name;
         this.cadastreGroup?.add(tubeMesh);
       } else {
-        // Create boundary line
+        // Create boundary line or loop
+        const isClosed =
+          points.length > 2 &&
+          (feat.category === "parcel" ||
+            feat.category === "setback" ||
+            points[0].distanceTo(points[points.length - 1]) < 0.1);
         const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
         const lineMat = new THREE.LineBasicMaterial({
           color: new THREE.Color(feat.color),
           linewidth: 2,
         });
-        const lineMesh = new THREE.Line(lineGeo, lineMat);
+        const lineMesh = isClosed ? new THREE.LineLoop(lineGeo, lineMat) : new THREE.Line(lineGeo, lineMat);
         lineMesh.name = feat.name;
         this.cadastreGroup?.add(lineMesh);
       }
     });
+
+    // Trigger Three.js render
+    if (this.world?.renderer?.three && (this.world.renderer.three as any).render) {
+      try {
+        const threeRenderer = this.world.renderer.three;
+        if (this.world.scene?.three && this.world.camera?.three) {
+          threeRenderer.render(this.world.scene.three, this.world.camera.three);
+        }
+      } catch (e) {
+        // Ignore render exceptions in head-less or test environments
+      }
+    }
   }
 }

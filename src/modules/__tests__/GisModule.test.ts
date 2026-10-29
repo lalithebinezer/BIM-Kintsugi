@@ -103,4 +103,68 @@ describe("GisModule Unit Tests", () => {
     gis.toggleBasemap(false);
     expect(gis.getBasemapConfig().enabled).toBe(false);
   });
+
+  it("should import MultiPolygon, MultiLineString, and Point GeoJSON with auto-centering", () => {
+    // GeoJSON in London (~51.5, -0.1) when current location is San Francisco (~37.77, -122.41)
+    const geojsonData = {
+      type: "FeatureCollection",
+      name: "London Survey Site",
+      features: [
+        {
+          type: "Feature",
+          properties: { name: "Cadastre Boundary", category: "parcel" },
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: [
+              [
+                [
+                  [-0.1278, 51.5074],
+                  [-0.1270, 51.5074],
+                  [-0.1270, 51.5080],
+                  [-0.1278, 51.5080],
+                  [-0.1278, 51.5074],
+                ],
+              ],
+            ],
+          },
+        },
+        {
+          type: "Feature",
+          properties: { name: "Underground Pipe", category: "utility-water" },
+          geometry: {
+            type: "MultiLineString",
+            coordinates: [
+              [
+                [-0.1275, 51.5075],
+                [-0.1272, 51.5078],
+              ],
+            ],
+          },
+        },
+        {
+          type: "Feature",
+          properties: { name: "Survey Benchmark Pin", category: "survey-point" },
+          geometry: {
+            type: "Point",
+            coordinates: [-0.1274, 51.5076],
+          },
+        },
+      ],
+    };
+
+    const res = gis.loadGeoJSON(geojsonData);
+    expect(res.featureCount).toBe(3);
+    expect(res.layerNames).toContain("parcel");
+    expect(res.layerNames).toContain("utility-water");
+
+    // Location must have auto-centered to London centroid
+    const newLoc = gis.getLocation();
+    expect(newLoc.latitude).toBeCloseTo(51.5076, 2);
+    expect(newLoc.longitude).toBeCloseTo(-0.1274, 2);
+
+    // Basemap must have been enabled with calculated radius
+    const cfg = gis.getBasemapConfig();
+    expect(cfg.enabled).toBe(true);
+    expect(cfg.radius).toBeGreaterThanOrEqual(300);
+  });
 });

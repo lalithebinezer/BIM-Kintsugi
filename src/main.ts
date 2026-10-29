@@ -3396,10 +3396,78 @@ fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
 
+  const fileNameLower = file.name.toLowerCase();
+  if (fileNameLower.endsWith(".geojson") || fileNameLower.endsWith(".json")) {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = GisModule.getInstance().loadGeoJSON(parsed);
+      if (typeof (window as any).refreshGisUI === "function") {
+        (window as any).refreshGisUI();
+      }
+      GisModule.getInstance().fitToCadastre();
+      showToast(`GeoJSON Imported: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
+      const gisPanel = document.getElementById("gis-panel");
+      if (gisPanel && gisPanel.classList.contains("hidden")) {
+        if (typeof (window as any).toggleGisSuite === "function") {
+          (window as any).toggleGisSuite();
+        }
+      }
+    } catch (err: any) {
+      showToast(`Failed to parse GeoJSON: ${err.message}`, "error");
+    } finally {
+      fileInput.value = "";
+    }
+    return;
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
   await loadModelData(file.name, uint8Array);
   fileInput.value = ""; // Clear value
+});
+
+// Drag and drop support for IFC, FRAG, and GeoJSON files
+window.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = "copy";
+  }
+});
+
+window.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+
+  const fileNameLower = file.name.toLowerCase();
+  if (fileNameLower.endsWith(".geojson") || fileNameLower.endsWith(".json")) {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = GisModule.getInstance().loadGeoJSON(parsed);
+      if (typeof (window as any).refreshGisUI === "function") {
+        (window as any).refreshGisUI();
+      }
+      GisModule.getInstance().fitToCadastre();
+      showToast(`GeoJSON Imported: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
+      const gisPanel = document.getElementById("gis-panel");
+      if (gisPanel && gisPanel.classList.contains("hidden")) {
+        if (typeof (window as any).toggleGisSuite === "function") {
+          (window as any).toggleGisSuite();
+        }
+      }
+    } catch (err: any) {
+      showToast(`Failed to parse GeoJSON: ${err.message}`, "error");
+    }
+    return;
+  }
+
+  if (fileNameLower.endsWith(".ifc") || fileNameLower.endsWith(".frag")) {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    await loadModelData(file.name, uint8Array);
+  }
 });
 
 // Load Sample Model Button
