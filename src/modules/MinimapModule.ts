@@ -44,6 +44,7 @@ export class MinimapModule {
   private isAutoTrackLevel: boolean = true;
   private showClashPins: boolean = true;
   private isExpanded: boolean = false;
+  private autoSyncCamera: boolean = true;
 
   private config: MinimapConfig = {
     size: 180,
@@ -190,14 +191,17 @@ export class MinimapModule {
   }
 
   public zoomIn() {
+    this.autoSyncCamera = false;
     this.config.zoom = Math.min(50, this.config.zoom * 1.25);
   }
 
   public zoomOut() {
+    this.autoSyncCamera = false;
     this.config.zoom = Math.max(0.5, this.config.zoom / 1.25);
   }
 
   public resetView() {
+    this.autoSyncCamera = true;
     this.panOffset = { x: 0, y: 0 };
     if (this.hasModel && !this.modelBounds.isEmpty()) {
       const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 5);
@@ -205,6 +209,14 @@ export class MinimapModule {
     } else {
       this.config.zoom = 8;
     }
+  }
+
+  public isCameraSyncEnabled(): boolean {
+    return this.autoSyncCamera;
+  }
+
+  public setAutoSyncCamera(enable: boolean) {
+    this.autoSyncCamera = enable;
   }
 
   public toggleAutoTrackLevel(enable?: boolean): boolean {
@@ -404,6 +416,7 @@ export class MinimapModule {
     // Canvas Wheel to Zoom in / Zoom out anchored to pointer
     this.canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
+      this.autoSyncCamera = false;
       const { x: mouseX, y: mouseY } = getCanvasCoords(e);
       const worldBefore = this.minimapToWorld(mouseX, mouseY);
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
@@ -413,6 +426,11 @@ export class MinimapModule {
       this.panOffset.x += (worldAfter.x - worldBefore.x) * this.config.zoom;
       this.panOffset.y += (worldAfter.z - worldBefore.z) * this.config.zoom;
     }, { passive: false });
+
+    // Double click to re-align view and resume camera sync
+    this.canvas.addEventListener("dblclick", () => {
+      this.resetView();
+    });
 
     // Prevent default context menu on right click for panning
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -495,10 +513,12 @@ export class MinimapModule {
         const cam = this.engine.world?.camera;
         if (cam && cam.controls && cam.three) {
           const rawMapPos = this.worldToMinimap(cam.three.position.x, cam.three.position.z);
-          const angle = Math.atan2(clickX - rawMapPos.x, -(clickY - rawMapPos.y));
+          const dx = clickX - rawMapPos.x;
+          const dy = clickY - rawMapPos.y;
+          const dist = Math.hypot(dx, dy) || 1;
           const targetDist = 12;
-          const targetX = cam.three.position.x + Math.sin(angle) * targetDist;
-          const targetZ = cam.three.position.z - Math.cos(angle) * targetDist;
+          const targetX = cam.three.position.x + (dx / dist) * targetDist;
+          const targetZ = cam.three.position.z + (dy / dist) * targetDist;
           cam.controls.setLookAt(
             cam.three.position.x,
             cam.three.position.y,
@@ -577,16 +597,58 @@ export class MinimapModule {
     const h = this.canvas.height;
     const center = w / 2;
 
-    // 0. Auto-track camera elevation to match floor storey
+    // 0. Query 3D camera position, forward orientation, orbit target & distance
     const cam = this.engine.world?.camera?.three;
     let camPos = new THREE.Vector3(0, 0, 0);
-    let camHeading = 0;
+    const forward = new THREE.Vector3(0, 0, -1);
+    const target = new THREE.Vector3(0, 0, 0);
+    let camDist = 20;
 
     if (cam) {
       camPos.copy(cam.position);
-      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-      camHeading = Math.atan2(forward.x, forward.z);
+      cam.getWorldDirection(forward);
 
+      const controls = (this.engine.world?.camera as any)?.controls;
+      if (controls && typeof controls.getTarget === "function") {
+        controls.getTarget(target);
+        camDist = camPos.distanceTo(target) || 20;
+      } else {
+        target.copy(camPos).addScaledVector(forward, 15);
+      }
+
+      // Synchronize 2D Radar zoom with 3D camera distance / zoom level
+      if (this.autoSyncCamera && !this.isPanning && this.hasModel && !this.modelBounds.isEmpty()) {
+        const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 15);
+        const baseOverviewDist = maxDim * 1.5;
+        const baseZoom = (this.config.size * 0.62) / maxDim;
+        const zoomRatio = THREE.MathUtils.clamp(baseOverviewDist / Math.max(3, camDist), 0.5, 4.5);
+        const targetZoom = baseZoom * Math.pow(zoomRatio, 0.7);
+
+        // Smooth zoom transition
+        this.config.zoom += (targetZoom - this.config.zoom) * 0.12;
+      }
+
+      // Smooth center tracking when inspecting or in walk mode
+      if (this.autoSyncCamera && !this.isPanning && (this.isWalkMode || this.config.zoom > 10)) {
+        const focalX = this.isWalkMode ? camPos.x : (camPos.x + target.x) / 2;
+        const focalZ = this.isWalkMode ? camPos.z : (camPos.z + target.z) / 2;
+        const originX = this.hasModel ? this.modelCenter.x : 0;
+        const originZ = this.hasModel ? this.modelCenter.z : 0;
+        const desiredPanX = -(focalX - originX) * this.config.zoom;
+        const desiredPanY = -(focalZ - originZ) * this.config.zoom;
+        this.panOffset.x += (desiredPanX - this.panOffset.x) * 0.1;
+        this.panOffset.y += (desiredPanY - this.panOffset.y) * 0.1;
+      }
+
+      // Live Compass Needle Rotation in UI header to face True North
+      const needle = document.querySelector(".compass-needle") as HTMLElement | null;
+      if (needle) {
+        const viewAngle = Math.atan2(forward.z, forward.x);
+        const bearingDeg = THREE.MathUtils.radToDeg(viewAngle + Math.PI / 2);
+        needle.style.transform = `rotate(${-bearingDeg.toFixed(1)}deg)`;
+      }
+
+      // Auto-track camera elevation to match floor storey
       if (this.isAutoTrackLevel && this.config.levels.length > 0) {
         let matchedIdx = 0;
         let minDiff = Infinity;
@@ -806,21 +868,30 @@ export class MinimapModule {
       }
     }
 
-    // 5. Draw Camera Field of View Frustum Cone & Avatar
+    // 5. Draw Camera Field of View Frustum Cone, Focal Target & Avatar
     const rawMapPos = this.worldToMinimap(camPos.x, camPos.z);
-    const margin = 14;
+    const margin = 12;
     const playerMapPos = {
       x: Math.max(margin, Math.min(w - margin, rawMapPos.x)),
       y: Math.max(margin, Math.min(h - margin, rawMapPos.y)),
     };
 
-    const fovAngle = Math.PI / 3; // 60 degrees
-    const coneRadius = 34;
+    // Correct viewing angle on 2D canvas (where East is 0 rad and South is +PI/2 rad):
+    const viewAngle = Math.atan2(forward.z, forward.x);
+
+    // Dynamic FOV angle matching actual 3D camera
+    const fovDegrees = (cam as THREE.PerspectiveCamera)?.fov || 60;
+    const fovAngle = THREE.MathUtils.degToRad(fovDegrees);
+
+    // Vision cone length dynamically proportional to camera distance in 2D minimap pixels
+    const targetPixelDist = camDist * this.config.zoom;
+    const coneRadius = THREE.MathUtils.clamp(targetPixelDist, 24, w * 0.72);
 
     // Gradient Vision Cone
     const grad = ctx.createRadialGradient(playerMapPos.x, playerMapPos.y, 2, playerMapPos.x, playerMapPos.y, coneRadius);
-    grad.addColorStop(0, "rgba(212, 255, 63, 0.4)");
-    grad.addColorStop(1, "rgba(212, 255, 63, 0.04)");
+    grad.addColorStop(0, "rgba(212, 255, 63, 0.45)");
+    grad.addColorStop(0.6, "rgba(212, 255, 63, 0.14)");
+    grad.addColorStop(1, "rgba(212, 255, 63, 0.0)");
 
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -829,29 +900,43 @@ export class MinimapModule {
       playerMapPos.x,
       playerMapPos.y,
       coneRadius,
-      camHeading - fovAngle / 2 - Math.PI / 2,
-      camHeading + fovAngle / 2 - Math.PI / 2
+      viewAngle - fovAngle / 2,
+      viewAngle + fovAngle / 2
     );
     ctx.closePath();
     ctx.fill();
 
     // Frustum Side Guide Rays
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.5)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 2]);
+    ctx.strokeStyle = "rgba(212, 255, 63, 0.6)";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 2]);
     ctx.beginPath();
     ctx.moveTo(playerMapPos.x, playerMapPos.y);
     ctx.lineTo(
-      playerMapPos.x + Math.cos(camHeading - fovAngle / 2 - Math.PI / 2) * coneRadius,
-      playerMapPos.y + Math.sin(camHeading - fovAngle / 2 - Math.PI / 2) * coneRadius
+      playerMapPos.x + Math.cos(viewAngle - fovAngle / 2) * coneRadius,
+      playerMapPos.y + Math.sin(viewAngle - fovAngle / 2) * coneRadius
     );
     ctx.moveTo(playerMapPos.x, playerMapPos.y);
     ctx.lineTo(
-      playerMapPos.x + Math.cos(camHeading + fovAngle / 2 - Math.PI / 2) * coneRadius,
-      playerMapPos.y + Math.sin(camHeading + fovAngle / 2 - Math.PI / 2) * coneRadius
+      playerMapPos.x + Math.cos(viewAngle + fovAngle / 2) * coneRadius,
+      playerMapPos.y + Math.sin(viewAngle + fovAngle / 2) * coneRadius
     );
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Orbit Focal Target Crosshair Reticle (exact 3D focal point on 2D floor plan)
+    const rawTargetPos = this.worldToMinimap(target.x, target.z);
+    if (rawTargetPos.x >= 0 && rawTargetPos.x <= w && rawTargetPos.y >= 0 && rawTargetPos.y <= h) {
+      ctx.strokeStyle = "rgba(212, 255, 63, 0.75)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(rawTargetPos.x, rawTargetPos.y, 3, 0, Math.PI * 2);
+      ctx.moveTo(rawTargetPos.x - 5, rawTargetPos.y);
+      ctx.lineTo(rawTargetPos.x + 5, rawTargetPos.y);
+      ctx.moveTo(rawTargetPos.x, rawTargetPos.y - 5);
+      ctx.lineTo(rawTargetPos.x, rawTargetPos.y + 5);
+      ctx.stroke();
+    }
 
     // Player / Camera Avatar Dot
     ctx.fillStyle = "#D4FF3F";
@@ -862,10 +947,10 @@ export class MinimapModule {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Directional View Arrow
-    const headingLength = 13;
-    const endX = playerMapPos.x + Math.sin(camHeading) * headingLength;
-    const endY = playerMapPos.y - Math.cos(camHeading) * headingLength;
+    // Directional View Arrow in exact viewing orientation
+    const headingLength = 14;
+    const endX = playerMapPos.x + Math.cos(viewAngle) * headingLength;
+    const endY = playerMapPos.y + Math.sin(viewAngle) * headingLength;
 
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 2;

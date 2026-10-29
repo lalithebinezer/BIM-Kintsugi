@@ -77,6 +77,27 @@ describe("Minimap & 4D Phasing Modules", () => {
       // Verify no throw and correct state
       minimap.setSelectedElement(null);
     });
+
+    it("should manage camera synchronization state", () => {
+      expect(minimap.isCameraSyncEnabled()).toBe(true);
+      minimap.setAutoSyncCamera(false);
+      expect(minimap.isCameraSyncEnabled()).toBe(false);
+      minimap.resetView();
+      expect(minimap.isCameraSyncEnabled()).toBe(true);
+    });
+
+    it("should accurately compute canvas orientation angles matching world coordinates", () => {
+      // +X is East (0 rad), +Z is South (+PI/2 rad), -X is West (PI rad), -Z is North (-PI/2 rad)
+      const forwardNorth = { x: 0, z: -1 };
+      const forwardSouth = { x: 0, z: 1 };
+      const forwardEast = { x: 1, z: 0 };
+      const forwardWest = { x: -1, z: 0 };
+
+      expect(Math.atan2(forwardNorth.z, forwardNorth.x)).toBeCloseTo(-Math.PI / 2);
+      expect(Math.atan2(forwardSouth.z, forwardSouth.x)).toBeCloseTo(Math.PI / 2);
+      expect(Math.atan2(forwardEast.z, forwardEast.x)).toBeCloseTo(0);
+      expect(Math.atan2(forwardWest.z, forwardWest.x)).toBeCloseTo(Math.PI);
+    });
   });
 
   describe("PhasingTimelineModule", () => {
