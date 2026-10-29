@@ -53,6 +53,9 @@ export class InteractiveGanttDrawer {
               <span id="gantt-current-date-badge" class="gantt-date-badge">YYYY-MM-DD</span>
             </div>
             <input type="text" id="gantt-search-filter" class="gantt-search-input" placeholder="Filter tasks by name or category..." />
+            <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display: inline-block; vertical-align: middle; margin-right: 2px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 5D Cost Control
+            </button>
             <button id="btn-gantt-fit-dates" class="btn-gantt-drawer-action" title="Fit all tasks into timeline view">Fit Timeline</button>
             <button id="btn-close-gantt-drawer" class="btn-icon-sm" title="Close Gantt Drawer">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -136,6 +139,12 @@ export class InteractiveGanttDrawer {
     panel.querySelector("#btn-gantt-fit-dates")?.addEventListener("click", () => {
       this.render();
       showToast("Fitted Gantt timeline to project dates", "info");
+    });
+
+    panel.querySelector("#btn-gantt-cost-control")?.addEventListener("click", () => {
+      if (typeof (window as any).toggleUnifiedCostControl === "function") {
+        (window as any).toggleUnifiedCostControl();
+      }
     });
   }
 

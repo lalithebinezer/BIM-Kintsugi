@@ -133,11 +133,6 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
   bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
   bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", renderBcfIssues);
-  bindEnterpriseTrigger("btn-header-cost", "btn-dock-cost", "cost-control-panel", () => {
-    if (typeof (window as any).updateCumulative5DCost === "function") {
-      (window as any).updateCumulative5DCost();
-    }
-  });
 
   document.getElementById("btn-export-bcf-json")?.addEventListener("click", async () => {
     const exportedZip = await bcfIssueManager.exportNativeBcfZip();
@@ -372,6 +367,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   document.getElementById("btn-dock-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-header-cost")?.addEventListener("click", toggleUnifiedCostControl);
+  document.getElementById("btn-timeline-cost-control")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
     if (typeof (window as any).toggle4DMode === "function") {
       (window as any).toggle4DMode(false);
