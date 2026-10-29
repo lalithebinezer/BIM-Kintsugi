@@ -415,6 +415,11 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (badgeElev) badgeElev.textContent = `${cfg.elevationOffset >= 0 ? "+" : ""}${cfg.elevationOffset.toFixed(2)} m`;
     if (sliderOpacity) sliderOpacity.value = String(cfg.opacity);
     if (badgeOpacity) badgeOpacity.textContent = `${Math.round(cfg.opacity * 100)}%`;
+
+    const txtSpaceFlight = document.getElementById("gis-space-flight-text");
+    if (txtSpaceFlight) {
+      txtSpaceFlight.textContent = gisModule.getIsSpaceView() ? "Descend to Site Level" : "Fly to Space Orbit";
+    }
   };
   (window as any).refreshGisUI = refreshGisUI;
 
@@ -511,6 +516,96 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     gisModule.setBasemapOpacity(val);
     const badge = document.getElementById("gis-opacity-val");
     if (badge) badge.textContent = `${Math.round(val * 100)}%`;
+  });
+
+  // OpenStreetMap Nominatim Global Geocoder
+  const searchInput = document.getElementById("gis-search-address") as HTMLInputElement | null;
+  const searchBtn = document.getElementById("gis-btn-search");
+  const suggestionsBox = document.getElementById("gis-search-suggestions");
+
+  const executeGeocodingSearch = async () => {
+    if (!searchInput) return;
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    if (searchBtn) {
+      searchBtn.setAttribute("disabled", "true");
+      searchBtn.innerHTML = `<span>...</span>`;
+    }
+
+    try {
+      const results = await gisModule.searchLocation(query);
+      if (suggestionsBox) {
+        if (results.length === 0) {
+          suggestionsBox.innerHTML = `<div style="padding: 0.4rem 0.5rem; font-size: 0.6rem; color: var(--text-muted);">No locations found</div>`;
+          suggestionsBox.classList.remove("hidden");
+        } else {
+          suggestionsBox.innerHTML = results
+            .map(
+              (r, idx) => `
+            <div class="gis-suggestion-item" data-idx="${idx}">
+              <div class="gis-suggestion-title">📍 ${r.displayName.split(",")[0]}</div>
+              <div class="gis-suggestion-desc">${r.displayName}</div>
+            </div>
+          `
+            )
+            .join("");
+          suggestionsBox.classList.remove("hidden");
+
+          suggestionsBox.querySelectorAll(".gis-suggestion-item").forEach((el) => {
+            el.addEventListener("click", () => {
+              const idx = parseInt(el.getAttribute("data-idx") || "0");
+              const selected = results[idx];
+              if (selected) {
+                gisModule.applyGeocodedLocation(selected);
+                refreshGisUI();
+                suggestionsBox.classList.add("hidden");
+                searchInput.value = selected.displayName.split(",")[0];
+                showToast(`Relocated to: ${selected.displayName.split(",")[0]} (${selected.lat.toFixed(4)}°, ${selected.lon.toFixed(4)}°)`, "success");
+                SoundManager.getInstance().playSnap();
+              }
+            });
+          });
+        }
+      }
+    } catch (err: any) {
+      showToast(`Geocoding error: ${err.message}`, "error");
+    } finally {
+      if (searchBtn) {
+        searchBtn.removeAttribute("disabled");
+        searchBtn.innerHTML = `
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>Find</span>
+        `;
+      }
+    }
+  };
+
+  searchBtn?.addEventListener("click", executeGeocodingSearch);
+  searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      executeGeocodingSearch();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (suggestionsBox && !suggestionsBox.contains(e.target as Node) && e.target !== searchInput) {
+      suggestionsBox.classList.add("hidden");
+    }
+  });
+
+  // Cinematic Orbital Space Flight & Site Descent
+  const btnSpaceFlight = document.getElementById("gis-btn-space-flight");
+  const txtSpaceFlight = document.getElementById("gis-space-flight-text");
+  btnSpaceFlight?.addEventListener("click", async () => {
+    SoundManager.getInstance().playClick();
+    const isSpace = await gisModule.toggleSpaceFlight();
+    if (txtSpaceFlight) {
+      txtSpaceFlight.textContent = isSpace ? "Descend to Site Level" : "Fly to Space Orbit";
+    }
+    btnSpaceFlight.classList.toggle("active", isSpace);
+    showToast(isSpace ? "Orbital Flight: 1200m Space Perspective" : "Descent: Returned to Site Level", "info");
   });
 
   // Demo Cadastre

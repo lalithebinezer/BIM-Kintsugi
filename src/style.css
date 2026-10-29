@@ -10030,3 +10030,40 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   border-color: #1C1917 transparent transparent transparent !important;
 }
 
+/* GeoBIM Geocoder Search Suggestions */
+.gis-suggestion-item {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.62rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  transition: background 0.15s ease;
+}
+
+.gis-suggestion-item:hover {
+  background: rgba(6, 182, 212, 0.15);
+}
+
+.gis-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.gis-suggestion-title {
+  font-weight: 700;
+  color: #06b6d4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gis-suggestion-desc {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

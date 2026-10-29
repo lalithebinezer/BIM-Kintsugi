@@ -43,6 +43,13 @@ export interface GisCoordinatesTelemetry {
   localZ: number;
 }
 
+export interface GisGeocodingResult {
+  displayName: string;
+  lat: number;
+  lon: number;
+  type?: string;
+}
+
 export const GIS_LOCATION_PRESETS: Record<string, GisProjectLocation> = {
   tokyo: {
     latitude: 35.6895,
@@ -131,6 +138,7 @@ export class GisModule {
   private basemapTexture: THREE.CanvasTexture | null = null;
   private currentTileFetchId: number = 0;
   private tileFetchTimer: any = null;
+  private isSpaceView: boolean = false;
 
   // Features list
   private geoJsonFeatures: GisGeoJsonFeature[] = [];
@@ -194,6 +202,92 @@ export class GisModule {
 
   public applyPreset(name: string): GisProjectLocation | null {
     return this.loadPresetLocation(name);
+  }
+
+  /**
+   * Performs asynchronous keyless address/landmark geocoding via OpenStreetMap Nominatim.
+   */
+  public async searchLocation(query: string): Promise<GisGeocodingResult[]> {
+    const q = (query || "").trim();
+    if (q.length < 2) return [];
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`;
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      if (!Array.isArray(data)) return [];
+      return data.map((item: any) => ({
+        displayName: item.display_name,
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+        type: item.type || item.class,
+      }));
+    } catch (err) {
+      console.warn("Nominatim geocoding error:", err);
+      return [];
+    }
+  }
+
+  /**
+   * Applies geocoded coordinates to project datum, rebuilds basemap, and updates solar position.
+   */
+  public applyGeocodedLocation(result: GisGeocodingResult) {
+    this.setLocation({
+      latitude: Number(result.lat.toFixed(6)),
+      longitude: Number(result.lon.toFixed(6)),
+      address: result.displayName,
+      source: "manual",
+    });
+
+    const sun = this.calculateSolarPosition();
+    if (typeof window !== "undefined" && typeof (window as any).updateSunPosition === "function") {
+      (window as any).updateSunPosition(sun.azimuth, sun.elevation);
+    }
+  }
+
+  public getIsSpaceView(): boolean {
+    return this.isSpaceView;
+  }
+
+  /**
+   * Toggles smooth cinematic flight between high-altitude space/regional orbit and site-level eye perspective.
+   */
+  public async toggleSpaceFlight(): Promise<boolean> {
+    if (!this.world || !this.world.camera?.controls) return false;
+    const controls = this.world.camera.controls as any;
+
+    this.isSpaceView = !this.isSpaceView;
+
+    if (this.isSpaceView) {
+      // High-altitude orbital space view overlooking the regional basemap
+      const alt = Math.max(1200, this.basemapConfig.radius * 2.2);
+      await controls.setLookAt(0, alt, alt * 0.45, 0, 0, 0, true);
+      const ticker = document.getElementById("ticker-camera-mode");
+      if (ticker) ticker.textContent = `ORBITAL SPACE VIEW (${Math.round(alt)}m AMSL)`;
+    } else {
+      // Cinematic descent down to site isometric eye-level perspective
+      const radius = Math.min(60, this.basemapConfig.radius * 0.15);
+      const isoDist = Math.max(28, radius * 1.5);
+      const isoNorm = 1 / Math.sqrt(3);
+      await controls.setLookAt(
+        isoNorm * isoDist,
+        isoNorm * isoDist + 4,
+        isoNorm * isoDist,
+        0,
+        2,
+        0,
+        true
+      );
+      const ticker = document.getElementById("ticker-camera-mode");
+      if (ticker) ticker.textContent = "3D PERSPECTIVE ISOMETRIC";
+    }
+
+    this.triggerRender();
+    return this.isSpaceView;
   }
 
   public getGeoreference(): { latitude: number; longitude: number; elevation: number; trueNorthRotation: number } {

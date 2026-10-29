@@ -2807,6 +2807,21 @@
             <span id="gis-dms-badge" style="font-size: 0.55rem; color: #06b6d4; font-family: var(--font-mono); font-weight: 700;">35°41'22"N 139°41'30"E</span>
           </div>
 
+          <!-- Global Address / Landmark Geocoding Search -->
+          <div style="margin-bottom: 0.5rem; position: relative;">
+            <label for="gis-search-address" style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Search Global Address or Landmark:</label>
+            <div style="display: flex; gap: 0.3rem;">
+              <div style="position: relative; flex: 1;">
+                <input type="text" id="gis-search-address" placeholder="e.g. Eiffel Tower, Marina Bay Sands..." style="width: 100%; font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.25rem 0.45rem;" />
+                <div id="gis-search-suggestions" class="hidden" style="position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; max-height: 160px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);"></div>
+              </div>
+              <button type="button" id="gis-btn-search" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Search OpenStreetMap Geocoder">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Find</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Presets Dropdown -->
           <div style="display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem;">
             <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Preset City:</label>
@@ -2900,6 +2915,12 @@
             </div>
             <input type="range" id="gis-slider-opacity" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: #06b6d4;" />
           </div>
+
+          <!-- Cinematic Orbital Space Flight & Site Descent -->
+          <button type="button" id="gis-btn-space-flight" class="btn-cost-action rates" style="width: 100%; margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.4rem 0.6rem; font-size: 0.65rem; border-color: rgba(6, 182, 212, 0.5); color: #06b6d4;" title="Toggle Cinematic Space Orbit View and Site-Level Camera Descent">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span id="gis-space-flight-text">Fly to Space Orbit</span>
+          </button>
         </div>
 
         <!-- Municipal Cadastre & Underground Utilities -->

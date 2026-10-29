@@ -167,4 +167,27 @@ describe("GisModule Unit Tests", () => {
     expect(cfg.enabled).toBe(true);
     expect(cfg.radius).toBeGreaterThanOrEqual(300);
   });
+
+  it("should apply geocoded location to datum and update solar angles", () => {
+    gis.applyGeocodedLocation({
+      displayName: "Sydney Opera House, Bennelong Point, Sydney, NSW, Australia",
+      lat: -33.8568,
+      lon: 151.2153,
+    });
+
+    const loc = gis.getLocation();
+    expect(loc.latitude).toBeCloseTo(-33.8568, 4);
+    expect(loc.longitude).toBeCloseTo(151.2153, 4);
+    expect(loc.address).toContain("Sydney Opera House");
+
+    const sun = gis.calculateSolarPosition(new Date("2026-12-21T12:00:00+11:00"));
+    expect(sun.elevation).toBeGreaterThan(60); // High summer sun in Southern hemisphere
+  });
+
+  it("should manage space flight state correctly", async () => {
+    expect(gis.getIsSpaceView()).toBe(false);
+    // In headless mock without camera controls, toggleSpaceFlight returns false safely
+    const res = await gis.toggleSpaceFlight();
+    expect(typeof res).toBe("boolean");
+  });
 });
