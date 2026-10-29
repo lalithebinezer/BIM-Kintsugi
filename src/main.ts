@@ -6102,6 +6102,9 @@ function updateTimelineDateUI() {
 
   const evm = schedule4DEngine.getEarnedValue(dateMs);
   gantt.updateEarnedValue(evm);
+
+  // Sync seekbar and playhead on Interactive Gantt Drawer
+  InteractiveGanttDrawer.getInstance().updateSeekbarPosition(dateMs);
 }
 
 async function updateTimelineVisualState(force: boolean = false) {
@@ -6359,6 +6362,7 @@ function startTimelinePlayback(onStep?: (dateStr: string) => void) {
   if (timelineIsPlaying || !timelineMinDate) return;
   timelineIsPlaying = true;
   (window as any).isTimelinePlaying = true;
+  InteractiveGanttDrawer.getInstance().updatePlaybackState(true);
   if (timelinePlayBtn) {
     timelinePlayBtn.classList.add("playing");
     timelinePlayBtn.innerHTML = `
@@ -6408,6 +6412,7 @@ function startTimelinePlayback(onStep?: (dateStr: string) => void) {
 function stopTimelinePlayback() {
   timelineIsPlaying = false;
   (window as any).isTimelinePlaying = false;
+  InteractiveGanttDrawer.getInstance().updatePlaybackState(false);
   if (timelineTimer) {
     cancelAnimationFrame(timelineTimer);
     timelineTimer = null;
@@ -6459,6 +6464,8 @@ if (timelinePlayBtn) {
 (window as any).startTimelinePlayback = startTimelinePlayback;
 (window as any).stopTimelinePlayback = stopTimelinePlayback;
 (window as any).isTimelinePlaying = false;
+(window as any).getTimelineDate = () => currentTimelineDate;
+(window as any).getTimelineBounds = () => ({ min: timelineMinDate, max: timelineMaxDate });
 
 (window as any).setTimelinePlaybackSpeed = (speed: number) => {
   timelineSpeed = speed;

@@ -14,6 +14,11 @@ export class InteractiveGanttDrawer {
   private timelineHeader: HTMLElement | null = null;
   private isVisible: boolean = false;
   private activeTaskId: string | null = null;
+  private playheadLine: HTMLElement | null = null;
+  private playheadHeaderMarker: HTMLElement | null = null;
+  private seekbarInput: HTMLInputElement | null = null;
+  private currentDateDisplay: HTMLElement | null = null;
+  private isUserDraggingSeekbar: boolean = false;
 
   private constructor() {}
 
@@ -40,6 +45,13 @@ export class InteractiveGanttDrawer {
             <span id="gantt-task-count-badge" class="gantt-count-badge">0 Tasks</span>
           </div>
           <div class="gantt-drawer-controls">
+            <div class="gantt-playback-controls">
+              <button id="btn-gantt-play-toggle" class="btn-gantt-play" title="Play / Pause 4D Animation (Space)">
+                <span id="gantt-play-icon">▶</span>
+                <span id="gantt-play-text">Play</span>
+              </button>
+              <span id="gantt-current-date-badge" class="gantt-date-badge">YYYY-MM-DD</span>
+            </div>
             <input type="text" id="gantt-search-filter" class="gantt-search-input" placeholder="Filter tasks by name or category..." />
             <button id="btn-gantt-fit-dates" class="btn-gantt-drawer-action" title="Fit all tasks into timeline view">Fit Timeline</button>
             <button id="btn-close-gantt-drawer" class="btn-icon-sm" title="Close Gantt Drawer">
@@ -52,9 +64,20 @@ export class InteractiveGanttDrawer {
             <div class="col-task-name">Task Description</div>
             <div class="col-task-status">Status</div>
             <div class="col-task-dates">Duration</div>
-            <div class="col-task-bar-header" id="gantt-timeline-header"></div>
+            <div class="col-task-bar-header" id="gantt-timeline-header">
+              <!-- Timeline ticks track and interactive seekbar overlay -->
+              <div class="gantt-ticks-track" id="gantt-ticks-track"></div>
+              <div class="gantt-seekbar-container" id="gantt-seekbar-container" title="Drag to seek 4D simulation date">
+                <input type="range" id="gantt-seekbar-slider" class="gantt-seekbar-slider" min="0" max="1000" value="0" />
+                <div class="gantt-playhead-marker" id="gantt-playhead-marker">
+                  <span class="gantt-playhead-tag" id="gantt-playhead-tag">Today</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="gantt-table-rows thin-scrollbar" id="gantt-table-rows">
+            <!-- Global vertical playhead line spanning across all Gantt rows -->
+            <div class="gantt-playhead-line" id="gantt-playhead-line"></div>
             <div class="empty-state">No schedule tasks loaded. Activate 4D mode or import CSV/MS Project schedule.</div>
           </div>
         </div>
@@ -65,6 +88,42 @@ export class InteractiveGanttDrawer {
     this.container = panel;
     this.tasksList = panel.querySelector("#gantt-table-rows");
     this.timelineHeader = panel.querySelector("#gantt-timeline-header");
+    this.seekbarInput = panel.querySelector("#gantt-seekbar-slider");
+    this.playheadLine = panel.querySelector("#gantt-playhead-line");
+    this.playheadHeaderMarker = panel.querySelector("#gantt-playhead-marker");
+    this.currentDateDisplay = panel.querySelector("#gantt-current-date-badge");
+
+    // Play/Pause button in Gantt drawer
+    const playBtn = panel.querySelector("#btn-gantt-play-toggle");
+    playBtn?.addEventListener("click", () => {
+      if (typeof (window as any).toggleTimelinePlayback === "function") {
+        (window as any).toggleTimelinePlayback();
+      }
+    });
+
+    // Seekbar input scrubbing
+    if (this.seekbarInput) {
+      this.seekbarInput.addEventListener("input", (e) => {
+        this.isUserDraggingSeekbar = true;
+        const val = Number((e.target as HTMLInputElement).value); // 0 to 1000
+        const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+        const bounds = scheduleManager?.getProjectDateRange();
+        if (bounds) {
+          const minMs = bounds.min.getTime();
+          const maxMs = bounds.max.getTime();
+          const targetMs = minMs + (val / 1000) * (maxMs - minMs);
+          const targetDate = new Date(targetMs);
+          if (typeof (window as any).jumpTimelineToDate === "function") {
+            (window as any).jumpTimelineToDate(targetDate);
+          }
+          this.updateSeekbarPosition(targetMs, false);
+        }
+      });
+
+      this.seekbarInput.addEventListener("change", () => {
+        this.isUserDraggingSeekbar = false;
+      });
+    }
 
     panel.querySelector("#btn-close-gantt-drawer")?.addEventListener("click", () => {
       this.hide();
@@ -123,16 +182,19 @@ export class InteractiveGanttDrawer {
     const totalDuration = Math.max(1, maxTime - minTime);
 
     // Render timeline month/week tick header
-    if (this.timelineHeader) {
+    const ticksTrack = this.timelineHeader?.querySelector("#gantt-ticks-track") || this.timelineHeader;
+    if (ticksTrack) {
       const weeks = Math.max(1, Math.ceil(totalDuration / (7 * 24 * 60 * 60 * 1000)));
       const ticks: string[] = [];
       for (let w = 1; w <= Math.min(weeks, 24); w++) {
         ticks.push(`<span class="gantt-tick">W${w}</span>`);
       }
-      this.timelineHeader.innerHTML = `<div class="gantt-ticks-track">${ticks.join("")}</div>`;
+      ticksTrack.innerHTML = ticks.join("");
     }
 
-    this.tasksList.innerHTML = "";
+    // Keep playhead line element inside tasks list
+    this.tasksList.innerHTML = `<div class="gantt-playhead-line" id="gantt-playhead-line"></div>`;
+    this.playheadLine = this.tasksList.querySelector("#gantt-playhead-line");
 
     tasks.forEach((t) => {
       const taskStart = new Date(t.startDate).getTime();
@@ -176,6 +238,79 @@ export class InteractiveGanttDrawer {
 
       this.tasksList!.appendChild(row);
     });
+
+    // Re-sync seekbar position after rendering tasks
+    const currentMs = (window as any).currentTimelineDate?.getTime?.();
+    if (currentMs) {
+      this.updateSeekbarPosition(currentMs, true);
+    }
+  }
+
+  /**
+   * Update the seekbar position and vertical playhead line during 4D animation playback.
+   */
+  public updateSeekbarPosition(currentDateMs: number, forceSliderSync: boolean = false): void {
+    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+    const bounds = scheduleManager?.getProjectDateRange();
+    if (!bounds) return;
+
+    const minMs = bounds.min.getTime();
+    const maxMs = bounds.max.getTime();
+    const totalDuration = Math.max(1, maxMs - minMs);
+    const clampedMs = Math.max(minMs, Math.min(maxMs, currentDateMs));
+    const pct = Math.max(0, Math.min(100, ((clampedMs - minMs) / totalDuration) * 100));
+
+    // Update seekbar input if user is not actively dragging it
+    if (this.seekbarInput && (!this.isUserDraggingSeekbar || forceSliderSync)) {
+      this.seekbarInput.value = String(Math.round((pct / 100) * 1000));
+    }
+
+    // Update header playhead marker position
+    if (this.playheadHeaderMarker) {
+      this.playheadHeaderMarker.style.left = `${pct.toFixed(2)}%`;
+      const dateObj = new Date(clampedMs);
+      const dateStr = dateObj.toISOString().split("T")[0];
+      const tag = this.playheadHeaderMarker.querySelector("#gantt-playhead-tag");
+      if (tag) {
+        tag.textContent = dateStr.slice(5); // MM-DD
+      }
+    }
+
+    // Update playhead vertical line spanning across task rows
+    if (this.playheadLine) {
+      // Align with column offset (col-task-name + col-task-status + col-task-dates = 260 + 90 + 120 = 470px)
+      this.playheadLine.style.left = `calc(470px + (100% - 470px) * ${pct / 100})`;
+      this.playheadLine.style.display = "block";
+    }
+
+    // Update date badge in header controls
+    if (this.currentDateDisplay) {
+      const dateObj = new Date(clampedMs);
+      this.currentDateDisplay.textContent = dateObj.toISOString().split("T")[0];
+    }
+
+    // Sync play/pause toggle button state
+    this.updatePlaybackState((window as any).isTimelinePlaying || false);
+  }
+
+  /**
+   * Updates play button visual icon/label to reflect 4D animation status.
+   */
+  public updatePlaybackState(isPlaying: boolean): void {
+    const playBtn = document.getElementById("btn-gantt-play-toggle");
+    const playIcon = document.getElementById("gantt-play-icon");
+    const playText = document.getElementById("gantt-play-text");
+    if (!playBtn) return;
+
+    if (isPlaying) {
+      playBtn.classList.add("playing");
+      if (playIcon) playIcon.textContent = "⏸";
+      if (playText) playText.textContent = "Pause";
+    } else {
+      playBtn.classList.remove("playing");
+      if (playIcon) playIcon.textContent = "▶";
+      if (playText) playText.textContent = "Play";
+    }
   }
 
   public selectTask(task: ScheduleTask): void {

@@ -166,4 +166,35 @@ describe("Minimap & 4D Phasing Modules", () => {
       expect(timeline.getState().isPlaying).toBe(false);
     });
   });
+
+  describe("InteractiveGanttDrawer & Seekbar Playhead", () => {
+    it("should initialize Gantt Drawer with seekbar and playhead elements", async () => {
+      const { InteractiveGanttDrawer } = await import("../../ui/InteractiveGanttDrawer");
+      const drawer = InteractiveGanttDrawer.getInstance();
+      drawer.init("test-gantt-panel");
+
+      const panel = document.getElementById("test-gantt-panel");
+      expect(panel).not.toBeNull();
+      expect(panel?.querySelector("#gantt-seekbar-slider")).not.toBeNull();
+      expect(panel?.querySelector("#gantt-playhead-marker")).not.toBeNull();
+      expect(panel?.querySelector("#gantt-playhead-line")).not.toBeNull();
+      expect(panel?.querySelector("#btn-gantt-play-toggle")).not.toBeNull();
+      expect(panel?.querySelector("#gantt-current-date-badge")).not.toBeNull();
+    });
+
+    it("should update playback state on the Gantt play toggle button", async () => {
+      const { InteractiveGanttDrawer } = await import("../../ui/InteractiveGanttDrawer");
+      const drawer = InteractiveGanttDrawer.getInstance();
+      drawer.init("test-gantt-panel");
+
+      drawer.updatePlaybackState(true);
+      const playBtn = document.getElementById("btn-gantt-play-toggle");
+      expect(playBtn?.classList.contains("playing")).toBe(true);
+      expect(document.getElementById("gantt-play-text")?.textContent).toBe("Pause");
+
+      drawer.updatePlaybackState(false);
+      expect(playBtn?.classList.contains("playing")).toBe(false);
+      expect(document.getElementById("gantt-play-text")?.textContent).toBe("Play");
+    });
+  });
 });
