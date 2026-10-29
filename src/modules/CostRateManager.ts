@@ -75,6 +75,12 @@ export class CostRateManager {
   }
 
   private loadState(): void {
+    if (typeof localStorage === "undefined") {
+      for (const [cat, def] of Object.entries(DEFAULT_CATEGORY_RATES)) {
+        this.rates.set(cat, { ...def });
+      }
+      return;
+    }
     const savedCurrency = localStorage.getItem(STORAGE_CURRENCY_KEY);
     if (savedCurrency && SUPPORTED_CURRENCIES[savedCurrency]) {
       this.activeCurrencyCode = savedCurrency;
@@ -101,12 +107,15 @@ export class CostRateManager {
   }
 
   public saveState(): void {
+    if (typeof localStorage === "undefined") return;
     const obj: Record<string, CategoryRate> = {};
     for (const [cat, rate] of this.rates.entries()) {
       obj[cat] = rate;
     }
-    localStorage.setItem(STORAGE_RATES_KEY, JSON.stringify(obj));
-    localStorage.setItem(STORAGE_CURRENCY_KEY, this.activeCurrencyCode);
+    try {
+      localStorage.setItem(STORAGE_RATES_KEY, JSON.stringify(obj));
+      localStorage.setItem(STORAGE_CURRENCY_KEY, this.activeCurrencyCode);
+    } catch (e) {}
   }
 
   public getCurrency(): CurrencyConfig {

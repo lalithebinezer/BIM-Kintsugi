@@ -100,6 +100,9 @@ import { ScheduleImportParsers } from "./modules/ScheduleImportParsers";
 import { CobieExportModule } from "./modules/CobieExportModule";
 import { ModelDiffModule } from "./modules/ModelDiffModule";
 import { PlanOverlayModule } from "./modules/PlanOverlayModule";
+import { SoundManager } from "./core/SoundManager";
+import { CinematicTourManager } from "./modules/CinematicTourManager";
+import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
 
 BUI.Manager.init();
 
@@ -2423,6 +2426,15 @@ function triggerBoqExport() {
 const btnExportBoqCsv = document.getElementById("btn-export-boq-csv");
 btnExportBoqCsv?.addEventListener("click", triggerBoqExport);
 document.getElementById("drawer-btn-export-boq")?.addEventListener("click", triggerBoqExport);
+
+// Wire Executive Construction Twin Report
+const triggerExecutiveReport = () => {
+  SoundManager.getInstance().playClick();
+  ExecutiveReportModule.getInstance().openReportModal();
+};
+document.getElementById("btn-export-exec-report")?.addEventListener("click", triggerExecutiveReport);
+document.getElementById("drawer-btn-exec-report")?.addEventListener("click", triggerExecutiveReport);
+(window as any).triggerExecutiveReport = triggerExecutiveReport;
 
 // Wire IDS 4D/5D Data Readiness Validation buttons
 async function triggerIdsAudit() {
@@ -7500,6 +7512,131 @@ requestAnimationFrame(renderHUD);
 // ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
 // ═════════════════════════════════════════════════════════════════════
 initEnterpriseSuitesController(world, highlighter);
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── PWA OFFLINE JOBSITE MODE & INSTALL PROMPT ───────────────────────
+// ═════════════════════════════════════════════════════════════════════
+if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((reg) => {
+        console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("[PWA] ServiceWorker registration failed:", err);
+      });
+  });
+}
+
+let deferredPwaPrompt: any = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  const pwaBtn = document.getElementById("btn-top-pwa-install");
+  if (pwaBtn) {
+    pwaBtn.style.display = "inline-flex";
+    pwaBtn.onclick = async () => {
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        const choice = await deferredPwaPrompt.userChoice;
+        if (choice && choice.outcome === "accepted") {
+          showToast("BIM Kintsugi installed successfully!", "success");
+          pwaBtn.style.display = "none";
+        }
+        deferredPwaPrompt = null;
+      }
+    };
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── AUDIO & SOUND FX SETTINGS WIRING ────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════
+const soundToggle = document.getElementById("settings-toggle-sound") as HTMLInputElement | null;
+const soundVolume = document.getElementById("settings-sound-volume") as HTMLInputElement | null;
+const soundVolumeVal = document.getElementById("val-sound-volume");
+
+if (soundToggle) {
+  soundToggle.checked = SoundManager.getInstance().isEnabled();
+  soundToggle.addEventListener("change", () => {
+    SoundManager.getInstance().setEnabled(soundToggle.checked);
+    if (soundToggle.checked) {
+      SoundManager.getInstance().playClick();
+    }
+  });
+}
+
+if (soundVolume) {
+  soundVolume.value = String(SoundManager.getInstance().getVolume());
+  if (soundVolumeVal) {
+    soundVolumeVal.textContent = `${Math.round(SoundManager.getInstance().getVolume() * 100)}%`;
+  }
+  soundVolume.addEventListener("input", () => {
+    const val = parseFloat(soundVolume.value);
+    SoundManager.getInstance().setVolume(val);
+    if (soundVolumeVal) {
+      soundVolumeVal.textContent = `${Math.round(val * 100)}%`;
+    }
+  });
+  soundVolume.addEventListener("change", () => {
+    SoundManager.getInstance().playClick();
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── CINEMATIC KEYFRAME TOUR CONTROLS ────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════
+const tourMgr = CinematicTourManager.getInstance();
+const updateTourBadge = () => {
+  const badge = document.getElementById("tour-waypoint-count");
+  if (badge) {
+    badge.textContent = `${tourMgr.getWaypoints().length} Keyframes`;
+  }
+};
+updateTourBadge();
+
+const playTourAction = async () => {
+  SoundManager.getInstance().playClick();
+  const stopBtn = document.getElementById("btn-tour-stop-panel");
+  if (stopBtn) stopBtn.style.display = "inline-flex";
+  showToast("Starting Cinematic Walkthrough Tour...", "info");
+  await tourMgr.playTour();
+  if (stopBtn) stopBtn.style.display = "none";
+};
+
+document.getElementById("btn-play-tour")?.addEventListener("click", playTourAction);
+document.getElementById("btn-tour-play-panel")?.addEventListener("click", playTourAction);
+
+document.getElementById("btn-tour-stop-panel")?.addEventListener("click", () => {
+  SoundManager.getInstance().playClick();
+  tourMgr.stopTour();
+  const stopBtn = document.getElementById("btn-tour-stop-panel");
+  if (stopBtn) stopBtn.style.display = "none";
+  showToast("Tour stopped.", "info");
+});
+
+document.getElementById("btn-tour-add-waypoint")?.addEventListener("click", () => {
+  SoundManager.getInstance().playClick();
+  tourMgr.addCurrentViewAsWaypoint();
+  updateTourBadge();
+  showToast("Added current camera angle as keyframe!", "success");
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── 3D REVISION DIFF & FEDERATION TRIGGER ───────────────────────────
+// ═════════════════════════════════════════════════════════════════════
+document.getElementById("btn-trigger-model-diff")?.addEventListener("click", async () => {
+  SoundManager.getInstance().playClick();
+  const ids = Array.from(fragments.list.keys());
+  if (ids.length < 2) {
+    showToast("Please load at least 2 IFC models to run 3D Revision Diff.", "warning");
+    return;
+  }
+  showToast(`Running 3D Revision Diff: ${ids[0]} vs ${ids[1]}...`, "info");
+  await ModelDiffModule.getInstance().compareModels(ids[0], ids[1]);
+});
+
 
 
 

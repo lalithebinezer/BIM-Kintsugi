@@ -9549,3 +9549,372 @@ body.right-sidebar-collapsed .right-sidebar {
 
 
 
+
+/* ==========================================================================
+   EXECUTIVE CONSTRUCTION TWIN REPORT & PRINT ENGINE
+   ========================================================================== */
+
+.executive-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100050;
+  background: rgba(10, 12, 16, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+}
+
+.executive-report-container {
+  width: 100%;
+  max-width: 880px;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 12px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin-bottom: 2rem;
+}
+
+.exec-report-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  background: #111827;
+  color: #F9FAFB;
+  border-bottom: 1px solid #374151;
+}
+
+.report-badge {
+  background: rgba(212, 255, 63, 0.15);
+  color: #D4FF3F;
+  border: 1px solid rgba(212, 255, 63, 0.4);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.btn-report-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.btn-report-action.print {
+  background: #2563EB;
+  color: #ffffff;
+}
+
+.btn-report-action.print:hover {
+  background: #1D4ED8;
+}
+
+.btn-report-action.json {
+  background: #374151;
+  color: #F3F4F6;
+  border-color: #4B5563;
+}
+
+.btn-report-action.json:hover {
+  background: #4B5563;
+}
+
+.btn-report-action.close {
+  background: transparent;
+  color: #9CA3AF;
+  padding: 0.4rem;
+}
+
+.btn-report-action.close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.exec-report-sheet {
+  padding: 2.25rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  background: #ffffff;
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #E5E7EB;
+  padding-bottom: 1.25rem;
+}
+
+.brand-logo-text {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.brand-subtext {
+  font-size: 0.72rem;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.report-title-main {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1F2937;
+  text-align: right;
+  letter-spacing: -0.01em;
+}
+
+.report-meta-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #4B5563;
+  margin-top: 0.35rem;
+  justify-content: flex-end;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+.kpi-card {
+  padding: 0.9rem;
+  border-radius: 8px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kpi-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #6B7280;
+  letter-spacing: 0.04em;
+}
+
+.kpi-value {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.kpi-foot {
+  font-size: 0.68rem;
+  color: #4B5563;
+  margin-top: 0.15rem;
+}
+
+.carbon-grade-badge {
+  background: #10B981;
+  color: #ffffff;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1F2937;
+  border-left: 3px solid #2563EB;
+  padding-left: 0.5rem;
+}
+
+.section-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.scurve-chart-wrapper {
+  background: #FAFAFA;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.report-table th,
+.report-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.report-table th {
+  background: #F3F4F6;
+  color: #374151;
+  font-weight: 700;
+  text-align: left;
+}
+
+.trade-pill {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.trade-pill.concrete { background: #FEF3C7; color: #92400E; }
+.trade-pill.steel { background: #E0E7FF; color: #3730A3; }
+.trade-pill.mep { background: #D1FAE5; color: #065F46; }
+.trade-pill.finishes { background: #FCE7F3; color: #9D174D; }
+
+.coordination-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+}
+
+.coord-box {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coord-box-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4B5563;
+}
+
+.coord-stat {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.coord-desc {
+  font-size: 0.7rem;
+  color: #6B7280;
+  line-height: 1.4;
+}
+
+.sheet-signoff {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.sign-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sign-line {
+  height: 1px;
+  background: #9CA3AF;
+  width: 70%;
+  margin-bottom: 0.4rem;
+}
+
+.sign-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.sign-meta {
+  font-size: 0.65rem;
+  color: #6B7280;
+}
+
+/* ==========================================================================
+   PRINT MEDIA STYLES (Vector PDF & Boardroom Hardcopy)
+   ========================================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .executive-report-overlay,
+  .executive-report-overlay * {
+    visibility: visible;
+  }
+
+  .executive-report-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .executive-report-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print,
+  .exec-report-toolbar {
+    display: none !important;
+  }
+
+  .exec-report-sheet {
+    padding: 0 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm;
+  }
+}

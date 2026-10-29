@@ -1,23 +1,24 @@
 {
-  "name": "Web BIM Twin — 4D/5D Digital Twin",
-  "short_name": "BIM Twin",
-  "description": "High-Performance 4D/5D Web BIM Viewer, Construction Sequencer and Cost Estimating Platform",
-  "start_url": "./index.html",
+  "name": "BIM Kintsugi — 4D/5D Digital Twin",
+  "short_name": "BIM Kintsugi",
+  "description": "High-Performance OpenBIM IFC Digital Twin, 4D Construction Simulation, 5D EVM Cost Control, and Clash Coordination Platform",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#0a0c10",
-  "theme_color": "#d4af37",
+  "background_color": "#0B0D14",
+  "theme_color": "#D4FF3F",
   "orientation": "any",
   "icons": [
     {
-      "src": "favicon.svg",
+      "src": "./favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "logo.jpg",
+      "src": "./logo.jpg",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

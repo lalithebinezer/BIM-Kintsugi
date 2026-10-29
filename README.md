@@ -106,6 +106,10 @@ BIM Kintsugi deeply integrates native `@thatopen/components` (`OBC`) and `@thato
 | **🤖 7. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Highlight high carbon elements"*, *"Cost summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
 | **🎨 8. VFX Studio & 4K Drawing Sheet** | • 6 `OBF.PostproductionAspect` render styles: **Shaded**, **Pen / Technical Drawing**, **Color + Pen**, **Shaded + Pen + AO**, **Clay / Ambient Occlusion**, and **Wireframe**<br>• Dynamic Solar Azimuth & Elevation shadow simulation<br>• **4K Technical Drawing Sheet Generator** (`3840×2160` PNG with ISO architectural border, project title block, scale bar, north arrow, and revision metadata) |
 | **🧭 9. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Interactive Navigation**: Click to teleport camera, drag avatar/cone to rotate gaze in real time, or toggle First-Person WASD Walk mode<br>• **Compass Rose & Face North**: True North indicator button with 1-click camera orientation snap<br>• **Storey Sync & Auto-Tracking**: Automatic IFC `IfcBuildingStorey` detection with live elevation auto-tracking and 1-click horizontal floor slicing<br>• **Clash & Selection Layer**: Live pulsing reticle for selected elements and interactive hazard pins for multi-discipline clashes on the active floor<br>• **Tactical Pan & Zoom**: Scroll wheel zoom, Shift/right-click pan, quick Zoom In/Out/Fit controls, live metric coordinate readout (`X/Z/Dist`), and expandable size preset (180px ↔ 290px) |
+| **📊 10. Executive Twin Report (Print & PDF)** | • 1-Click executive project report modal synthesizing 4D schedule progress, 5D EVM S-Curve (PV vs EV vs AC), category trade quantities, 3D clash resolution matrix, 6D embodied carbon rating, and BCF coordination status<br>• **Print-Optimized `@media print` Layout**: Boardroom-ready vector print formatting with zero background ink waste and instant PDF export via `window.print()`<br>• Complete JSON schema report download for enterprise BI ingestion |
+| **📱 11. PWA & Offline Jobsite Mode** | • Progressive Web App with WebAssembly and static asset pre-caching (`web-ifc.wasm`, `web-ifc-mt.wasm`) via custom Service Worker<br>• Standalone installation on iPads/tablets for high-speed offline 3D model navigation on active construction sites |
+| **🔊 12. Synthesized Web Audio Soundscape** | • Pure client-side Web Audio API synthesizer for UI clicks, measurement snaps, spatial beacon chimes, and camera shutter sounds<br>• Master volume slider (0%–100%) and instant mute toggle in Gaming & Controls Settings |
+| **🎬 13. Cinematic Keyframe Tour & Model Diff** | • Multi-keyframe camera tour interpolation with smooth bezier cubic transitions and custom waypoint capture<br>• 3D Revision Diff comparing federated IFC models with color-coded classification (Added in Green, Removed in Red, Modified in Amber) |
 
 ---
 
@@ -134,6 +138,7 @@ BIM-Kintsugi/
     │   └── __tests__/CustomViewManager.test.ts # Viewpoint unit tests
     │
     ├── modules/                                # Enterprise Domain Feature Suites
+    │   ├── ExecutiveReportModule.ts            # Executive Construction Twin Report (Print, PDF & EVM S-Curve)
     │   ├── MeasurementSuite.ts                 # 5-mode 3D measurements (Length, Delta, Angle, Area, Volume)
     │   ├── ClippingModule.ts                   # 6-DOF section box, custom planes & OBF.ClipStyler hatches
     │   ├── StoreyLevelSlicer.ts                # IFC storey elevation slicer & OBC.Views 2D floor plans

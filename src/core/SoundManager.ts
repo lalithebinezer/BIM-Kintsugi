@@ -6,10 +6,13 @@ export class SoundManager {
   private static instance: SoundManager | null = null;
   private audioCtx: AudioContext | null = null;
   private enabled: boolean = true;
+  private volume: number = 0.7;
 
   private constructor() {
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem("bim_sound_enabled") : null;
     this.enabled = saved !== null ? saved === "true" : true;
+    const savedVol = typeof localStorage !== "undefined" ? localStorage.getItem("bim_sound_volume") : null;
+    this.volume = savedVol !== null ? Math.max(0, Math.min(1, parseFloat(savedVol))) : 0.7;
   }
 
   public static getInstance(): SoundManager {
@@ -44,6 +47,17 @@ export class SoundManager {
     } catch (e) {}
   }
 
+  public getVolume(): number {
+    return this.volume;
+  }
+
+  public setVolume(val: number) {
+    this.volume = Math.max(0, Math.min(1, val));
+    try {
+      localStorage.setItem("bim_sound_volume", this.volume.toString());
+    } catch (e) {}
+  }
+
   public toggle(): boolean {
     this.setEnabled(!this.enabled);
     if (this.enabled) {
@@ -56,7 +70,7 @@ export class SoundManager {
    * Ultra-soft 12ms micro-click for dock & button hovers
    */
   public playHover() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.volume <= 0.001) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -69,7 +83,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(950, now);
       osc.frequency.exponentialRampToValueAtTime(1400, now + 0.015);
 
-      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.setValueAtTime(0.04 * this.volume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
 
       osc.connect(gain);
@@ -84,7 +98,7 @@ export class SoundManager {
    * Crisp mechanical click for toolbar action triggers
    */
   public playClick() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.volume <= 0.001) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -97,7 +111,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(650, now);
       osc.frequency.exponentialRampToValueAtTime(320, now + 0.035);
 
-      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.08 * this.volume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
 
       osc.connect(gain);
@@ -112,7 +126,7 @@ export class SoundManager {
    * High-frequency metallic magnetic snap for 3D measurement points
    */
   public playSnap() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.volume <= 0.001) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -125,7 +139,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(2200, now);
       osc.frequency.exponentialRampToValueAtTime(3400, now + 0.04);
 
-      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.setValueAtTime(0.09 * this.volume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
 
       osc.connect(gain);
@@ -140,7 +154,7 @@ export class SoundManager {
    * Harmonic E-major spatial chime when dropping 3D collaboration beacons
    */
   public playBeacon() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.volume <= 0.001) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -156,7 +170,7 @@ export class SoundManager {
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, noteStart);
 
-        gain.gain.setValueAtTime(0.06, noteStart);
+        gain.gain.setValueAtTime(0.06 * this.volume, noteStart);
         gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.25);
 
         osc.connect(gain);
@@ -172,7 +186,7 @@ export class SoundManager {
    * Camera shutter audio effect for 4K presentation captures and snapshots
    */
   public playShutter() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.volume <= 0.001) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
@@ -185,7 +199,7 @@ export class SoundManager {
       osc1.type = "triangle";
       osc1.frequency.setValueAtTime(800, now);
       osc1.frequency.exponentialRampToValueAtTime(200, now + 0.025);
-      gain1.gain.setValueAtTime(0.1, now);
+      gain1.gain.setValueAtTime(0.1 * this.volume, now);
       gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
@@ -198,7 +212,7 @@ export class SoundManager {
       osc2.type = "triangle";
       osc2.frequency.setValueAtTime(600, now + 0.08);
       osc2.frequency.exponentialRampToValueAtTime(150, now + 0.11);
-      gain2.gain.setValueAtTime(0.12, now + 0.08);
+      gain2.gain.setValueAtTime(0.12 * this.volume, now + 0.08);
       gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
       osc2.connect(gain2);
       gain2.connect(ctx.destination);

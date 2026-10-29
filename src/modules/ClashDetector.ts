@@ -77,8 +77,12 @@ export class ClashDetector {
     this.clashMarkerGroup = new THREE.Group();
     this.clashMarkerGroup.name = "ClashMarkerGroup";
 
-    if (this.engine.world?.scene?.three) {
-      this.engine.world.scene.three.add(this.clashMarkerGroup);
+    try {
+      if (this.engine.world?.scene?.three) {
+        this.engine.world.scene.three.add(this.clashMarkerGroup);
+      }
+    } catch (e) {
+      // Scene not initialized yet in headless/test environments
     }
   }
 

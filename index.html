@@ -8,9 +8,10 @@
   <title>BIM Viewer by Lalith Ebinezer</title>
   <meta name="description" content="Enterprise BIM Viewer with IFC model loading, 3D navigation, digital twin data, and section cutting tools." />
   <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#0A0A0C" />
+  <meta name="theme-color" content="#D4FF3F" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BIM Kintsugi" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -82,6 +83,11 @@
               <div id="saved-views-dropdown-content"></div>
             </div>
           </div>
+
+          <button class="btn-shortcuts-toggle" id="btn-top-pwa-install" title="Install BIM Kintsugi PWA App for Offline Field Use" style="display: none; background: rgba(212,255,63,0.15); border: 1px solid rgba(212,255,63,0.4); color: var(--accent-primary);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>INSTALL</span>
+          </button>
 
           <button class="btn-sidebar-toggle" id="btn-toggle-right" title="Toggle Scene & Properties">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -594,6 +600,10 @@
                   <input type="file" id="file-input" aria-label="Upload IFC or FRAG Model File" accept=".ifc,.frag" />
                 </div>
               </div>
+              <button type="button" class="btn-secondary" id="btn-trigger-model-diff" style="width: 100%; margin-top: 0.45rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.4rem 0.6rem; font-size: 0.68rem; font-weight: 700; border: 1px dashed var(--border-color); color: var(--text-primary); cursor: pointer;" title="Compare loaded models for 3D Revision Diff (Added, Removed, Modified elements)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/></svg>
+                <span>3D Revision Diff &amp; Federation</span>
+              </button>
             </div>
           </div>
         </div>
@@ -811,6 +821,25 @@
                   <button class="btn-secondary" id="btn-add-viewpoint" style="padding: 0.1rem 0.4rem; font-size: 0.62rem; cursor: pointer; color: var(--accent-500); border-color: var(--accent-500);">+ Bookmark View</button>
                 </div>
                 <div id="viewpoint-bookmarks-list" style="margin-bottom: 0.4rem;"></div>
+
+                <!-- Cinematic Keyframe Tour -->
+                <div class="section-subtitle" style="font-size: 0.68rem; margin-top: 0.65rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; border-top: 1px solid var(--border-subtle); padding-top: 0.4rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>Cinematic Keyframe Tour</span>
+                  <span class="value-badge" id="tour-waypoint-count">4 Keyframes</span>
+                </div>
+                <div style="display: flex; gap: 0.35rem; margin-top: 0.35rem; margin-bottom: 0.4rem;">
+                  <button type="button" class="btn-secondary" id="btn-tour-add-waypoint" style="flex: 1; padding: 0.25rem 0.35rem; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;" title="Capture current camera position as a keyframe">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <span>+ Keyframe</span>
+                  </button>
+                  <button type="button" class="btn-primary" id="btn-tour-play-panel" style="flex: 1; padding: 0.25rem 0.35rem; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem; background: var(--accent-primary); color: #000; font-weight: 700;" title="Play smooth cinematic keyframe camera animation">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Play Tour</span>
+                  </button>
+                  <button type="button" class="btn-secondary" id="btn-tour-stop-panel" style="display: none; padding: 0.25rem 0.35rem; font-size: 0.65rem; color: #ef4444; border-color: #ef4444;" title="Stop camera tour">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+                  </button>
+                </div>
               </div>
 
               <!-- CATEGORY 2: DISPLAY & RENDER SETTINGS -->
@@ -1263,6 +1292,12 @@
                     </svg>
                     <span>Export BOQ</span>
                   </button>
+                  <button type="button" class="btn-cost-action report" id="btn-export-exec-report"
+                    title="Generate Executive 4D/5D Twin Report (Print & PDF)"
+                    style="grid-column: span 2; background: linear-gradient(135deg, rgba(212,255,63,0.12), rgba(37,99,235,0.15)); border: 1px solid rgba(212,255,63,0.4); color: var(--text-primary); font-weight: 700;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Executive Twin Report (Print / PDF)</span>
+                  </button>
                 </div>
 
                 <button type="button" class="btn-cost-action ids" id="btn-run-ids-audit"
@@ -1494,6 +1529,34 @@
                 </div>
                 <input type="range" class="custom-slider" id="settings-mouse-sensitivity" aria-label="Mouse Look Sensitivity" min="0.1" max="3.0" step="0.1"
                   value="1.0" style="width: 100%;" />
+              </div>
+
+              <!-- Audio & Sound FX Settings -->
+              <div class="section-subtitle"
+                style="font-size: 0.65rem; margin-top: 0.35rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.35rem;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <span>Audio &amp; Sound FX</span>
+              </div>
+              <div class="scene-control-item"
+                style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.35rem 0.6rem; border-radius: 8px;">
+                <div class="scene-control-label"
+                  style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
+                  <span>UI Sound Effects</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="settings-toggle-sound" aria-label="Toggle UI Audio and Sound Effects" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="control-row">
+                <div class="control-label"
+                  style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                  <span>Master Volume</span>
+                  <span class="value-badge" id="val-sound-volume">70%</span>
+                </div>
+                <input type="range" class="custom-slider" id="settings-sound-volume" aria-label="Master Sound Effects Volume" min="0" max="1" step="0.05"
+                  value="0.7" style="width: 100%;" />
               </div>
 
               <div class="section-subtitle"
@@ -2182,6 +2245,20 @@
                   <div class="tool-desc">Snap-to-vertex point-to-point measurement, angle, area, and bounding box volume with live on-screen laser callouts.</div>
                 </div>
               </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">Executive Twin Report (Print &amp; PDF)</div>
+                  <div class="tool-desc">1-Click generation of an executive construction report modal. Synthesizes 4D SPI, 5D EVM S-Curve, category trade breakdown, 3D clash matrix, and 6D carbon LCA into a boardroom-ready vector print layout with JSON export.</div>
+                </div>
+              </div>
+              <div class="tool-card">
+                <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+                <div class="tool-info">
+                  <div class="tool-name">PWA &amp; Offline Jobsite Mode</div>
+                  <div class="tool-desc">Installable Progressive Web App with custom Service Worker caching WebAssembly loaders and core assets for reliable offline 3D model navigation on construction site iPads and tablets.</div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="help-tab-panel" id="help-tab-shortcuts">
@@ -2643,6 +2720,12 @@
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             <span>Export BOQ</span>
+          </button>
+          <button type="button" class="btn-cost-action report" id="drawer-btn-exec-report"
+            title="Generate Executive 4D/5D Twin Report (Print & PDF)"
+            style="grid-column: span 2; background: linear-gradient(135deg, rgba(212,255,63,0.12), rgba(37,99,235,0.15)); border: 1px solid rgba(212,255,63,0.4); color: var(--text-primary); font-weight: 700;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Executive Twin Report (Print / PDF)</span>
           </button>
         </div>
 
