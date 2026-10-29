@@ -591,7 +591,7 @@
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                   <span>Upload IFC</span>
-                  <input type="file" id="file-input" accept=".ifc,.frag" />
+                  <input type="file" id="file-input" aria-label="Upload IFC or FRAG Model File" accept=".ifc,.frag" />
                 </div>
               </div>
             </div>
@@ -739,7 +739,7 @@
                       <span>Camera Far Limit</span>
                       <span class="value-badge" id="val-camera-far">3000m</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-camera-far" min="100" max="10000" step="100" value="3000" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-camera-far" aria-label="Camera Far Limit" min="100" max="10000" step="100" value="3000" style="width: 100%;" />
                   </div>
 
                   <div class="control-row" style="grid-column: span 2;">
@@ -747,7 +747,7 @@
                       <span>Camera Near Limit</span>
                       <span class="value-badge" id="val-camera-near">0.01m</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-camera-near" min="0.01" max="10.0" step="0.05" value="0.01" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-camera-near" aria-label="Camera Near Limit" min="0.01" max="10.0" step="0.05" value="0.01" style="width: 100%;" />
                   </div>
 
                   <div class="control-row" style="grid-column: span 2;">
@@ -755,7 +755,7 @@
                       <span>Field of View (FOV)</span>
                       <span class="value-badge" id="val-camera-fov">55°</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-camera-fov" min="30" max="120" step="1" value="55" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-camera-fov" aria-label="Field of View (FOV)" min="30" max="120" step="1" value="55" style="width: 100%;" />
                   </div>
 
                   <div class="control-row" style="grid-column: span 2;">
@@ -763,7 +763,7 @@
                       <span>Zoom & Dolly Speed</span>
                       <span class="value-badge" id="val-camera-speed">0.3x</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-camera-speed" min="0.1" max="3.0" step="0.1" value="0.3" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-camera-speed" aria-label="Zoom and Dolly Speed" min="0.1" max="3.0" step="0.1" value="0.3" style="width: 100%;" />
                   </div>
 
                   <div class="scene-control-item" style="grid-column: span 2;">
@@ -771,7 +771,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 22 12 17 22 22 12 2" /></svg>
                       <span>Navigation Mode</span>
                     </div>
-                    <select id="settings-camera-mode" class="custom-select">
+                    <select id="settings-camera-mode" aria-label="Camera Navigation Mode" class="custom-select">
                       <option value="Orbit">Orbit</option>
                       <option value="FirstPerson">First Person</option>
                       <option value="Plan">Plan</option>
@@ -783,7 +783,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2" /></svg>
                       <span>Projection</span>
                     </div>
-                    <select id="settings-camera-projection" class="custom-select">
+                    <select id="settings-camera-projection" aria-label="Camera Projection Type" class="custom-select">
                       <option value="Perspective">Perspective</option>
                       <option value="Orthographic">Orthographic</option>
                     </select>
@@ -795,7 +795,7 @@
                       <span>Allow Input</span>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="settings-camera-input" checked />
+                      <input type="checkbox" id="settings-camera-input" aria-label="Allow Camera Input" checked />
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -821,7 +821,7 @@
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M12 12 2.5 7.5M12 12l9.5-4.5"/></svg>
                       <span>UI Theme Preset</span>
                     </div>
-                    <select id="select-theme-toggle-settings" class="custom-select select-theme-toggle">
+                    <select id="select-theme-toggle-settings" aria-label="UI Color Theme" class="custom-select select-theme-toggle">
                       <option value="obsidian" selected>Obsidian Pro (Dark & Lime)</option>
                       <option value="zen">Zen Minimalist (Charcoal & Amber)</option>
                       <option value="cyberpunk">Cyberpunk Neon (Midnight & Cyan)</option>
@@ -835,7 +835,7 @@
                       <span>Grid layer</span>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="settings-toggle-grid" checked />
+                      <input type="checkbox" id="settings-toggle-grid" aria-label="Toggle World Grid" checked />
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -846,7 +846,7 @@
                       <span>Show Logo</span>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="settings-toggle-logo" />
+                      <input type="checkbox" id="settings-toggle-logo" aria-label="Toggle Watermark Logo" />
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -857,7 +857,7 @@
                       <span>Shadows</span>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="settings-toggle-shadows" />
+                      <input type="checkbox" id="settings-toggle-shadows" aria-label="Toggle Contact Shadows" />
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -901,7 +901,7 @@
                     </div>
 
                     <div class="custom-highlight-selector-row">
-                      <select id="select-custom-highlighter-style" class="custom-highlight-select">
+                      <select id="select-custom-highlighter-style" aria-label="Custom Highlighter Preset Style" class="custom-highlight-select">
                         <option value="Red">Red Alert (#ef4444)</option>
                         <option value="Green">Pass / Green (#10b981)</option>
                         <option value="Amber">Warning / Amber (#f59e0b)</option>
@@ -949,7 +949,7 @@
                     <span>Disassembly Clustering</span>
                     <span class="value-badge" id="badge-explosion-mode">CATEGORIES</span>
                   </div>
-                  <select class="custom-select" id="select-explosion-mode" style="width: 100%;">
+                  <select class="custom-select" id="select-explosion-mode" aria-label="Model Disassembly Hierarchy" style="width: 100%;">
                     <option value="category-cluster" selected>Category Clusters (Sorted)</option>
                     <option value="asset-dense-cluster">Asset & Equipment Matrix (Tandem)</option>
                     <option value="radial">Radial 3D Spatial</option>
@@ -960,7 +960,7 @@
                     <span>Disassembly Factor</span>
                     <span class="value-badge" id="val-explosion-factor">0%</span>
                   </div>
-                  <input type="range" class="custom-slider" id="settings-explosion-slider" min="0" max="100" step="1" value="0" style="width: 100%;" />
+                  <input type="range" class="custom-slider" id="settings-explosion-slider" aria-label="Model Explosion Expansion Slider" min="0" max="100" step="1" value="0" style="width: 100%;" />
                 </div>
               </div>
 
@@ -972,7 +972,7 @@
                       <span>Solar Sun Azimuth</span>
                       <span class="value-badge" id="val-sun-azimuth">135°</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-sun-azimuth" min="0" max="360" step="5" value="135" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-sun-azimuth" aria-label="Sun Light Azimuth Angle" min="0" max="360" step="5" value="135" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -980,7 +980,7 @@
                       <span>Solar Sun Elevation</span>
                       <span class="value-badge" id="val-sun-elevation">45°</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-sun-elevation" min="5" max="90" step="1" value="45" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-sun-elevation" aria-label="Sun Light Elevation Angle" min="5" max="90" step="1" value="45" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -988,7 +988,7 @@
                       <span>Ambient Light</span>
                       <span class="value-badge" id="val-ambient-light">1.5</span>
                     </div>
-                    <input type="range" class="custom-slider" id="ambient-light-slider" min="0" max="4" step="0.1" value="1.5" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="ambient-light-slider" aria-label="Ambient Light Intensity" min="0" max="4" step="0.1" value="1.5" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -996,7 +996,7 @@
                       <span>Directional Light</span>
                       <span class="value-badge" id="val-dir-light">1.5</span>
                     </div>
-                    <input type="range" class="custom-slider" id="dir-light-slider" min="0" max="4" step="0.1" value="1.5" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="dir-light-slider" aria-label="Directional Light Intensity" min="0" max="4" step="0.1" value="1.5" style="width: 100%;" />
                   </div>
                 </div>
               </div>
@@ -1009,7 +1009,7 @@
                       <span>Enable Post-Processing</span>
                     </div>
                     <label class="toggle-switch">
-                      <input type="checkbox" id="settings-toggle-postproc" />
+                      <input type="checkbox" id="settings-toggle-postproc" aria-label="Toggle Post-Processing Shaders" />
                       <span class="toggle-slider"></span>
                     </label>
                   </div>
@@ -1019,7 +1019,7 @@
                       <span>Outline Line Thickness</span>
                       <span class="value-badge" id="val-postproc-thickness">1.2</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-thickness" min="0.2" max="4.0" step="0.1" value="1.2" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-thickness" aria-label="Post-Processing Outline Thickness" min="0.2" max="4.0" step="0.1" value="1.2" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -1027,7 +1027,7 @@
                       <span>Hand-Drawn Sketch Jitter</span>
                       <span class="value-badge" id="val-postproc-jitter">0.0018</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-jitter" min="0" max="0.008" step="0.0002" value="0.0018" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-jitter" aria-label="Post-Processing Hand-Drawn Jitter" min="0" max="0.008" step="0.0002" value="0.0018" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -1035,7 +1035,7 @@
                       <span>Bloom Glow Intensity</span>
                       <span class="value-badge" id="val-postproc-bloom">0.4</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-bloom" min="0.0" max="1.5" step="0.05" value="0.4" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-bloom" aria-label="Post-Processing Bloom Intensity" min="0.0" max="1.5" step="0.05" value="0.4" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -1043,7 +1043,7 @@
                       <span>Radial Vignette Shading</span>
                       <span class="value-badge" id="val-postproc-vignette">0.35</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-vignette" min="0.0" max="1.0" step="0.05" value="0.35" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-vignette" aria-label="Post-Processing Vignette Intensity" min="0.0" max="1.0" step="0.05" value="0.35" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -1051,7 +1051,7 @@
                       <span>Chromatic Aberration</span>
                       <span class="value-badge" id="val-postproc-chroma">0.05</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-chroma" min="0.0" max="0.8" step="0.02" value="0.05" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-chroma" aria-label="Post-Processing Chromatic Aberration" min="0.0" max="0.8" step="0.02" value="0.05" style="width: 100%;" />
                   </div>
 
                   <div class="control-row">
@@ -1059,14 +1059,14 @@
                       <span>Quantized Toon Steps</span>
                       <span class="value-badge" id="val-postproc-toon">4</span>
                     </div>
-                    <input type="range" class="custom-slider" id="settings-postproc-toon" min="2" max="8" step="1" value="4" style="width: 100%;" />
+                    <input type="range" class="custom-slider" id="settings-postproc-toon" aria-label="Post-Processing Toon Shader Steps" min="2" max="8" step="1" value="4" style="width: 100%;" />
                   </div>
 
                   <div class="scene-control-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.35rem 0.6rem; border-radius: 8px; margin-top: 0.2rem;">
                     <div class="scene-control-label" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
                       <span>Shader FX Overlay</span>
                     </div>
-                    <select id="settings-postproc-fxmode" class="custom-select">
+                    <select id="settings-postproc-fxmode" aria-label="Post-Processing Shader FX Preset Mode" class="custom-select">
                       <option value="0">Default (Theme Auto)</option>
                       <option value="1">Blueprint Draft Grid</option>
                       <option value="2">CRT Cyber Scanlines</option>
@@ -1282,11 +1282,11 @@
                 <div class="form-inputs-group">
                   <div class="form-input-box">
                     <label for="cost-unit-cost">Unit Cost ($)</label>
-                    <input type="number" id="cost-unit-cost" min="0" step="1" />
+                    <input type="number" id="cost-unit-cost" aria-label="Unit Cost Rate" min="0" step="1" />
                   </div>
                   <div class="form-input-box">
                     <label for="cost-quantity">Quantity</label>
-                    <input type="number" id="cost-quantity" min="0" step="0.1" />
+                    <input type="number" id="cost-quantity" aria-label="Item Takeoff Quantity" min="0" step="0.1" />
                   </div>
                   <div class="prop-row" style="margin-top:0.2rem;">
                     <span class="prop-label">Calculated Element Cost</span>
@@ -1305,7 +1305,7 @@
                     </div>
                     <div class="form-input-box">
                       <label for="sched-status">Task Status</label>
-                      <select id="sched-status">
+                      <select id="sched-status" aria-label="Task Schedule Status">
                         <option value="Planned">Planned</option>
                         <option value="In Progress">In Progress</option>
                         <option value="Completed">Completed</option>
@@ -1313,11 +1313,11 @@
                     </div>
                     <div class="form-input-box">
                       <label for="sched-start">Start Date</label>
-                      <input type="date" id="sched-start" />
+                      <input type="date" id="sched-start" aria-label="Task Start Date" />
                     </div>
                     <div class="form-input-box">
                       <label for="sched-end">End Date</label>
-                      <input type="date" id="sched-end" />
+                      <input type="date" id="sched-end" aria-label="Task Finish Date" />
                     </div>
                   </div>
 
@@ -1371,7 +1371,7 @@
                     style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
                     <span>Camera Gameplay Preset</span>
                   </div>
-                  <select id="settings-game-camera-preset" class="custom-select">
+                  <select id="settings-game-camera-preset" aria-label="Gaming Camera Experience Preset" class="custom-select">
                     <option value="Default">Default Viewer</option>
                     <option value="FPS">FPS (First-Person)</option>
                     <option value="Sports">Sports (Bird's Eye)</option>
@@ -1388,20 +1388,20 @@
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Custom FOV</span>
                   <span class="value-badge" id="val-fps-fov">105</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-fps-fov" min="60" max="120" step="1" value="105"
+                <input type="range" class="custom-slider" id="settings-fps-fov" aria-label="First-Person Field of View" min="60" max="120" step="1" value="105"
                   style="width: 100%;" />
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Camera Shake</span>
                   <label class="toggle-switch">
-                    <input type="checkbox" id="settings-fps-shake" />
+                    <input type="checkbox" id="settings-fps-shake" aria-label="Camera Head Bob and Camera Shake" />
                     <span class="toggle-slider"></span>
                   </label>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Weapon View</span>
-                  <select id="settings-fps-weapon-style" class="custom-select">
+                  <select id="settings-fps-weapon-style" aria-label="FPS Measurement Crosshair Style" class="custom-select">
                     <option value="Default">Default</option>
                     <option value="Wide">Wide</option>
                   </select>
@@ -1415,14 +1415,14 @@
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Camera Height</span>
                   <span class="value-badge" id="val-sports-height">15.0</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-sports-height" min="0" max="20" step="0.5"
+                <input type="range" class="custom-slider" id="settings-sports-height" aria-label="Sports Camera Overhead Height" min="0" max="20" step="0.5"
                   value="15" style="width: 100%;" />
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Zoom Level</span>
                   <span class="value-badge" id="val-sports-zoom">5.0</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-sports-zoom" min="0" max="10" step="0.1"
+                <input type="range" class="custom-slider" id="settings-sports-zoom" aria-label="Sports Camera Telephoto Zoom" min="0" max="10" step="0.1"
                   value="5" style="width: 100%;" />
               </div>
 
@@ -1431,7 +1431,7 @@
                 style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Attachment Point</span>
-                  <select id="settings-racing-attachment" class="custom-select">
+                  <select id="settings-racing-attachment" aria-label="Racing Camera Rig Attachment" class="custom-select">
                     <option value="Bumper">Bumper (Front)</option>
                     <option value="Hood">Hood (Rear/Top)</option>
                   </select>
@@ -1441,7 +1441,7 @@
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Racing FOV</span>
                   <span class="value-badge" id="val-racing-fov">80</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-racing-fov" min="70" max="90" step="1" value="80"
+                <input type="range" class="custom-slider" id="settings-racing-fov" aria-label="Racing High-Speed FOV" min="70" max="90" step="1" value="80"
                   style="width: 100%;" />
               </div>
 
@@ -1452,13 +1452,13 @@
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Camera Distance</span>
                   <span class="value-badge" id="val-thirdperson-distance">8.0</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-thirdperson-distance" min="2" max="30" step="0.5"
+                <input type="range" class="custom-slider" id="settings-thirdperson-distance" aria-label="Third-Person Orbit Distance" min="2" max="30" step="0.5"
                   value="8" style="width: 100%;" />
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Auto-Follow Rotation</span>
                   <label class="toggle-switch">
-                    <input type="checkbox" id="settings-thirdperson-autofollow" checked />
+                    <input type="checkbox" id="settings-thirdperson-autofollow" aria-label="Third-Person Auto-Follow Target" checked />
                     <span class="toggle-slider"></span>
                   </label>
                 </div>
@@ -1471,7 +1471,7 @@
                   <span>Keyboard Controls</span>
                 </div>
                 <label class="toggle-switch">
-                  <input type="checkbox" id="settings-enable-wasd" checked />
+                  <input type="checkbox" id="settings-enable-wasd" aria-label="Enable WASD Keyboard Navigation" checked />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
@@ -1482,7 +1482,7 @@
                   <span>Movement Speed</span>
                   <span class="value-badge" id="val-wasd-speed">0.4</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-wasd-speed" min="0.1" max="2.0" step="0.05"
+                <input type="range" class="custom-slider" id="settings-wasd-speed" aria-label="WASD Walk Speed" min="0.1" max="2.0" step="0.05"
                   value="0.4" style="width: 100%;" />
               </div>
 
@@ -1492,7 +1492,7 @@
                   <span>Mouse Sensitivity</span>
                   <span class="value-badge" id="val-mouse-sensitivity">1.0</span>
                 </div>
-                <input type="range" class="custom-slider" id="settings-mouse-sensitivity" min="0.1" max="3.0" step="0.1"
+                <input type="range" class="custom-slider" id="settings-mouse-sensitivity" aria-label="Mouse Look Sensitivity" min="0.1" max="3.0" step="0.1"
                   value="1.0" style="width: 100%;" />
               </div>
 
@@ -1582,7 +1582,7 @@
                     <span>3D Pin Annotation Tool</span>
                   </div>
                   <label class="toggle-switch" for="settings-toggle-annotation">
-                    <input type="checkbox" id="settings-toggle-annotation" />
+                    <input type="checkbox" id="settings-toggle-annotation" aria-label="Toggle 3D Dimension Annotations" />
                     <span class="toggle-slider"></span>
                   </label>
                 </div>
@@ -1657,7 +1657,7 @@
                       <button type="button" id="btn-sidebar-save-pin" style="flex: 1; background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save</button>
                       <button type="button" id="btn-sidebar-focus-pin" style="background: var(--bg-card); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus</button>
                       <button type="button" id="btn-sidebar-xray-pin" style="background: var(--bg-card); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray</button>
-                      <button type="button" id="btn-sidebar-delete-pin" style="background: var(--bg-card); color: var(--color-danger, #ef4444); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      <button type="button" id="btn-sidebar-delete-pin" aria-label="Delete Bookmark Pin" title="Delete Bookmark Pin" style="background: var(--bg-card); color: var(--color-danger, #ef4444); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                     </div>
                   </div>
 
@@ -1712,7 +1712,7 @@
                     <span>6-Axis Section Box</span>
                   </div>
                   <label class="toggle-switch" for="settings-toggle-section-box">
-                    <input type="checkbox" id="settings-toggle-section-box" />
+                    <input type="checkbox" id="settings-toggle-section-box" aria-label="Toggle Interactive 3D Section Box" />
                     <span class="toggle-slider"></span>
                   </label>
                 </div>
@@ -1721,7 +1721,7 @@
                   <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted);">
                     <span>Height Slicing (Y-Min / Y-Max)</span>
                   </div>
-                  <input type="range" class="custom-slider" id="section-box-ymax" min="-20" max="80" step="1" value="50" style="width: 100%;" />
+                  <input type="range" class="custom-slider" id="section-box-ymax" aria-label="Section Box Elevation Slice Height" min="-20" max="80" step="1" value="50" style="width: 100%;" />
                 </div>
               </div>
 
@@ -1736,7 +1736,7 @@
                   <textarea id="bcf-topic-desc" placeholder="Issue description..." rows="2" style="font-size: 0.7rem; padding: 0.3rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; resize: vertical;"></textarea>
 
                   <div style="display: flex; gap: 0.3rem;">
-                    <select id="bcf-topic-type" class="custom-select" style="flex: 1;">
+                    <select id="bcf-topic-type" aria-label="BCF Topic Issue Type" class="custom-select" style="flex: 1;">
                       <option value="Clash">Clash</option>
                       <option value="Coordination">Coordination</option>
                       <option value="Schedule Risk">Schedule Risk</option>
@@ -1744,7 +1744,7 @@
                       <option value="Information">Information</option>
                       <option value="Fault">Fault</option>
                     </select>
-                    <select id="bcf-topic-priority" class="custom-select" style="flex: 1;">
+                    <select id="bcf-topic-priority" aria-label="BCF Topic Priority Level" class="custom-select" style="flex: 1;">
                       <option value="Minor">Minor</option>
                       <option value="Normal" selected>Normal</option>
                       <option value="Major">Major</option>
@@ -1814,7 +1814,7 @@
                     Category &amp; Spatial Operations
                   </div>
                   <div style="display: flex; gap: 0.3rem;">
-                    <select id="select-query-category" class="custom-select" style="flex: 1;">
+                    <select id="select-query-category" aria-label="IFC Query Category Filter" class="custom-select" style="flex: 1;">
                       <option value="IFCWALL">IFCWALL</option>
                       <option value="IFCSLAB">IFCSLAB</option>
                       <option value="IFCDOOR">IFCDOOR</option>
@@ -1868,7 +1868,7 @@
           </div>
 
           <div class="gantt-bar-center">
-            <input type="range" class="timeline-slider" id="timeline-slider" min="0" max="60" value="0" />
+            <input type="range" class="timeline-slider" id="timeline-slider" aria-label="4D Construction Timeline Progress Scrubber" min="0" max="60" value="0" />
             <div class="gantt-milestones-row">
               <span class="gantt-pill active" data-week="1">1. Foundations</span>
               <span class="gantt-pill" data-week="8">2. Columns</span>
@@ -1903,7 +1903,7 @@
                 <button class="btn-speed-pill" data-speed="5">5x</button>
                 <button class="btn-speed-pill" data-speed="10">10x</button>
               </div>
-              <select id="timeline-speed" class="timeline-speed-select" style="display: none;">
+              <select id="timeline-speed" aria-label="4D Simulation Playback Speed" class="timeline-speed-select" style="display: none;">
                 <option value="1">1 Day/s</option>
                 <option value="2" selected>2 Days/s</option>
                 <option value="5">5 Days/s</option>
@@ -1918,12 +1918,12 @@
 
             <label class="btn-timeline-csv" title="Upload Custom 4D Schedule CSV with Adjusted Dates">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV
-              <input type="file" id="btn-import-4d-csv-input" accept=".csv" style="display: none;" />
+              <input type="file" id="btn-import-4d-csv-input" aria-label="Import 4D CSV Schedule File" accept=".csv" style="display: none;" />
             </label>
 
             <label class="btn-timeline-csv" title="Import MS Project (.xml) or Primavera (.xer) Schedule">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> MSP / P6
-              <input type="file" id="btn-import-schedule-advanced" accept=".xml,.xer" style="display: none;" />
+              <input type="file" id="btn-import-schedule-advanced" aria-label="Import MS Project XML or Primavera P6 XER File" accept=".xml,.xer" style="display: none;" />
             </label>
 
             <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
@@ -1949,15 +1949,15 @@
 
           <div class="timeline-legend">
             <label class="legend-item" title="Click to change Planned status model color">
-              <input type="color" id="4d-color-planned" value="#6b7280" class="legend-color-picker" />
+              <input type="color" id="4d-color-planned" aria-label="4D Planned Activity Color" value="#6b7280" class="legend-color-picker" />
               <span>Planned</span>
             </label>
             <label class="legend-item" title="Click to change In Progress status model color">
-              <input type="color" id="4d-color-active" value="#f59e0b" class="legend-color-picker" />
+              <input type="color" id="4d-color-active" aria-label="4D In-Progress Activity Color" value="#f59e0b" class="legend-color-picker" />
               <span>In Progress</span>
             </label>
             <label class="legend-item" title="Click to change Completed status model color">
-              <input type="color" id="4d-color-complete" value="#10b981" class="legend-color-picker" />
+              <input type="color" id="4d-color-complete" aria-label="4D Completed Activity Color" value="#10b981" class="legend-color-picker" />
               <span>Completed</span>
             </label>
           </div>
@@ -2362,7 +2362,7 @@
         </div>
         <div class="drawer-header-actions">
           <span id="measurement-mode-badge" class="drawer-status-tag">Ready</span>
-          <button class="btn-icon drawer-close-btn" data-target="measurement-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="measurement-panel" aria-label="Close Dimensions Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
@@ -2392,7 +2392,7 @@
           <div class="section-card-row">
             <span>Vertex Snapping</span>
             <label class="toggle-switch">
-              <input type="checkbox" id="chk-measure-snap" checked />
+              <input type="checkbox" id="chk-measure-snap" aria-label="Enable Measurement Vertex Snap" checked />
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -2418,7 +2418,7 @@
         </div>
         <div class="drawer-header-actions">
           <span id="clash-critical-badge" class="drawer-status-tag tag-critical">0 Critical</span>
-          <button class="btn-icon drawer-close-btn" data-target="clash-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="clash-panel" aria-label="Close Clash Matrix Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
@@ -2449,7 +2449,7 @@
         </div>
         <div class="drawer-header-actions">
           <span id="carbon-rating-grade" class="carbon-grade-badge grade-A">Grade A</span>
-          <button class="btn-icon drawer-close-btn" data-target="carbon-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="carbon-panel" aria-label="Close Carbon Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
@@ -2486,7 +2486,7 @@
         </div>
         <div class="drawer-header-actions">
           <span class="drawer-status-tag tag-ai">Active</span>
-          <button class="btn-icon drawer-close-btn" data-target="copilot-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="copilot-panel" aria-label="Close Copilot Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="copilot-quick-chips thin-scrollbar">
@@ -2517,7 +2517,7 @@
         </div>
         <div class="drawer-header-actions">
           <span id="collab-user-count-badge" class="drawer-status-tag">4 Online</span>
-          <button class="btn-icon drawer-close-btn" data-target="collab-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="collab-panel" aria-label="Close Collaboration Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
 
@@ -2562,10 +2562,10 @@
         <div class="drawer-header-actions">
           <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import
-            <input type="file" id="btn-import-bcf-input" accept=".bcfzip,.bcf,.json" style="display: none;" />
+            <input type="file" id="btn-import-bcf-input" aria-label="Import BCF Package File" accept=".bcfzip,.bcf,.json" style="display: none;" />
           </label>
           <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
-          <button class="btn-icon drawer-close-btn" data-target="bcf-issues-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="bcf-issues-panel" aria-label="Close BCF Issues Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
@@ -2573,7 +2573,7 @@
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <input type="text" id="bcf-new-title" placeholder="Issue Title (e.g. Duct clash with W12 beam)" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.72rem;" />
             <div style="display: flex; gap: 0.4rem;">
-              <select id="bcf-new-priority" style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+              <select id="bcf-new-priority" aria-label="BCF Issue Priority" style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
                 <option value="Critical">Critical Priority</option>
                 <option value="Major">Major Priority</option>
                 <option value="Normal" selected>Normal Priority</option>
@@ -2599,7 +2599,7 @@
         </div>
         <div class="drawer-header-actions">
           <span id="drawer-cost-currency-badge" class="carbon-grade-badge grade-A" style="background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">USD $</span>
-          <button class="btn-icon drawer-close-btn" data-target="cost-control-panel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="cost-control-panel" aria-label="Close Cost Control Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
