@@ -6344,7 +6344,7 @@ function updateScheduleWidgetUI() {
       }
 
       // Auto-collapse sidebar drawer on mobile for direct viewport visibility
-      if (window.innerWidth <= 1024) {
+      if (window.innerWidth <= 1080) {
         if (typeof (window as any).closeAllSidebars === 'function') {
           (window as any).closeAllSidebars();
         }
@@ -6801,7 +6801,7 @@ if (btnQuickExplode) {
 }
 
 window.addEventListener("resize", () => {
-  if (window.innerWidth > 1024) {
+  if (window.innerWidth > 1080) {
     if (typeof (window as any).closeAllSidebars === "function") {
       (window as any).closeAllSidebars();
     }

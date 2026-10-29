@@ -87,7 +87,7 @@ export class UIManager {
       const sidebar = document.querySelector(isLeft ? '.left-sidebar' : '.right-sidebar');
       if (!sidebar) return;
 
-      const isMobile = window.innerWidth <= 1024;
+      const isMobile = window.innerWidth <= 1080;
       const currentActiveBtn = tabBar.querySelector('.sidebar-tab-btn.active, .tab-btn.active');
       const currentActiveTab = currentActiveBtn?.getAttribute('data-tab');
 
@@ -154,7 +154,7 @@ export class UIManager {
     });
 
     document.getElementById('btn-toggle-left')?.addEventListener('click', () => {
-      if (window.innerWidth > 1024) {
+      if (window.innerWidth > 1080) {
         document.body.classList.toggle('left-sidebar-collapsed');
         if (!document.body.classList.contains('left-sidebar-collapsed')) {
           document.body.classList.add('right-sidebar-collapsed');
@@ -170,7 +170,7 @@ export class UIManager {
     });
 
     document.getElementById('btn-toggle-right')?.addEventListener('click', () => {
-      if (window.innerWidth > 1024) {
+      if (window.innerWidth > 1080) {
         document.body.classList.toggle('right-sidebar-collapsed');
         if (!document.body.classList.contains('right-sidebar-collapsed')) {
           document.body.classList.add('left-sidebar-collapsed');
