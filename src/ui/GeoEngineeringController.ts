@@ -56,13 +56,7 @@ export function initGeoEngineeringController(world: any, fragmentsCore?: any) {
     suite.setSunSite(loc.latitude, loc.longitude, loc.trueNorthAngle || 0);
   };
 
-  const refreshSun = (apply: boolean) => {
-    syncSite();
-    const d = dateInput?.value ? new Date(dateInput.value + "T12:00:00") : new Date();
-    suite.sunState.dayOfYear = dayOfYearFromDate(d);
-    suite.sunState.hour = Number(hourInput?.value ?? 12);
-    const sun = apply ? suite.applySun() : suite.getSunNow();
-    if (!apply && pathToggle?.checked) suite.drawSunPath(true);
+  const updateSunUI = (sun: { azimuth: number; elevation: number }, hour: number) => {
     const s = suite.sunState;
     const dl = computeDaylight(computeSunPath(s.lat, s.lon, s.dayOfYear, 0.1, s.utcOffset));
     const r = $("geo-sun-readout");
@@ -74,14 +68,31 @@ export function initGeoEngineeringController(world: any, fragmentsCore?: any) {
           : "Polar night — sun below horizon all day");
     }
     const hv = $("geo-sun-hour-val");
-    if (hv) hv.textContent = fmtHour(s.hour);
+    if (hv) hv.textContent = fmtHour(hour);
     const badge = $("geo-sun-badge");
     if (badge) badge.textContent = sun.elevation > 0 ? `☀ ${sun.elevation.toFixed(0)}°` : "Night";
-    if (!pathToggle?.checked) suite.hideSunPath();
+  };
+
+  const refreshSun = (apply: boolean) => {
+    syncSite();
+    const d = dateInput?.value ? new Date(dateInput.value + "T12:00:00") : new Date();
+    suite.sunState.dayOfYear = dayOfYearFromDate(d);
+    suite.sunState.hour = Number(hourInput?.value ?? 12);
+    const sun = apply ? suite.applySun() : suite.getSunNow();
+    if (!apply && pathToggle?.checked) suite.drawSunPath(true);
+    if (!pathToggle?.checked && !suite.isPlayingDayCycle()) suite.hideSunPath();
+    updateSunUI(sun, suite.sunState.hour);
     return sun;
   };
 
-  hourInput?.addEventListener("input", () => refreshSun(true));
+  hourInput?.addEventListener("input", () => {
+    if (suite.isPlayingDayCycle()) {
+      suite.stopDayCycle();
+      const playBtn = $("geo-sun-play");
+      if (playBtn) playBtn.textContent = "▶ Play Day Cycle";
+    }
+    refreshSun(true);
+  });
   dateInput?.addEventListener("change", () => refreshSun(true));
   pathToggle?.addEventListener("change", () => { refreshSun(false); click(); });
   document.querySelectorAll<HTMLButtonElement>(".geo-sun-preset").forEach((b) =>
@@ -99,11 +110,21 @@ export function initGeoEngineeringController(world: any, fragmentsCore?: any) {
   $("geo-sun-play")?.addEventListener("click", (e) => {
     syncSite();
     const btn = e.currentTarget as HTMLButtonElement;
-    const playing = suite.playDayCycle((hour) => {
-      if (hourInput) hourInput.value = String(hour);
-      refreshSun(false);
+    const playing = suite.playDayCycle((hour, sun) => {
+      if (hourInput) {
+        hourInput.value = hour.toFixed(2);
+      }
+      updateSunUI(sun, hour);
     });
     btn.textContent = playing ? "■ Stop Cycle" : "▶ Play Day Cycle";
+    if (playing) {
+      if (pathToggle && !pathToggle.checked) {
+        pathToggle.checked = true;
+      }
+      showToast("Day cycle playing — sun and shadows animating", "info");
+    } else {
+      showToast("Day cycle stopped", "info");
+    }
     click();
   });
 

@@ -593,7 +593,12 @@ export class GeoEngineeringSuite {
       if (r?.three && this.world.scene?.three && this.world.camera?.three) {
         r.three.render(this.world.scene.three, this.world.camera.three);
       }
-      if (r) r.needsUpdate = true;
+      if (r) {
+        r.needsUpdate = true;
+        if (typeof (r as any).update === "function") {
+          (r as any).update();
+        }
+      }
     } catch {
       /* noop */
     }
@@ -711,19 +716,34 @@ export class GeoEngineeringSuite {
     this.drawSunPath(false);
   }
 
-  public playDayCycle(onTick: (hour: number, sun: { azimuth: number; elevation: number }) => void): boolean {
+  public isPlayingDayCycle(): boolean {
+    return this.sunAnimId !== null;
+  }
+
+  public stopDayCycle() {
     if (this.sunAnimId !== null) {
       cancelAnimationFrame(this.sunAnimId);
       this.sunAnimId = null;
+    }
+  }
+
+  public playDayCycle(onTick: (hour: number, sun: { azimuth: number; elevation: number }) => void): boolean {
+    if (this.sunAnimId !== null) {
+      this.stopDayCycle();
       return false;
+    }
+    // Automatically ensure sun path group is visible so user sees the sun movement
+    if (!this.sunGroup.visible) {
+      this.sunGroup.visible = true;
     }
     let last = performance.now();
     const step = (t: number) => {
-      const dt = (t - last) / 1000;
+      const dt = Math.min(0.2, (t - last) / 1000); // cap delta time to avoid large jumps
       last = t;
-      this.sunState.hour += dt * 1.5; // 1.5 h per second
+      this.sunState.hour += dt * 1.5; // 1.5 daylight hours per real second
       if (this.sunState.hour >= 21) this.sunState.hour = 5;
-      onTick(this.sunState.hour, this.applySun());
+      const sun = this.applySun();
+      onTick(this.sunState.hour, sun);
       this.sunAnimId = requestAnimationFrame(step);
     };
     this.sunAnimId = requestAnimationFrame(step);
