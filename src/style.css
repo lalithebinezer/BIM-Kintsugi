@@ -7655,6 +7655,8 @@ body.right-sidebar-collapsed .right-sidebar {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .drawer-tool-grid {

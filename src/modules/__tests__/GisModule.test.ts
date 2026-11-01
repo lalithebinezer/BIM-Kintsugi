@@ -190,4 +190,126 @@ describe("GisModule Unit Tests", () => {
     const res = await gis.toggleSpaceFlight();
     expect(typeof res).toBe("boolean");
   });
+
+  it("should compute accurate geodesic distance and initial bearing", () => {
+    // Tokyo Station (35.6812, 139.7671) to Tokyo Tower (35.6586, 139.7454) ~3.25 km
+    const dist = gis.calculateGeodesicDistance(35.6812, 139.7671, 35.6586, 139.7454);
+    expect(dist).toBeGreaterThan(3100);
+    expect(dist).toBeLessThan(3400);
+
+    const bearing = gis.calculateInitialBearing(35.6812, 139.7671, 35.6586, 139.7454);
+    expect(bearing).toBeGreaterThan(200);
+    expect(bearing).toBeLessThan(230); // South-Southwest
+  });
+
+  it("should manage Survey Ground Control Points (GCPs) and measure baselines", () => {
+    const defaultPts = gis.getSurveyPoints();
+    expect(defaultPts.length).toBeGreaterThanOrEqual(3);
+    expect(defaultPts.some((p) => p.id === "BM-01")).toBe(true);
+    expect(defaultPts.some((p) => p.id === "GCP-01")).toBe(true);
+
+    const newPt = gis.addSurveyPoint({
+      name: "Boundary Monument 4",
+      code: "GCP-04",
+      type: "BOUNDARY",
+      localX: 80,
+      localY: 0.5,
+      localZ: -45,
+      color: "#ec4899",
+    });
+    expect(newPt.id).toBeDefined();
+    expect(newPt.latitude).toBeDefined();
+    expect(newPt.longitude).toBeDefined();
+
+    // Measure baseline between BM-01 and GCP-04
+    const bm = defaultPts.find((p) => p.id === "BM-01")!;
+    const measurement = gis.measureDistanceBetweenPoints(bm.id, newPt.id);
+    expect(measurement).not.toBeNull();
+    if (measurement) {
+      expect(measurement.localDistance).toBeGreaterThan(0);
+      expect(measurement.geodesicDistance).toBeGreaterThan(0);
+      expect(measurement.initialBearing).toBeGreaterThanOrEqual(0);
+      expect(measurement.deltaElevation).toBeCloseTo(0.5, 1);
+    }
+
+    // Export Survey CSV
+    const csv = gis.exportSurveyPointsCsv();
+    expect(csv).toContain("Point_ID,Name,Code,Type,Local_X_m,Local_Y_m,Local_Z_m,Latitude,Longitude");
+    expect(csv).toContain("GCP-04");
+    expect(csv).toContain("BM-01");
+
+    // Remove point
+    const removed = gis.removeSurveyPoint(newPt.id);
+    expect(removed).toBe(true);
+    expect(gis.getSurveyPoints().some((p) => p.id === newPt.id)).toBe(false);
+  });
+
+  it("should generate valid ESRI World File (.wld) and Projection WKT (.prj)", () => {
+    gis.setGeoreference({ latitude: 35.6895, longitude: 139.6917, trueNorthRotation: 15.0 });
+    const wld = gis.exportEsriWorldFile();
+    const lines = wld.trim().split("\n");
+    expect(lines.length).toBe(6);
+    expect(parseFloat(lines[0])).not.toBeNaN();
+    expect(parseFloat(lines[4])).toBeGreaterThan(0); // Easting
+    expect(parseFloat(lines[5])).toBeGreaterThan(0); // Northing
+
+    const prj = gis.exportPrjFile();
+    expect(prj).toContain('PROJCS["WGS_1984_');
+    expect(prj).toContain('GEOGCS["GCS_WGS_1984"');
+  });
+
+  it("should calculate coordinate picking from 2D mini-map projection", () => {
+    gis.setMiniMapZoom(16);
+    expect(gis.getMiniMapZoom()).toBe(16);
+
+    const picked = gis.pickLocationFromMiniMap(160, 75, 320, 150);
+    // Clicking at the exact center (160, 75) of a 320x150 canvas should return approximately the current site location
+    const currLoc = gis.getLocation();
+    expect(picked.latitude).toBeCloseTo(currLoc.latitude, 1);
+    expect(picked.longitude).toBeCloseTo(currLoc.longitude, 1);
+  });
+
+  it("should control 3D True North compass and ground control point visibility", () => {
+    expect(gis.isCompassVisible()).toBe(true);
+    gis.setCompassVisible(false);
+    expect(gis.isCompassVisible()).toBe(false);
+
+    expect(gis.isSurveyPointsVisible()).toBe(true);
+    gis.setSurveyPointsVisible(false);
+    expect(gis.isSurveyPointsVisible()).toBe(false);
+
+    // Camera alignments should run cleanly without throwing
+    expect(() => gis.alignCameraToTrueNorth()).not.toThrow();
+    expect(() => gis.alignCameraToProjectNorth()).not.toThrow();
+  });
+
+  it("should parse buildingSMART IFC4 IfcMapConversion and IfcProjectedCRS metadata", () => {
+    const mockIfc = `
+ISO-10303-21;
+HEADER;
+ENDSEC;
+DATA;
+#10=IFCPROJECT('0123456789',#1,'Sample GeoBIM Project',$,$,$,$,(#20),#30);
+#20=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,#40,#50);
+#40=IFCAXIS2PLACEMENT3D(#60,$,$);
+#60=IFCCARTESIANPOINT((0.,0.,0.));
+#100=IFCSITE('9876543210',#1,'Olympic Stadium Site',$,$,#110,$,$,.ELEMENT.,(35,40,48,720000),(139,42,42,840000),42.5,$,$);
+#200=IFCMAPCONVERSION(#20,#210,395420.5,3948750.2,42.5,0.9996,0.02617,1.0);
+#210=IFCPROJECTEDCRS('EPSG:32654','WGS 84 / UTM zone 54N','WGS 84','UTM','54N',#220);
+ENDSEC;
+END-ISO-10303-21;
+`;
+    const parsed = gis.parseIfcSiteMetadata(mockIfc);
+    expect(parsed).not.toBeNull();
+    if (parsed) {
+      expect(parsed.siteName).toBe("Olympic Stadium Site");
+      expect(parsed.latitude).toBeCloseTo(35.6802, 2);
+      expect(parsed.longitude).toBeCloseTo(139.7119, 2);
+      expect(parsed.elevation).toBeCloseTo(42.5, 1);
+      expect(parsed.mapConversion).toBeDefined();
+      expect(parsed.mapConversion?.eastings).toBe(395420.5);
+      expect(parsed.mapConversion?.northings).toBe(3948750.2);
+      expect(parsed.projectedCrs?.name).toBe("EPSG:32654");
+    }
+  });
 });

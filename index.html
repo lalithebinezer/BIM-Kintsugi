@@ -2919,6 +2919,27 @@
             </select>
           </div>
 
+          <!-- Interactive 2D World Location Mini-Map -->
+          <div style="margin-bottom: 0.6rem; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <span style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted);">Site Location Pin Picker:</span>
+              <div style="display: flex; gap: 0.25rem; align-items: center;">
+                <button type="button" id="gis-minimap-zoom-in" class="btn-icon" style="width: 20px; height: 20px; font-size: 0.75rem; line-height: 1;" title="Mini-Map Zoom In">+</button>
+                <button type="button" id="gis-minimap-zoom-out" class="btn-icon" style="width: 20px; height: 20px; font-size: 0.75rem; line-height: 1;" title="Mini-Map Zoom Out">−</button>
+                <button type="button" id="gis-btn-current-gps" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.58rem; display: flex; align-items: center; gap: 0.2rem;" title="Query Device GPS / Geolocation">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+                  <span>My GPS</span>
+                </button>
+              </div>
+            </div>
+            <div style="position: relative; width: 100%; height: 135px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); background: #0b1320;">
+              <canvas id="gis-minimap-canvas" width="320" height="135" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
+              <div style="position: absolute; bottom: 3px; left: 6px; font-size: 0.52rem; color: rgba(255,255,255,0.7); pointer-events: none; text-shadow: 0 1px 2px #000;">
+                Click map to relocate Site Datum
+              </div>
+            </div>
+          </div>
+
           <!-- Lat / Lon / Elev / True North Grid -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; font-size: 0.62rem;">
             <div>
@@ -2936,6 +2957,31 @@
             <div>
               <span style="color: var(--text-muted); font-weight: 700;">True North Angle (°):</span>
               <input type="number" id="gis-input-north" step="0.5" value="0.0" style="width: 100%; font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem;" />
+            </div>
+          </div>
+
+          <!-- True North Rotation Slider & Camera Alignment -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                <input type="checkbox" id="gis-toggle-compass" checked />
+                <span>3D True North Ground Compass</span>
+              </label>
+              <span id="gis-north-badge" style="font-family: var(--font-mono); font-size: 0.58rem; color: #06b6d4;">0.0° TN</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="font-size: 0.58rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
+              <input type="range" id="gis-slider-north" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
+              <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.6rem; padding: 0.25rem 0.4rem;" title="Align Camera Orientation to True North">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+                <span>Align True North</span>
+              </button>
+              <button type="button" id="gis-btn-align-proj-north" class="btn-cost-action boq" style="font-size: 0.6rem; padding: 0.25rem 0.4rem;" title="Align Camera Orientation to Project North (0°)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Project North</span>
+              </button>
             </div>
           </div>
 
@@ -3006,6 +3052,44 @@
           </button>
         </div>
 
+        <!-- Survey Ground Control Points (GCPs) & Site Benchmark Suite -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <span>Survey GCPs & Benchmarks</span>
+          <span id="gis-gcp-count-badge" class="value-badge" style="font-size: 0.55rem; color: #06b6d4;">3 Points</span>
+        </div>
+
+        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+              <input type="checkbox" id="gis-toggle-gcps" checked />
+              <span>Show 3D Survey Prisms & Laser Poles</span>
+            </label>
+            <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.58rem; display: flex; align-items: center; gap: 0.2rem;" title="Add Survey Control Point at Site Origin">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Add GCP</span>
+            </button>
+          </div>
+
+          <!-- GCP Points List Container -->
+          <div id="gis-survey-points-list" style="display: flex; flex-direction: column; gap: 0.3rem; max-height: 140px; overflow-y: auto; padding-right: 2px;">
+            <!-- Injected dynamically by refreshGisUI() -->
+          </div>
+
+          <!-- Geodesic Measurement Output (Between GCPs) -->
+          <div id="gis-geodesic-measurement" class="hidden" style="padding: 0.35rem 0.5rem; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 4px; font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-secondary);">
+            <div style="font-weight: 700; color: #06b6d4; margin-bottom: 0.15rem;">Geodesic Baseline Vector:</div>
+            <div id="gis-measurement-details">Distance: -- m | Azimuth: --° | dZ: -- m</div>
+          </div>
+
+          <!-- Survey Export Actions -->
+          <div style="display: grid; grid-template-columns: 1fr; gap: 0.35rem; margin-top: 0.2rem;">
+            <button type="button" id="gis-btn-export-gcp-csv" class="btn-cost-action rates" style="font-size: 0.62rem; justify-content: center;" title="Export Total Station / GNSS Survey CSV File">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Export Total Station CSV (GCPs)</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Municipal Cadastre & Underground Utilities -->
         <div class="drawer-section-header" style="margin-top: 0.75rem;">
           <span>Cadastre & GeoJSON Utilities</span>
@@ -3056,6 +3140,16 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>Export Site GeoJSON FeatureCollection</span>
           </button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.2rem;">
+            <button type="button" id="gis-btn-export-world-file" class="btn-cost-action boq" style="font-size: 0.58rem; justify-content: center;" title="Export ESRI World File (.wld) for GIS Raster Alignment">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Export World File (.wld)</span>
+            </button>
+            <button type="button" id="gis-btn-export-prj" class="btn-cost-action boq" style="font-size: 0.58rem; justify-content: center;" title="Export Projection WKT (.prj) File">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              <span>Export Projection (.prj)</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -50,6 +50,38 @@ export interface GisGeocodingResult {
   type?: string;
 }
 
+export interface GisSurveyControlPoint {
+  id: string; // e.g. "BM-01", "GCP-01"
+  name: string;
+  code: string;
+  type?: string;
+  color?: string;
+  localX: number;
+  localY: number;
+  localZ: number;
+  latitude: number;
+  longitude: number;
+  elevationAMSL: number;
+  easting: number;
+  northing: number;
+  description?: string;
+}
+
+export interface GisDistanceMeasurement {
+  fromLat: number;
+  fromLon: number;
+  toLat: number;
+  toLon: number;
+  distanceMeters: number;
+  distanceKm: number;
+  initialBearingDegrees: number;
+  elevationDeltaMeters: number;
+  localDistance?: number;
+  geodesicDistance?: number;
+  initialBearing?: number;
+  deltaElevation?: number;
+}
+
 export const GIS_LOCATION_PRESETS: Record<string, GisProjectLocation> = {
   tokyo: {
     latitude: 35.6895,
@@ -134,16 +166,25 @@ export class GisModule {
   private basemapGroup: THREE.Group | null = null;
   private basemapMesh: THREE.Mesh | null = null;
   private cadastreGroup: THREE.Group | null = null;
+  private compassGroup: THREE.Group | null = null;
+  private surveyGroup: THREE.Group | null = null;
   private basemapCanvas: HTMLCanvasElement | null = null;
   private basemapTexture: THREE.CanvasTexture | null = null;
   private currentTileFetchId: number = 0;
   private tileFetchTimer: any = null;
   private isSpaceView: boolean = false;
+  private _isCompassVisible: boolean = true;
+  private _isSurveyVisible: boolean = true;
+  private miniMapZoom: number = 14;
+  private miniMapCanvas: HTMLCanvasElement | null = null;
 
   // Features list
   private geoJsonFeatures: GisGeoJsonFeature[] = [];
+  private surveyPoints: GisSurveyControlPoint[] = [];
 
-  private constructor() {}
+  private constructor() {
+    this.initDefaultSurveyPoints();
+  }
 
   public static getInstance(): GisModule {
     if (!GisModule.instance) {
@@ -168,6 +209,26 @@ export class GisModule {
       this.world.scene.three.add(this.cadastreGroup);
     }
 
+    if (!this.compassGroup) {
+      this.compassGroup = new THREE.Group();
+      this.compassGroup.name = "gis-compass-group";
+      this.world.scene.three.add(this.compassGroup);
+    }
+
+    if (!this.surveyGroup) {
+      this.surveyGroup = new THREE.Group();
+      this.surveyGroup.name = "gis-survey-group";
+      this.world.scene.three.add(this.surveyGroup);
+    }
+
+    if (this.surveyPoints.length === 0) {
+      this.initDefaultSurveyPoints();
+    } else {
+      this.rebuildSurveyPointsMesh();
+    }
+
+    this.rebuildCompassRose();
+
     if (this.basemapConfig.enabled) {
       this.rebuildBasemap();
     }
@@ -188,6 +249,12 @@ export class GisModule {
     }
     if (this.geoJsonFeatures.length > 0) {
       this.rebuildCadastreMesh();
+    }
+    this.rebuildCompassRose();
+    this.updateSurveyPointCoordinates();
+    this.rebuildSurveyPointsMesh();
+    if (this.miniMapCanvas) {
+      this.renderMiniMap();
     }
   }
 
@@ -408,44 +475,145 @@ export class GisModule {
   }
 
   /**
-   * Attempts to parse `IfcSite` latitude, longitude, and elevation from fragment models.
+   * Attempts to parse `IfcSite`, `IfcMapConversion`, and `IfcProjectedCRS` metadata from fragment models or raw IFC text.
    */
-  public async parseIfcSiteMetadata(model: any): Promise<boolean> {
-    if (!model) return false;
-    try {
-      if (typeof model.getAllPropertiesOfType === "function") {
-        // Look for IFCSITE (express type 4096294205 or matching string)
-        const sites = await model.getAllPropertiesOfType("IFCSITE");
-        if (sites && Object.keys(sites).length > 0) {
-          const firstSite = Object.values(sites)[0] as any;
-          let latVal = firstSite.RefLatitude?.value || firstSite.RefLatitude;
-          let lonVal = firstSite.RefLongitude?.value || firstSite.RefLongitude;
-          let elevVal = firstSite.RefElevation?.value || firstSite.RefElevation;
+  public parseIfcSiteMetadata(model: any): any {
+    if (!model) return null;
 
-          // Convert IFC DMS array [deg, min, sec, microsec] to decimal degrees
-          if (Array.isArray(latVal) && latVal.length >= 3) {
-            latVal = latVal[0] + latVal[1] / 60 + (latVal[2] + (latVal[3] || 0) / 1000000) / 3600;
-          }
-          if (Array.isArray(lonVal) && lonVal.length >= 3) {
-            lonVal = lonVal[0] + lonVal[1] / 60 + (lonVal[2] + (lonVal[3] || 0) / 1000000) / 3600;
-          }
+    if (typeof model === "string") {
+      let siteName = "IFC Site Location";
+      let latitude = this.location.latitude;
+      let longitude = this.location.longitude;
+      let elevation = this.location.elevationAMSL;
+      let mapConversion: any = undefined;
+      let projectedCrs: any = undefined;
 
-          if (typeof latVal === "number" && typeof lonVal === "number" && !isNaN(latVal) && !isNaN(lonVal)) {
-            this.setLocation({
-              latitude: Number(latVal.toFixed(6)),
-              longitude: Number(lonVal.toFixed(6)),
-              elevationAMSL: typeof elevVal === "number" ? Number(elevVal.toFixed(2)) : this.location.elevationAMSL,
-              source: "ifc-site",
-              address: firstSite.Name?.value || "IFC Site Location",
-            });
-            return true;
+      // Extract IFCSITE
+      const siteNameMatch = model.match(/IFCSITE\s*\(\s*'[^']*'\s*,\s*[^,]+\s*,\s*'([^']+)'/i);
+      if (siteNameMatch) {
+        siteName = siteNameMatch[1];
+      }
+      const coordsMatch = model.match(/IFCSITE[\s\S]*?\(\s*([-\d\s,]+)\s*\)\s*,\s*\(\s*([-\d\s,]+)\s*\)\s*,\s*([-\d.]+)/i);
+      if (coordsMatch) {
+        const latParts = coordsMatch[1].split(",").map((s) => parseFloat(s.trim()));
+        const lonParts = coordsMatch[2].split(",").map((s) => parseFloat(s.trim()));
+        if (latParts.length >= 3) {
+          latitude = latParts[0] + latParts[1] / 60 + (latParts[2] + (latParts[3] || 0) / 1000000) / 3600;
+        }
+        if (lonParts.length >= 3) {
+          longitude = lonParts[0] + lonParts[1] / 60 + (lonParts[2] + (lonParts[3] || 0) / 1000000) / 3600;
+        }
+        elevation = parseFloat(coordsMatch[3]) || elevation;
+      }
+
+      // Extract IFCMAPCONVERSION
+      const mcMatch = model.match(/IFCMAPCONVERSION\s*\([^,]+,[^,]+,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)/i);
+      if (mcMatch) {
+        mapConversion = {
+          eastings: parseFloat(mcMatch[1]),
+          northings: parseFloat(mcMatch[2]),
+          orthogonalHeight: parseFloat(mcMatch[3]),
+        };
+      }
+
+      // Extract IFCPROJECTEDCRS
+      const crsMatch = model.match(/IFCPROJECTEDCRS\s*\(\s*'([^']+)'\s*,\s*'([^']+)'/i);
+      if (crsMatch) {
+        projectedCrs = {
+          name: crsMatch[1],
+          description: crsMatch[2],
+        };
+      }
+
+      const result = {
+        siteName,
+        latitude,
+        longitude,
+        elevation,
+        mapConversion,
+        projectedCrs,
+      };
+
+      this.setLocation({
+        latitude: Number(latitude.toFixed(6)),
+        longitude: Number(longitude.toFixed(6)),
+        elevationAMSL: Number(elevation.toFixed(2)),
+        source: "ifc-site",
+        address: siteName,
+        crsName: projectedCrs?.name || this.location.crsName,
+      });
+
+      return result;
+    }
+
+    return (async () => {
+      let foundGeoreference = false;
+      try {
+        if (typeof model.getAllPropertiesOfType === "function") {
+          // 1. Look for IFCMAPCONVERSION & IFCPROJECTEDCRS (IFC4 standard)
+          try {
+            const mapConversions = await model.getAllPropertiesOfType("IFCMAPCONVERSION");
+            if (mapConversions && Object.keys(mapConversions).length > 0) {
+              const mc = Object.values(mapConversions)[0] as any;
+              const elev = mc.OrthogonalHeight?.value ?? mc.OrthogonalHeight;
+              const xAxisX = mc.XAxisAbscissa?.value ?? mc.XAxisAbscissa ?? 1;
+              const xAxisY = mc.XAxisOrdinate?.value ?? mc.XAxisOrdinate ?? 0;
+              const trueNorthRot = (Math.atan2(xAxisY, xAxisX) * 180) / Math.PI;
+
+              if (typeof elev === "number" || typeof trueNorthRot === "number") {
+                this.setLocation({
+                  elevationAMSL: typeof elev === "number" ? Number(elev.toFixed(2)) : this.location.elevationAMSL,
+                  trueNorthAngle: Number(trueNorthRot.toFixed(2)),
+                  source: "ifc-site"
+                });
+                foundGeoreference = true;
+              }
+            }
+
+            const crsList = await model.getAllPropertiesOfType("IFCPROJECTEDCRS");
+            if (crsList && Object.keys(crsList).length > 0) {
+              const crs = Object.values(crsList)[0] as any;
+              const crsName = crs.Name?.value || crs.Name;
+              if (crsName) {
+                this.location.crsName = String(crsName);
+                foundGeoreference = true;
+              }
+            }
+          } catch {}
+
+          // 2. Look for IFCSITE (express type 4096294205 or matching string)
+          const sites = await model.getAllPropertiesOfType("IFCSITE");
+          if (sites && Object.keys(sites).length > 0) {
+            const firstSite = Object.values(sites)[0] as any;
+            let latVal = firstSite.RefLatitude?.value || firstSite.RefLatitude;
+            let lonVal = firstSite.RefLongitude?.value || firstSite.RefLongitude;
+            let elevVal = firstSite.RefElevation?.value || firstSite.RefElevation;
+
+            // Convert IFC DMS array [deg, min, sec, microsec] to decimal degrees
+            if (Array.isArray(latVal) && latVal.length >= 3) {
+              latVal = latVal[0] + latVal[1] / 60 + (latVal[2] + (latVal[3] || 0) / 1000000) / 3600;
+            }
+            if (Array.isArray(lonVal) && lonVal.length >= 3) {
+              lonVal = lonVal[0] + lonVal[1] / 60 + (lonVal[2] + (lonVal[3] || 0) / 1000000) / 3600;
+            }
+
+            if (typeof latVal === "number" && typeof lonVal === "number" && !isNaN(latVal) && !isNaN(lonVal)) {
+              this.setLocation({
+                latitude: Number(latVal.toFixed(6)),
+                longitude: Number(lonVal.toFixed(6)),
+                elevationAMSL: typeof elevVal === "number" ? Number(elevVal.toFixed(2)) : this.location.elevationAMSL,
+                source: "ifc-site",
+                address: firstSite.Name?.value || "IFC Site Location",
+              });
+              return true;
+            }
           }
         }
+      } catch {
+        // IFC site not parsed or not available in current model
       }
-    } catch {
-      // IFC site not parsed or not available in current model
-    }
-    return false;
+      return foundGeoreference;
+    })();
   }
 
   // ============================================================
@@ -1425,5 +1593,723 @@ export class GisModule {
 
     // Trigger Three.js render
     this.triggerRender();
+  }
+
+  // ============================================================
+  // 3D TRUE NORTH COMPASS ROSE & CAMERA ALIGNMENT
+  // ============================================================
+
+  /**
+   * Rebuilds the 3D True North Compass Rose on the ground plane.
+   */
+  public rebuildCompassRose() {
+    if (!this.compassGroup) return;
+
+    // Clear existing
+    while (this.compassGroup.children.length > 0) {
+      const child = this.compassGroup.children[0] as any;
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach((m: any) => m.dispose());
+        else child.material.dispose();
+      }
+      this.compassGroup.remove(child);
+    }
+
+    if (!this._isCompassVisible) {
+      this.compassGroup.visible = false;
+      return;
+    }
+    this.compassGroup.visible = true;
+
+    const radius = Math.min(32, Math.max(12, this.basemapConfig.radius * 0.08));
+    const elev = this.basemapConfig.elevationOffset + 0.12;
+
+    // 1. Outer Ring
+    const segments = 64;
+    const ringPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      ringPts.push(new THREE.Vector3(Math.cos(theta) * radius, elev, Math.sin(theta) * radius));
+    }
+    const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+    const ringMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.65 });
+    const ringLine = new THREE.LineLoop(ringGeo, ringMat);
+    this.compassGroup.add(ringLine);
+
+    // 2. Inner Ring
+    const innerRadius = radius * 0.72;
+    const innerPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      innerPts.push(new THREE.Vector3(Math.cos(theta) * innerRadius, elev, Math.sin(theta) * innerRadius));
+    }
+    const innerGeo = new THREE.BufferGeometry().setFromPoints(innerPts);
+    const innerMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
+    const innerLine = new THREE.LineLoop(innerGeo, innerMat);
+    this.compassGroup.add(innerLine);
+
+    // 3. Compass Rose Ticks (every 30 degrees, large at cardinals)
+    const tickPts: THREE.Vector3[] = [];
+    for (let deg = 0; deg < 360; deg += 30) {
+      const rad = (deg * Math.PI) / 180;
+      const isCardinal = deg % 90 === 0;
+      const r1 = isCardinal ? radius * 0.58 : radius * 0.76;
+      const r2 = radius * 1.04;
+      tickPts.push(new THREE.Vector3(Math.sin(rad) * r1, elev, -Math.cos(rad) * r1));
+      tickPts.push(new THREE.Vector3(Math.sin(rad) * r2, elev, -Math.cos(rad) * r2));
+    }
+    const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPts);
+    const tickSegments = new THREE.LineSegments(
+      tickGeo,
+      new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.75 })
+    );
+    this.compassGroup.add(tickSegments);
+
+    // 4. Stylized 3D True North Arrow (pointing North -Z)
+    const arrowShape = new THREE.Shape();
+    arrowShape.moveTo(0, -radius * 1.25);
+    arrowShape.lineTo(radius * 0.22, 0);
+    arrowShape.lineTo(0, -radius * 0.15);
+    arrowShape.lineTo(-radius * 0.22, 0);
+    arrowShape.closePath();
+
+    const arrowGeo = new THREE.ShapeGeometry(arrowShape);
+    arrowGeo.rotateX(-Math.PI / 2);
+    arrowGeo.translate(0, elev + 0.05, 0);
+
+    const arrowMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+    this.compassGroup.add(arrowMesh);
+
+    // Position & Orientation matching True North
+    this.compassGroup.position.set(0, 0, 0);
+    this.compassGroup.rotation.y = (-this.location.trueNorthAngle * Math.PI) / 180;
+
+    this.triggerRender();
+  }
+
+  public setCompassVisible(visible: boolean) {
+    this._isCompassVisible = visible;
+    if (this.compassGroup) {
+      this.compassGroup.visible = visible;
+    }
+    this.triggerRender();
+  }
+
+  public isCompassVisible(): boolean {
+    return this._isCompassVisible;
+  }
+
+  public getIsCompassVisible(): boolean {
+    return this._isCompassVisible;
+  }
+
+  public async alignCameraToTrueNorth(): Promise<void> {
+    if (!this.world?.camera?.controls) return;
+    try {
+      const controls = this.world.camera.controls as any;
+      const angleRad = (-this.location.trueNorthAngle * Math.PI) / 180;
+      if (typeof controls.rotateTo === "function") {
+        await controls.rotateTo(angleRad, Math.PI / 3.5, true);
+      }
+    } catch (e) {
+      console.warn("alignCameraToTrueNorth error:", e);
+    }
+  }
+
+  public async alignCameraToProjectNorth(): Promise<void> {
+    if (!this.world?.camera?.controls) return;
+    try {
+      const controls = this.world.camera.controls as any;
+      if (typeof controls.rotateTo === "function") {
+        await controls.rotateTo(0, Math.PI / 3.5, true);
+      }
+    } catch (e) {
+      console.warn("alignCameraToProjectNorth error:", e);
+    }
+  }
+
+  // ============================================================
+  // SURVEY GROUND CONTROL POINTS (GCPS) SUITE
+  // ============================================================
+
+  public initDefaultSurveyPoints() {
+    this.surveyPoints = [];
+    const utmOrigin = this.toUtm(this.location.latitude, this.location.longitude);
+
+    // 1. Primary Site Origin Benchmark
+    this.surveyPoints.push({
+      id: "BM-01",
+      name: "Site Origin Benchmark",
+      code: "BENCHMARK",
+      type: "BENCHMARK",
+      color: "#f59e0b",
+      localX: 0,
+      localY: 0,
+      localZ: 0,
+      latitude: this.location.latitude,
+      longitude: this.location.longitude,
+      elevationAMSL: this.location.elevationAMSL,
+      easting: utmOrigin.easting,
+      northing: utmOrigin.northing,
+      description: "Primary Geodetic Control Benchmark (Origin 0,0,0)",
+    });
+
+    // 2. North-East Site Boundary Control Point
+    const gcp1Geo = this.localToGeodetic(35, -25);
+    const gcp1Utm = this.toUtm(gcp1Geo.lat, gcp1Geo.lon);
+    this.surveyPoints.push({
+      id: "GCP-01",
+      name: "NE Boundary Control",
+      code: "CONTROL",
+      type: "CONTROL",
+      color: "#06b6d4",
+      localX: 35,
+      localY: 0,
+      localZ: -25,
+      latitude: gcp1Geo.lat,
+      longitude: gcp1Geo.lon,
+      elevationAMSL: this.location.elevationAMSL,
+      easting: gcp1Utm.easting,
+      northing: gcp1Utm.northing,
+      description: "North-East Cadastral Survey Station",
+    });
+
+    // 3. South-West Site Boundary Control Point
+    const gcp2Geo = this.localToGeodetic(-35, 25);
+    const gcp2Utm = this.toUtm(gcp2Geo.lat, gcp2Geo.lon);
+    this.surveyPoints.push({
+      id: "GCP-02",
+      name: "SW Boundary Control",
+      code: "BOUNDARY",
+      type: "BOUNDARY",
+      color: "#10b981",
+      localX: -35,
+      localY: 0,
+      localZ: 25,
+      latitude: gcp2Geo.lat,
+      longitude: gcp2Geo.lon,
+      elevationAMSL: this.location.elevationAMSL,
+      easting: gcp2Utm.easting,
+      northing: gcp2Utm.northing,
+      description: "South-West Cadastral Boundary Peg",
+    });
+
+    this.rebuildSurveyPointsMesh();
+  }
+
+  public getSurveyPoints(): GisSurveyControlPoint[] {
+    return [...this.surveyPoints];
+  }
+
+  public addSurveyPoint(point: Partial<GisSurveyControlPoint> & {
+    localX: number;
+    localZ: number;
+  }): GisSurveyControlPoint {
+    const id = point.id || `GCP-0${this.surveyPoints.length + 1}`;
+    const localY = point.localY || 0;
+    const geo = this.localToGeodetic(point.localX, point.localZ);
+    const utm = this.toUtm(geo.lat, geo.lon);
+
+    const newPoint: GisSurveyControlPoint = {
+      id,
+      name: point.name || `Control Point ${id}`,
+      code: point.code || "CONTROL",
+      type: point.type || point.code || "CONTROL",
+      color: point.color || "#10b981",
+      localX: point.localX,
+      localY,
+      localZ: point.localZ,
+      latitude: geo.lat,
+      longitude: geo.lon,
+      elevationAMSL: Number((this.location.elevationAMSL + localY).toFixed(2)),
+      easting: utm.easting,
+      northing: utm.northing,
+      description: point.description || "Field Survey Station",
+    };
+
+    this.surveyPoints.push(newPoint);
+    this.rebuildSurveyPointsMesh();
+    return newPoint;
+  }
+
+  public removeSurveyPoint(id: string): boolean {
+    const idx = this.surveyPoints.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      this.surveyPoints.splice(idx, 1);
+      this.rebuildSurveyPointsMesh();
+      return true;
+    }
+    return false;
+  }
+
+  public clearSurveyPoints() {
+    this.surveyPoints = [];
+    this.rebuildSurveyPointsMesh();
+  }
+
+  public setSurveyVisible(visible: boolean) {
+    this._isSurveyVisible = visible;
+    if (this.surveyGroup) {
+      this.surveyGroup.visible = visible;
+    }
+    this.triggerRender();
+  }
+
+  public setSurveyPointsVisible(visible: boolean) {
+    this.setSurveyVisible(visible);
+  }
+
+  public isSurveyPointsVisible(): boolean {
+    return this._isSurveyVisible;
+  }
+
+  public getIsSurveyVisible(): boolean {
+    return this._isSurveyVisible;
+  }
+
+  private updateSurveyPointCoordinates() {
+    this.surveyPoints.forEach((p) => {
+      const geo = this.localToGeodetic(p.localX, p.localZ);
+      const utm = this.toUtm(geo.lat, geo.lon);
+      p.latitude = geo.lat;
+      p.longitude = geo.lon;
+      p.elevationAMSL = Number((this.location.elevationAMSL + p.localY).toFixed(2));
+      p.easting = utm.easting;
+      p.northing = utm.northing;
+    });
+  }
+
+  /**
+   * Rebuilds 3D Survey Ground Control Points (GCPs) beacons and laser lines.
+   */
+  public rebuildSurveyPointsMesh() {
+    if (!this.surveyGroup) return;
+
+    // Clear existing
+    while (this.surveyGroup.children.length > 0) {
+      const child = this.surveyGroup.children[0] as any;
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach((m: any) => m.dispose());
+        else child.material.dispose();
+      }
+      this.surveyGroup.remove(child);
+    }
+
+    if (!this._isSurveyVisible) {
+      this.surveyGroup.visible = false;
+      return;
+    }
+    this.surveyGroup.visible = true;
+
+    this.surveyPoints.forEach((p) => {
+      let colorHex = 0x06b6d4; // Cyan (CONTROL)
+      if (p.code === "BENCHMARK") colorHex = 0xf59e0b; // Amber / Gold
+      else if (p.code === "BOUNDARY") colorHex = 0x10b981; // Emerald
+      else if (p.code === "UTILITY") colorHex = 0xa855f7; // Purple
+
+      // 1. Survey Prism (Octahedron)
+      const prismGeo = new THREE.OctahedronGeometry(0.75, 0);
+      const prismMat = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: false });
+      const prismMesh = new THREE.Mesh(prismGeo, prismMat);
+      prismMesh.position.set(p.localX, p.localY + 1.8, p.localZ);
+      prismMesh.name = `GCP-${p.id}`;
+      this.surveyGroup?.add(prismMesh);
+
+      // 2. Vertical Laser Line to ground
+      const linePts = [
+        new THREE.Vector3(p.localX, p.localY, p.localZ),
+        new THREE.Vector3(p.localX, p.localY + 1.8, p.localZ),
+      ];
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+      const lineMat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85 });
+      const line = new THREE.Line(lineGeo, lineMat);
+      this.surveyGroup?.add(line);
+
+      // 3. Ground ring target
+      const ringGeo = new THREE.RingGeometry(0.5, 0.75, 16);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.6,
+      });
+      const groundRing = new THREE.Mesh(ringGeo, ringMat);
+      groundRing.position.set(p.localX, p.localY + 0.05, p.localZ);
+      this.surveyGroup?.add(groundRing);
+    });
+
+    this.triggerRender();
+  }
+
+  // ============================================================
+  // GEODESIC DISTANCE & BEARING (HAVERSINE INVERSE)
+  // ============================================================
+
+  public calculateGeodesicDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6378137.0; // WGS84 Equatorial Radius in meters
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  public calculateInitialBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+    const x =
+      Math.cos(phi1) * Math.sin(phi2) -
+      Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+    const theta = Math.atan2(y, x);
+    return ((theta * 180) / Math.PI + 360) % 360;
+  }
+
+  public measureDistanceBetweenPoints(
+    arg1: string | number,
+    arg2?: string | number,
+    x2?: number,
+    z2?: number
+  ): GisDistanceMeasurement | null {
+    if (typeof arg1 === "string" && typeof arg2 === "string") {
+      const p1 = this.surveyPoints.find((p) => p.id === arg1);
+      const p2 = this.surveyPoints.find((p) => p.id === arg2);
+      if (!p1 || !p2) return null;
+
+      const localDx = p2.localX - p1.localX;
+      const localDy = p2.localY - p1.localY;
+      const localDz = p2.localZ - p1.localZ;
+      const localDist = Math.sqrt(localDx * localDx + localDy * localDy + localDz * localDz);
+
+      const geodesicDist = this.calculateGeodesicDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+      const bearing = this.calculateInitialBearing(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+      const dZ = p2.elevationAMSL - p1.elevationAMSL;
+
+      return {
+        fromLat: p1.latitude,
+        fromLon: p1.longitude,
+        toLat: p2.latitude,
+        toLon: p2.longitude,
+        distanceMeters: Math.round(geodesicDist * 100) / 100,
+        distanceKm: Math.round((geodesicDist / 1000) * 1000) / 1000,
+        initialBearingDegrees: Math.round(bearing * 10) / 10,
+        elevationDeltaMeters: Math.round(dZ * 100) / 100,
+        localDistance: Math.round(localDist * 100) / 100,
+        geodesicDistance: Math.round(geodesicDist * 100) / 100,
+        initialBearing: Math.round(bearing * 10) / 10,
+        deltaElevation: Math.round(dZ * 100) / 100,
+      };
+    }
+
+    const x1 = typeof arg1 === "number" ? arg1 : 0;
+    const z1 = typeof arg2 === "number" ? arg2 : 0;
+    const geo1 = this.localToGeodetic(x1, z1);
+    const geo2 = this.localToGeodetic(x2 || 0, z2 || 0);
+    const dist = this.calculateGeodesicDistance(geo1.lat, geo1.lon, geo2.lat, geo2.lon);
+    const bearing = this.calculateInitialBearing(geo1.lat, geo1.lon, geo2.lat, geo2.lon);
+    const localDist = Math.sqrt(Math.pow((x2 || 0) - x1, 2) + Math.pow((z2 || 0) - z1, 2));
+
+    return {
+      fromLat: geo1.lat,
+      fromLon: geo1.lon,
+      toLat: geo2.lat,
+      toLon: geo2.lon,
+      distanceMeters: Math.round(dist * 100) / 100,
+      distanceKm: Math.round((dist / 1000) * 1000) / 1000,
+      initialBearingDegrees: Math.round(bearing * 10) / 10,
+      elevationDeltaMeters: 0,
+      localDistance: Math.round(localDist * 100) / 100,
+      geodesicDistance: Math.round(dist * 100) / 100,
+      initialBearing: Math.round(bearing * 10) / 10,
+      deltaElevation: 0,
+    };
+  }
+
+  // ============================================================
+  // MULTI-STANDARD GEOREFERENCING EXPORT SUITE
+  // ============================================================
+
+  public exportSurveyPointsCsv(): string {
+    const headers = [
+      "Point_ID",
+      "Name",
+      "Code",
+      "Type",
+      "Local_X_m",
+      "Local_Y_m",
+      "Local_Z_m",
+      "Latitude",
+      "Longitude",
+      "UTM_Easting_m",
+      "UTM_Northing_m",
+      "Elevation_AMSL_m",
+      "Description",
+    ];
+    const rows = this.surveyPoints.map((p) =>
+      [
+        p.id,
+        `"${p.name}"`,
+        p.code,
+        p.type,
+        p.localX.toFixed(3),
+        p.localY.toFixed(3),
+        p.localZ.toFixed(3),
+        p.latitude.toFixed(7),
+        p.longitude.toFixed(7),
+        p.easting,
+        p.northing,
+        p.elevationAMSL.toFixed(2),
+        `"${p.description || ""}"`,
+      ].join(",")
+    );
+    return [headers.join(","), ...rows].join("\n");
+  }
+
+  public exportEsriWorldFile(): string {
+    const pixelSize = (this.basemapConfig.radius * 2) / 1024;
+    const theta = (-this.location.trueNorthAngle * Math.PI) / 180;
+    const utm = this.toUtm(this.location.latitude, this.location.longitude);
+    const A = pixelSize * Math.cos(theta);
+    const D = pixelSize * Math.sin(theta);
+    const B = pixelSize * Math.sin(theta);
+    const E = -pixelSize * Math.cos(theta);
+    const C = utm.easting - this.basemapConfig.radius;
+    const F = utm.northing + this.basemapConfig.radius;
+
+    return [
+      A.toFixed(6),
+      D.toFixed(6),
+      B.toFixed(6),
+      E.toFixed(6),
+      C.toFixed(2),
+      F.toFixed(2),
+    ].join("\n");
+  }
+
+  public exportPrjFile(): string {
+    const utm = this.toUtm(this.location.latitude, this.location.longitude);
+    const zoneDigits = parseInt(utm.zone.replace(/\D/g, "")) || 30;
+    const centralMeridian = (zoneDigits - 1) * 6 - 180 + 3;
+
+    return `PROJCS["WGS_1984_${utm.zone.replace(" ", "_")}",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",${this.location.latitude >= 0 ? "0.0" : "10000000.0"}],PARAMETER["Central_Meridian",${centralMeridian}.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]`;
+  }
+
+  // ============================================================
+  // INTERACTIVE 2D MINI-MAP LOCATION PICKER
+  // ============================================================
+
+  public renderMiniMap(canvas?: HTMLCanvasElement | string, zoom?: number) {
+    let c: HTMLCanvasElement | null = null;
+    if (typeof canvas === "string") {
+      c = (typeof document !== "undefined" ? (document.getElementById(canvas) as HTMLCanvasElement) : null) || this.miniMapCanvas;
+    } else {
+      c = canvas || this.miniMapCanvas;
+    }
+    if (!c) return;
+    this.miniMapCanvas = c;
+    if (typeof zoom === "number") {
+      this.miniMapZoom = Math.max(3, Math.min(18, zoom));
+    }
+    const ctx = c.getContext ? c.getContext("2d") : null;
+    if (!ctx) return;
+
+    const w = c.width;
+    const h = c.height;
+
+    // Dark high-tech background
+    ctx.fillStyle = "#090d14";
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.12)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < w; x += 25) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y < h; y += 25) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    // Try fetching and rendering center tile + adjacent tiles
+    const z = this.miniMapZoom;
+    const cx = ((this.location.longitude + 180) / 360) * Math.pow(2, z);
+    const latRad = (this.location.latitude * Math.PI) / 180;
+    const cy = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * Math.pow(2, z);
+
+    const tileX = Math.floor(cx);
+    const tileY = Math.floor(cy);
+    const fracX = cx - tileX;
+    const fracY = cy - tileY;
+
+    if (typeof Image !== "undefined") {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const tx = tileX + dx;
+          const ty = tileY + dy;
+          if (tx < 0 || ty < 0 || tx >= Math.pow(2, z) || ty >= Math.pow(2, z)) continue;
+          const url = `https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`;
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const posX = w / 2 + (dx - fracX) * 256;
+            const posY = h / 2 + (dy - fracY) * 256;
+            ctx.drawImage(img, posX, posY, 256, 256);
+            this.drawMiniMapCrosshair(ctx, w, h);
+          };
+          img.src = url;
+        }
+      }
+    }
+
+    this.drawMiniMapCrosshair(ctx, w, h);
+  }
+
+  private drawMiniMapCrosshair(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    const centerX = w / 2;
+    const centerY = h / 2;
+
+    // Outer radar ring
+    ctx.strokeStyle = "#06b6d4";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 42, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crosshairs
+    ctx.strokeStyle = "#06b6d4";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 16, centerY);
+    ctx.lineTo(centerX + 16, centerY);
+    ctx.moveTo(centerX, centerY - 16);
+    ctx.lineTo(centerX, centerY + 16);
+    ctx.stroke();
+
+    // Central Pin
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // True North indicator in top-left
+    ctx.save();
+    ctx.translate(22, 22);
+    ctx.rotate((-this.location.trueNorthAngle * Math.PI) / 180);
+    ctx.fillStyle = "#06b6d4";
+    ctx.beginPath();
+    ctx.moveTo(0, -11);
+    ctx.lineTo(4, 5);
+    ctx.lineTo(-4, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 8px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("N", 0, -14);
+    ctx.restore();
+  }
+
+  public pickLocationFromMiniMap(
+    clickX: number,
+    clickY: number,
+    canvasWidth: number,
+    canvasHeight: number
+  ): { lat: number; lon: number; latitude: number; longitude: number } {
+    const z = this.miniMapZoom;
+    const cx = ((this.location.longitude + 180) / 360) * Math.pow(2, z);
+    const latRad = (this.location.latitude * Math.PI) / 180;
+    const cy = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * Math.pow(2, z);
+
+    const deltaTileX = (clickX - canvasWidth / 2) / 256;
+    const deltaTileY = (clickY - canvasHeight / 2) / 256;
+
+    const clickedTileX = cx + deltaTileX;
+    const clickedTileY = cy + deltaTileY;
+
+    const newLon = (clickedTileX / Math.pow(2, z)) * 360 - 180;
+    const n = Math.PI - (2 * Math.PI * clickedTileY) / Math.pow(2, z);
+    const newLat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+
+    const clampedLat = Math.max(-85.0511, Math.min(85.0511, newLat));
+    const clampedLon = Math.max(-180, Math.min(180, newLon));
+
+    this.setLocation({
+      latitude: Number(clampedLat.toFixed(6)),
+      longitude: Number(clampedLon.toFixed(6)),
+      source: "manual",
+      address: `Selected Map Pin (${clampedLat.toFixed(4)}°, ${clampedLon.toFixed(4)}°)`,
+    });
+
+    return {
+      lat: this.location.latitude,
+      lon: this.location.longitude,
+      latitude: this.location.latitude,
+      longitude: this.location.longitude,
+    };
+  }
+
+  public getMiniMapZoom(): number {
+    return this.miniMapZoom;
+  }
+
+  public setMiniMapZoom(zoom: number) {
+    this.miniMapZoom = Math.max(3, Math.min(18, zoom));
+    if (this.miniMapCanvas) {
+      this.renderMiniMap();
+    }
+  }
+
+  public async requestCurrentGpsLocation(): Promise<GisProjectLocation> {
+    return new Promise((resolve, reject) => {
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          this.setLocation({
+            latitude: Number(pos.coords.latitude.toFixed(6)),
+            longitude: Number(pos.coords.longitude.toFixed(6)),
+            elevationAMSL:
+              pos.coords.altitude !== null ? Number(pos.coords.altitude.toFixed(1)) : this.location.elevationAMSL,
+            source: "manual",
+            address: `Device GPS (±${Math.round(pos.coords.accuracy)}m)`,
+          });
+          resolve(this.getLocation());
+        },
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
   }
 }

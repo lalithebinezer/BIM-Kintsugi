@@ -420,6 +420,68 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (txtSpaceFlight) {
       txtSpaceFlight.textContent = gisModule.getIsSpaceView() ? "Descend to Site Level" : "Fly to Space Orbit";
     }
+
+    // Synchronize True North controls & Compass Rose
+    const sliderNorth = document.getElementById("gis-slider-north") as HTMLInputElement | null;
+    const badgeNorth = document.getElementById("gis-north-badge");
+    const toggleCompass = document.getElementById("gis-toggle-compass") as HTMLInputElement | null;
+    if (sliderNorth) sliderNorth.value = String(geo.trueNorthRotation);
+    if (badgeNorth) badgeNorth.textContent = `${geo.trueNorthRotation.toFixed(1)}° TN`;
+    if (toggleCompass) toggleCompass.checked = gisModule.isCompassVisible();
+
+    // Render 2D Mini-Map Pin Picker
+    gisModule.renderMiniMap("gis-minimap-canvas");
+
+    // Synchronize Survey GCPs & Benchmarks
+    const gcpCountBadge = document.getElementById("gis-gcp-count-badge");
+    const toggleGcps = document.getElementById("gis-toggle-gcps") as HTMLInputElement | null;
+    const gcpListContainer = document.getElementById("gis-survey-points-list");
+    const pts = gisModule.getSurveyPoints();
+
+    if (gcpCountBadge) {
+      gcpCountBadge.textContent = `${pts.length} Point${pts.length === 1 ? "" : "s"}`;
+    }
+    if (toggleGcps) {
+      toggleGcps.checked = gisModule.isSurveyPointsVisible();
+    }
+    if (gcpListContainer) {
+      if (pts.length === 0) {
+        gcpListContainer.innerHTML = `<div style="font-size: 0.58rem; color: var(--text-muted); padding: 0.25rem;">No survey control points defined. Click "+ Add GCP" to create one.</div>`;
+      } else {
+        gcpListContainer.innerHTML = pts.map(p => `
+          <div class="gis-gcp-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.35rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.58rem;">
+            <div style="display: flex; align-items: center; gap: 0.3rem;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${p.color}; flex-shrink: 0;"></span>
+              <div>
+                <span style="font-weight: 700; color: var(--text-primary);">${p.name} (${p.code})</span>
+                <span style="color: var(--text-muted); margin-left: 0.25rem;">[${p.type}]</span>
+                <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.52rem;">
+                  X:${p.localX.toFixed(1)}m Y:${p.localY.toFixed(1)}m Z:${p.localZ.toFixed(1)}m | ${p.latitude.toFixed(5)}°, ${p.longitude.toFixed(5)}°
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.2rem; align-items: center;">
+              <button type="button" class="btn-icon gis-btn-delete-gcp" data-id="${p.id}" style="width: 18px; height: 18px; color: #ef4444;" title="Delete Control Point">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </div>
+          </div>
+        `).join("");
+
+        gcpListContainer.querySelectorAll(".gis-btn-delete-gcp").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute("data-id");
+            if (id) {
+              gisModule.removeSurveyPoint(id);
+              refreshGisUI();
+              showToast("Survey Point deleted", "info");
+              SoundManager.getInstance().playClick();
+            }
+          });
+        });
+      }
+    }
   };
   (window as any).refreshGisUI = refreshGisUI;
 
@@ -655,6 +717,139 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     a.click();
     URL.revokeObjectURL(url);
     showToast("Exported Site GeoJSON FeatureCollection", "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Mini-Map Interaction: Click to relocate site datum
+  const miniMapCanvas = document.getElementById("gis-minimap-canvas") as HTMLCanvasElement | null;
+  miniMapCanvas?.addEventListener("click", (e) => {
+    const rect = miniMapCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const picked = gisModule.pickLocationFromMiniMap(x, y, rect.width, rect.height);
+    gisModule.setGeoreference({ latitude: picked.latitude, longitude: picked.longitude });
+    refreshGisUI();
+    showToast(`Relocated Site Datum: ${picked.latitude.toFixed(4)}°, ${picked.longitude.toFixed(4)}°`, "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-minimap-zoom-in")?.addEventListener("click", () => {
+    const curr = gisModule.getMiniMapZoom();
+    gisModule.setMiniMapZoom(curr + 1);
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-minimap-zoom-out")?.addEventListener("click", () => {
+    const curr = gisModule.getMiniMapZoom();
+    gisModule.setMiniMapZoom(curr - 1);
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-current-gps")?.addEventListener("click", async () => {
+    showToast("Querying Device GPS Geolocation...", "info");
+    const pos = await gisModule.requestCurrentGpsLocation();
+    if (pos) {
+      gisModule.setGeoreference({ latitude: pos.latitude, longitude: pos.longitude });
+      refreshGisUI();
+      showToast(`GPS Locked: ${pos.latitude.toFixed(4)}°, ${pos.longitude.toFixed(4)}°`, "success");
+      SoundManager.getInstance().playClick();
+    } else {
+      showToast("Unable to acquire device GPS geolocation", "warning");
+    }
+  });
+
+  // True North Slider, Compass Toggle & Camera Alignment
+  document.getElementById("gis-slider-north")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setGeoreference({ trueNorthRotation: val });
+    const northInput = document.getElementById("gis-input-north") as HTMLInputElement | null;
+    const badgeNorth = document.getElementById("gis-north-badge");
+    if (northInput) northInput.value = String(val);
+    if (badgeNorth) badgeNorth.textContent = `${val.toFixed(1)}° TN`;
+  });
+
+  document.getElementById("gis-toggle-compass")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    gisModule.setCompassVisible(checked);
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-align-true-north")?.addEventListener("click", () => {
+    gisModule.alignCameraToTrueNorth();
+    showToast("Camera aligned to True North", "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-align-proj-north")?.addEventListener("click", () => {
+    gisModule.alignCameraToProjectNorth();
+    showToast("Camera aligned to Project North (0°)", "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Survey GCP Controls
+  document.getElementById("gis-toggle-gcps")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    gisModule.setSurveyPointsVisible(checked);
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-add-gcp")?.addEventListener("click", () => {
+    const pts = gisModule.getSurveyPoints();
+    const nextNum = pts.length + 1;
+    const offset = (nextNum - 1) * 15;
+    gisModule.addSurveyPoint({
+      name: `Control Point ${nextNum}`,
+      code: `GCP-0${nextNum}`,
+      type: "GCP",
+      localX: offset,
+      localY: 0,
+      localZ: offset,
+      color: "#10b981",
+    });
+    refreshGisUI();
+    showToast(`Added Survey Control Point GCP-0${nextNum}`, "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-export-gcp-csv")?.addEventListener("click", () => {
+    const csv = gisModule.exportSurveyPointsCsv();
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Site_Survey_GCPs_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Exported Total Station Survey CSV", "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  // Multi-Standard Georeferencing Exporters (ESRI World File & PRJ)
+  document.getElementById("gis-btn-export-world-file")?.addEventListener("click", () => {
+    const wld = gisModule.exportEsriWorldFile();
+    const blob = new Blob([wld], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Site_Basemap_${Date.now()}.wld`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Exported ESRI World File (.wld)", "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-export-prj")?.addEventListener("click", () => {
+    const prj = gisModule.exportPrjFile();
+    const blob = new Blob([prj], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Site_Projection_${Date.now()}.prj`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Exported Projection WKT (.prj)", "success");
     SoundManager.getInstance().playClick();
   });
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
