@@ -996,6 +996,83 @@
                     <input type="color" id="settings-hover-color" value="#00f5a0" title="Set Pointer Hover Color" />
                   </div>
 
+                  <!-- Graphic Accelerator & Hardware Performance Studio -->
+                  <div class="custom-highlight-studio-card" id="gpu-accelerator-studio-card" style="border-left: 3px solid #38bdf8; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                    <div class="custom-highlight-header">
+                      <div class="custom-highlight-title" style="color: #38bdf8;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                        <span>Graphics Accelerator &amp; GPU</span>
+                      </div>
+                      <span class="custom-highlight-badge" id="gpu-active-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Hardware On</span>
+                    </div>
+
+                    <div id="gpu-telemetry-box" style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.35rem; line-height: 1.35;">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-primary); font-weight: 700;">Active GPU:</span>
+                        <span id="gpu-device-name" style="color: #38bdf8; text-align: right; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Detecting...</span>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>API Backend:</span>
+                        <span id="gpu-api-backend" style="color: var(--text-dim);">WebGL 2.0 (Direct3D 11)</span>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Resolution Scale:</span>
+                        <span id="gpu-dpr-val" style="color: #d4ff3f;">2.0x (Ultra Sharp)</span>
+                      </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.45rem;">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">Acceleration Preset</span>
+                        <select id="select-gpu-preset" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                          <option value="ultra" selected>⚡ Ultra (Full Fidelity &amp; Shadows)</option>
+                          <option value="balanced">⚖ Balanced (1.5x Scaling)</option>
+                          <option value="eco">🌱 Eco / Battery Saver (1.0x, Low FX)</option>
+                          <option value="custom">🛠 Custom Calibration</option>
+                        </select>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">Render Scale / DPR</span>
+                        <select id="select-gpu-dpr" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                          <option value="2.0" selected>2.0x (HiDPI / Ultra)</option>
+                          <option value="1.5">1.5x (Smooth High-Q)</option>
+                          <option value="1.0">1.0x (Native Display)</option>
+                          <option value="0.75">0.75x (Performance Boost)</option>
+                        </select>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">Shadow Map Resolution</span>
+                        <select id="select-gpu-shadow-res" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                          <option value="4096">4096² (Cinematic PCF)</option>
+                          <option value="2048" selected>2048² (Crisp Standard)</option>
+                          <option value="1024">1024² (Fast Performance)</option>
+                          <option value="512">512² (Low VRAM)</option>
+                        </select>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">Post-FX Anti-Aliasing (FXAA)</span>
+                        <label class="toggle-switch">
+                          <input type="checkbox" id="toggle-gpu-fxaa" checked />
+                          <span class="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.35rem; margin-top: 0.45rem;">
+                      <button type="button" class="btn-secondary" id="btn-gpu-bench" style="flex: 1; padding: 0.25rem 0.4rem; font-size: 0.64rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>
+                        <span>Probe GPU Specs</span>
+                      </button>
+                      <button type="button" class="btn-secondary" id="btn-gpu-guide" style="flex: 1; padding: 0.25rem 0.4rem; font-size: 0.64rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>OS Setup Guide</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <!-- Custom Highlighter Styles Studio -->
                   <div class="custom-highlight-studio-card">
                     <div class="custom-highlight-header">

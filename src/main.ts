@@ -4097,6 +4097,8 @@ logoToggle.addEventListener("change", () => {
   }
 });
 
+import { initGraphicsAcceleratorController } from "./ui/GraphicsAcceleratorController";
+
 const shadowsToggle = document.getElementById("settings-toggle-shadows")! as HTMLInputElement;
 shadowsToggle.addEventListener("change", () => {
   const enabled = shadowsToggle.checked;
@@ -4157,6 +4159,13 @@ hoverColorPicker.addEventListener("input", () => {
     style.color = new THREE.Color(colorHex);
   }
 });
+
+// Initialize Graphics Accelerator & GPU Studio
+try {
+  initGraphicsAcceleratorController(world, dirLight);
+} catch (err) {
+  console.warn("Failed to initialize GraphicsAcceleratorController:", err);
+}
 
 // Interactive 4D Simulation Status Color Pickers
 const plannedColorPicker = document.getElementById("4d-color-planned") as HTMLInputElement | null;
