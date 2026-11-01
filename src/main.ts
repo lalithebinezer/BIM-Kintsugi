@@ -127,7 +127,7 @@ const container = document.getElementById("container")!;
 world.renderer = new OBF.PostproductionRenderer(components, container);
 world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 world.renderer.three.shadowMap.enabled = true;
-world.renderer.three.shadowMap.type = THREE.PCFShadowMap;
+world.renderer.three.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // WebGL Context Loss & Recovery Guard
 const glCanvas = world.renderer.three.domElement;
@@ -723,8 +723,9 @@ if (dirLight) {
   dirLight.shadow.camera.right = 60;
   dirLight.shadow.camera.top = 60;
   dirLight.shadow.camera.bottom = -60;
-  dirLight.shadow.bias = -0.0005;
-  dirLight.shadow.normalBias = 0.02;
+  dirLight.shadow.bias = -0.0001;
+  dirLight.shadow.normalBias = 0.05;
+  dirLight.shadow.radius = 2;
   world.scene.three.add(dirLight.target);
 }
 world.scene.shadowsEnabled = false;
@@ -5571,12 +5572,12 @@ const sunAzimuthVal = document.getElementById("val-sun-azimuth");
 const sunElevationInput = document.getElementById("settings-sun-elevation") as HTMLInputElement | null;
 const sunElevationVal = document.getElementById("val-sun-elevation");
 
-const updateSunPosition = () => {
-  const azimuthDeg = sunAzimuthInput ? Number(sunAzimuthInput.value) : 135;
-  const elevationDeg = sunElevationInput ? Number(sunElevationInput.value) : 45;
+const updateSunPosition = (azimuthParam?: number, elevationParam?: number) => {
+  const azimuthDeg = typeof azimuthParam === "number" ? azimuthParam : (sunAzimuthInput ? Number(sunAzimuthInput.value) : 135);
+  const elevationDeg = typeof elevationParam === "number" ? elevationParam : (sunElevationInput ? Number(sunElevationInput.value) : 45);
 
-  if (sunAzimuthVal) sunAzimuthVal.innerText = `${azimuthDeg}°`;
-  if (sunElevationVal) sunElevationVal.innerText = `${elevationDeg}°`;
+  if (sunAzimuthVal) sunAzimuthVal.innerText = `${azimuthDeg.toFixed(1)}°`;
+  if (sunElevationVal) sunElevationVal.innerText = `${elevationDeg.toFixed(1)}°`;
 
   const azimuthRad = (azimuthDeg * Math.PI) / 180;
   const elevationRad = (elevationDeg * Math.PI) / 180;
@@ -5597,20 +5598,16 @@ const updateSunPosition = () => {
     if (dirLight.shadow && dirLight.shadow.camera) {
       dirLight.shadow.camera.updateProjectionMatrix();
     }
-
-    if (world.scene && (world.scene as any).updateShadows) {
-      (world.scene as any).updateShadows();
-    }
   }
 };
 
-if (sunAzimuthInput) sunAzimuthInput.addEventListener("input", updateSunPosition);
-if (sunElevationInput) sunElevationInput.addEventListener("input", updateSunPosition);
-// Global hook used by GeoBIM solar study (azimuth/elevation in degrees)
+if (sunAzimuthInput) sunAzimuthInput.addEventListener("input", () => updateSunPosition());
+if (sunElevationInput) sunElevationInput.addEventListener("input", () => updateSunPosition());
+// Global hook used by GeoBIM solar study (azimuth/elevation in degrees with floating precision)
 (window as any).updateSunPosition = (azimuth: number, elevation: number) => {
-  if (sunAzimuthInput) sunAzimuthInput.value = String(Math.round(azimuth));
-  if (sunElevationInput) sunElevationInput.value = String(Math.round(elevation));
-  updateSunPosition();
+  if (sunAzimuthInput) sunAzimuthInput.value = azimuth.toFixed(1);
+  if (sunElevationInput) sunElevationInput.value = elevation.toFixed(1);
+  updateSunPosition(azimuth, elevation);
 };
 
 // 3D Pin Annotation Tool Controller & Sidebar Sync
