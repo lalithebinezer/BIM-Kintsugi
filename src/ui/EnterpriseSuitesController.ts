@@ -492,7 +492,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
         gcpListContainer.innerHTML = `<div style="font-size: 0.58rem; color: var(--text-muted); padding: 0.25rem;">No survey control points defined. Click "+ Add GCP" to create one.</div>`;
       } else {
         gcpListContainer.innerHTML = pts.map(p => `
-          <div class="gis-gcp-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.35rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.58rem;">
+          <div class="gis-gcp-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.35rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.58rem; cursor: pointer;" title="Click to view & frame survey point ${p.name}">
             <div style="display: flex; align-items: center; gap: 0.3rem;">
               <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${p.color}; flex-shrink: 0;"></span>
               <div>
@@ -504,12 +504,44 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
               </div>
             </div>
             <div style="display: flex; gap: 0.2rem; align-items: center;">
+              <button type="button" class="btn-icon gis-btn-focus-gcp" data-id="${p.id}" style="width: 18px; height: 18px; color: #06b6d4;" title="Frame Camera on Point">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
               <button type="button" class="btn-icon gis-btn-delete-gcp" data-id="${p.id}" style="width: 18px; height: 18px; color: #ef4444;" title="Delete Control Point">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
             </div>
           </div>
         `).join("");
+
+        gcpListContainer.querySelectorAll(".gis-gcp-item").forEach(item => {
+          item.addEventListener("click", () => {
+            const id = item.getAttribute("data-id");
+            if (id) {
+              gisModule.setSurveyPointsVisible(true);
+              const toggle = document.getElementById("gis-toggle-gcps") as HTMLInputElement | null;
+              if (toggle) toggle.checked = true;
+              gisModule.flyToSurveyPoint(id);
+              showToast(`Focusing camera on Survey Point ${id}`, "info");
+              SoundManager.getInstance().playClick();
+            }
+          });
+        });
+
+        gcpListContainer.querySelectorAll(".gis-btn-focus-gcp").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute("data-id");
+            if (id) {
+              gisModule.setSurveyPointsVisible(true);
+              const toggle = document.getElementById("gis-toggle-gcps") as HTMLInputElement | null;
+              if (toggle) toggle.checked = true;
+              gisModule.flyToSurveyPoint(id);
+              showToast(`Focusing camera on Survey Point ${id}`, "info");
+              SoundManager.getInstance().playClick();
+            }
+          });
+        });
 
         gcpListContainer.querySelectorAll(".gis-btn-delete-gcp").forEach(btn => {
           btn.addEventListener("click", (e) => {
@@ -869,6 +901,15 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("gis-btn-align-true-north")?.addEventListener("click", () => {
     gisModule.alignCameraToTrueNorth();
     showToast("Camera aligned to True North", "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-focus-compass")?.addEventListener("click", () => {
+    gisModule.setCompassVisible(true);
+    const toggle = document.getElementById("gis-toggle-compass") as HTMLInputElement | null;
+    if (toggle) toggle.checked = true;
+    gisModule.flyToCompass();
+    showToast("Framed 3D True North Ground Compass", "info");
     SoundManager.getInstance().playClick();
   });
 

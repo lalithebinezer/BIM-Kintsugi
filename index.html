@@ -2973,12 +2973,16 @@
               <span style="font-size: 0.58rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
               <input type="range" id="gis-slider-north" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-              <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.6rem; padding: 0.25rem 0.4rem;" title="Align Camera Orientation to True North">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem;">
+              <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.58rem; padding: 0.25rem 0.3rem;" title="Align Camera Orientation to True North">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
-                <span>Align True North</span>
+                <span>Align North</span>
               </button>
-              <button type="button" id="gis-btn-align-proj-north" class="btn-cost-action boq" style="font-size: 0.6rem; padding: 0.25rem 0.4rem;" title="Align Camera Orientation to Project North (0°)">
+              <button type="button" id="gis-btn-focus-compass" class="btn-cost-action rates" style="font-size: 0.58rem; padding: 0.25rem 0.3rem; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;" title="Frame Camera Directly to True North Compass Rose">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>View Compass</span>
+              </button>
+              <button type="button" id="gis-btn-align-proj-north" class="btn-cost-action boq" style="font-size: 0.58rem; padding: 0.25rem 0.3rem;" title="Align Camera Orientation to Project North (0°)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span>Project North</span>
               </button>

@@ -302,9 +302,11 @@ describe("GisModule Unit Tests", () => {
     gis.setSurveyPointsVisible(false);
     expect(gis.isSurveyPointsVisible()).toBe(false);
 
-    // Camera alignments should run cleanly without throwing
+    // Camera alignments and fly-to helpers should run cleanly without throwing
     expect(() => gis.alignCameraToTrueNorth()).not.toThrow();
     expect(() => gis.alignCameraToProjectNorth()).not.toThrow();
+    expect(() => gis.flyToCompass()).not.toThrow();
+    expect(() => gis.flyToSurveyPoint("BM-01")).not.toThrow();
   });
 
   it("should parse buildingSMART IFC4 IfcMapConversion and IfcProjectedCRS metadata", () => {

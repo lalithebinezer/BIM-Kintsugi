@@ -1723,11 +1723,7 @@ export class GisModule {
       this.compassGroup.remove(child);
     }
 
-    if (!this._isCompassVisible) {
-      this.compassGroup.visible = false;
-      return;
-    }
-    this.compassGroup.visible = true;
+    this.compassGroup.visible = this._isCompassVisible;
 
     const radius = Math.min(32, Math.max(12, this.basemapConfig.radius * 0.08));
     const elev = this.basemapConfig.elevationOffset + 0.12;
@@ -1740,7 +1736,7 @@ export class GisModule {
       ringPts.push(new THREE.Vector3(Math.cos(theta) * radius, elev, Math.sin(theta) * radius));
     }
     const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
-    const ringMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.65 });
+    const ringMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.75 });
     const ringLine = new THREE.LineLoop(ringGeo, ringMat);
     this.compassGroup.add(ringLine);
 
@@ -1752,7 +1748,7 @@ export class GisModule {
       innerPts.push(new THREE.Vector3(Math.cos(theta) * innerRadius, elev, Math.sin(theta) * innerRadius));
     }
     const innerGeo = new THREE.BufferGeometry().setFromPoints(innerPts);
-    const innerMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
+    const innerMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 });
     const innerLine = new THREE.LineLoop(innerGeo, innerMat);
     this.compassGroup.add(innerLine);
 
@@ -1769,15 +1765,16 @@ export class GisModule {
     const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPts);
     const tickSegments = new THREE.LineSegments(
       tickGeo,
-      new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.75 })
+      new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.85 })
     );
     this.compassGroup.add(tickSegments);
 
     // 4. Stylized 3D True North Arrow (pointing North -Z)
+    // Primary North Arrow (Cyan / Bright Teal)
     const arrowShape = new THREE.Shape();
-    arrowShape.moveTo(0, -radius * 1.25);
+    arrowShape.moveTo(0, radius * 1.35);
     arrowShape.lineTo(radius * 0.22, 0);
-    arrowShape.lineTo(0, -radius * 0.15);
+    arrowShape.lineTo(0, radius * 0.18);
     arrowShape.lineTo(-radius * 0.22, 0);
     arrowShape.closePath();
 
@@ -1789,10 +1786,56 @@ export class GisModule {
       color: 0x06b6d4,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.95,
     });
     const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
     this.compassGroup.add(arrowMesh);
+
+    // South pointer needle accent (Rose/Coral) pointing South +Z
+    const southShape = new THREE.Shape();
+    southShape.moveTo(0, -radius * 0.85);
+    southShape.lineTo(radius * 0.15, 0);
+    southShape.lineTo(0, -radius * 0.12);
+    southShape.lineTo(-radius * 0.15, 0);
+    southShape.closePath();
+
+    const southGeo = new THREE.ShapeGeometry(southShape);
+    southGeo.rotateX(-Math.PI / 2);
+    southGeo.translate(0, elev + 0.04, 0);
+
+    const southMat = new THREE.MeshBasicMaterial({
+      color: 0xf43f5e,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const southMesh = new THREE.Mesh(southGeo, southMat);
+    this.compassGroup.add(southMesh);
+
+    // 5. Pure 3D Vector Geometry "N" at North Tip
+    const nShape = new THREE.Shape();
+    const nScale = Math.max(1.4, radius * 0.08);
+    nShape.moveTo(-0.5 * nScale, -0.7 * nScale);
+    nShape.lineTo(-0.22 * nScale, -0.7 * nScale);
+    nShape.lineTo(-0.22 * nScale, 0.3 * nScale);
+    nShape.lineTo(0.22 * nScale, -0.7 * nScale);
+    nShape.lineTo(0.5 * nScale, -0.7 * nScale);
+    nShape.lineTo(0.5 * nScale, 0.7 * nScale);
+    nShape.lineTo(0.22 * nScale, 0.7 * nScale);
+    nShape.lineTo(0.22 * nScale, -0.3 * nScale);
+    nShape.lineTo(-0.22 * nScale, 0.7 * nScale);
+    nShape.lineTo(-0.5 * nScale, 0.7 * nScale);
+    nShape.closePath();
+
+    const nGeo = new THREE.ShapeGeometry(nShape);
+    nGeo.rotateX(-Math.PI / 2);
+    nGeo.translate(0, elev + 0.06, -radius * 1.5);
+    const nMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      side: THREE.DoubleSide,
+    });
+    const nMesh = new THREE.Mesh(nGeo, nMat);
+    this.compassGroup.add(nMesh);
 
     // Position & Orientation matching True North
     this.compassGroup.position.set(0, 0, 0);
@@ -1805,6 +1848,9 @@ export class GisModule {
     this._isCompassVisible = visible;
     if (this.compassGroup) {
       this.compassGroup.visible = visible;
+      if (visible && this.compassGroup.children.length === 0) {
+        this.rebuildCompassRose();
+      }
     }
     this.triggerRender();
   }
@@ -1815,6 +1861,30 @@ export class GisModule {
 
   public getIsCompassVisible(): boolean {
     return this._isCompassVisible;
+  }
+
+  public async flyToCompass(): Promise<boolean> {
+    if (!this.world?.camera?.controls) return false;
+    try {
+      const controls = this.world.camera.controls as any;
+      const radius = Math.min(32, Math.max(12, this.basemapConfig.radius * 0.08));
+      const dist = Math.max(22, radius * 1.5);
+      if (typeof controls.setLookAt === "function") {
+        await controls.setLookAt(
+          dist * 0.4,
+          dist * 0.7,
+          dist * 0.6,
+          -5,
+          0.5,
+          0,
+          true
+        );
+      }
+      return true;
+    } catch (e) {
+      console.warn("flyToCompass error:", e);
+      return false;
+    }
   }
 
   public async alignCameraToTrueNorth(): Promise<void> {
@@ -1965,6 +2035,9 @@ export class GisModule {
     this._isSurveyVisible = visible;
     if (this.surveyGroup) {
       this.surveyGroup.visible = visible;
+      if (visible && this.surveyGroup.children.length === 0) {
+        this.rebuildSurveyPointsMesh();
+      }
     }
     this.triggerRender();
   }
@@ -1979,6 +2052,29 @@ export class GisModule {
 
   public getIsSurveyVisible(): boolean {
     return this._isSurveyVisible;
+  }
+
+  public async flyToSurveyPoint(pointId: string): Promise<boolean> {
+    const pt = this.surveyPoints.find((p) => p.id === pointId);
+    if (!pt || !this.world?.camera?.controls) return false;
+    try {
+      const controls = this.world.camera.controls as any;
+      if (typeof controls.setLookAt === "function") {
+        await controls.setLookAt(
+          pt.localX + 10,
+          pt.localY + 8,
+          pt.localZ + 10,
+          pt.localX,
+          pt.localY + 1.2,
+          pt.localZ,
+          true
+        );
+      }
+      return true;
+    } catch (e) {
+      console.warn("flyToSurveyPoint error:", e);
+      return false;
+    }
   }
 
   private updateSurveyPointCoordinates() {
@@ -2010,48 +2106,72 @@ export class GisModule {
       this.surveyGroup.remove(child);
     }
 
-    if (!this._isSurveyVisible) {
-      this.surveyGroup.visible = false;
-      return;
-    }
-    this.surveyGroup.visible = true;
+    this.surveyGroup.visible = this._isSurveyVisible;
 
     this.surveyPoints.forEach((p) => {
       let colorHex = 0x06b6d4; // Cyan (CONTROL)
-      if (p.code === "BENCHMARK") colorHex = 0xf59e0b; // Amber / Gold
-      else if (p.code === "BOUNDARY") colorHex = 0x10b981; // Emerald
-      else if (p.code === "UTILITY") colorHex = 0xa855f7; // Purple
+      if (p.code === "BENCHMARK") colorHex = 0xf59e0b;
+      else if (p.code === "BOUNDARY") colorHex = 0x10b981;
+      else if (p.code === "UTILITY") colorHex = 0xa855f7;
 
       // 1. Survey Prism (Octahedron)
-      const prismGeo = new THREE.OctahedronGeometry(0.75, 0);
+      const prismGeo = new THREE.OctahedronGeometry(0.9, 0);
       const prismMat = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: false });
       const prismMesh = new THREE.Mesh(prismGeo, prismMat);
       prismMesh.position.set(p.localX, p.localY + 1.8, p.localZ);
       prismMesh.name = `GCP-${p.id}`;
       this.surveyGroup?.add(prismMesh);
 
-      // 2. Vertical Laser Line to ground
-      const linePts = [
-        new THREE.Vector3(p.localX, p.localY, p.localZ),
-        new THREE.Vector3(p.localX, p.localY + 1.8, p.localZ),
-      ];
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
-      const lineMat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85 });
-      const line = new THREE.Line(lineGeo, lineMat);
-      this.surveyGroup?.add(line);
+      // Prism faceted wireframe overlay for precision look
+      const prismWireGeo = new THREE.WireframeGeometry(prismGeo);
+      const prismWireMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 });
+      const prismWire = new THREE.LineSegments(prismWireGeo, prismWireMat);
+      prismWire.position.set(p.localX, p.localY + 1.8, p.localZ);
+      this.surveyGroup?.add(prismWire);
 
-      // 3. Ground ring target
-      const ringGeo = new THREE.RingGeometry(0.5, 0.75, 16);
+      // 2. Vertical Laser Pole to ground (Solid cylinder)
+      const poleHeight = 1.8;
+      const poleGeo = new THREE.CylinderGeometry(0.04, 0.04, poleHeight, 8);
+      const poleMat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85 });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.set(p.localX, p.localY + poleHeight / 2, p.localZ);
+      this.surveyGroup?.add(pole);
+
+      // 3. Ground ring target (inner and outer rings + crosshairs)
+      const ringGeo = new THREE.RingGeometry(0.7, 0.95, 32);
       ringGeo.rotateX(-Math.PI / 2);
       const ringMat = new THREE.MeshBasicMaterial({
         color: colorHex,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.75,
       });
       const groundRing = new THREE.Mesh(ringGeo, ringMat);
       groundRing.position.set(p.localX, p.localY + 0.05, p.localZ);
       this.surveyGroup?.add(groundRing);
+
+      const innerRingGeo = new THREE.RingGeometry(0.2, 0.35, 16);
+      innerRingGeo.rotateX(-Math.PI / 2);
+      const innerRingMesh = new THREE.Mesh(innerRingGeo, ringMat);
+      innerRingMesh.position.set(p.localX, p.localY + 0.06, p.localZ);
+      this.surveyGroup?.add(innerRingMesh);
+
+      const chPts = [
+        new THREE.Vector3(p.localX - 1.2, p.localY + 0.07, p.localZ),
+        new THREE.Vector3(p.localX + 1.2, p.localY + 0.07, p.localZ),
+        new THREE.Vector3(p.localX, p.localY + 0.07, p.localZ - 1.2),
+        new THREE.Vector3(p.localX, p.localY + 0.07, p.localZ + 1.2),
+      ];
+      const chGeo = new THREE.BufferGeometry().setFromPoints(chPts);
+      const chLine = new THREE.LineSegments(chGeo, new THREE.LineBasicMaterial({ color: colorHex, opacity: 0.85, transparent: true }));
+      this.surveyGroup?.add(chLine);
+
+      // 4. Optical Prism Center Illuminator Beacon
+      const beaconGeo = new THREE.SphereGeometry(0.25, 12, 12);
+      const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
+      beaconMesh.position.set(p.localX, p.localY + 1.8, p.localZ);
+      this.surveyGroup?.add(beaconMesh);
     });
 
     this.triggerRender();
@@ -2617,6 +2737,9 @@ export class GisModule {
 
   public startModelPlacementMode(onPlaced?: (placement: GisModelPlacement) => void): boolean {
     this.isModelPlacementMode = true;
+    if (this.modelAnchorGroup) {
+      this.modelAnchorGroup.visible = true;
+    }
     if (typeof document === "undefined") return true;
 
     const container = document.getElementById("container");
@@ -2666,6 +2789,9 @@ export class GisModule {
 
   public stopModelPlacementMode() {
     this.isModelPlacementMode = false;
+    if (this.modelAnchorGroup) {
+      this.modelAnchorGroup.visible = false;
+    }
     if (typeof document !== "undefined") {
       const container = document.getElementById("container");
       if (container) {
@@ -2684,6 +2810,7 @@ export class GisModule {
 
   public rebuildModelAnchorMesh() {
     if (!this.modelAnchorGroup) return;
+    this.modelAnchorGroup.visible = this.isModelPlacementMode;
 
     // Clear existing
     while (this.modelAnchorGroup.children.length > 0) {
