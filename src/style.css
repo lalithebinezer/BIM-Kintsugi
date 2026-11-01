@@ -10605,3 +10605,51 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 }
 
 
+
+/* ============================================================
+   GeoEngineering Suite cards (Solar, Section Box, Terrain, IFC,
+   Survey Discrepancy, Walkthrough, Offline Cache)
+   ============================================================ */
+#gis-panel .geo-suite-card { display: flex; flex-direction: column; gap: 0.55rem; }
+#gis-panel .geo-row { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+#gis-panel .geo-row input[type="range"] { width: 100%; accent-color: #06b6d4; }
+#gis-panel .geo-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+#gis-panel .geo-grid-2 .btn-cost-action, #gis-panel .geo-full { padding: 0.42rem 0.5rem; justify-content: center; }
+#gis-panel .geo-full { width: 100%; }
+#gis-panel .geo-val { float: right; font-family: var(--font-mono, monospace); color: #06b6d4; font-size: 0.62rem; }
+#gis-panel .geo-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
+#gis-panel .geo-presets .gis-btn-radius-preset { font-size: 0.58rem; padding: 0.3rem 0.2rem; white-space: nowrap; }
+#gis-panel .geo-readout {
+  font-family: var(--font-mono, monospace); font-size: 0.6rem; line-height: 1.5;
+  color: var(--text-muted); background: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.18); border-radius: 6px; padding: 0.45rem 0.55rem;
+}
+#gis-panel .geo-check { display: flex; align-items: center; gap: 0.45rem; font-size: 0.68rem; color: var(--text-primary, #e2e8f0); cursor: pointer; }
+#gis-panel .geo-check input { accent-color: #06b6d4; }
+#gis-panel .geo-box-sliders { display: flex; flex-direction: column; gap: 0.35rem; opacity: 0.45; pointer-events: none; transition: opacity 0.2s; }
+#gis-panel .geo-box-sliders.active { opacity: 1; pointer-events: auto; }
+#gis-panel .geo-box-axis { display: grid; grid-template-columns: 18px 1fr 1fr; gap: 0.4rem; align-items: center; }
+#gis-panel .geo-box-axis input[type="range"] { width: 100%; accent-color: #d4ff3f; }
+#gis-panel .geo-axis { font-family: var(--font-mono, monospace); font-size: 0.62rem; font-weight: 700; text-align: center; }
+#gis-panel .geo-axis.x { color: #ef4444; } #gis-panel .geo-axis.y { color: #22c55e; } #gis-panel .geo-axis.z { color: #3b82f6; }
+#gis-panel .geo-disc-list { display: flex; flex-direction: column; gap: 0.3rem; max-height: 180px; overflow-y: auto; }
+#gis-panel .geo-disc-item {
+  display: grid; grid-template-columns: 8px 1fr auto; gap: 0.45rem; align-items: center;
+  font-size: 0.62rem; padding: 0.35rem 0.5rem; border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); cursor: pointer;
+}
+#gis-panel .geo-disc-item:hover { border-color: rgba(6, 182, 212, 0.4); }
+#gis-panel .geo-disc-dot { width: 8px; height: 8px; border-radius: 50%; }
+#gis-panel .geo-disc-item.pass .geo-disc-dot { background: #10b981; }
+#gis-panel .geo-disc-item.warn .geo-disc-dot { background: #f59e0b; }
+#gis-panel .geo-disc-item.fail .geo-disc-dot { background: #ef4444; }
+#gis-panel .geo-disc-mm { font-family: var(--font-mono, monospace); font-weight: 700; }
+#gis-panel .geo-disc-item.pass .geo-disc-mm { color: #10b981; }
+#gis-panel .geo-disc-item.warn .geo-disc-mm { color: #f59e0b; }
+#gis-panel .geo-disc-item.fail .geo-disc-mm { color: #ef4444; }
+#gis-panel #geo-walk-toggle.active { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.5); color: #f87171; }
+
+[data-theme="light"] #gis-panel .geo-readout, body.light-theme #gis-panel .geo-readout { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+[data-theme="light"] #gis-panel .geo-check, body.light-theme #gis-panel .geo-check { color: #0f172a; }
+[data-theme="light"] #gis-panel .geo-disc-item, body.light-theme #gis-panel .geo-disc-item { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
+[data-theme="light"] #gis-panel .geo-val, body.light-theme #gis-panel .geo-val { color: #0e7490; }

@@ -3216,6 +3216,161 @@
           </div>
         </div>
 
+        <!-- ============ SOLAR STUDY ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Solar Study &amp; Shadow Simulation</span>
+          <span id="geo-sun-badge" class="gis-telemetry-pill">--</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <div class="geo-row">
+            <label for="geo-sun-date" class="gis-field-label">Date</label>
+            <input type="date" id="geo-sun-date" class="gis-input" />
+          </div>
+          <div class="geo-row">
+            <label for="geo-sun-hour" class="gis-field-label">Time of Day <span id="geo-sun-hour-val" class="geo-val">12:00</span></label>
+            <input type="range" id="geo-sun-hour" min="0" max="24" step="0.25" value="12" />
+          </div>
+          <div class="geo-presets">
+            <button type="button" class="gis-btn-radius-preset geo-sun-preset" data-date="03-20">Equinox Mar</button>
+            <button type="button" class="gis-btn-radius-preset geo-sun-preset" data-date="06-21">Summer Sol.</button>
+            <button type="button" class="gis-btn-radius-preset geo-sun-preset" data-date="09-22">Equinox Sep</button>
+            <button type="button" class="gis-btn-radius-preset geo-sun-preset" data-date="12-21">Winter Sol.</button>
+          </div>
+          <div id="geo-sun-readout" class="geo-readout">Azimuth -- · Elevation -- · Daylight --</div>
+          <label class="geo-check"><input type="checkbox" id="geo-sun-path-toggle" /> Show 3D sun-path arc</label>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-sun-apply" class="btn-cost-action rates">Apply Sun</button>
+            <button type="button" id="geo-sun-play" class="btn-cost-action boq">▶ Play Day Cycle</button>
+          </div>
+        </div>
+
+        <!-- ============ SECTION BOX ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>3D Section Box</span>
+          <span id="geo-box-badge" class="gis-telemetry-pill">Off</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <label class="geo-check"><input type="checkbox" id="geo-box-toggle" /> Enable section box clipping</label>
+          <div id="geo-box-sliders" class="geo-box-sliders">
+            <div class="geo-box-axis"><span class="geo-axis x">X</span><input type="range" data-axis="x" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="x" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
+            <div class="geo-box-axis"><span class="geo-axis y">Y</span><input type="range" data-axis="y" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="y" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
+            <div class="geo-box-axis"><span class="geo-axis z">Z</span><input type="range" data-axis="z" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="z" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
+          </div>
+          <div id="geo-box-readout" class="geo-readout">Box: --</div>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-box-fit" class="btn-cost-action rates">Fit to Model</button>
+            <button type="button" id="geo-box-reset" class="btn-cost-action boq">Reset Box</button>
+          </div>
+        </div>
+
+        <!-- ============ TERRAIN ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>3D Terrain (DEM) &amp; Earthworks</span>
+          <span id="geo-terrain-badge" class="gis-telemetry-pill">None</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <div class="geo-grid-2">
+            <div class="geo-row">
+              <label for="geo-terrain-exag" class="gis-field-label">Vertical Exaggeration <span id="geo-terrain-exag-val" class="geo-val">1.0×</span></label>
+              <input type="range" id="geo-terrain-exag" min="0.5" max="5" step="0.1" value="1" />
+            </div>
+            <div class="geo-row">
+              <label for="geo-terrain-contour" class="gis-field-label">Contour Interval (m)</label>
+              <input type="number" id="geo-terrain-contour" class="gis-input" min="0.5" step="0.5" value="2" />
+            </div>
+          </div>
+          <div class="geo-row">
+            <label for="geo-terrain-pad" class="gis-field-label">Building Pad Elevation (m, relative)</label>
+            <input type="number" id="geo-terrain-pad" class="gis-input" step="0.1" value="0" />
+          </div>
+          <div id="geo-terrain-readout" class="geo-readout">Generate terrain to compute cut / fill.</div>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-terrain-build" class="btn-cost-action rates">Build Terrain</button>
+            <button type="button" id="geo-terrain-remove" class="btn-cost-action boq">Remove</button>
+          </div>
+          <button type="button" id="geo-terrain-cutfill" class="btn-cost-action boq geo-full">Compute Footprint Cut / Fill</button>
+        </div>
+
+        <!-- ============ IFC GEOREF ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>IFC4 Georeferencing Export</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <div id="geo-ifc-readout" class="geo-readout">IfcMapConversion · IfcProjectedCRS (buildingSMART)</div>
+          <div class="geo-row">
+            <label for="geo-ifc-file" class="gis-field-label">Inject into existing IFC (optional)</label>
+            <input type="file" id="geo-ifc-file" accept=".ifc" class="gis-input" style="padding: 0.25rem 0.4rem; font-size: 0.62rem;" />
+          </div>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-ifc-export" class="btn-cost-action rates">Export .ifc</button>
+            <button type="button" id="geo-ifc-json" class="btn-cost-action boq">Export JSON</button>
+          </div>
+        </div>
+
+        <!-- ============ SURVEY DISCREPANCY ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Field Survey Discrepancy</span>
+          <span id="geo-disc-badge" class="gis-telemetry-pill">0 pts</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <div class="geo-grid-2">
+            <div class="geo-row">
+              <label for="geo-tol-pass" class="gis-field-label">Pass ≤ (mm)</label>
+              <input type="number" id="geo-tol-pass" class="gis-input" min="1" value="15" />
+            </div>
+            <div class="geo-row">
+              <label for="geo-tol-warn" class="gis-field-label">Warn ≤ (mm)</label>
+              <input type="number" id="geo-tol-warn" class="gis-input" min="1" value="30" />
+            </div>
+          </div>
+          <div class="geo-row">
+            <label for="geo-disc-file" class="gis-field-label">Total Station CSV (id,x,y,z or id,E,N,H)</label>
+            <input type="file" id="geo-disc-file" accept=".csv,.txt" class="gis-input" style="padding: 0.25rem 0.4rem; font-size: 0.62rem;" />
+          </div>
+          <div id="geo-disc-summary" class="geo-readout">Compared against Survey GCPs.</div>
+          <div id="geo-disc-list" class="geo-disc-list"></div>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-disc-demo" class="btn-cost-action rates">Demo Field Data</button>
+            <button type="button" id="geo-disc-export" class="btn-cost-action boq">Export Report</button>
+          </div>
+          <button type="button" id="geo-disc-clear" class="btn-cost-action boq geo-full">Clear Heatmap</button>
+        </div>
+
+        <!-- ============ WALKTHROUGH ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>First-Person Walkthrough</span>
+          <span id="geo-walk-badge" class="gis-telemetry-pill">Idle</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <div class="geo-grid-2">
+            <div class="geo-row">
+              <label for="geo-walk-speed" class="gis-field-label">Speed <span id="geo-walk-speed-val" class="geo-val">3.2 m/s</span></label>
+              <input type="range" id="geo-walk-speed" min="0.5" max="10" step="0.1" value="3.2" />
+            </div>
+            <div class="geo-row">
+              <label for="geo-walk-eye" class="gis-field-label">Eye Height (m)</label>
+              <input type="number" id="geo-walk-eye" class="gis-input" min="0.5" max="3" step="0.05" value="1.65" />
+            </div>
+          </div>
+          <label class="geo-check"><input type="checkbox" id="geo-walk-collision" checked /> Floor follow &amp; wall collision</label>
+          <div class="geo-readout">WASD move · Shift run · Q/E fly · click to mouse-look · Esc exit</div>
+          <button type="button" id="geo-walk-toggle" class="btn-cost-action rates geo-full">Start Walkthrough</button>
+        </div>
+
+        <!-- ============ OFFLINE CACHE ============ -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Offline Basemap Cache</span>
+          <span id="geo-cache-badge" class="gis-telemetry-pill">--</span>
+        </div>
+        <div class="drawer-section-card geo-suite-card">
+          <label class="geo-check"><input type="checkbox" id="geo-cache-toggle" checked /> Cache tiles in IndexedDB (offline jobsite mode)</label>
+          <div id="geo-cache-readout" class="geo-readout">--</div>
+          <div class="geo-grid-2">
+            <button type="button" id="geo-cache-refresh" class="btn-cost-action rates">Refresh Stats</button>
+            <button type="button" id="geo-cache-clear" class="btn-cost-action boq">Clear Cache</button>
+          </div>
+        </div>
+
         <!-- Municipal Cadastre & Underground Utilities -->
         <div class="drawer-section-header" style="margin-top: 0.75rem;">
           <span>Cadastre & GeoJSON Utilities</span>

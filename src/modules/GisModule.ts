@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GisTileCache } from "./GeoEngineeringSuite";
 
 export type GisBasemapProvider = "satellite" | "streets" | "dark" | "topo";
 
@@ -1210,20 +1211,24 @@ export class GisModule {
           continue;
         }
 
-        const p = new Promise<{ img: HTMLImageElement; tx: number; ty: number } | null>((resolve) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => {
-            if (this.tileCache.size > 300) {
-              const firstKey = this.tileCache.keys().next().value;
-              if (firstKey) this.tileCache.delete(firstKey);
-            }
-            this.tileCache.set(url, img);
-            resolve({ img, tx, ty });
-          };
-          img.onerror = () => resolve(null);
-          img.src = url;
-        });
+        const p = (async () => {
+          const src = await GisTileCache.resolve(url);
+          return new Promise<{ img: HTMLImageElement; tx: number; ty: number } | null>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              if (this.tileCache.size > 300) {
+                const firstKey = this.tileCache.keys().next().value;
+                if (firstKey) this.tileCache.delete(firstKey);
+              }
+              this.tileCache.set(url, img);
+              if (src === url) GisTileCache.store(url);
+              resolve({ img, tx, ty });
+            };
+            img.onerror = () => resolve(null);
+            img.src = src;
+          });
+        })();
         imgPromises.push(p);
       }
     }

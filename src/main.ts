@@ -73,6 +73,7 @@ import { CostRateManager } from "./modules/CostRateManager";
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
 import { BimEngine } from "./core/BimEngine";
+import { initGeoEngineeringController } from "./ui/GeoEngineeringController";
 import { ModelManager } from "./core/ModelManager";
 import { ViewportController } from "./core/ViewportController";
 import { ClippingModule } from "./modules/ClippingModule";
@@ -5596,6 +5597,12 @@ const updateSunPosition = () => {
 
 if (sunAzimuthInput) sunAzimuthInput.addEventListener("input", updateSunPosition);
 if (sunElevationInput) sunElevationInput.addEventListener("input", updateSunPosition);
+// Global hook used by GeoBIM solar study (azimuth/elevation in degrees)
+(window as any).updateSunPosition = (azimuth: number, elevation: number) => {
+  if (sunAzimuthInput) sunAzimuthInput.value = String(Math.round(azimuth));
+  if (sunElevationInput) sunElevationInput.value = String(Math.round(elevation));
+  updateSunPosition();
+};
 
 // 3D Pin Annotation Tool Controller & Sidebar Sync
 const toggleAnnotation = document.getElementById("settings-toggle-annotation") as HTMLInputElement | null;
@@ -7641,6 +7648,7 @@ requestAnimationFrame(renderHUD);
 // ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
 // ═════════════════════════════════════════════════════════════════════
 initEnterpriseSuitesController(world, highlighter);
+initGeoEngineeringController(world, (BimEngine.getInstance() as any).fragments?.core);
 
 // ═════════════════════════════════════════════════════════════════════
 // ─── PWA OFFLINE JOBSITE MODE & INSTALL PROMPT ───────────────────────
