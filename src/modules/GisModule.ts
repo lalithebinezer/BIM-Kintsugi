@@ -18,6 +18,7 @@ export interface GisBasemapConfig {
   radius: number; // meters (radius from project origin)
   elevationOffset: number; // vertical offset relative to 3D model ground (meters)
   opacity: number;
+  resolution?: 1024 | 2048 | 4096; // canvas texture pixel resolution
 }
 
 export interface GisGeoJsonFeature {
@@ -172,6 +173,7 @@ export class GisModule {
     radius: 400,
     elevationOffset: -0.05,
     opacity: 0.95,
+    resolution: 2048,
   };
 
   // 3D Scene Objects
@@ -446,6 +448,10 @@ export class GisModule {
       this.basemapMesh.material.opacity = opacity;
       this.triggerRender();
     }
+  }
+
+  public setBasemapResolution(resolution: 1024 | 2048 | 4096) {
+    this.setBasemapConfig({ resolution });
   }
 
   public clearCadastre() {
@@ -862,21 +868,38 @@ export class GisModule {
     this.basemapGroup.visible = true;
 
     const diameter = this.basemapConfig.radius * 2;
+    const res = this.basemapConfig.resolution || 2048;
+
+    // Initialize or resize high-res procedural canvas texture
+    if (!this.basemapCanvas) {
+      this.basemapCanvas = document.createElement("canvas");
+    }
+    if (this.basemapCanvas.width !== res || this.basemapCanvas.height !== res) {
+      this.basemapCanvas.width = res;
+      this.basemapCanvas.height = res;
+      if (this.basemapTexture) {
+        this.basemapTexture.needsUpdate = true;
+      }
+    }
 
     // Recreate geometry if size changed
     if (!this.basemapMesh) {
       const geo = new THREE.PlaneGeometry(diameter, diameter, 32, 32);
       geo.rotateX(-Math.PI / 2);
 
-      // Initialize high-res procedural canvas texture
-      this.basemapCanvas = document.createElement("canvas");
-      this.basemapCanvas.width = 1024;
-      this.basemapCanvas.height = 1024;
       this.renderBasemapTextureContent();
 
       this.basemapTexture = new THREE.CanvasTexture(this.basemapCanvas);
       this.basemapTexture.wrapS = THREE.ClampToEdgeWrapping;
       this.basemapTexture.wrapT = THREE.ClampToEdgeWrapping;
+      this.basemapTexture.generateMipmaps = true;
+      this.basemapTexture.minFilter = THREE.LinearMipmapLinearFilter;
+      this.basemapTexture.magFilter = THREE.LinearFilter;
+      const maxAnisotropy = this.world?.renderer?.three?.capabilities?.getMaxAnisotropy?.() ?? 16;
+      this.basemapTexture.anisotropy = Math.max(1, Math.min(16, maxAnisotropy));
+      if ((THREE as any).SRGBColorSpace) {
+        this.basemapTexture.colorSpace = (THREE as any).SRGBColorSpace;
+      }
 
       const mat = new THREE.MeshBasicMaterial({
         map: this.basemapTexture,
@@ -931,6 +954,7 @@ export class GisModule {
 
     const w = this.basemapCanvas.width;
     const h = this.basemapCanvas.height;
+    const scale = w / 1024;
     const provider = this.basemapConfig.provider;
 
     ctx.clearRect(0, 0, w, h);
@@ -976,7 +1000,7 @@ export class GisModule {
     for (let d = 0; d <= radius; d += gridStep) {
       const isMajor = Math.round(d / gridStep) % 4 === 0;
       ctx.strokeStyle = isMajor ? gridMajor : gridMinor;
-      ctx.lineWidth = isMajor ? 1.5 : 1;
+      ctx.lineWidth = (isMajor ? 1.5 : 1) * scale;
 
       // Positive & negative offsets from center
       const offsets = d === 0 ? [0] : [d, -d];
@@ -1001,25 +1025,25 @@ export class GisModule {
     // North arrow mark at top
     ctx.fillStyle = "#D4FF3F";
     ctx.beginPath();
-    ctx.moveTo(centerX, 20);
-    ctx.lineTo(centerX - 10, 45);
-    ctx.lineTo(centerX + 10, 45);
+    ctx.moveTo(centerX, 20 * scale);
+    ctx.lineTo(centerX - 10 * scale, 45 * scale);
+    ctx.lineTo(centerX + 10 * scale, 45 * scale);
     ctx.closePath();
     ctx.fill();
 
-    ctx.font = "bold 16px sans-serif";
+    ctx.font = `bold ${Math.round(16 * scale)}px sans-serif`;
     ctx.fillStyle = "#ffffff";
-    ctx.fillText("N", centerX - 6, 65);
+    ctx.fillText("N", centerX - 6 * scale, 65 * scale);
 
     // Center origin reticle
     ctx.strokeStyle = "#D4FF3F";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * scale;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
-    ctx.moveTo(centerX - 16, centerY);
-    ctx.lineTo(centerX + 16, centerY);
-    ctx.moveTo(centerX, centerY - 16);
-    ctx.lineTo(centerX, centerY + 16);
+    ctx.arc(centerX, centerY, 8 * scale, 0, Math.PI * 2);
+    ctx.moveTo(centerX - 16 * scale, centerY);
+    ctx.lineTo(centerX + 16 * scale, centerY);
+    ctx.moveTo(centerX, centerY - 16 * scale);
+    ctx.lineTo(centerX, centerY + 16 * scale);
     ctx.stroke();
 
     if (this.basemapTexture) {
@@ -1032,13 +1056,14 @@ export class GisModule {
     const centerY = h / 2;
     const radius = this.basemapConfig.radius;
     const pxPerMeter = (w / 2) / radius;
+    const scale = w / 1024;
 
     let interval = 100;
     if (radius >= 2000) interval = 500;
     else if (radius >= 800) interval = 250;
     else if (radius <= 250) interval = 50;
 
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.5 * scale;
     ctx.strokeStyle = ringColor;
 
     for (let d = interval; d <= radius; d += interval) {
@@ -1048,13 +1073,13 @@ export class GisModule {
       ctx.stroke();
 
       ctx.fillStyle = ringColor;
-      ctx.font = "bold 13px monospace";
-      ctx.fillText(`${d}m`, centerX + rPx + 4, centerY - 4);
+      ctx.font = `bold ${Math.round(13 * scale)}px monospace`;
+      ctx.fillText(`${d}m`, centerX + rPx + 4 * scale, centerY - 4 * scale);
     }
 
     // Outer boundary ring
     ctx.strokeStyle = ringColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * scale;
     ctx.beginPath();
     ctx.arc(centerX, centerY, (w / 2) * 0.98, 0, Math.PI * 2);
     ctx.stroke();
@@ -1103,9 +1128,9 @@ export class GisModule {
     // Desired ground resolution in meters per pixel
     const groundRes = (2 * R) / canvasWidth;
 
-    // Optimal Web Mercator zoom level for this extent
+    // Optimal Web Mercator zoom level for this extent (up to zoom 19 for crisp detail)
     let zoom = Math.round(Math.log2((156543.03 * Math.max(0.1, cosLat)) / groundRes));
-    zoom = Math.max(12, Math.min(18, zoom));
+    zoom = Math.max(12, Math.min(19, zoom));
 
     const lonToTileX = (lon: number, z: number) => ((lon + 180) / 360) * Math.pow(2, z);
     const latToTileY = (lat: number, z: number) => {
@@ -1123,8 +1148,9 @@ export class GisModule {
     let tileYMin = Math.floor(yStart);
     let tileYMax = Math.floor(yEnd);
 
-    // Limit maximum tiles to fetch in one pass to avoid rate limits or browser stalls
-    while ((tileXMax - tileXMin + 1) * (tileYMax - tileYMin + 1) > 20 && zoom > 10) {
+    // Limit maximum tiles to fetch in one pass based on resolution
+    const maxTiles = canvasWidth >= 4096 ? 49 : canvasWidth >= 2048 ? 36 : 20;
+    while ((tileXMax - tileXMin + 1) * (tileYMax - tileYMin + 1) > maxTiles && zoom > 10) {
       zoom--;
       xStart = lonToTileX(lonMin, zoom);
       xEnd = lonToTileX(lonMax, zoom);
@@ -1199,18 +1225,19 @@ export class GisModule {
   private overlayCadastralMarks(ctx: CanvasRenderingContext2D, w: number, h: number) {
     const centerX = w / 2;
     const centerY = h / 2;
+    const scale = w / 1024;
 
     this.drawMetricRangeRings(ctx, w, h, "rgba(212, 255, 63, 0.65)");
 
     // Center crosshair / origin reticle
     ctx.strokeStyle = "#D4FF3F";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.5 * scale;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-    ctx.moveTo(centerX - 18, centerY);
-    ctx.lineTo(centerX + 18, centerY);
-    ctx.moveTo(centerX, centerY - 18);
-    ctx.lineTo(centerX, centerY + 18);
+    ctx.arc(centerX, centerY, 6 * scale, 0, Math.PI * 2);
+    ctx.moveTo(centerX - 18 * scale, centerY);
+    ctx.lineTo(centerX + 18 * scale, centerY);
+    ctx.moveTo(centerX, centerY - 18 * scale);
+    ctx.lineTo(centerX, centerY + 18 * scale);
     ctx.stroke();
   }
 
@@ -2163,8 +2190,23 @@ export class GisModule {
     const ctx = c.getContext ? c.getContext("2d") : null;
     if (!ctx) return;
 
-    const w = c.width;
-    const h = c.height;
+    const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(3, window.devicePixelRatio || 1)) : 1;
+    const clientW = c.clientWidth || 320;
+    const clientH = c.clientHeight || 135;
+    const targetW = Math.round(clientW * dpr);
+    const targetH = Math.round(clientH * dpr);
+
+    if (c.width !== targetW || c.height !== targetH) {
+      c.width = targetW;
+      c.height = targetH;
+    }
+
+    if (ctx.setTransform) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    const w = clientW;
+    const h = clientH;
 
     // Dark high-tech background
     ctx.fillStyle = "#090d14";
@@ -2207,6 +2249,7 @@ export class GisModule {
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.onload = () => {
+            if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             const posX = w / 2 + (dx - fracX) * 256;
             const posY = h / 2 + (dy - fracY) * 256;
             ctx.drawImage(img, posX, posY, 256, 256);

@@ -99,6 +99,14 @@ describe("GisModule Unit Tests", () => {
     expect(cfg.provider).toBe("satellite");
     expect(cfg.radius).toBe(800);
     expect(cfg.opacity).toBe(0.75);
+    expect(cfg.resolution).toBe(2048);
+
+    // Test resolution adjustment
+    gis.setBasemapResolution(4096);
+    expect(gis.getBasemapConfig().resolution).toBe(4096);
+
+    gis.setBasemapResolution(1024);
+    expect(gis.getBasemapConfig().resolution).toBe(1024);
 
     gis.toggleBasemap(false);
     expect(gis.getBasemapConfig().enabled).toBe(false);

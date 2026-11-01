@@ -3021,6 +3021,15 @@
             </select>
           </div>
 
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Map Clarity / Res:</label>
+            <select id="gis-select-resolution" class="form-select" style="flex: 1; font-size: 0.65rem; padding: 0.2rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;" title="Increase basemap canvas pixel density for sharper ground textures and aerial imagery">
+              <option value="1024">Standard (1024 × 1024 · 1.0 MP)</option>
+              <option value="2048" selected>High Clarity 2K (2048 × 2048 · 4.2 MP)</option>
+              <option value="4096">Ultra-HD 4K (4096 × 4096 · 16.8 MP)</option>
+            </select>
+          </div>
+
           <div style="display: flex; flex-direction: column; gap: 0.2rem;">
             <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
               <span>Basemap Extent Radius</span>

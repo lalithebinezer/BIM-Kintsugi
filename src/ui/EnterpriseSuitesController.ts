@@ -409,6 +409,8 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       statusBadge.style.color = cfg.enabled ? "#06b6d4" : "var(--text-muted)";
     }
     if (selectProvider) selectProvider.value = cfg.provider;
+    const selectRes = document.getElementById("gis-select-resolution") as HTMLSelectElement | null;
+    if (selectRes) selectRes.value = String(cfg.resolution || 2048);
     if (sliderRadius) sliderRadius.value = String(cfg.radius);
     if (badgeRadius) badgeRadius.textContent = `${cfg.radius} m`;
     if (sliderElev) sliderElev.value = String(cfg.elevationOffset);
@@ -595,6 +597,14 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const prov = (e.target as HTMLSelectElement).value as any;
     gisModule.setBasemapProvider(prov);
     showToast(`Basemap Provider: ${prov}`, "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-select-resolution")?.addEventListener("change", (e) => {
+    const res = parseInt((e.target as HTMLSelectElement).value, 10) as 1024 | 2048 | 4096;
+    gisModule.setBasemapResolution(res);
+    const mpDesc = res === 4096 ? "Ultra-HD 4K (16.8 MP)" : res === 2048 ? "High Clarity 2K (4.2 MP)" : "Standard (1.0 MP)";
+    showToast(`Map Clarity: ${res}×${res} px (${mpDesc})`, "success");
     SoundManager.getInstance().playClick();
   });
 
