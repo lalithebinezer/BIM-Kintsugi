@@ -3052,6 +3052,102 @@
           </button>
         </div>
 
+        <!-- Model Placement on Map (Relocate BIM) -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <span>Model Placement on Map</span>
+          <span id="gis-model-offset-badge" class="value-badge" style="font-size: 0.55rem; color: #38bdf8;">Origin [0,0]</span>
+        </div>
+
+        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem; border-left: 3px solid #38bdf8;">
+          <div style="font-size: 0.6rem; color: var(--text-muted);">
+            Reposition and orient the BIM model across the 3D ground basemap and parcel site datum.
+          </div>
+
+          <!-- Interactive Action Buttons -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
+            <button type="button" id="gis-btn-pick-model-loc" class="btn-cost-action rates" style="border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 0.6rem; padding: 0.3rem 0.4rem;" title="Click on 3D Ground Basemap or 2D Mini-Map to Move Model">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+              <span id="gis-text-pick-model">Click Map to Move</span>
+            </button>
+            <button type="button" id="gis-btn-snap-model-ground" class="btn-cost-action boq" style="font-size: 0.6rem; padding: 0.3rem 0.4rem;" title="Snap Model Base to Ground Basemap Elevation Offset">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+              <span>Snap Ground</span>
+            </button>
+          </div>
+
+          <!-- Easting / Northing Sliders & Inputs -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.2rem;">
+            <!-- Easting X -->
+            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem;">
+                <span style="font-weight: 700; color: var(--text-muted);">Easting Offset (ΔX East):</span>
+                <div style="display: flex; gap: 0.2rem; align-items: center;">
+                  <button type="button" id="gis-btn-nudge-x-neg" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m West">−10</button>
+                  <input type="number" id="gis-model-input-x" step="0.5" value="0.0" style="width: 55px; font-family: var(--font-mono); font-size: 0.62rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 3px; padding: 0.1rem 0.25rem; text-align: right;" />
+                  <button type="button" id="gis-btn-nudge-x-pos" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m East">+10</button>
+                </div>
+              </div>
+              <input type="range" id="gis-model-slider-x" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+            </div>
+
+            <!-- Northing Z -->
+            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem;">
+                <span style="font-weight: 700; color: var(--text-muted);">Northing Offset (ΔZ North):</span>
+                <div style="display: flex; gap: 0.2rem; align-items: center;">
+                  <button type="button" id="gis-btn-nudge-z-pos" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m North">+10</button>
+                  <input type="number" id="gis-model-input-z" step="0.5" value="0.0" style="width: 55px; font-family: var(--font-mono); font-size: 0.62rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 3px; padding: 0.1rem 0.25rem; text-align: right;" />
+                  <button type="button" id="gis-btn-nudge-z-neg" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m South">−10</button>
+                </div>
+              </div>
+              <input type="range" id="gis-model-slider-z" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+            </div>
+
+            <!-- Elevation Y & Rotation Y -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--text-muted); font-weight: 700;">
+                  <span>Elevation (ΔY):</span>
+                  <span id="gis-model-val-y" style="font-family: var(--font-mono); color: var(--text-primary);">0.00 m</span>
+                </div>
+                <input type="range" id="gis-model-slider-y" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--text-muted); font-weight: 700;">
+                  <span>Orientation (Yaw):</span>
+                  <span id="gis-model-val-rot" style="font-family: var(--font-mono); color: var(--text-primary);">0.0°</span>
+                </div>
+                <input type="range" id="gis-model-slider-rot" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Model Geographic Coordinates -->
+          <div style="padding: 0.35rem 0.45rem; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 4px; font-family: var(--font-mono); font-size: 0.58rem; display: flex; flex-direction: column; gap: 0.2rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Model GPS (WGS84):</span>
+              <span id="gis-model-gps" style="color: #38bdf8; font-weight: 700;">35.676200°, 139.650300°</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Model Elevation AMSL:</span>
+              <span id="gis-model-elev-amsl" style="color: var(--text-primary);">40.00 m</span>
+            </div>
+          </div>
+
+          <!-- Quick Station Snap & Reset -->
+          <div style="display: flex; gap: 0.35rem; align-items: center; margin-top: 0.15rem;">
+            <select id="gis-select-snap-gcp" class="form-select" style="flex: 1; font-size: 0.6rem; padding: 0.2rem 0.35rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+              <option value="BM-01">Snap to BM-01 (Site Benchmark)</option>
+              <option value="GCP-01">Snap to GCP-01 (NE Control)</option>
+              <option value="GCP-02">Snap to GCP-02 (SW Control)</option>
+            </select>
+            <button type="button" id="gis-btn-snap-to-gcp" class="btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.58rem; white-space: nowrap;" title="Move Model Origin to Selected Survey Station">Snap</button>
+            <button type="button" id="gis-btn-reset-model-pos" class="btn-icon" style="width: 24px; height: 24px;" title="Reset Model Position to Origin (0,0,0)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+          </div>
+        </div>
+
         <!-- Survey Ground Control Points (GCPs) & Site Benchmark Suite -->
         <div class="drawer-section-header" style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
           <span>Survey GCPs & Benchmarks</span>

@@ -312,4 +312,64 @@ END-ISO-10303-21;
       expect(parsed.projectedCrs?.name).toBe("EPSG:32654");
     }
   });
+
+  it("should manage model map relocation, coordinate translation, and station snapping", () => {
+    // 1. Initial state
+    const initial = gis.getModelPlacement();
+    expect(initial.x).toBe(0);
+    expect(initial.y).toBe(0);
+    expect(initial.z).toBe(0);
+    expect(initial.rotationY).toBe(0);
+
+    // 2. Set placement offset (+40m East, -25m North, +3.5m Elev, 30 deg rotation)
+    const placed = gis.setModelPlacement({
+      x: 40,
+      z: -25,
+      y: 3.5,
+      rotationY: 30,
+    });
+    expect(placed.x).toBe(40);
+    expect(placed.z).toBe(-25);
+    expect(placed.y).toBe(3.5);
+    expect(placed.rotationY).toBe(30);
+    expect(placed.latitude).toBeDefined();
+    expect(placed.longitude).toBeDefined();
+
+    // 3. Snap to ground basemap elevation
+    gis.setBasemapElevation(-1.25);
+    const groundSnapped = gis.snapModelToGround();
+    expect(groundSnapped.y).toBe(-1.25);
+
+    // 4. Snap model to survey control point (GCP-01 is at local X: 35, Z: -25)
+    const gcpSnapped = gis.snapModelToGcp("GCP-01");
+    expect(gcpSnapped).not.toBeNull();
+    if (gcpSnapped) {
+      expect(gcpSnapped.x).toBe(35);
+      expect(gcpSnapped.z).toBe(-25);
+    }
+
+    // 5. Relocate model to geographic coordinates
+    const geoRelocated = gis.relocateModelToCoordinates(37.7750, -122.4190);
+    expect(geoRelocated.latitude).toBeCloseTo(37.7750, 3);
+    expect(geoRelocated.longitude).toBeCloseTo(-122.4190, 3);
+
+    // 6. Interactive placement mode
+    expect(gis.isModelPlacementActive()).toBe(false);
+    gis.startModelPlacementMode();
+    expect(gis.isModelPlacementActive()).toBe(true);
+    gis.stopModelPlacementMode();
+    expect(gis.isModelPlacementActive()).toBe(false);
+
+    // 7. Mini-map model coordinate picking
+    const miniMapPlaced = gis.pickLocationForModel(160, 75, 320, 150);
+    expect(miniMapPlaced.x).toBeDefined();
+    expect(miniMapPlaced.z).toBeDefined();
+
+    // 8. Reset model position back to origin
+    const reset = gis.resetModelPlacement();
+    expect(reset.x).toBe(0);
+    expect(reset.y).toBe(0);
+    expect(reset.z).toBe(0);
+    expect(reset.rotationY).toBe(0);
+  });
 });

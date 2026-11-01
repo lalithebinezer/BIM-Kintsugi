@@ -421,6 +421,45 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       txtSpaceFlight.textContent = gisModule.getIsSpaceView() ? "Descend to Site Level" : "Fly to Space Orbit";
     }
 
+    // Synchronize Model Placement on Map
+    const placement = gisModule.getModelPlacement();
+    const badgeOffset = document.getElementById("gis-model-offset-badge");
+    const inputX = document.getElementById("gis-model-input-x") as HTMLInputElement | null;
+    const sliderX = document.getElementById("gis-model-slider-x") as HTMLInputElement | null;
+    const inputZ = document.getElementById("gis-model-input-z") as HTMLInputElement | null;
+    const sliderZ = document.getElementById("gis-model-slider-z") as HTMLInputElement | null;
+    const sliderY = document.getElementById("gis-model-slider-y") as HTMLInputElement | null;
+    const valY = document.getElementById("gis-model-val-y");
+    const sliderRot = document.getElementById("gis-model-slider-rot") as HTMLInputElement | null;
+    const valRot = document.getElementById("gis-model-val-rot");
+    const modelGps = document.getElementById("gis-model-gps");
+    const modelElevAmsl = document.getElementById("gis-model-elev-amsl");
+    const txtPickModel = document.getElementById("gis-text-pick-model");
+    const btnPickModel = document.getElementById("gis-btn-pick-model-loc");
+
+    if (badgeOffset) {
+      badgeOffset.textContent = (placement.x === 0 && placement.z === 0)
+        ? "Origin [0,0]"
+        : `ΔX:${placement.x >= 0 ? "+" : ""}${placement.x.toFixed(1)}m ΔZ:${placement.z >= 0 ? "+" : ""}${placement.z.toFixed(1)}m`;
+    }
+    if (inputX) inputX.value = String(placement.x);
+    if (sliderX) sliderX.value = String(Math.round(placement.x));
+    if (inputZ) inputZ.value = String(placement.z);
+    if (sliderZ) sliderZ.value = String(Math.round(placement.z));
+    if (sliderY) sliderY.value = String(placement.y);
+    if (valY) valY.textContent = `${placement.y >= 0 ? "+" : ""}${placement.y.toFixed(2)} m`;
+    if (sliderRot) sliderRot.value = String(placement.rotationY);
+    if (valRot) valRot.textContent = `${placement.rotationY.toFixed(1)}°`;
+    if (modelGps) modelGps.textContent = `${placement.latitude.toFixed(6)}°, ${placement.longitude.toFixed(6)}°`;
+    if (modelElevAmsl) modelElevAmsl.textContent = `${placement.elevationAMSL.toFixed(2)} m AMSL`;
+
+    if (txtPickModel) {
+      txtPickModel.textContent = gisModule.isModelPlacementActive() ? "Cancel Map Pick" : "Click Map to Move";
+    }
+    if (btnPickModel) {
+      btnPickModel.style.background = gisModule.isModelPlacementActive() ? "rgba(56, 189, 248, 0.25)" : "";
+    }
+
     // Synchronize True North controls & Compass Rose
     const sliderNorth = document.getElementById("gis-slider-north") as HTMLInputElement | null;
     const badgeNorth = document.getElementById("gis-north-badge");
@@ -720,17 +759,25 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     SoundManager.getInstance().playClick();
   });
 
-  // Mini-Map Interaction: Click to relocate site datum
+  // Mini-Map Interaction: Click to relocate site datum or model
   const miniMapCanvas = document.getElementById("gis-minimap-canvas") as HTMLCanvasElement | null;
   miniMapCanvas?.addEventListener("click", (e) => {
     const rect = miniMapCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const picked = gisModule.pickLocationFromMiniMap(x, y, rect.width, rect.height);
-    gisModule.setGeoreference({ latitude: picked.latitude, longitude: picked.longitude });
-    refreshGisUI();
-    showToast(`Relocated Site Datum: ${picked.latitude.toFixed(4)}°, ${picked.longitude.toFixed(4)}°`, "info");
-    SoundManager.getInstance().playClick();
+    if (gisModule.isModelPlacementActive()) {
+      const placed = gisModule.pickLocationForModel(x, y, rect.width, rect.height);
+      refreshGisUI();
+      showToast(`Model relocated on map to [X: ${placed.x}m, Z: ${placed.z}m]`, "success");
+      SoundManager.getInstance().playClick();
+      gisModule.stopModelPlacementMode();
+    } else {
+      const picked = gisModule.pickLocationFromMiniMap(x, y, rect.width, rect.height);
+      gisModule.setGeoreference({ latitude: picked.latitude, longitude: picked.longitude });
+      refreshGisUI();
+      showToast(`Relocated Site Datum: ${picked.latitude.toFixed(4)}°, ${picked.longitude.toFixed(4)}°`, "info");
+      SoundManager.getInstance().playClick();
+    }
   });
 
   document.getElementById("gis-minimap-zoom-in")?.addEventListener("click", () => {
@@ -851,6 +898,130 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     URL.revokeObjectURL(url);
     showToast("Exported Projection WKT (.prj)", "success");
     SoundManager.getInstance().playClick();
+  });
+
+  // Model Placement on Map Listeners
+  document.getElementById("gis-btn-pick-model-loc")?.addEventListener("click", () => {
+    SoundManager.getInstance().playClick();
+    if (gisModule.isModelPlacementActive()) {
+      gisModule.stopModelPlacementMode();
+      showToast("Map placement mode cancelled", "info");
+    } else {
+      gisModule.startModelPlacementMode((placed) => {
+        showToast(`Model relocated to [X: ${placed.x}m, Z: ${placed.z}m]`, "success");
+        SoundManager.getInstance().playClick();
+      });
+      showToast("Click on 3D Ground Basemap or 2D Mini-Map to position model", "info");
+    }
+    refreshGisUI();
+  });
+
+  document.getElementById("gis-btn-snap-model-ground")?.addEventListener("click", () => {
+    gisModule.snapModelToGround();
+    refreshGisUI();
+    showToast("Model base aligned to ground basemap elevation", "success");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-reset-model-pos")?.addEventListener("click", () => {
+    gisModule.resetModelPlacement();
+    refreshGisUI();
+    showToast("Model position reset to project origin [0, 0, 0]", "info");
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-model-slider-x")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setModelPlacement({ x: val });
+    const inputX = document.getElementById("gis-model-input-x") as HTMLInputElement | null;
+    if (inputX) inputX.value = String(val);
+    const placement = gisModule.getModelPlacement();
+    const modelGps = document.getElementById("gis-model-gps");
+    if (modelGps) modelGps.textContent = `${placement.latitude.toFixed(6)}°, ${placement.longitude.toFixed(6)}°`;
+    const badgeOffset = document.getElementById("gis-model-offset-badge");
+    if (badgeOffset) badgeOffset.textContent = `ΔX:${placement.x >= 0 ? "+" : ""}${placement.x.toFixed(1)}m ΔZ:${placement.z >= 0 ? "+" : ""}${placement.z.toFixed(1)}m`;
+  });
+
+  document.getElementById("gis-model-input-x")?.addEventListener("change", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value || "0");
+    gisModule.setModelPlacement({ x: val });
+    refreshGisUI();
+  });
+
+  document.getElementById("gis-btn-nudge-x-neg")?.addEventListener("click", () => {
+    const p = gisModule.getModelPlacement();
+    gisModule.setModelPlacement({ x: Number((p.x - 10).toFixed(1)) });
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-nudge-x-pos")?.addEventListener("click", () => {
+    const p = gisModule.getModelPlacement();
+    gisModule.setModelPlacement({ x: Number((p.x + 10).toFixed(1)) });
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-model-slider-z")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setModelPlacement({ z: val });
+    const inputZ = document.getElementById("gis-model-input-z") as HTMLInputElement | null;
+    if (inputZ) inputZ.value = String(val);
+    const placement = gisModule.getModelPlacement();
+    const modelGps = document.getElementById("gis-model-gps");
+    if (modelGps) modelGps.textContent = `${placement.latitude.toFixed(6)}°, ${placement.longitude.toFixed(6)}°`;
+    const badgeOffset = document.getElementById("gis-model-offset-badge");
+    if (badgeOffset) badgeOffset.textContent = `ΔX:${placement.x >= 0 ? "+" : ""}${placement.x.toFixed(1)}m ΔZ:${placement.z >= 0 ? "+" : ""}${placement.z.toFixed(1)}m`;
+  });
+
+  document.getElementById("gis-model-input-z")?.addEventListener("change", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value || "0");
+    gisModule.setModelPlacement({ z: val });
+    refreshGisUI();
+  });
+
+  document.getElementById("gis-btn-nudge-z-neg")?.addEventListener("click", () => {
+    const p = gisModule.getModelPlacement();
+    gisModule.setModelPlacement({ z: Number((p.z - 10).toFixed(1)) });
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-btn-nudge-z-pos")?.addEventListener("click", () => {
+    const p = gisModule.getModelPlacement();
+    gisModule.setModelPlacement({ z: Number((p.z + 10).toFixed(1)) });
+    refreshGisUI();
+    SoundManager.getInstance().playClick();
+  });
+
+  document.getElementById("gis-model-slider-y")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setModelPlacement({ y: val });
+    const valY = document.getElementById("gis-model-val-y");
+    if (valY) valY.textContent = `${val >= 0 ? "+" : ""}${val.toFixed(2)} m`;
+    const elevAmsl = document.getElementById("gis-model-elev-amsl");
+    const placement = gisModule.getModelPlacement();
+    if (elevAmsl) elevAmsl.textContent = `${placement.elevationAMSL.toFixed(2)} m AMSL`;
+  });
+
+  document.getElementById("gis-model-slider-rot")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    gisModule.setModelPlacement({ rotationY: val });
+    const valRot = document.getElementById("gis-model-val-rot");
+    if (valRot) valRot.textContent = `${val.toFixed(1)}°`;
+  });
+
+  document.getElementById("gis-btn-snap-to-gcp")?.addEventListener("click", () => {
+    const select = document.getElementById("gis-select-snap-gcp") as HTMLSelectElement | null;
+    const gcpId = select?.value;
+    if (gcpId) {
+      const placed = gisModule.snapModelToGcp(gcpId);
+      if (placed) {
+        refreshGisUI();
+        showToast(`Model snapped to station ${gcpId} [X: ${placed.x}m, Z: ${placed.z}m]`, "success");
+        SoundManager.getInstance().playClick();
+      }
+    }
   });
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
     if (typeof (window as any).toggle4DMode === "function") {

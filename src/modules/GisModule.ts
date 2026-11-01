@@ -82,6 +82,18 @@ export interface GisDistanceMeasurement {
   deltaElevation?: number;
 }
 
+export interface GisModelPlacement {
+  modelId: string;
+  x: number;
+  y: number;
+  z: number;
+  rotationY: number;
+  latitude: number;
+  longitude: number;
+  elevationAMSL: number;
+  isLocked?: boolean;
+}
+
 export const GIS_LOCATION_PRESETS: Record<string, GisProjectLocation> = {
   tokyo: {
     latitude: 35.6895,
@@ -168,6 +180,7 @@ export class GisModule {
   private cadastreGroup: THREE.Group | null = null;
   private compassGroup: THREE.Group | null = null;
   private surveyGroup: THREE.Group | null = null;
+  private modelAnchorGroup: THREE.Group | null = null;
   private basemapCanvas: HTMLCanvasElement | null = null;
   private basemapTexture: THREE.CanvasTexture | null = null;
   private currentTileFetchId: number = 0;
@@ -177,6 +190,20 @@ export class GisModule {
   private _isSurveyVisible: boolean = true;
   private miniMapZoom: number = 14;
   private miniMapCanvas: HTMLCanvasElement | null = null;
+
+  // Model Placement on Map
+  private modelPlacement: GisModelPlacement = {
+    modelId: "all",
+    x: 0,
+    y: 0,
+    z: 0,
+    rotationY: 0,
+    latitude: 0,
+    longitude: 0,
+    elevationAMSL: 0,
+  };
+  private isModelPlacementMode: boolean = false;
+  private boundOn3DGroundClick: ((e: MouseEvent) => void) | null = null;
 
   // Features list
   private geoJsonFeatures: GisGeoJsonFeature[] = [];
@@ -221,6 +248,12 @@ export class GisModule {
       this.world.scene.three.add(this.surveyGroup);
     }
 
+    if (!this.modelAnchorGroup) {
+      this.modelAnchorGroup = new THREE.Group();
+      this.modelAnchorGroup.name = "gis-model-anchor-group";
+      this.world.scene.three.add(this.modelAnchorGroup);
+    }
+
     if (this.surveyPoints.length === 0) {
       this.initDefaultSurveyPoints();
     } else {
@@ -228,6 +261,7 @@ export class GisModule {
     }
 
     this.rebuildCompassRose();
+    this.rebuildModelAnchorMesh();
 
     if (this.basemapConfig.enabled) {
       this.rebuildBasemap();
@@ -2237,6 +2271,71 @@ export class GisModule {
     ctx.textAlign = "center";
     ctx.fillText("N", 0, -14);
     ctx.restore();
+
+    // Draw Relocated BIM Model Marker on Mini-Map
+    const mGeo = this.localToGeodetic(this.modelPlacement.x, this.modelPlacement.z);
+    const z = this.miniMapZoom;
+    const cx = ((this.location.longitude + 180) / 360) * Math.pow(2, z);
+    const latRad = (this.location.latitude * Math.PI) / 180;
+    const cy = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * Math.pow(2, z);
+
+    const mcx = ((mGeo.lon + 180) / 360) * Math.pow(2, z);
+    const mLatRad = (mGeo.lat * Math.PI) / 180;
+    const mcy = ((1 - Math.asinh(Math.tan(mLatRad)) / Math.PI) / 2) * Math.pow(2, z);
+
+    const modelPixelX = w / 2 + (mcx - cx) * 256;
+    const modelPixelY = h / 2 + (mcy - cy) * 256;
+
+    ctx.save();
+    ctx.translate(modelPixelX, modelPixelY);
+    ctx.rotate((this.modelPlacement.rotationY * Math.PI) / 180);
+
+    // Model building footprint marker
+    ctx.fillStyle = "rgba(56, 189, 248, 0.4)";
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-12, -9, 24, 18);
+    ctx.strokeRect(-12, -9, 24, 18);
+
+    // Heading Arrow
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(4, -9);
+    ctx.lineTo(-4, -9);
+    ctx.closePath();
+    ctx.fill();
+
+    // Model Label
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 8px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("MODEL", 0, 4);
+    ctx.restore();
+  }
+
+  public pickLocationForModel(
+    clickX: number,
+    clickY: number,
+    canvasWidth: number,
+    canvasHeight: number
+  ): GisModelPlacement {
+    const z = this.miniMapZoom;
+    const cx = ((this.location.longitude + 180) / 360) * Math.pow(2, z);
+    const latRad = (this.location.latitude * Math.PI) / 180;
+    const cy = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * Math.pow(2, z);
+
+    const deltaTileX = (clickX - canvasWidth / 2) / 256;
+    const deltaTileY = (clickY - canvasHeight / 2) / 256;
+
+    const clickedTileX = cx + deltaTileX;
+    const clickedTileY = cy + deltaTileY;
+
+    const newLon = (clickedTileX / Math.pow(2, z)) * 360 - 180;
+    const n = Math.PI - (2 * Math.PI * clickedTileY) / Math.pow(2, z);
+    const newLat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+
+    return this.relocateModelToCoordinates(newLat, newLon);
   }
 
   public pickLocationFromMiniMap(
@@ -2311,5 +2410,229 @@ export class GisModule {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
+  }
+
+  // ============================================================
+  // MODEL MAP RELOCATION & PLACEMENT SUITE
+  // ============================================================
+
+  public getModelPlacement(): GisModelPlacement {
+    const geo = this.localToGeodetic(this.modelPlacement.x, this.modelPlacement.z);
+    return {
+      ...this.modelPlacement,
+      latitude: geo.lat,
+      longitude: geo.lon,
+      elevationAMSL: Number((this.location.elevationAMSL + this.modelPlacement.y).toFixed(2)),
+    };
+  }
+
+  public setModelPlacement(offset: Partial<GisModelPlacement>): GisModelPlacement {
+    this.modelPlacement = {
+      ...this.modelPlacement,
+      ...offset,
+    };
+
+    // Apply translation & rotation to loaded BIM models
+    try {
+      if (typeof window !== "undefined") {
+        const bimEngine = (window as any).bimEngine || (window as any).BimEngine?.getInstance?.();
+        const fragments = bimEngine?.fragments;
+        if (fragments?.list) {
+          for (const [modelId, model] of fragments.list) {
+            if (this.modelPlacement.modelId !== "all" && this.modelPlacement.modelId !== modelId) {
+              continue;
+            }
+            const modelObj = (model.object || model) as THREE.Object3D;
+            if (modelObj && modelObj.position) {
+              modelObj.position.set(
+                this.modelPlacement.x,
+                this.modelPlacement.y,
+                this.modelPlacement.z
+              );
+              if (modelObj.rotation) {
+                modelObj.rotation.y = (this.modelPlacement.rotationY * Math.PI) / 180;
+              }
+              modelObj.updateMatrixWorld?.(true);
+            }
+          }
+          fragments.core?.update?.(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to apply model placement transform:", e);
+    }
+
+    this.rebuildModelAnchorMesh();
+    this.renderMiniMap();
+    this.triggerRender();
+
+    return this.getModelPlacement();
+  }
+
+  public resetModelPlacement(): GisModelPlacement {
+    return this.setModelPlacement({
+      x: 0,
+      y: 0,
+      z: 0,
+      rotationY: 0,
+    });
+  }
+
+  public snapModelToGround(): GisModelPlacement {
+    return this.setModelPlacement({
+      y: this.basemapConfig.elevationOffset,
+    });
+  }
+
+  public snapModelToGcp(gcpId: string): GisModelPlacement | null {
+    const pt = this.surveyPoints.find((p) => p.id === gcpId);
+    if (!pt) return null;
+    return this.setModelPlacement({
+      x: pt.localX,
+      y: pt.localY,
+      z: pt.localZ,
+    });
+  }
+
+  public relocateModelToCoordinates(lat: number, lon: number, elevationAMSL?: number): GisModelPlacement {
+    const local = this.geodeticToLocal(lat, lon);
+    const y = typeof elevationAMSL === "number" ? elevationAMSL - this.location.elevationAMSL : this.modelPlacement.y;
+    return this.setModelPlacement({
+      x: Number(local.x.toFixed(2)),
+      z: Number(local.z.toFixed(2)),
+      y: Number(y.toFixed(2)),
+    });
+  }
+
+  public startModelPlacementMode(onPlaced?: (placement: GisModelPlacement) => void): boolean {
+    this.isModelPlacementMode = true;
+    if (typeof document === "undefined") return true;
+
+    const container = document.getElementById("container");
+    if (!container) return false;
+
+    container.style.cursor = "crosshair";
+
+    if (this.boundOn3DGroundClick) {
+      container.removeEventListener("pointerdown", this.boundOn3DGroundClick);
+    }
+
+    this.boundOn3DGroundClick = (e: MouseEvent) => {
+      if (!this.isModelPlacementMode) return;
+      if ((e.target as HTMLElement)?.closest(".enterprise-drawer, .dock, .top-bar-overlay, .panel-glass, #gis-panel")) {
+        return;
+      }
+
+      const rect = container.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      if (this.world?.camera?.three) {
+        raycaster.setFromCamera(mouse, this.world.camera.three);
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.basemapConfig.elevationOffset);
+        const hit = new THREE.Vector3();
+        const intersected = raycaster.ray.intersectPlane(groundPlane, hit);
+        if (intersected) {
+          const placement = this.setModelPlacement({
+            x: Number(hit.x.toFixed(2)),
+            z: Number(hit.z.toFixed(2)),
+          });
+          if (onPlaced) onPlaced(placement);
+          if (typeof (window as any).refreshGisUI === "function") {
+            (window as any).refreshGisUI();
+          }
+          this.stopModelPlacementMode();
+        }
+      }
+    };
+
+    container.addEventListener("pointerdown", this.boundOn3DGroundClick);
+    return true;
+  }
+
+  public stopModelPlacementMode() {
+    this.isModelPlacementMode = false;
+    if (typeof document !== "undefined") {
+      const container = document.getElementById("container");
+      if (container) {
+        container.style.cursor = "";
+        if (this.boundOn3DGroundClick) {
+          container.removeEventListener("pointerdown", this.boundOn3DGroundClick);
+          this.boundOn3DGroundClick = null;
+        }
+      }
+    }
+  }
+
+  public isModelPlacementActive(): boolean {
+    return this.isModelPlacementMode;
+  }
+
+  public rebuildModelAnchorMesh() {
+    if (!this.modelAnchorGroup) return;
+
+    // Clear existing
+    while (this.modelAnchorGroup.children.length > 0) {
+      const child = this.modelAnchorGroup.children[0] as any;
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach((m: any) => m.dispose());
+        else child.material.dispose();
+      }
+      this.modelAnchorGroup.remove(child);
+    }
+
+    const { x, y, z, rotationY } = this.modelPlacement;
+
+    // Outer target ring on ground
+    const ringGeo = new THREE.RingGeometry(3.0, 3.25, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    this.modelAnchorGroup.add(ringMesh);
+
+    // Inner central beacon disc
+    const discGeo = new THREE.CircleGeometry(0.8, 16);
+    discGeo.rotateX(-Math.PI / 2);
+    const discMat = new THREE.MeshBasicMaterial({
+      color: 0x0284c7,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const discMesh = new THREE.Mesh(discGeo, discMat);
+    this.modelAnchorGroup.add(discMesh);
+
+    // Forward direction arrow
+    const arrowShape = new THREE.Shape();
+    arrowShape.moveTo(0, 6.0);
+    arrowShape.lineTo(1.4, 3.2);
+    arrowShape.lineTo(0.5, 3.2);
+    arrowShape.lineTo(0.5, 0);
+    arrowShape.lineTo(-0.5, 0);
+    arrowShape.lineTo(-0.5, 3.2);
+    arrowShape.lineTo(-1.4, 3.2);
+    arrowShape.closePath();
+    const arrowGeo = new THREE.ShapeGeometry(arrowShape);
+    arrowGeo.rotateX(-Math.PI / 2);
+    const arrowMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+    });
+    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+    this.modelAnchorGroup.add(arrowMesh);
+
+    // Position and orient anchor
+    this.modelAnchorGroup.position.set(x, y + 0.02, z);
+    this.modelAnchorGroup.rotation.y = (rotationY * Math.PI) / 180;
+    this.triggerRender();
   }
 }
