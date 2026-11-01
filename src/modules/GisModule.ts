@@ -187,6 +187,7 @@ export class GisModule {
   private basemapTexture: THREE.CanvasTexture | null = null;
   private currentTileFetchId: number = 0;
   private tileFetchTimer: any = null;
+  private tileCache: Map<string, HTMLImageElement> = new Map();
   private isSpaceView: boolean = false;
   private _isCompassVisible: boolean = true;
   private _isSurveyVisible: boolean = true;
@@ -430,8 +431,36 @@ export class GisModule {
     this.setBasemapConfig({ provider });
   }
 
-  public setBasemapRadius(radius: number) {
-    this.setBasemapConfig({ radius });
+  public setBasemapRadius(radius: number, fitView: boolean = false) {
+    const clamped = Math.max(50, Math.min(5000, radius));
+    this.setBasemapConfig({ radius: clamped });
+    if (this.miniMapCanvas) {
+      this.renderMiniMap();
+    }
+    if (fitView) {
+      this.fitToBasemap();
+    }
+  }
+
+  /**
+   * Smoothly frames the 3D camera to fit the full geographic extent of the 3D Basemap ground plane.
+   */
+  public fitToBasemap() {
+    if (!this.world || !this.world.camera?.controls || !this.basemapMesh) return;
+    try {
+      const box = new THREE.Box3().setFromObject(this.basemapMesh);
+      const r = this.basemapConfig.radius;
+      // Add vertical volume so fitToBox frames from an elevated aerial viewpoint
+      box.min.y = this.basemapConfig.elevationOffset - r * 0.15;
+      box.max.y = this.basemapConfig.elevationOffset + r * 0.85;
+
+      const controls = this.world.camera.controls as any;
+      if (typeof controls.fitToBox === "function") {
+        controls.fitToBox(box, true);
+      }
+    } catch (e) {
+      console.warn("fitToBasemap failed:", e);
+    }
   }
 
   public setBasemapElevation(elevationOffset: number) {
@@ -1171,10 +1200,23 @@ export class GisModule {
           .replace("{x}", String(tx))
           .replace("{y}", String(ty));
 
+        const cached = this.tileCache.get(url);
+        if (cached && cached.complete && cached.naturalWidth > 0) {
+          imgPromises.push(Promise.resolve({ img: cached, tx, ty }));
+          continue;
+        }
+
         const p = new Promise<{ img: HTMLImageElement; tx: number; ty: number } | null>((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          img.onload = () => resolve({ img, tx, ty });
+          img.onload = () => {
+            if (this.tileCache.size > 300) {
+              const firstKey = this.tileCache.keys().next().value;
+              if (firstKey) this.tileCache.delete(firstKey);
+            }
+            this.tileCache.set(url, img);
+            resolve({ img, tx, ty });
+          };
           img.onerror = () => resolve(null);
           img.src = url;
         });
@@ -2267,16 +2309,38 @@ export class GisModule {
     const centerX = w / 2;
     const centerY = h / 2;
 
-    // Outer radar ring
-    ctx.strokeStyle = "#06b6d4";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
-    ctx.stroke();
+    // Dynamic Basemap Extent Radius Coverage Ring on 2D Mini-Map
+    const lat0 = this.location.latitude;
+    const cosLat = Math.cos((lat0 * Math.PI) / 180);
+    const miniMapGroundRes = (156543.03 * Math.max(0.1, cosLat)) / Math.pow(2, this.miniMapZoom);
+    const extentRadiusPx = this.basemapConfig.radius / miniMapGroundRes;
 
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
+    // Draw dynamic geographic extent circle
+    ctx.save();
+    ctx.fillStyle = "rgba(6, 182, 212, 0.08)";
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.9)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 42, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, extentRadiusPx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Coverage label on circle border
+    if (extentRadiusPx > 18) {
+      ctx.fillStyle = "#06b6d4";
+      ctx.font = "bold 8px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(`${this.basemapConfig.radius}m Extent`, centerX + extentRadiusPx + 3, centerY - 2);
+    }
+    ctx.restore();
+
+    // Central crosshair & reticle
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
     ctx.stroke();
 
     // Crosshairs

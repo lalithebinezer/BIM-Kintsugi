@@ -397,6 +397,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const statusBadge = document.getElementById("gis-basemap-status");
     const selectProvider = document.getElementById("gis-select-provider") as HTMLSelectElement | null;
     const sliderRadius = document.getElementById("gis-slider-radius") as HTMLInputElement | null;
+    const inputRadius = document.getElementById("gis-input-radius") as HTMLInputElement | null;
     const badgeRadius = document.getElementById("gis-radius-val");
     const sliderElev = document.getElementById("gis-slider-elev") as HTMLInputElement | null;
     const badgeElev = document.getElementById("gis-elev-val");
@@ -412,6 +413,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const selectRes = document.getElementById("gis-select-resolution") as HTMLSelectElement | null;
     if (selectRes) selectRes.value = String(cfg.resolution || 2048);
     if (sliderRadius) sliderRadius.value = String(cfg.radius);
+    if (inputRadius) inputRadius.value = String(cfg.radius);
     if (badgeRadius) badgeRadius.textContent = `${cfg.radius} m`;
     if (sliderElev) sliderElev.value = String(cfg.elevationOffset);
     if (badgeElev) badgeElev.textContent = `${cfg.elevationOffset >= 0 ? "+" : ""}${cfg.elevationOffset.toFixed(2)} m`;
@@ -608,11 +610,42 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     SoundManager.getInstance().playClick();
   });
 
+  const applyRadiusUpdate = (val: number, fitView: boolean = false) => {
+    if (isNaN(val) || val <= 0) return;
+    const clamped = Math.max(50, Math.min(5000, val));
+    gisModule.setBasemapRadius(clamped, fitView);
+    const slider = document.getElementById("gis-slider-radius") as HTMLInputElement | null;
+    const input = document.getElementById("gis-input-radius") as HTMLInputElement | null;
+    const badge = document.getElementById("gis-radius-val");
+    if (slider) slider.value = String(clamped);
+    if (input) input.value = String(clamped);
+    if (badge) badge.textContent = `${clamped} m`;
+  };
+
   document.getElementById("gis-slider-radius")?.addEventListener("input", (e) => {
     const val = parseFloat((e.target as HTMLInputElement).value);
-    gisModule.setBasemapRadius(val);
-    const badge = document.getElementById("gis-radius-val");
-    if (badge) badge.textContent = `${val} m`;
+    applyRadiusUpdate(val);
+  });
+
+  document.getElementById("gis-input-radius")?.addEventListener("change", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    applyRadiusUpdate(val);
+    SoundManager.getInstance().playClick();
+  });
+
+  document.querySelectorAll(".gis-btn-radius-preset").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const r = parseFloat(btn.getAttribute("data-radius") || "400");
+      applyRadiusUpdate(r, true);
+      showToast(`Basemap Extent: ${r}m radius`, "info");
+      SoundManager.getInstance().playClick();
+    });
+  });
+
+  document.getElementById("gis-btn-frame-basemap")?.addEventListener("click", () => {
+    gisModule.fitToBasemap();
+    showToast("3D camera framed to full basemap extent", "info");
+    SoundManager.getInstance().playClick();
   });
 
   document.getElementById("gis-slider-elev")?.addEventListener("input", (e) => {

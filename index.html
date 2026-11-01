@@ -3030,12 +3030,26 @@
             </select>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
               <span>Basemap Extent Radius</span>
-              <span id="gis-radius-val" style="font-family: var(--font-mono); color: var(--text-primary);">400 m</span>
+              <div style="display: flex; align-items: center; gap: 0.2rem;">
+                <input type="number" id="gis-input-radius" min="50" max="5000" step="50" value="400" style="width: 54px; font-size: 0.62rem; font-family: var(--font-mono); padding: 0.1rem 0.25rem; background: var(--bg-input); color: #06b6d4; border: 1px solid var(--border-color); border-radius: 3px; text-align: right;" title="Direct numerical radius in meters" />
+                <span style="font-size: 0.6rem; color: var(--text-muted);">m</span>
+                <button type="button" id="gis-btn-frame-basemap" class="btn-icon" style="width: 20px; height: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Frame 3D Camera to Full Basemap Extent">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+              </div>
             </div>
-            <input type="range" id="gis-slider-radius" min="100" max="2500" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-radius" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
+
+            <!-- Quick Radius Presets -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.2rem; margin-top: 0.1rem;">
+              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="250" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Site Extent (250m)">250m Site</button>
+              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="500" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Area Extent (500m)">500m Area</button>
+              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="1000" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Campus Extent (1 km)">1 km</button>
+              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="2000" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="District Extent (2 km)">2 km</button>
+            </div>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.2rem;">

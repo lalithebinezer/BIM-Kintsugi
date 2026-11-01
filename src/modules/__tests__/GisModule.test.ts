@@ -108,6 +108,18 @@ describe("GisModule Unit Tests", () => {
     gis.setBasemapResolution(1024);
     expect(gis.getBasemapConfig().resolution).toBe(1024);
 
+    // Test radius adjustment and clamping
+    gis.setBasemapRadius(1500);
+    expect(gis.getBasemapConfig().radius).toBe(1500);
+
+    gis.setBasemapRadius(10); // Below minimum 50m
+    expect(gis.getBasemapConfig().radius).toBe(50);
+
+    gis.setBasemapRadius(9999); // Above maximum 5000m
+    expect(gis.getBasemapConfig().radius).toBe(5000);
+
+    expect(() => gis.fitToBasemap()).not.toThrow();
+
     gis.toggleBasemap(false);
     expect(gis.getBasemapConfig().enabled).toBe(false);
   });
