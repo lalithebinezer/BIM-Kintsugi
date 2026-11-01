@@ -128,11 +128,17 @@ export function initGraphicsAcceleratorController(world: any, dirLight?: THREE.D
 
   // Handle Shadow Map Resolution
   const applyShadowResolution = (size: number) => {
-    if (dirLight?.shadow?.map) {
+    if (dirLight?.shadow) {
       dirLight.shadow.mapSize.width = size;
       dirLight.shadow.mapSize.height = size;
-      dirLight.shadow.map.dispose();
-      (dirLight.shadow as any).map = null;
+      if (dirLight.shadow.map) {
+        dirLight.shadow.map.dispose();
+        dirLight.shadow.map = null as any;
+      }
+      dirLight.shadow.needsUpdate = true;
+      if (world?.renderer?.three?.shadowMap) {
+        world.renderer.three.shadowMap.needsUpdate = true;
+      }
       if (dirLight.shadow.camera) {
         dirLight.shadow.camera.updateProjectionMatrix();
       }
