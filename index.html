@@ -2884,31 +2884,31 @@
       </div>
       <div class="drawer-body thin-scrollbar">
         <!-- Site Georeferencing Card -->
-        <div class="drawer-section-card" style="border-left: 3px solid #06b6d4;">
-          <div style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-            <span>World Geodetic Datum (WGS84)</span>
-            <span id="gis-dms-badge" style="font-size: 0.55rem; color: #06b6d4; font-family: var(--font-mono); font-weight: 700;">35°41'22"N 139°41'30"E</span>
+        <div class="drawer-section-card gis-card-cyan">
+          <div class="gis-header-row">
+            <span class="gis-card-title">World Geodetic Datum (WGS84)</span>
+            <span id="gis-dms-badge" class="gis-telemetry-pill">35°41'22"N 139°41'30"E</span>
           </div>
 
           <!-- Global Address / Landmark Geocoding Search -->
-          <div style="margin-bottom: 0.5rem; position: relative;">
-            <label for="gis-search-address" style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Search Global Address or Landmark:</label>
-            <div style="display: flex; gap: 0.3rem;">
+          <div style="position: relative;">
+            <label for="gis-search-address" class="gis-field-label">Search Global Address or Landmark:</label>
+            <div style="display: flex; gap: 0.4rem;">
               <div style="position: relative; flex: 1;">
-                <input type="text" id="gis-search-address" placeholder="e.g. Eiffel Tower, Marina Bay Sands..." style="width: 100%; font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.25rem 0.45rem;" />
-                <div id="gis-search-suggestions" class="hidden" style="position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; max-height: 160px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);"></div>
+                <input type="text" id="gis-search-address" class="gis-input" placeholder="e.g. Eiffel Tower, Marina Bay Sands..." />
+                <div id="gis-search-suggestions" class="hidden" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; max-height: 180px; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.6);"></div>
               </div>
-              <button type="button" id="gis-btn-search" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Search OpenStreetMap Geocoder">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <button type="button" id="gis-btn-search" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.65rem; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap;" title="Search OpenStreetMap Geocoder">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <span>Find</span>
               </button>
             </div>
           </div>
 
           <!-- Presets Dropdown -->
-          <div style="display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem;">
-            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Preset City:</label>
-            <select id="gis-preset-select" class="form-select" style="flex: 1; font-size: 0.65rem; padding: 0.2rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="gis-preset-select" class="gis-field-label" style="margin-bottom: 0; white-space: nowrap;">Preset City:</label>
+            <select id="gis-preset-select" class="gis-select" style="flex: 1;">
               <option value="tokyo">Tokyo, Japan (Default IFC)</option>
               <option value="london">London, UK</option>
               <option value="san_francisco">San Francisco, USA</option>
@@ -2920,82 +2920,82 @@
           </div>
 
           <!-- Interactive 2D World Location Mini-Map -->
-          <div style="margin-bottom: 0.6rem; position: relative;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-              <span style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted);">Site Location Pin Picker:</span>
-              <div style="display: flex; gap: 0.25rem; align-items: center;">
-                <button type="button" id="gis-minimap-zoom-in" class="btn-icon" style="width: 20px; height: 20px; font-size: 0.75rem; line-height: 1;" title="Mini-Map Zoom In">+</button>
-                <button type="button" id="gis-minimap-zoom-out" class="btn-icon" style="width: 20px; height: 20px; font-size: 0.75rem; line-height: 1;" title="Mini-Map Zoom Out">−</button>
-                <button type="button" id="gis-btn-current-gps" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.58rem; display: flex; align-items: center; gap: 0.2rem;" title="Query Device GPS / Geolocation">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+          <div style="position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <span class="gis-field-label" style="margin-bottom: 0;">Site Location Pin Picker:</span>
+              <div style="display: flex; gap: 0.3rem; align-items: center;">
+                <button type="button" id="gis-minimap-zoom-in" class="btn-icon" style="width: 24px; height: 24px; font-size: 0.85rem; font-weight: 700; line-height: 1;" title="Mini-Map Zoom In">+</button>
+                <button type="button" id="gis-minimap-zoom-out" class="btn-icon" style="width: 24px; height: 24px; font-size: 0.85rem; font-weight: 700; line-height: 1;" title="Mini-Map Zoom Out">−</button>
+                <button type="button" id="gis-btn-current-gps" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Query Device GPS / Geolocation">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
                   <span>My GPS</span>
                 </button>
               </div>
             </div>
-            <div style="position: relative; width: 100%; height: 135px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); background: #0b1320;">
-              <canvas id="gis-minimap-canvas" width="320" height="135" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
-              <div style="position: absolute; bottom: 3px; left: 6px; font-size: 0.52rem; color: rgba(255,255,255,0.7); pointer-events: none; text-shadow: 0 1px 2px #000;">
+            <div style="position: relative; width: 100%; height: 140px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: #0b1320; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
+              <canvas id="gis-minimap-canvas" width="320" height="140" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
+              <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.58rem; color: rgba(255,255,255,0.75); pointer-events: none; text-shadow: 0 1px 3px #000; font-family: var(--font-mono);">
                 Click map to relocate Site Datum
               </div>
             </div>
           </div>
 
           <!-- Lat / Lon / Elev / True North Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; font-size: 0.62rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;">
             <div>
-              <span style="color: var(--text-muted); font-weight: 700;">Latitude (°):</span>
-              <input type="number" id="gis-input-lat" step="0.000001" value="35.6762" style="width: 100%; font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem;" />
+              <label for="gis-input-lat" class="gis-field-label">Latitude (°):</label>
+              <input type="number" id="gis-input-lat" class="gis-input mono" step="0.000001" value="35.6762" />
             </div>
             <div>
-              <span style="color: var(--text-muted); font-weight: 700;">Longitude (°):</span>
-              <input type="number" id="gis-input-lon" step="0.000001" value="139.6503" style="width: 100%; font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem;" />
+              <label for="gis-input-lon" class="gis-field-label">Longitude (°):</label>
+              <input type="number" id="gis-input-lon" class="gis-input mono" step="0.000001" value="139.6503" />
             </div>
             <div>
-              <span style="color: var(--text-muted); font-weight: 700;">Elevation AMSL (m):</span>
-              <input type="number" id="gis-input-elev" step="0.1" value="40.0" style="width: 100%; font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem;" />
+              <label for="gis-input-elev" class="gis-field-label">Elevation AMSL (m):</label>
+              <input type="number" id="gis-input-elev" class="gis-input mono" step="0.1" value="40.0" />
             </div>
             <div>
-              <span style="color: var(--text-muted); font-weight: 700;">True North Angle (°):</span>
-              <input type="number" id="gis-input-north" step="0.5" value="0.0" style="width: 100%; font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem;" />
+              <label for="gis-input-north" class="gis-field-label">True North Angle (°):</label>
+              <input type="number" id="gis-input-north" class="gis-input mono" step="0.5" value="0.0" />
             </div>
           </div>
 
           <!-- True North Rotation Slider & Camera Alignment -->
-          <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed var(--border-color);">
+          <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.35rem; padding-top: 0.55rem; border-top: 1px dashed var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                <input type="checkbox" id="gis-toggle-compass" />
+              <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="checkbox" id="gis-toggle-compass" style="accent-color: #06b6d4;" />
                 <span>3D True North Ground Compass</span>
               </label>
-              <span id="gis-north-badge" style="font-family: var(--font-mono); font-size: 0.58rem; color: #06b6d4;">0.0° TN</span>
+              <span id="gis-north-badge" class="gis-telemetry-pill">0.0° TN</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <span style="font-size: 0.58rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.62rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
               <input type="range" id="gis-slider-north" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem;">
-              <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.58rem; padding: 0.25rem 0.3rem;" title="Align Camera Orientation to True North">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+              <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem;" title="Align Camera Orientation to True North">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
                 <span>Align North</span>
               </button>
-              <button type="button" id="gis-btn-focus-compass" class="btn-cost-action rates" style="font-size: 0.58rem; padding: 0.25rem 0.3rem; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;" title="Frame Camera Directly to True North Compass Rose">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              <button type="button" id="gis-btn-focus-compass" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;" title="Frame Camera Directly to True North Compass Rose">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                 <span>View Compass</span>
               </button>
-              <button type="button" id="gis-btn-align-proj-north" class="btn-cost-action boq" style="font-size: 0.58rem; padding: 0.25rem 0.3rem;" title="Align Camera Orientation to Project North (0°)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <button type="button" id="gis-btn-align-proj-north" class="btn-cost-action boq" style="font-size: 0.62rem; padding: 0.35rem 0.35rem;" title="Align Camera Orientation to Project North (0°)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span>Project North</span>
               </button>
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.5rem;">
-            <button type="button" id="gis-btn-apply-coords" class="btn-cost-action rates" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;" title="Update Georeference Datum">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-top: 0.3rem;">
+            <button type="button" id="gis-btn-apply-coords" class="btn-cost-action rates" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; padding: 0.4rem 0.6rem;" title="Update Georeference Datum">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               <span>Apply Datum</span>
             </button>
-            <button type="button" id="gis-btn-align-sun" class="btn-cost-action boq" title="Align Directional Sun Light to NOAA Solar Position">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <button type="button" id="gis-btn-align-sun" class="btn-cost-action boq" style="padding: 0.4rem 0.6rem;" title="Align Directional Sun Light to NOAA Solar Position">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               <span>Align Sun</span>
             </button>
           </div>
@@ -3006,18 +3006,18 @@
           <span>3D Ground Basemap Plane</span>
         </div>
 
-        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem;">
+        <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label style="font-size: 0.65rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-basemap" />
+            <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+              <input type="checkbox" id="gis-toggle-basemap" style="accent-color: #06b6d4;" />
               <span>Enable 3D Satellite / Map Surface</span>
             </label>
-            <span class="value-badge" id="gis-basemap-status" style="font-size: 0.55rem; color: var(--text-muted);">Disabled</span>
+            <span class="gis-telemetry-pill" id="gis-basemap-status" style="color: var(--text-muted); background: rgba(255,255,255,0.05); border-color: var(--border-color);">Disabled</span>
           </div>
 
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Tile Provider:</label>
-            <select id="gis-select-provider" class="form-select" style="flex: 1; font-size: 0.65rem; padding: 0.2rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="gis-select-provider" class="gis-field-label" style="margin-bottom: 0; white-space: nowrap;">Tile Provider:</label>
+            <select id="gis-select-provider" class="gis-select" style="flex: 1;">
               <option value="satellite">Satellite Aerial (ArcGIS World Imagery)</option>
               <option value="streets">OpenStreetMap (Standard)</option>
               <option value="dark">CartoDB Dark Canvas (Modern BIM)</option>
@@ -3025,56 +3025,56 @@
             </select>
           </div>
 
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Map Clarity / Res:</label>
-            <select id="gis-select-resolution" class="form-select" style="flex: 1; font-size: 0.65rem; padding: 0.2rem 0.4rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;" title="Increase basemap canvas pixel density for sharper ground textures and aerial imagery">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="gis-select-resolution" class="gis-field-label" style="margin-bottom: 0; white-space: nowrap;">Map Clarity / Res:</label>
+            <select id="gis-select-resolution" class="gis-select" style="flex: 1;" title="Increase basemap canvas pixel density for sharper ground textures and aerial imagery">
               <option value="1024">Standard (1024 × 1024 · 1.0 MP)</option>
               <option value="2048" selected>High Clarity 2K (2048 × 2048 · 4.2 MP)</option>
               <option value="4096">Ultra-HD 4K (4096 × 4096 · 16.8 MP)</option>
             </select>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
-              <span>Basemap Extent Radius</span>
-              <div style="display: flex; align-items: center; gap: 0.2rem;">
-                <input type="number" id="gis-input-radius" min="50" max="5000" step="50" value="400" style="width: 54px; font-size: 0.62rem; font-family: var(--font-mono); padding: 0.1rem 0.25rem; background: var(--bg-input); color: #06b6d4; border: 1px solid var(--border-color); border-radius: 3px; text-align: right;" title="Direct numerical radius in meters" />
-                <span style="font-size: 0.6rem; color: var(--text-muted);">m</span>
-                <button type="button" id="gis-btn-frame-basemap" class="btn-icon" style="width: 20px; height: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Frame 3D Camera to Full Basemap Extent">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="gis-field-label" style="margin-bottom: 0;">Basemap Extent Radius:</span>
+              <div style="display: flex; align-items: center; gap: 0.3rem;">
+                <input type="number" id="gis-input-radius" class="gis-input mono" min="50" max="5000" step="50" value="400" style="width: 60px; padding: 0.2rem 0.35rem; text-align: right;" title="Direct numerical radius in meters" />
+                <span style="font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-mono);">m</span>
+                <button type="button" id="gis-btn-frame-basemap" class="btn-icon" style="width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Frame 3D Camera to Full Basemap Extent">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
                 </button>
               </div>
             </div>
             <input type="range" id="gis-slider-radius" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
 
             <!-- Quick Radius Presets -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.2rem; margin-top: 0.1rem;">
-              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="250" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Site Extent (250m)">250m Site</button>
-              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="500" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Area Extent (500m)">500m Area</button>
-              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="1000" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="Campus Extent (1 km)">1 km</button>
-              <button type="button" class="btn-secondary gis-btn-radius-preset" data-radius="2000" style="padding: 0.15rem 0.2rem; font-size: 0.55rem; text-align: center;" title="District Extent (2 km)">2 km</button>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-top: 0.15rem;">
+              <button type="button" class="gis-btn-radius-preset" data-radius="250" title="Site Extent (250m)">250m Site</button>
+              <button type="button" class="gis-btn-radius-preset" data-radius="500" title="Area Extent (500m)">500m Area</button>
+              <button type="button" class="gis-btn-radius-preset" data-radius="1000" title="Campus Extent (1 km)">1 km</button>
+              <button type="button" class="gis-btn-radius-preset" data-radius="2000" title="District Extent (2 km)">2 km</button>
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
-              <span>Vertical Elevation Offset</span>
-              <span id="gis-elev-val" style="font-family: var(--font-mono); color: var(--text-primary);">-0.05 m</span>
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="gis-field-label" style="margin-bottom: 0;">Vertical Elevation Offset:</span>
+              <span id="gis-elev-val" class="gis-telemetry-pill">-0.05 m</span>
             </div>
             <input type="range" id="gis-slider-elev" min="-25" max="25" step="0.25" value="-0.05" style="width: 100%; accent-color: #06b6d4;" />
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); font-weight: 700;">
-              <span>Surface Opacity</span>
-              <span id="gis-opacity-val" style="font-family: var(--font-mono); color: var(--text-primary);">95%</span>
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="gis-field-label" style="margin-bottom: 0;">Surface Opacity:</span>
+              <span id="gis-opacity-val" class="gis-telemetry-pill">95%</span>
             </div>
             <input type="range" id="gis-slider-opacity" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: #06b6d4;" />
           </div>
 
           <!-- Cinematic Orbital Space Flight & Site Descent -->
-          <button type="button" id="gis-btn-space-flight" class="btn-cost-action rates" style="width: 100%; margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.4rem 0.6rem; font-size: 0.65rem; border-color: rgba(6, 182, 212, 0.5); color: #06b6d4;" title="Toggle Cinematic Space Orbit View and Site-Level Camera Descent">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <button type="button" id="gis-btn-space-flight" class="btn-cost-action rates" style="width: 100%; margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.45rem 0.75rem; font-size: 0.68rem; border-color: rgba(6, 182, 212, 0.5); color: #06b6d4;" title="Toggle Cinematic Space Orbit View and Site-Level Camera Descent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
             <span id="gis-space-flight-text">Fly to Space Orbit</span>
           </button>
         </div>
@@ -3082,67 +3082,67 @@
         <!-- Model Placement on Map (Relocate BIM) -->
         <div class="drawer-section-header" style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
           <span>Model Placement on Map</span>
-          <span id="gis-model-offset-badge" class="value-badge" style="font-size: 0.55rem; color: #38bdf8;">Origin [0,0]</span>
+          <span id="gis-model-offset-badge" class="gis-telemetry-pill sky">Origin [0,0]</span>
         </div>
 
-        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem; border-left: 3px solid #38bdf8;">
-          <div style="font-size: 0.6rem; color: var(--text-muted);">
+        <div class="drawer-section-card gis-card-sky">
+          <div style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
             Reposition and orient the BIM model across the 3D ground basemap and parcel site datum.
           </div>
 
           <!-- Interactive Action Buttons -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-            <button type="button" id="gis-btn-pick-model-loc" class="btn-cost-action rates" style="border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 0.6rem; padding: 0.3rem 0.4rem;" title="Click on 3D Ground Basemap or 2D Mini-Map to Move Model">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;">
+            <button type="button" id="gis-btn-pick-model-loc" class="btn-cost-action rates" style="border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 0.65rem; padding: 0.4rem 0.5rem;" title="Click on 3D Ground Basemap or 2D Mini-Map to Move Model">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
               <span id="gis-text-pick-model">Click Map to Move</span>
             </button>
-            <button type="button" id="gis-btn-snap-model-ground" class="btn-cost-action boq" style="font-size: 0.6rem; padding: 0.3rem 0.4rem;" title="Snap Model Base to Ground Basemap Elevation Offset">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+            <button type="button" id="gis-btn-snap-model-ground" class="btn-cost-action boq" style="font-size: 0.65rem; padding: 0.4rem 0.5rem;" title="Snap Model Base to Ground Basemap Elevation Offset">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
               <span>Snap Ground</span>
             </button>
           </div>
 
           <!-- Easting / Northing Sliders & Inputs -->
-          <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.2rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.2rem;">
             <!-- Easting X -->
-            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem;">
-                <span style="font-weight: 700; color: var(--text-muted);">Easting Offset (ΔX East):</span>
-                <div style="display: flex; gap: 0.2rem; align-items: center;">
-                  <button type="button" id="gis-btn-nudge-x-neg" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m West">−10</button>
-                  <input type="number" id="gis-model-input-x" step="0.5" value="0.0" style="width: 55px; font-family: var(--font-mono); font-size: 0.62rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 3px; padding: 0.1rem 0.25rem; text-align: right;" />
-                  <button type="button" id="gis-btn-nudge-x-pos" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m East">+10</button>
+            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="gis-field-label" style="margin-bottom: 0;">Easting Offset (ΔX East):</span>
+                <div style="display: flex; gap: 0.3rem; align-items: center;">
+                  <button type="button" id="gis-btn-nudge-x-neg" class="gis-btn-nudge" title="Move 10m West">−10</button>
+                  <input type="number" id="gis-model-input-x" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
+                  <button type="button" id="gis-btn-nudge-x-pos" class="gis-btn-nudge" title="Move 10m East">+10</button>
                 </div>
               </div>
               <input type="range" id="gis-model-slider-x" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
             </div>
 
             <!-- Northing Z -->
-            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem;">
-                <span style="font-weight: 700; color: var(--text-muted);">Northing Offset (ΔZ North):</span>
-                <div style="display: flex; gap: 0.2rem; align-items: center;">
-                  <button type="button" id="gis-btn-nudge-z-pos" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m North">+10</button>
-                  <input type="number" id="gis-model-input-z" step="0.5" value="0.0" style="width: 55px; font-family: var(--font-mono); font-size: 0.62rem; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 3px; padding: 0.1rem 0.25rem; text-align: right;" />
-                  <button type="button" id="gis-btn-nudge-z-neg" class="btn-icon" style="width: 18px; height: 18px; font-size: 0.6rem;" title="Move 10m South">−10</button>
+            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="gis-field-label" style="margin-bottom: 0;">Northing Offset (ΔZ North):</span>
+                <div style="display: flex; gap: 0.3rem; align-items: center;">
+                  <button type="button" id="gis-btn-nudge-z-pos" class="gis-btn-nudge" title="Move 10m North">+10</button>
+                  <input type="number" id="gis-model-input-z" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
+                  <button type="button" id="gis-btn-nudge-z-neg" class="gis-btn-nudge" title="Move 10m South">−10</button>
                 </div>
               </div>
               <input type="range" id="gis-model-slider-z" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
             </div>
 
             <!-- Elevation Y & Rotation Y -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
-              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--text-muted); font-weight: 700;">
-                  <span>Elevation (ΔY):</span>
-                  <span id="gis-model-val-y" style="font-family: var(--font-mono); color: var(--text-primary);">0.00 m</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="gis-field-label" style="margin-bottom: 0;">Elevation (ΔY):</span>
+                  <span id="gis-model-val-y" class="gis-telemetry-pill sky">0.00 m</span>
                 </div>
                 <input type="range" id="gis-model-slider-y" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: #38bdf8;" />
               </div>
-              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--text-muted); font-weight: 700;">
-                  <span>Orientation (Yaw):</span>
-                  <span id="gis-model-val-rot" style="font-family: var(--font-mono); color: var(--text-primary);">0.0°</span>
+              <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="gis-field-label" style="margin-bottom: 0;">Orientation (Yaw):</span>
+                  <span id="gis-model-val-rot" class="gis-telemetry-pill sky">0.0°</span>
                 </div>
                 <input type="range" id="gis-model-slider-rot" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: #38bdf8;" />
               </div>
@@ -3150,27 +3150,27 @@
           </div>
 
           <!-- Live Model Geographic Coordinates -->
-          <div style="padding: 0.35rem 0.45rem; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 4px; font-family: var(--font-mono); font-size: 0.58rem; display: flex; flex-direction: column; gap: 0.2rem;">
+          <div style="padding: 0.45rem 0.6rem; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; display: flex; flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Model GPS (WGS84):</span>
               <span id="gis-model-gps" style="color: #38bdf8; font-weight: 700;">35.676200°, 139.650300°</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Model Elevation AMSL:</span>
-              <span id="gis-model-elev-amsl" style="color: var(--text-primary);">40.00 m</span>
+              <span id="gis-model-elev-amsl" style="color: var(--text-primary); font-weight: 600;">40.00 m</span>
             </div>
           </div>
 
           <!-- Quick Station Snap & Reset -->
-          <div style="display: flex; gap: 0.35rem; align-items: center; margin-top: 0.15rem;">
-            <select id="gis-select-snap-gcp" class="form-select" style="flex: 1; font-size: 0.6rem; padding: 0.2rem 0.35rem; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+          <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 0.2rem;">
+            <select id="gis-select-snap-gcp" class="gis-select" style="flex: 1;" title="Select a survey benchmark to align the model origin">
               <option value="BM-01">Snap to BM-01 (Site Benchmark)</option>
               <option value="GCP-01">Snap to GCP-01 (NE Control)</option>
               <option value="GCP-02">Snap to GCP-02 (SW Control)</option>
             </select>
-            <button type="button" id="gis-btn-snap-to-gcp" class="btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.58rem; white-space: nowrap;" title="Move Model Origin to Selected Survey Station">Snap</button>
-            <button type="button" id="gis-btn-reset-model-pos" class="btn-icon" style="width: 24px; height: 24px;" title="Reset Model Position to Origin (0,0,0)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <button type="button" id="gis-btn-snap-to-gcp" class="btn-secondary" style="padding: 0.35rem 0.55rem; font-size: 0.65rem; white-space: nowrap;" title="Move Model Origin to Selected Survey Station">Snap</button>
+            <button type="button" id="gis-btn-reset-model-pos" class="btn-icon" style="width: 28px; height: 28px;" title="Reset Model Position to Origin (0,0,0)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
             </button>
           </div>
         </div>
@@ -3178,36 +3178,39 @@
         <!-- Survey Ground Control Points (GCPs) & Site Benchmark Suite -->
         <div class="drawer-section-header" style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
           <span>Survey GCPs & Benchmarks</span>
-          <span id="gis-gcp-count-badge" class="value-badge" style="font-size: 0.55rem; color: #06b6d4;">3 Points</span>
+          <span id="gis-gcp-count-badge" class="gis-telemetry-pill">3 Points</span>
         </div>
 
-        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem;">
+        <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-gcps" />
+            <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+              <input type="checkbox" id="gis-toggle-gcps" style="accent-color: #06b6d4;" />
               <span>Show 3D Survey Prisms & Laser Poles</span>
             </label>
-            <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.58rem; display: flex; align-items: center; gap: 0.2rem;" title="Add Survey Control Point at Site Origin">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Add Survey Control Point at Site Origin">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               <span>Add GCP</span>
             </button>
           </div>
 
           <!-- GCP Points List Container -->
-          <div id="gis-survey-points-list" style="display: flex; flex-direction: column; gap: 0.3rem; max-height: 140px; overflow-y: auto; padding-right: 2px;">
+          <div id="gis-survey-points-list" style="display: flex; flex-direction: column; gap: 0.35rem; max-height: 160px; overflow-y: auto; padding-right: 3px;">
             <!-- Injected dynamically by refreshGisUI() -->
           </div>
 
           <!-- Geodesic Measurement Output (Between GCPs) -->
-          <div id="gis-geodesic-measurement" class="hidden" style="padding: 0.35rem 0.5rem; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 4px; font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-secondary);">
-            <div style="font-weight: 700; color: #06b6d4; margin-bottom: 0.15rem;">Geodesic Baseline Vector:</div>
+          <div id="gis-geodesic-measurement" class="hidden" style="padding: 0.45rem 0.6rem; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-secondary);">
+            <div style="font-weight: 700; color: #06b6d4; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+              <span>Geodesic Baseline Vector:</span>
+            </div>
             <div id="gis-measurement-details">Distance: -- m | Azimuth: --° | dZ: -- m</div>
           </div>
 
           <!-- Survey Export Actions -->
-          <div style="display: grid; grid-template-columns: 1fr; gap: 0.35rem; margin-top: 0.2rem;">
-            <button type="button" id="gis-btn-export-gcp-csv" class="btn-cost-action rates" style="font-size: 0.62rem; justify-content: center;" title="Export Total Station / GNSS Survey CSV File">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 0.45rem; margin-top: 0.25rem;">
+            <button type="button" id="gis-btn-export-gcp-csv" class="btn-cost-action rates" style="font-size: 0.65rem; justify-content: center; padding: 0.4rem 0.6rem;" title="Export Total Station / GNSS Survey CSV File">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span>Export Total Station CSV (GCPs)</span>
             </button>
           </div>
@@ -3218,26 +3221,26 @@
           <span>Cadastre & GeoJSON Utilities</span>
         </div>
 
-        <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.4rem;">
-          <div style="font-size: 0.6rem; color: var(--text-muted);">
+        <div class="drawer-section-card">
+          <div style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
             Overlay municipal cadastral property boundaries, zoning easements, and 3D underground utility conduits (water, stormwater, power).
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.2rem;">
-            <button type="button" id="gis-btn-demo-cadastre" class="btn-cost-action rates" title="Generate Demo Cadastral Parcels & Utilities">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-top: 0.25rem;">
+            <button type="button" id="gis-btn-demo-cadastre" class="btn-cost-action rates" style="padding: 0.4rem 0.5rem;" title="Generate Demo Cadastral Parcels & Utilities">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
               <span>Demo Cadastre</span>
             </button>
-            <button type="button" id="gis-btn-clear-cadastre" class="btn-cost-action boq" title="Clear GIS Layers">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <button type="button" id="gis-btn-clear-cadastre" class="btn-cost-action boq" style="padding: 0.4rem 0.5rem;" title="Clear GIS Layers">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               <span>Clear Layers</span>
             </button>
           </div>
 
           <!-- File Upload for Custom GeoJSON -->
-          <div style="display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.25rem;">
-            <label for="gis-file-geojson" style="font-size: 0.6rem; font-weight: 700; color: var(--text-muted);">Import Municipal GeoJSON (.geojson / .json):</label>
-            <input type="file" id="gis-file-geojson" accept=".geojson,.json" style="font-size: 0.6rem; color: var(--text-muted);" />
+          <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.3rem;">
+            <label for="gis-file-geojson" class="gis-field-label">Import Municipal GeoJSON (.geojson / .json):</label>
+            <input type="file" id="gis-file-geojson" accept=".geojson,.json" class="gis-input" style="padding: 0.25rem 0.4rem; font-size: 0.62rem;" />
           </div>
         </div>
 
@@ -3246,30 +3249,30 @@
           <span>Live Spatial Telemetry</span>
         </div>
 
-        <div class="drawer-section-card" style="font-family: var(--font-mono); font-size: 0.62rem; display: flex; flex-direction: column; gap: 0.3rem;">
+        <div class="drawer-section-card" style="font-family: var(--font-mono); font-size: 0.65rem; display: flex; flex-direction: column; gap: 0.35rem;">
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-muted);">Site Origin:</span>
-            <span id="gis-telemetry-origin" style="color: var(--text-primary);">0.0, 0.0, 0.0</span>
+            <span id="gis-telemetry-origin" style="color: var(--text-primary); font-weight: 600;">0.0, 0.0, 0.0</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-muted);">Cursor (Local 3D):</span>
-            <span id="gis-telemetry-local" style="color: var(--text-primary);">X: 0.00m, Z: 0.00m</span>
+            <span id="gis-telemetry-local" style="color: var(--text-primary); font-weight: 600;">X: 0.00m, Z: 0.00m</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-muted);">Cursor (GPS WGS84):</span>
-            <span id="gis-telemetry-gps" style="color: #06b6d4;">35.676200°, 139.650300°</span>
+            <span id="gis-telemetry-gps" style="color: #06b6d4; font-weight: 700;">35.676200°, 139.650300°</span>
           </div>
-          <button type="button" id="gis-btn-export-geojson" class="btn-cost-action report" style="width: 100%; margin-top: 0.35rem; justify-content: center;" title="Export Site Coordinates & Georeference as GeoJSON">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button type="button" id="gis-btn-export-geojson" class="btn-cost-action report" style="width: 100%; margin-top: 0.4rem; justify-content: center; padding: 0.45rem 0.65rem;" title="Export Site Coordinates & Georeference as GeoJSON">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>Export Site GeoJSON FeatureCollection</span>
           </button>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.2rem;">
-            <button type="button" id="gis-btn-export-world-file" class="btn-cost-action boq" style="font-size: 0.58rem; justify-content: center;" title="Export ESRI World File (.wld) for GIS Raster Alignment">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-top: 0.25rem;">
+            <button type="button" id="gis-btn-export-world-file" class="btn-cost-action boq" style="font-size: 0.62rem; justify-content: center; padding: 0.35rem 0.5rem;" title="Export ESRI World File (.wld) for GIS Raster Alignment">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <span>Export World File (.wld)</span>
             </button>
-            <button type="button" id="gis-btn-export-prj" class="btn-cost-action boq" style="font-size: 0.58rem; justify-content: center;" title="Export Projection WKT (.prj) File">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <button type="button" id="gis-btn-export-prj" class="btn-cost-action boq" style="font-size: 0.62rem; justify-content: center; padding: 0.35rem 0.5rem;" title="Export Projection WKT (.prj) File">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 12 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
               <span>Export Projection (.prj)</span>
             </button>
           </div>

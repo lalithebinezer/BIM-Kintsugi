@@ -10369,3 +10369,239 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   text-overflow: ellipsis;
 }
 
+/* ============================================================
+   GeoBIM & SITE GEOREFERENCE DRAWER STYLING
+   ============================================================ */
+
+#gis-panel .drawer-section-card {
+  background: var(--bg-card, rgba(20, 20, 24, 0.75));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#gis-panel .drawer-section-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+#gis-panel .gis-card-cyan {
+  border-left: 3px solid #06b6d4 !important;
+}
+
+#gis-panel .gis-card-sky {
+  border-left: 3px solid #38bdf8 !important;
+}
+
+.gis-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.gis-card-title {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.gis-telemetry-pill {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: #06b6d4;
+  font-weight: 700;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.gis-telemetry-pill.sky {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.gis-field-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.gis-input,
+.gis-select {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  background: var(--bg-input, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #ffffff);
+  border-radius: 5px;
+  padding: 0.35rem 0.5rem;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gis-input:focus,
+.gis-select:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
+}
+
+.gis-input.mono {
+  font-family: var(--font-mono);
+}
+
+.gis-btn-nudge {
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.gis-btn-nudge:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.gis-btn-nudge:active {
+  transform: translateY(0);
+  background: rgba(56, 189, 248, 0.25);
+}
+
+.gis-btn-radius-preset {
+  padding: 0.28rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gis-btn-radius-preset:hover {
+  background: rgba(6, 182, 212, 0.14);
+  border-color: #06b6d4;
+  color: #06b6d4;
+  transform: translateY(-1px);
+}
+
+.gis-btn-radius-preset:active {
+  transform: translateY(0);
+}
+
+.gis-gcp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.64rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gis-gcp-item:hover {
+  background: rgba(6, 182, 212, 0.08);
+  border-color: rgba(6, 182, 212, 0.35);
+  transform: translateX(1px);
+}
+
+.gis-gcp-item .gis-btn-focus-gcp {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: #06b6d4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.gis-gcp-item .gis-btn-focus-gcp:hover {
+  background: #06b6d4;
+  color: #000;
+  border-color: #06b6d4;
+}
+
+.gis-gcp-item .gis-btn-delete-gcp {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.gis-gcp-item .gis-btn-delete-gcp:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+/* Light Theme Overrides for GeoBIM */
+[data-theme="light"] #gis-panel .drawer-section-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] #gis-panel .gis-input,
+[data-theme="light"] #gis-panel .gis-select {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] #gis-panel .gis-btn-nudge,
+[data-theme="light"] #gis-panel .gis-btn-radius-preset {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] #gis-panel .gis-gcp-item {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+

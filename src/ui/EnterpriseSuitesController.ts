@@ -392,6 +392,26 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (dmsBadge) dmsBadge.textContent = `${dms.latDms} ${dms.lonDms}`;
     if (utmBadge) utmBadge.textContent = gisModule.getUtmZone(geo.latitude, geo.longitude);
 
+    // Sync Preset City dropdown if matches known preset
+    const presetSelect = document.getElementById("gis-preset-select") as HTMLSelectElement | null;
+    if (presetSelect) {
+      const knownPresets: Record<string, { lat: number; lon: number }> = {
+        tokyo: { lat: 35.6762, lon: 139.6503 },
+        london: { lat: 51.5074, lon: -0.1278 },
+        san_francisco: { lat: 37.7749, lon: -122.4194 },
+        new_york: { lat: 40.7128, lon: -74.006 },
+        dubai: { lat: 25.2048, lon: 55.2708 },
+        singapore: { lat: 1.3521, lon: 103.8198 },
+        sydney: { lat: -33.8688, lon: 151.2093 },
+      };
+      for (const [key, p] of Object.entries(knownPresets)) {
+        if (Math.abs(geo.latitude - p.lat) < 0.001 && Math.abs(geo.longitude - p.lon) < 0.001) {
+          presetSelect.value = key;
+          break;
+        }
+      }
+    }
+
     // Synchronize 3D Basemap controls
     const toggleBasemap = document.getElementById("gis-toggle-basemap") as HTMLInputElement | null;
     const statusBadge = document.getElementById("gis-basemap-status");
@@ -487,28 +507,70 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (toggleGcps) {
       toggleGcps.checked = gisModule.isSurveyPointsVisible();
     }
+    // Dynamic Snap GCP select synchronization
+    const snapSelect = document.getElementById("gis-select-snap-gcp") as HTMLSelectElement | null;
+    if (snapSelect) {
+      const currentVal = snapSelect.value;
+      if (pts.length === 0) {
+        snapSelect.innerHTML = `<option value="">No Control Points Available</option>`;
+      } else {
+        snapSelect.innerHTML = pts
+          .map((p) => `<option value="${p.id}">Snap to ${p.code} (${p.name})</option>`)
+          .join("");
+        if (pts.some((p) => p.id === currentVal)) {
+          snapSelect.value = currentVal;
+        }
+      }
+    }
+
+    // Geodesic Baseline Measurement Output
+    const geoBox = document.getElementById("gis-geodesic-measurement");
+    const geoDetails = document.getElementById("gis-measurement-details");
+    if (geoBox && geoDetails) {
+      if (pts.length >= 2) {
+        const m = gisModule.measureDistanceBetweenPoints(pts[0].id, pts[1].id);
+        if (m) {
+          geoBox.classList.remove("hidden");
+          geoDetails.innerHTML = `<strong>${pts[0].code} &rarr; ${pts[1].code}:</strong> Distance: <strong>${m.distanceMeters.toFixed(2)} m</strong> (${m.distanceKm.toFixed(3)} km) | Azimuth: <strong>${m.initialBearingDegrees}°</strong> | &Delta;Z: <strong>${m.elevationDeltaMeters >= 0 ? "+" : ""}${m.elevationDeltaMeters.toFixed(2)} m</strong>`;
+        } else {
+          geoBox.classList.add("hidden");
+        }
+      } else {
+        geoBox.classList.add("hidden");
+      }
+    }
+
+    // Live Spatial Telemetry Origin
+    const telemOrigin = document.getElementById("gis-telemetry-origin");
+    if (telemOrigin) {
+      telemOrigin.textContent = `${geo.latitude.toFixed(6)}°, ${geo.longitude.toFixed(6)}° (AMSL: ${geo.elevation.toFixed(1)}m)`;
+    }
+
     if (gcpListContainer) {
       if (pts.length === 0) {
-        gcpListContainer.innerHTML = `<div style="font-size: 0.58rem; color: var(--text-muted); padding: 0.25rem;">No survey control points defined. Click "+ Add GCP" to create one.</div>`;
+        gcpListContainer.innerHTML = `<div style="font-size: 0.62rem; color: var(--text-muted); padding: 0.4rem; text-align: center;">No survey control points defined. Click "+ Add GCP" to create one.</div>`;
       } else {
         gcpListContainer.innerHTML = pts.map(p => `
-          <div class="gis-gcp-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.35rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.58rem; cursor: pointer;" title="Click to view & frame survey point ${p.name}">
-            <div style="display: flex; align-items: center; gap: 0.3rem;">
-              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${p.color}; flex-shrink: 0;"></span>
-              <div>
-                <span style="font-weight: 700; color: var(--text-primary);">${p.name} (${p.code})</span>
-                <span style="color: var(--text-muted); margin-left: 0.25rem;">[${p.type}]</span>
-                <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.52rem;">
-                  X:${p.localX.toFixed(1)}m Y:${p.localY.toFixed(1)}m Z:${p.localZ.toFixed(1)}m | ${p.latitude.toFixed(5)}°, ${p.longitude.toFixed(5)}°
+          <div class="gis-gcp-item" data-id="${p.id}" title="Click to view & measure survey point ${p.name}">
+            <div style="display: flex; align-items: center; gap: 0.4rem; min-width: 0;">
+              <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: ${p.color}; box-shadow: 0 0 6px ${p.color}; flex-shrink: 0;"></span>
+              <div style="min-width: 0;">
+                <div style="font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.25rem;">
+                  <span>${p.code}</span>
+                  <span style="color: var(--text-muted); font-size: 0.58rem; font-weight: normal;">${p.name}</span>
+                  <span style="color: #06b6d4; font-size: 0.54rem; font-family: var(--font-mono); background: rgba(6, 182, 212, 0.1); padding: 0.05rem 0.25rem; border-radius: 3px;">${p.type}</span>
+                </div>
+                <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.56rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  X:${p.localX.toFixed(1)}m Y:${p.localY.toFixed(1)}m Z:${p.localZ.toFixed(1)}m · ${p.latitude.toFixed(4)}°, ${p.longitude.toFixed(4)}°
                 </div>
               </div>
             </div>
-            <div style="display: flex; gap: 0.2rem; align-items: center;">
-              <button type="button" class="btn-icon gis-btn-focus-gcp" data-id="${p.id}" style="width: 18px; height: 18px; color: #06b6d4;" title="Frame Camera on Point">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            <div style="display: flex; gap: 0.25rem; align-items: center; flex-shrink: 0;">
+              <button type="button" class="gis-btn-focus-gcp" data-id="${p.id}" title="Frame Camera on Point">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
-              <button type="button" class="btn-icon gis-btn-delete-gcp" data-id="${p.id}" style="width: 18px; height: 18px; color: #ef4444;" title="Delete Control Point">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              <button type="button" class="gis-btn-delete-gcp" data-id="${p.id}" title="Delete Control Point">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
             </div>
           </div>
@@ -522,6 +584,19 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
               const toggle = document.getElementById("gis-toggle-gcps") as HTMLInputElement | null;
               if (toggle) toggle.checked = true;
               gisModule.flyToSurveyPoint(id);
+
+              // Update baseline measurement between pts[0] and clicked point
+              if (pts.length >= 2 && geoBox && geoDetails) {
+                const targetPt = pts.find(p => p.id === id);
+                if (targetPt && targetPt.id !== pts[0].id) {
+                  const m = gisModule.measureDistanceBetweenPoints(pts[0].id, targetPt.id);
+                  if (m) {
+                    geoBox.classList.remove("hidden");
+                    geoDetails.innerHTML = `<strong>${pts[0].code} &rarr; ${targetPt.code}:</strong> Distance: <strong>${m.distanceMeters.toFixed(2)} m</strong> (${m.distanceKm.toFixed(3)} km) | Azimuth: <strong>${m.initialBearingDegrees}°</strong> | &Delta;Z: <strong>${m.elevationDeltaMeters >= 0 ? "+" : ""}${m.elevationDeltaMeters.toFixed(2)} m</strong>`;
+                  }
+                }
+              }
+
               showToast(`Focusing camera on Survey Point ${id}`, "info");
               SoundManager.getInstance().playClick();
             }
@@ -892,6 +967,36 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (badgeNorth) badgeNorth.textContent = `${val.toFixed(1)}° TN`;
   });
 
+  document.getElementById("gis-input-north")?.addEventListener("input", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value || "0");
+    if (!isNaN(val)) {
+      gisModule.setGeoreference({ trueNorthRotation: val });
+      const sliderNorth = document.getElementById("gis-slider-north") as HTMLInputElement | null;
+      const badgeNorth = document.getElementById("gis-north-badge");
+      if (sliderNorth) sliderNorth.value = String(val);
+      if (badgeNorth) badgeNorth.textContent = `${val.toFixed(1)}° TN`;
+    }
+  });
+
+  const onCoordInputChange = () => {
+    const lat = parseFloat((document.getElementById("gis-input-lat") as HTMLInputElement)?.value || "0");
+    const lon = parseFloat((document.getElementById("gis-input-lon") as HTMLInputElement)?.value || "0");
+    if (!isNaN(lat) && !isNaN(lon)) {
+      gisModule.setGeoreference({ latitude: lat, longitude: lon });
+      refreshGisUI();
+    }
+  };
+  document.getElementById("gis-input-lat")?.addEventListener("change", onCoordInputChange);
+  document.getElementById("gis-input-lon")?.addEventListener("change", onCoordInputChange);
+
+  document.getElementById("gis-input-elev")?.addEventListener("change", (e) => {
+    const val = parseFloat((e.target as HTMLInputElement).value || "0");
+    if (!isNaN(val)) {
+      gisModule.setGeoreference({ elevation: val });
+      refreshGisUI();
+    }
+  });
+
   document.getElementById("gis-toggle-compass")?.addEventListener("change", (e) => {
     const checked = (e.target as HTMLInputElement).checked;
     gisModule.setCompassVisible(checked);
@@ -1087,12 +1192,18 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const placement = gisModule.getModelPlacement();
     if (elevAmsl) elevAmsl.textContent = `${placement.elevationAMSL.toFixed(2)} m AMSL`;
   });
+  document.getElementById("gis-model-slider-y")?.addEventListener("change", () => {
+    refreshGisUI();
+  });
 
   document.getElementById("gis-model-slider-rot")?.addEventListener("input", (e) => {
     const val = parseFloat((e.target as HTMLInputElement).value);
     gisModule.setModelPlacement({ rotationY: val });
     const valRot = document.getElementById("gis-model-val-rot");
     if (valRot) valRot.textContent = `${val.toFixed(1)}°`;
+  });
+  document.getElementById("gis-model-slider-rot")?.addEventListener("change", () => {
+    refreshGisUI();
   });
 
   document.getElementById("gis-btn-snap-to-gcp")?.addEventListener("click", () => {
@@ -1105,6 +1216,47 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
         showToast(`Model snapped to station ${gcpId} [X: ${placed.x}m, Z: ${placed.z}m]`, "success");
         SoundManager.getInstance().playClick();
       }
+    }
+  });
+
+  // Live Spatial Telemetry Tracking on Canvas and Mini-Map
+  const container = document.getElementById("container");
+  container?.addEventListener("pointermove", (e) => {
+    const panel = document.getElementById("gis-panel");
+    if (!panel || panel.classList.contains("hidden")) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const mouse = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    if ((gisModule as any)?.world?.camera?.three) {
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, (gisModule as any).world.camera.three);
+      const elevOffset = gisModule.getBasemapConfig()?.elevationOffset || 0;
+      const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -elevOffset);
+      const hit = new THREE.Vector3();
+      if (raycaster.ray.intersectPlane(groundPlane, hit)) {
+        const telemLocal = document.getElementById("gis-telemetry-local");
+        const telemGps = document.getElementById("gis-telemetry-gps");
+        if (telemLocal) telemLocal.textContent = `X: ${hit.x.toFixed(2)}m, Z: ${hit.z.toFixed(2)}m`;
+        if (telemGps) {
+          const geoCoord = gisModule.localToGeodetic(hit.x, hit.z);
+          telemGps.textContent = `${geoCoord.lat.toFixed(6)}°, ${geoCoord.lon.toFixed(6)}°`;
+        }
+      }
+    }
+  });
+
+  miniMapCanvas?.addEventListener("pointermove", (e) => {
+    const rect = miniMapCanvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const picked = gisModule.pickLocationFromMiniMap(x, y, rect.width, rect.height);
+    const telemGps = document.getElementById("gis-telemetry-gps");
+    if (telemGps) {
+      telemGps.textContent = `${picked.latitude.toFixed(6)}°, ${picked.longitude.toFixed(6)}°`;
     }
   });
   document.getElementById("btn-close-gantt-bar")?.addEventListener("click", () => {
