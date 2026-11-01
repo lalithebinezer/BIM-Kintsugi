@@ -2964,7 +2964,7 @@
           <div style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                <input type="checkbox" id="gis-toggle-compass" checked />
+                <input type="checkbox" id="gis-toggle-compass" />
                 <span>3D True North Ground Compass</span>
               </label>
               <span id="gis-north-badge" style="font-family: var(--font-mono); font-size: 0.58rem; color: #06b6d4;">0.0° TN</span>
@@ -3005,10 +3005,10 @@
         <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.65rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-basemap" checked />
+              <input type="checkbox" id="gis-toggle-basemap" />
               <span>Enable 3D Satellite / Map Surface</span>
             </label>
-            <span class="value-badge" id="gis-basemap-status" style="font-size: 0.55rem; color: #06b6d4;">Active</span>
+            <span class="value-badge" id="gis-basemap-status" style="font-size: 0.55rem; color: var(--text-muted);">Disabled</span>
           </div>
 
           <div style="display: flex; gap: 0.4rem; align-items: center;">
@@ -3180,7 +3180,7 @@
         <div class="drawer-section-card" style="display: flex; flex-direction: column; gap: 0.45rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.62rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-gcps" checked />
+              <input type="checkbox" id="gis-toggle-gcps" />
               <span>Show 3D Survey Prisms & Laser Poles</span>
             </label>
             <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.58rem; display: flex; align-items: center; gap: 0.2rem;" title="Add Survey Control Point at Site Origin">

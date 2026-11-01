@@ -290,10 +290,14 @@ describe("GisModule Unit Tests", () => {
   });
 
   it("should control 3D True North compass and ground control point visibility", () => {
+    expect(gis.isCompassVisible()).toBe(false);
+    gis.setCompassVisible(true);
     expect(gis.isCompassVisible()).toBe(true);
     gis.setCompassVisible(false);
     expect(gis.isCompassVisible()).toBe(false);
 
+    expect(gis.isSurveyPointsVisible()).toBe(false);
+    gis.setSurveyPointsVisible(true);
     expect(gis.isSurveyPointsVisible()).toBe(true);
     gis.setSurveyPointsVisible(false);
     expect(gis.isSurveyPointsVisible()).toBe(false);

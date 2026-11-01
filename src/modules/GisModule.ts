@@ -168,7 +168,7 @@ export class GisModule {
   // State
   private location: GisProjectLocation = { ...GIS_LOCATION_PRESETS.sanfrancisco };
   private basemapConfig: GisBasemapConfig = {
-    enabled: true,
+    enabled: false,
     provider: "satellite",
     radius: 400,
     elevationOffset: -0.05,
@@ -189,8 +189,8 @@ export class GisModule {
   private tileFetchTimer: any = null;
   private tileCache: Map<string, HTMLImageElement> = new Map();
   private isSpaceView: boolean = false;
-  private _isCompassVisible: boolean = true;
-  private _isSurveyVisible: boolean = true;
+  private _isCompassVisible: boolean = false;
+  private _isSurveyVisible: boolean = false;
   private miniMapZoom: number = 14;
   private miniMapCanvas: HTMLCanvasElement | null = null;
 
@@ -232,6 +232,7 @@ export class GisModule {
       this.basemapGroup.name = "gis-basemap-group";
       this.world.scene.three.add(this.basemapGroup);
     }
+    this.basemapGroup.visible = this.basemapConfig.enabled;
 
     if (!this.cadastreGroup) {
       this.cadastreGroup = new THREE.Group();
@@ -244,18 +245,21 @@ export class GisModule {
       this.compassGroup.name = "gis-compass-group";
       this.world.scene.three.add(this.compassGroup);
     }
+    this.compassGroup.visible = this._isCompassVisible;
 
     if (!this.surveyGroup) {
       this.surveyGroup = new THREE.Group();
       this.surveyGroup.name = "gis-survey-group";
       this.world.scene.three.add(this.surveyGroup);
     }
+    this.surveyGroup.visible = this._isSurveyVisible;
 
     if (!this.modelAnchorGroup) {
       this.modelAnchorGroup = new THREE.Group();
       this.modelAnchorGroup.name = "gis-model-anchor-group";
       this.world.scene.three.add(this.modelAnchorGroup);
     }
+    this.modelAnchorGroup.visible = false;
 
     if (this.surveyPoints.length === 0) {
       this.initDefaultSurveyPoints();
