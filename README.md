@@ -255,6 +255,8 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 | :--- | :--- | :--- |
 | **`Ctrl + K` / `Cmd + K`** | **Command Palette** | Fuzzy search across 30+ BIM tools, suites, cameras, themes, and render styles |
 | **`Ctrl + P`** | **Executive Twin Report** | Open boardroom-ready executive construction report modal with vector print / PDF export |
+| **`[` / `]`** | **Camera Zoom Speed** | Decrease or increase camera zoom/dolly speed dynamically (0.1x to 5.0x) |
+| **`-` / `+`** | **Step Zoom Speed** | Step camera zoom speed down/up with instant floating HUD toast notification |
 | **`F`** | **Fit to Screen** | Frame all visible BIM geometry in the viewport |
 | **`H`** | **Reset Visibility** | Unhide all isolated/hidden elements and clear active highlights |
 | **`I`** | **Isolate Selection** | Isolate currently selected BIM elements |
@@ -274,6 +276,13 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 
 ## 📝 Recent Changes & Enhancements
 
+- **Dynamic Camera Zoom & Dolly Speed Engine** – Full interactive camera zoom control suite:
+  - **Canvas HUD Stepper & Capsule**: Instant `[-]` and `[+]` speed adjustment buttons and current speed badge (`⚡ 1.0x`) placed directly in the top-left canvas toolbar.
+  - **Touchscreen Direct Zoom**: 1-tap Zoom In (`+`) and Zoom Out (`-`) buttons for mobile, tablet, or trackpad navigation without requiring a physical mouse wheel.
+  - **Speed Presets**: 5 tailored speed tiers: `0.2x Precision (Fine MEP)`, `0.5x Slow (Inspection)`, `1.0x Standard (1:1)`, `2.0x Fast (Storeys)`, and `4.0x Turbo (GIS Basemap & Masterplan)`.
+  - **Keyboard Hotkeys**: Press `[` / `]` or `-` / `+` anywhere in the 3D viewport to dynamically accelerate or decelerate zoom speed.
+  - **Floating HUD Toast**: Real-time non-intrusive toast notification displaying current speed tier and multiplier.
+  - **Scene Settings & Persistence**: Flanking step buttons, range slider (`0.1x` to `5.0x`), quick preset pills, and automatic `localStorage` persistence across sessions.
 - **Boardroom-Ready Executive Twin Report Module** – Generates a comprehensive project status modal synthesizing 4D construction schedule milestones, 5D EVM S-Curve (Planned Value PV vs. Earned Value EV vs. Actual Cost AC), category trade cost breakdown, 3D clash matrix, 6D embodied carbon rating, and BCF coordination status. Features `@media print` vector styling for paper/PDF export and raw JSON schema export for BI ingestion.
 - **PWA & Offline Jobsite Mode** – Progressive Web App with custom Service Worker caching WebAssembly binaries (`web-ifc.wasm`, `web-ifc-mt.wasm`) and static assets for high-speed offline 3D model navigation on construction site iPads and field tablets.
 - **Synthesized Web Audio Soundscape** – Native Web Audio API synthesizer generating tactile auditory feedback for measurement clicks, vertex snaps, spatial beacons, and camera snapshots. Master volume slider (0%–100%) and instant mute toggle in Gaming & Controls Settings.

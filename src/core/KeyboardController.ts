@@ -3,6 +3,8 @@
  * Manages keybindings, modal shortcuts (?), and viewport navigation triggers.
  */
 
+import { CameraSpeedController } from './CameraSpeedController';
+
 export class KeyboardController {
   private static instance: KeyboardController | null = null;
   private initialized = false;
@@ -118,6 +120,12 @@ export class KeyboardController {
         document.getElementById('btn-view-top')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'p') {
         document.getElementById('btn-view-iso')?.click();
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === '[' || e.key === '{' || e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        CameraSpeedController.getInstance().decreaseSpeed();
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === ']' || e.key === '}' || e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        CameraSpeedController.getInstance().increaseSpeed();
       } else if (e.key === ' ' || e.code === 'Space') {
         const btn4dPlay = document.getElementById('timeline-play-btn');
         const timelinePanel = document.getElementById('timeline-panel');

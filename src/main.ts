@@ -39,6 +39,7 @@ import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
 import { GisModule } from "./modules/GisModule";
+import { CameraSpeedController } from "./core/CameraSpeedController";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
     IFCWALL: "#94a3b8",
@@ -179,8 +180,9 @@ if (world.camera.controls) {
   const controls = world.camera.controls as any;
   controls.enabled = true;
   controls.dollyToCursor = true;
-  controls.dollySpeed = 0.3;
-  controls.zoomSpeed = 0.3;
+  const initialSpeed = CameraSpeedController.getInstance().getSpeed();
+  controls.dollySpeed = initialSpeed;
+  controls.zoomSpeed = initialSpeed;
   if (controls.mouseButtons) {
     controls.mouseButtons.left = CameraControls.ACTION.ROTATE;
     controls.mouseButtons.right = CameraControls.ACTION.TRUCK;
@@ -214,6 +216,10 @@ customViewManager.init(world);
 const gisModule = GisModule.getInstance();
 gisModule.init(world);
 (window as any).gisModule = gisModule;
+
+const cameraSpeedController = CameraSpeedController.getInstance();
+cameraSpeedController.init(world);
+(window as any).cameraSpeedController = cameraSpeedController;
 
 
 
@@ -5519,20 +5525,8 @@ if (cameraFovInput) {
   });
 }
 
-// Zoom & Dolly Speed Slider
-const cameraSpeedInput = document.getElementById("settings-camera-speed") as HTMLInputElement | null;
-const cameraSpeedVal = document.getElementById("val-camera-speed");
-if (cameraSpeedInput) {
-  cameraSpeedInput.addEventListener("input", () => {
-    const speedVal = Number(cameraSpeedInput.value);
-    if (cameraSpeedVal) cameraSpeedVal.innerText = `${speedVal.toFixed(1)}x`;
-
-    if (world.camera && world.camera.controls) {
-      (world.camera.controls as any).dollySpeed = speedVal;
-      (world.camera.controls as any).zoomSpeed = speedVal;
-    }
-  });
-}
+// Zoom & Dolly Speed is managed by CameraSpeedController
+CameraSpeedController.getInstance().syncUI();
 
 // Exploded Disassembly View Slider & Clustering Mode
 const explosionSlider = document.getElementById("settings-explosion-slider") as HTMLInputElement | null;

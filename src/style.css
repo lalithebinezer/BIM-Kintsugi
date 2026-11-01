@@ -2186,6 +2186,303 @@ input[type="color"]::-moz-color-swatch {
   border-color: var(--border-accent);
 }
 
+/* ============================================================
+   CAMERA SPEED & ZOOM CONTROLS SUITE
+   ============================================================ */
+.camera-speed-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(18, 18, 22, 0.75);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 0.1rem 0.2rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .camera-speed-capsule {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-zoom-action {
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+
+.zoom-speed-stepper {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 1px;
+  position: relative;
+}
+
+[data-theme="light"] .zoom-speed-stepper {
+  background: #F1F5F9;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.btn-zoom-step {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  width: 20px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-zoom-step:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #ffffff);
+}
+
+[data-theme="light"] .btn-zoom-step:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.btn-zoom-badge {
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #ffffff);
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 0 0.35rem;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent-500, #38bdf8);
+}
+
+/* Speed Dropdown Menu */
+.zoom-speed-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: var(--bg-panel-header, rgba(16, 18, 24, 0.96));
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 0.4rem;
+  z-index: 10010;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  animation: modalScaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.zoom-speed-dropdown.hidden {
+  display: none !important;
+}
+
+[data-theme="light"] .zoom-speed-dropdown {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.zoom-speed-dropdown-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #94a3b8);
+  padding: 0.25rem 0.45rem;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  margin-bottom: 0.2rem;
+}
+
+.zoom-preset-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.zoom-preset-opt:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="light"] .zoom-preset-opt:hover {
+  background: #F1F5F9;
+}
+
+.zoom-preset-opt.active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: var(--accent-500, #38bdf8);
+}
+
+.zoom-preset-opt .preset-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+[data-theme="light"] .zoom-preset-opt .preset-name {
+  color: #0F172A;
+}
+
+.zoom-preset-opt.active .preset-name {
+  color: var(--accent-500, #38bdf8);
+}
+
+.zoom-preset-opt .preset-desc {
+  font-size: 0.62rem;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 1px;
+}
+
+/* Floating Camera Speed Toast */
+.camera-speed-toast {
+  position: fixed;
+  top: calc(var(--header-bottom, 4.15rem) + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--accent-500, #38bdf8);
+  color: #FFFFFF;
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 100020;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.camera-speed-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.camera-speed-toast.hidden {
+  display: none !important;
+}
+
+/* Right Sidebar Scene Tab Speed Controls */
+.btn-speed-step {
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #ffffff);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-speed-step:hover {
+  border-color: var(--accent-500, #38bdf8);
+  color: var(--accent-500, #38bdf8);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+[data-theme="light"] .btn-speed-step {
+  background: #F1F5F9;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #1E293B;
+}
+
+[data-theme="light"] .btn-speed-step:hover {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: #4F46E5;
+  color: #4F46E5;
+}
+
+.speed-preset-pills {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.speed-preset-pills .btn-speed-pill {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--text-muted, #94a3b8);
+  padding: 0.22rem 0.2rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.speed-preset-pills .btn-speed-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #ffffff);
+}
+
+.speed-preset-pills .btn-speed-pill.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--accent-500, #38bdf8);
+  color: var(--accent-500, #38bdf8);
+}
+
+[data-theme="light"] .speed-preset-pills .btn-speed-pill {
+  background: #F1F5F9;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #64748B;
+}
+
+[data-theme="light"] .speed-preset-pills .btn-speed-pill.active {
+  background: rgba(79, 70, 229, 0.12);
+  border-color: #4F46E5;
+  color: #4F46E5;
+}
+
 .bim-breadcrumbs-bar {
   display: flex;
   align-items: center;
