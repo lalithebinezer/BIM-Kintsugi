@@ -15,7 +15,13 @@ describe("CameraSpeedController — Dynamic Zoom Speed Engine", () => {
     mockControls = {
       dollySpeed: 1.0,
       zoomSpeed: 1.0,
-      dolly: vi.fn().mockResolvedValue(undefined)
+      distance: 25,
+      dolly: vi.fn().mockResolvedValue(undefined),
+      zoom: vi.fn().mockResolvedValue(undefined),
+      camera: {
+        isOrthographicCamera: false,
+        zoom: 1
+      }
     };
 
     mockWorld = {
@@ -80,13 +86,25 @@ describe("CameraSpeedController — Dynamic Zoom Speed Engine", () => {
     expect(localStorage.getItem(CameraSpeedController.STORAGE_KEY)).toBe("2.5");
   });
 
-  it("should execute smooth dolly when zoomIn and zoomOut are called", async () => {
+  it("should execute smooth dolly when zoomIn and zoomOut are called in perspective", async () => {
     controller.setSpeed(1.0, false);
-    await controller.zoomIn(3.0);
-    expect(mockControls.dolly).toHaveBeenCalledWith(3.0, true);
+    await controller.zoomIn(0.2);
+    expect(mockControls.dolly).toHaveBeenCalledWith(5.0, true);
 
-    await controller.zoomOut(3.0);
-    expect(mockControls.dolly).toHaveBeenCalledWith(-3.0, true);
+    await controller.zoomOut(0.2);
+    expect(mockControls.dolly).toHaveBeenCalledWith(-5.0, true);
+  });
+
+  it("should execute smooth zoom when zoomIn and zoomOut are called in orthographic", async () => {
+    mockControls.camera.isOrthographicCamera = true;
+    mockControls.camera.zoom = 2;
+    controller.setSpeed(1.0, false);
+
+    await controller.zoomIn(0.2);
+    expect(mockControls.zoom).toHaveBeenCalledWith(0.4, true);
+
+    await controller.zoomOut(0.2);
+    expect(mockControls.zoom).toHaveBeenCalledWith(-0.4, true);
   });
 
   it("should dispatch camera-speed-changed custom event on window", () => {

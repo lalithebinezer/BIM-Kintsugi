@@ -160,14 +160,31 @@ export class CameraSpeedController {
 
   /**
    * Smoothly zoom in camera along current view direction
+   * Adapts dynamically to perspective distance or orthographic scale
    */
-  public async zoomIn(delta: number = 2.5): Promise<void> {
+  public async zoomIn(factor: number = 0.22): Promise<void> {
     if (!this.world?.camera?.controls) return;
     try {
       const controls = this.world.camera.controls as any;
-      const step = Math.max(0.5, delta * this.speed);
-      if (typeof controls.dolly === "function") {
-        await controls.dolly(step, true);
+      const isOrtho =
+        controls.camera?.isOrthographicCamera ||
+        (this.world.camera as any)?.isOrthographic;
+
+      if (isOrtho) {
+        const curZoom = controls.camera?.zoom || 1;
+        const zoomDelta = Math.max(0.05, curZoom * factor * this.speed);
+        if (typeof controls.zoom === "function") {
+          await controls.zoom(zoomDelta, true);
+        }
+      } else {
+        const curDist =
+          typeof controls.distance === "number"
+            ? controls.distance
+            : controls._spherical?.radius || 25;
+        const dollyDist = Math.max(1.0, curDist * factor * this.speed);
+        if (typeof controls.dolly === "function") {
+          await controls.dolly(dollyDist, true);
+        }
       }
       try {
         SoundManager.getInstance().playClick();
@@ -179,14 +196,31 @@ export class CameraSpeedController {
 
   /**
    * Smoothly zoom out camera away from current view direction
+   * Adapts dynamically to perspective distance or orthographic scale
    */
-  public async zoomOut(delta: number = 2.5): Promise<void> {
+  public async zoomOut(factor: number = 0.22): Promise<void> {
     if (!this.world?.camera?.controls) return;
     try {
       const controls = this.world.camera.controls as any;
-      const step = Math.max(0.5, delta * this.speed);
-      if (typeof controls.dolly === "function") {
-        await controls.dolly(-step, true);
+      const isOrtho =
+        controls.camera?.isOrthographicCamera ||
+        (this.world.camera as any)?.isOrthographic;
+
+      if (isOrtho) {
+        const curZoom = controls.camera?.zoom || 1;
+        const zoomDelta = Math.max(0.05, curZoom * factor * this.speed);
+        if (typeof controls.zoom === "function") {
+          await controls.zoom(-zoomDelta, true);
+        }
+      } else {
+        const curDist =
+          typeof controls.distance === "number"
+            ? controls.distance
+            : controls._spherical?.radius || 25;
+        const dollyDist = Math.max(1.0, curDist * factor * this.speed);
+        if (typeof controls.dolly === "function") {
+          await controls.dolly(-dollyDist, true);
+        }
       }
       try {
         SoundManager.getInstance().playClick();
@@ -328,15 +362,20 @@ export class CameraSpeedController {
       this.increaseSpeed();
     });
 
-    // 5. Direct Zoom In / Zoom Out buttons in HUD
-    document.getElementById("btn-zoom-in")?.addEventListener("click", (e) => {
+    // 5. Direct Zoom In / Zoom Out buttons in HUD and Magic Dock
+    const handleZoomIn = (e: Event) => {
       e.stopPropagation();
       this.zoomIn();
-    });
-    document.getElementById("btn-zoom-out")?.addEventListener("click", (e) => {
+    };
+    const handleZoomOut = (e: Event) => {
       e.stopPropagation();
       this.zoomOut();
-    });
+    };
+
+    document.getElementById("btn-zoom-in")?.addEventListener("click", handleZoomIn);
+    document.getElementById("btn-zoom-out")?.addEventListener("click", handleZoomOut);
+    document.getElementById("btn-dock-zoom-in")?.addEventListener("click", handleZoomIn);
+    document.getElementById("btn-dock-zoom-out")?.addEventListener("click", handleZoomOut);
 
     // 6. Viewport HUD speed badge dropdown toggle
     const badgeBtn = document.getElementById("btn-zoom-speed-badge");

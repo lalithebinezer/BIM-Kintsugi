@@ -255,8 +255,9 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 | :--- | :--- | :--- |
 | **`Ctrl + K` / `Cmd + K`** | **Command Palette** | Fuzzy search across 30+ BIM tools, suites, cameras, themes, and render styles |
 | **`Ctrl + P`** | **Executive Twin Report** | Open boardroom-ready executive construction report modal with vector print / PDF export |
+| **`+` / `PageUp`** | **Zoom In Camera** | Smoothly zoom camera into the model (proportional to distance & zoom speed) |
+| **`-` / `PageDown`** | **Zoom Out Camera** | Smoothly zoom camera out from the model (proportional to distance & zoom speed) |
 | **`[` / `]`** | **Camera Zoom Speed** | Decrease or increase camera zoom/dolly speed dynamically (0.1x to 5.0x) |
-| **`-` / `+`** | **Step Zoom Speed** | Step camera zoom speed down/up with instant floating HUD toast notification |
 | **`F`** | **Fit to Screen** | Frame all visible BIM geometry in the viewport |
 | **`H`** | **Reset Visibility** | Unhide all isolated/hidden elements and clear active highlights |
 | **`I`** | **Isolate Selection** | Isolate currently selected BIM elements |

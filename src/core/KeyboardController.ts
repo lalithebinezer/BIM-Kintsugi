@@ -120,12 +120,18 @@ export class KeyboardController {
         document.getElementById('btn-view-top')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'p') {
         document.getElementById('btn-view-iso')?.click();
-      } else if (!e.ctrlKey && !e.metaKey && (e.key === '[' || e.key === '{' || e.key === '-' || e.key === '_')) {
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === '[' || e.key === '{')) {
         e.preventDefault();
         CameraSpeedController.getInstance().decreaseSpeed();
-      } else if (!e.ctrlKey && !e.metaKey && (e.key === ']' || e.key === '}' || e.key === '=' || e.key === '+')) {
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === ']' || e.key === '}')) {
         e.preventDefault();
         CameraSpeedController.getInstance().increaseSpeed();
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === '=' || e.key === '+' || e.code === 'NumpadAdd' || e.key === 'PageUp')) {
+        e.preventDefault();
+        CameraSpeedController.getInstance().zoomIn();
+      } else if (!e.ctrlKey && !e.metaKey && (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' || e.key === 'PageDown')) {
+        e.preventDefault();
+        CameraSpeedController.getInstance().zoomOut();
       } else if (e.key === ' ' || e.code === 'Space') {
         const btn4dPlay = document.getElementById('timeline-play-btn');
         const timelinePanel = document.getElementById('timeline-panel');
