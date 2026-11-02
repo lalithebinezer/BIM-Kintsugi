@@ -329,7 +329,7 @@ body {
   --header-bottom: 4.15rem;
   --left-panel-w: 310px;
   --right-panel-w: 360px;
-  --radar-w: 230px;
+  --radar-w: 360px;
   --left-safe-offset: calc(var(--left-panel-w) + 1.35rem);
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
 }
@@ -8411,7 +8411,8 @@ body.right-sidebar-collapsed .right-sidebar {
 
 .minimap-radar-widget {
   position: relative;
-  width: var(--radar-w, 230px);
+  width: var(--radar-w, 385px);
+  min-width: 385px;
   background: var(--bg-surface, rgba(14, 14, 18, 0.92));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -8491,17 +8492,19 @@ body.resizing-radar * {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.35rem 0.55rem;
+  padding: 0.35rem 0.65rem 0.35rem 0.55rem;
   background: var(--bg-panel-header, #16161C);
   border-bottom: 1px solid var(--border-color, #23232C);
   gap: 0.35rem;
   min-height: 32px;
+  overflow: visible;
 }
 
 .minimap-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.15rem;
+  flex-shrink: 0;
 }
 
 .minimap-title {
@@ -8515,25 +8518,31 @@ body.resizing-radar * {
 }
 
 .minimap-level-select {
-  padding: 0.15rem 0.35rem !important;
+  padding: 0.1rem 0.35rem !important;
   font-size: 0.62rem !important;
-  height: 22px !important;
-  min-width: 54px !important;
-  max-width: 82px !important;
-  border-radius: 4px !important;
+  font-weight: 700 !important;
+  height: 20px !important;
+  min-width: 58px !important;
+  max-width: 72px !important;
+  border-radius: 5px !important;
   flex-shrink: 0 !important;
-  background-position: right 0.2rem center !important;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.06)) !important;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12)) !important;
+  color: var(--text-primary, #ffffff) !important;
+  cursor: pointer;
 }
 
 .btn-minimap-tool {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
   border-radius: 4px;
-  color: var(--text-muted, #71717A);
-  padding: 0.18rem 0.32rem;
+  color: var(--text-muted, #94A3B8);
+  padding: 0;
+  width: 20px;
   min-width: 20px;
-  height: 22px;
-  font-size: 0.58rem;
+  max-width: 20px;
+  height: 20px;
+  font-size: 0.60rem;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
@@ -8541,6 +8550,7 @@ body.resizing-radar * {
   justify-content: center;
   line-height: 1;
   flex-shrink: 0;
+  gap: 2px;
   transition: all 0.15s ease;
 }
 
@@ -8561,14 +8571,15 @@ body.resizing-radar * {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.35rem;
+  padding: 0.45rem;
   background: #0A0A0E;
   overflow: hidden;
 }
 
 #minimap-canvas {
-  width: calc(var(--radar-w, 230px) - 20px);
-  height: calc(var(--radar-w, 230px) - 20px);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
   border-radius: 8px;
   cursor: crosshair;
   transition: width 0.22s ease, height 0.22s ease;

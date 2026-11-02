@@ -75,7 +75,7 @@ export class MinimapModule {
   private measureEnd: { x: number; z: number } | null = null;
 
   private config: MinimapConfig = {
-    size: 180,
+    size: 280,
     zoom: 8,
     currentLevelIndex: 0,
     levels: [
@@ -281,7 +281,7 @@ export class MinimapModule {
     if (container) {
       container.classList.toggle("expanded", this.isExpanded);
     }
-    const newSize = this.isExpanded ? 280 : 180;
+    const newSize = this.isExpanded ? 380 : 280;
     this.setSize(newSize);
     return this.isExpanded;
   }

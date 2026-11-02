@@ -13,7 +13,7 @@ describe("Minimap & 4D Phasing Modules", () => {
 
     it("should initialize with default config", () => {
       const config = minimap.getConfig();
-      expect(config.size).toBe(180);
+      expect(config.size).toBe(280);
       expect(config.zoom).toBe(8);
       expect(config.levels.length).toBe(4);
       expect(config.isWalkModeActive).toBe(false);
@@ -21,16 +21,16 @@ describe("Minimap & 4D Phasing Modules", () => {
 
     it("should correctly convert world coordinates to minimap pixels", () => {
       const pixel = minimap.worldToMinimap(0, 0);
-      expect(pixel.x).toBe(90);
-      expect(pixel.y).toBe(90);
+      expect(pixel.x).toBe(140);
+      expect(pixel.y).toBe(140);
 
       const offsetPixel = minimap.worldToMinimap(5, -5);
-      expect(offsetPixel.x).toBe(90 + 5 * 8);
-      expect(offsetPixel.y).toBe(90 - 5 * 8);
+      expect(offsetPixel.x).toBe(140 + 5 * 8);
+      expect(offsetPixel.y).toBe(140 - 5 * 8);
     });
 
     it("should correctly convert minimap pixels back to world coordinates", () => {
-      const worldPos = minimap.minimapToWorld(90, 90);
+      const worldPos = minimap.minimapToWorld(140, 140);
       expect(worldPos.x).toBe(0);
       expect(worldPos.z).toBe(0);
     });
@@ -67,9 +67,9 @@ describe("Minimap & 4D Phasing Modules", () => {
       expect(minimap.toggleClashPins(true)).toBe(true);
 
       expect(minimap.toggleExpanded(true)).toBe(true);
-      expect(minimap.getConfig().size).toBe(280);
+      expect(minimap.getConfig().size).toBe(380);
       expect(minimap.toggleExpanded(false)).toBe(false);
-      expect(minimap.getConfig().size).toBe(180);
+      expect(minimap.getConfig().size).toBe(280);
     });
 
     it("should set and clear selected element position", () => {
