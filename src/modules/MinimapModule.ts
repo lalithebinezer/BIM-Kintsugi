@@ -286,11 +286,22 @@ export class MinimapModule {
     return this.isExpanded;
   }
 
-  public setSize(size: number) {
-    this.config.size = size;
+  public setSize(size: number, saveToStorage: boolean = true) {
+    const clampedSize = Math.max(140, Math.min(520, size));
+    this.config.size = clampedSize;
     if (this.canvas) {
-      this.canvas.width = size;
-      this.canvas.height = size;
+      this.canvas.width = clampedSize;
+      this.canvas.height = clampedSize;
+    }
+    const container = document.getElementById("minimap-container");
+    if (container) {
+      container.style.setProperty("--radar-w", `${clampedSize + 20}px`);
+      container.style.width = `${clampedSize + 20}px`;
+    }
+    if (saveToStorage && typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem("bim_minimap_custom_size", String(clampedSize));
+      } catch (e) {}
     }
   }
 
@@ -715,6 +726,61 @@ export class MinimapModule {
     document.getElementById("btn-minimap-pins-toggle")?.addEventListener("click", () => {
       this.toggleClashPins();
     });
+
+    this.bindResizeHandle();
+  }
+
+  private bindResizeHandle() {
+    const handle = document.getElementById("minimap-resize-handle");
+    const container = document.getElementById("minimap-container");
+    if (!handle || !container) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    // Restore saved custom size if present
+    try {
+      const saved = localStorage.getItem("bim_minimap_custom_size");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 140 && parsed <= 520) {
+          this.setSize(parsed, false);
+        }
+      }
+    } catch (e) {}
+
+    handle.addEventListener("pointerdown", (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = container.offsetWidth;
+      handle.setPointerCapture(e.pointerId);
+      document.body.classList.add("resizing-radar");
+    });
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isResizing) return;
+      // Because container is bottom-right anchored, dragging left (negative deltaX) increases width
+      const deltaX = startX - e.clientX;
+      const targetContainerWidth = startWidth + deltaX;
+      const targetCanvasSize = THREE.MathUtils.clamp(targetContainerWidth - 20, 140, 520);
+      this.setSize(targetCanvasSize, true);
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!isResizing) return;
+      isResizing = false;
+      try {
+        handle.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      document.body.classList.remove("resizing-radar");
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   }
 
   public draw() {

@@ -8438,8 +8438,44 @@ body.right-sidebar-collapsed .right-sidebar {
 }
 
 .minimap-radar-widget.collapsed .minimap-canvas-wrap,
-.minimap-radar-widget.collapsed .minimap-footer {
+.minimap-radar-widget.collapsed .minimap-footer,
+.minimap-radar-widget.collapsed .minimap-resize-handle {
   display: none !important;
+}
+
+.minimap-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 2px 0 0 2px;
+  color: var(--text-muted, #71717A);
+  opacity: 0.45;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  touch-action: none;
+}
+
+.minimap-resize-handle:hover,
+body.resizing-radar .minimap-resize-handle {
+  opacity: 1;
+  color: var(--accent-500, #D4FF3F);
+  transform: scale(1.15);
+}
+
+body.resizing-radar {
+  cursor: nwse-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-radar * {
+  user-select: none !important;
 }
 
 .minimap-radar-widget.collapsed {
