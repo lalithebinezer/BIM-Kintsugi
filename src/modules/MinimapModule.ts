@@ -770,7 +770,7 @@ export class MinimapModule {
       }
 
       // Smooth center tracking when inspecting or in walk mode
-      if (this.autoSyncCamera && !this.isPanning && (this.isWalkMode || this.config.zoom > 10 || this.isHeadingUp)) {
+      if (this.autoSyncCamera && !this.isPanning) {
         const focalX = this.isWalkMode ? camPos.x : (camPos.x + target.x) / 2;
         const focalZ = this.isWalkMode ? camPos.z : (camPos.z + target.z) / 2;
         const originX = this.hasModel ? this.modelCenter.x : 0;
