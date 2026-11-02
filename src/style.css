@@ -329,7 +329,7 @@ body {
   --header-bottom: 4.15rem;
   --left-panel-w: 310px;
   --right-panel-w: 360px;
-  --radar-w: 200px;
+  --radar-w: 230px;
   --left-safe-offset: calc(var(--left-panel-w) + 1.35rem);
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
 }
@@ -6360,7 +6360,7 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 290px;
     --right-panel-w: 315px;
-    --radar-w: 180px;
+    --radar-w: 210px;
   }
   .header-center-info #status-text {
     max-width: 110px;
@@ -6380,7 +6380,7 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 270px;
     --right-panel-w: 295px;
-    --radar-w: 165px;
+    --radar-w: 195px;
   }
   .header-center-info {
     display: none !important;
@@ -6410,7 +6410,7 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 250px;
     --right-panel-w: 275px;
-    --radar-w: 145px;
+    --radar-w: 180px;
   }
   .brand-badge {
     display: none;
@@ -8411,7 +8411,7 @@ body.right-sidebar-collapsed .right-sidebar {
 
 .minimap-radar-widget {
   position: relative;
-  width: var(--radar-w, 200px);
+  width: var(--radar-w, 230px);
   background: var(--bg-surface, rgba(14, 14, 18, 0.92));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -8458,7 +8458,8 @@ body.right-sidebar-collapsed .right-sidebar {
   padding: 0.35rem 0.55rem;
   background: var(--bg-panel-header, #16161C);
   border-bottom: 1px solid var(--border-color, #23232C);
-  gap: 0.3rem;
+  gap: 0.35rem;
+  min-height: 32px;
 }
 
 .minimap-header-actions {
@@ -8481,8 +8482,11 @@ body.right-sidebar-collapsed .right-sidebar {
   padding: 0.15rem 0.35rem !important;
   font-size: 0.62rem !important;
   height: 22px !important;
-  background-position: right 0.25rem center !important;
-  max-width: 95px;
+  min-width: 54px !important;
+  max-width: 82px !important;
+  border-radius: 4px !important;
+  flex-shrink: 0 !important;
+  background-position: right 0.2rem center !important;
 }
 
 .btn-minimap-tool {
@@ -8491,13 +8495,16 @@ body.right-sidebar-collapsed .right-sidebar {
   border-radius: 4px;
   color: var(--text-muted, #71717A);
   padding: 0.18rem 0.32rem;
+  min-width: 20px;
+  height: 22px;
   font-size: 0.58rem;
   font-weight: 800;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -8524,8 +8531,8 @@ body.right-sidebar-collapsed .right-sidebar {
 }
 
 #minimap-canvas {
-  width: calc(var(--radar-w, 200px) - 20px);
-  height: calc(var(--radar-w, 200px) - 20px);
+  width: calc(var(--radar-w, 230px) - 20px);
+  height: calc(var(--radar-w, 230px) - 20px);
   border-radius: 8px;
   cursor: crosshair;
   transition: width 0.22s ease, height 0.22s ease;
