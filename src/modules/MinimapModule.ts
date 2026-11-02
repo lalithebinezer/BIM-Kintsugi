@@ -164,7 +164,12 @@ export class MinimapModule {
     const walkBtn = document.getElementById("btn-minimap-walk-toggle");
     if (walkBtn) {
       walkBtn.classList.toggle("active", this.isWalkMode);
-      walkBtn.innerText = this.isWalkMode ? "Walk Mode (WASD)" : "Orbit Mode";
+      const label = document.getElementById("label-minimap-walk-mode");
+      if (label) {
+        label.innerText = this.isWalkMode ? "Walk Mode" : "Orbit Mode";
+      } else {
+        walkBtn.innerText = this.isWalkMode ? "Walk Mode" : "Orbit Mode";
+      }
     }
 
     return this.isWalkMode;
