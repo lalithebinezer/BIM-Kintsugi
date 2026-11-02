@@ -3,6 +3,7 @@ import * as OBC from "@thatopen/components";
 import { BimEngine } from "../core/BimEngine";
 import { ClashDetector } from "./ClashDetector";
 import { StoreyLevelSlicer } from "./StoreyLevelSlicer";
+import { GeoEngineeringSuite } from "./GeoEngineeringSuite";
 
 export interface MinimapConfig {
   size: number;
@@ -13,6 +14,22 @@ export interface MinimapConfig {
   autoTrackLevel?: boolean;
   showClashPins?: boolean;
   isExpanded?: boolean;
+  headingUp?: boolean;
+}
+
+export interface BreadcrumbNode {
+  x: number;
+  z: number;
+  time: number;
+}
+
+export interface RoomZone {
+  name: string;
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  area: number;
 }
 
 export class MinimapModule {
@@ -46,6 +63,17 @@ export class MinimapModule {
   private isExpanded: boolean = false;
   private autoSyncCamera: boolean = true;
 
+  // Advanced 2D Radar Enhancements
+  public isHeadingUp: boolean = false;
+  private breadcrumbs: BreadcrumbNode[] = [];
+  private lastBreadcrumbTime: number = 0;
+  private roomZones: RoomZone[] = [];
+
+  // Measurement tool state on 2D radar (Shift + Click/Drag or Double-Click)
+  private isMeasuring: boolean = false;
+  private measureStart: { x: number; z: number } | null = null;
+  private measureEnd: { x: number; z: number } | null = null;
+
   private config: MinimapConfig = {
     size: 180,
     zoom: 8,
@@ -60,6 +88,7 @@ export class MinimapModule {
     autoTrackLevel: true,
     showClashPins: true,
     isExpanded: false,
+    headingUp: false,
   };
 
   private constructor() {
@@ -94,6 +123,20 @@ export class MinimapModule {
       container.classList.toggle("hidden", !this.isVisible);
     }
     return this.isVisible;
+  }
+
+  public toggleHeadingUp(enable?: boolean): boolean {
+    this.isHeadingUp = enable !== undefined ? enable : !this.isHeadingUp;
+    this.config.headingUp = this.isHeadingUp;
+    const label = document.getElementById("label-minimap-heading");
+    if (label) {
+      label.innerText = this.isHeadingUp ? "H-UP" : "N-UP";
+    }
+    const btn = document.getElementById("btn-minimap-heading-mode");
+    if (btn) {
+      btn.classList.toggle("active", this.isHeadingUp);
+    }
+    return this.isHeadingUp;
   }
 
   public toggleWalkMode(enable?: boolean): boolean {
@@ -161,14 +204,10 @@ export class MinimapModule {
             .join("");
           select.value = String(this.config.currentLevelIndex);
         }
-        this.updateUI();
       }
     } catch (e) {}
   }
 
-  /**
-   * Rotates 3D camera to face True North (looking down -Z)
-   */
   public faceNorth() {
     try {
       const camera = this.engine.world?.camera;
@@ -269,6 +308,21 @@ export class MinimapModule {
     }
   }
 
+  public exportPlanImage(filename: string = "BIM-Kintsugi-FloorPlan-2D.png") {
+    if (!this.canvas) return;
+    try {
+      const dataUrl = this.canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.warn("Failed to export minimap image:", e);
+    }
+  }
+
   /**
    * Recalculates aggregate model bounding box across all loaded IFC models and scene meshes
    */
@@ -356,6 +410,33 @@ export class MinimapModule {
         const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 5);
         this.config.zoom = (this.config.size * 0.65) / maxDim;
       }
+
+      // Generate room zones if not populated
+      if (this.roomZones.length === 0 && this.modelSize.x > 5 && this.modelSize.z > 5) {
+        const sx = this.modelBounds.min.x;
+        const sz = this.modelBounds.min.z;
+        const dx = this.modelSize.x / 3;
+        const dz = this.modelSize.z / 2;
+        const titles = ["Office 101", "Conf Room A", "Lobby / Atrium", "Mechanical", "Office 102", "Corridor West"];
+        let idx = 0;
+        for (let row = 0; row < 2; row++) {
+          for (let col = 0; col < 3; col++) {
+            const rx1 = sx + col * dx;
+            const rx2 = rx1 + dx;
+            const rz1 = sz + row * dz;
+            const rz2 = rz1 + dz;
+            this.roomZones.push({
+              name: titles[idx % titles.length],
+              minX: rx1,
+              maxX: rx2,
+              minZ: rz1,
+              maxZ: rz2,
+              area: Math.round(dx * dz),
+            });
+            idx++;
+          }
+        }
+      }
     }
   }
 
@@ -432,21 +513,33 @@ export class MinimapModule {
       this.resetView();
     });
 
-    // Prevent default context menu on right click for panning
-    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    this.canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault(); // allow right-drag for pan or measure
+    });
 
     this.canvas.addEventListener("pointerdown", (e) => {
-      if (!this.canvas) return;
       const { x: clickX, y: clickY } = getCanvasCoords(e);
 
-      // 1. Right click or Shift+Click = Pan Map
-      if (e.button === 2 || e.button === 1 || e.shiftKey) {
+      // Check if Shift + Left Click is pressed: Start Radar Measurement
+      if (e.shiftKey && e.button === 0) {
+        this.isMeasuring = true;
+        const wPos = this.minimapToWorld(clickX, clickY);
+        this.measureStart = { x: wPos.x, z: wPos.z };
+        this.measureEnd = { x: wPos.x, z: wPos.z };
+        return;
+      }
+
+      // 1. Check if right-click or middle-click: Start Pan
+      if (e.button === 2 || e.button === 1) {
         this.isPanning = true;
+        this.autoSyncCamera = false;
         this.lastPanPointer = { x: e.clientX, y: e.clientY };
         return;
       }
 
-      // 2. Check if clicking near avatar to rotate vision gaze
+      if (e.button !== 0) return;
+
+      // 2. Check if clicking on avatar cone to rotate gaze
       const cam = this.engine.world?.camera?.three;
       if (cam) {
         const rawMapPos = this.worldToMinimap(cam.position.x, cam.position.z);
@@ -483,8 +576,24 @@ export class MinimapModule {
       const { x: clickX, y: clickY } = getCanvasCoords(e);
       this.hoverPixel = { x: clickX, y: clickY };
 
-      // Update Live Metric Coordinates Readout Pill
       const worldPos = this.minimapToWorld(clickX, clickY);
+
+      // Handle Measurement Dragging
+      if (this.isMeasuring && this.measureStart) {
+        this.measureEnd = { x: worldPos.x, z: worldPos.z };
+        const dist = Math.hypot(this.measureEnd.x - this.measureStart.x, this.measureEnd.z - this.measureStart.z);
+        const coordsBadge = document.getElementById("minimap-coords-badge");
+        const coordsText = document.getElementById("minimap-coords-text");
+        const coordsDist = document.getElementById("minimap-coords-dist");
+        if (coordsBadge && coordsText && coordsDist) {
+          coordsBadge.style.display = "flex";
+          coordsText.innerText = `Measure: ${dist.toFixed(2)}m`;
+          coordsDist.innerText = `ΔX:${Math.abs(this.measureEnd.x - this.measureStart.x).toFixed(1)}m ΔZ:${Math.abs(this.measureEnd.z - this.measureStart.z).toFixed(1)}m`;
+        }
+        return;
+      }
+
+      // Update Live Metric Coordinates Readout Pill
       const coordsBadge = document.getElementById("minimap-coords-badge");
       const coordsText = document.getElementById("minimap-coords-text");
       const coordsDist = document.getElementById("minimap-coords-dist");
@@ -540,21 +649,28 @@ export class MinimapModule {
 
     this.canvas.addEventListener("pointerleave", () => {
       this.hoverPixel = null;
-      const coordsBadge = document.getElementById("minimap-coords-badge");
-      if (coordsBadge) coordsBadge.style.display = "none";
+      if (!this.isMeasuring) {
+        const coordsBadge = document.getElementById("minimap-coords-badge");
+        if (coordsBadge) coordsBadge.style.display = "none";
+      }
     });
 
-    window.addEventListener("pointerup", () => {
+    const endDrag = () => {
       this.isDraggingMinimap = false;
       this.isRotatingGaze = false;
       this.isPanning = false;
-    });
+      if (this.isMeasuring) {
+        // Keep measurement visible for 3 seconds
+        setTimeout(() => {
+          this.isMeasuring = false;
+          this.measureStart = null;
+          this.measureEnd = null;
+        }, 3500);
+      }
+    };
 
-    window.addEventListener("pointercancel", () => {
-      this.isDraggingMinimap = false;
-      this.isRotatingGaze = false;
-      this.isPanning = false;
-    });
+    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointercancel", endDrag);
   }
 
   private bindHeaderControls() {
@@ -576,6 +692,14 @@ export class MinimapModule {
 
     document.getElementById("btn-minimap-autolevel")?.addEventListener("click", () => {
       this.toggleAutoTrackLevel();
+    });
+
+    document.getElementById("btn-minimap-heading-mode")?.addEventListener("click", () => {
+      this.toggleHeadingUp();
+    });
+
+    document.getElementById("btn-minimap-export")?.addEventListener("click", () => {
+      this.exportPlanImage();
     });
 
     document.getElementById("btn-minimap-expand")?.addEventListener("click", () => {
@@ -616,6 +740,14 @@ export class MinimapModule {
         target.copy(camPos).addScaledVector(forward, 15);
       }
 
+      // Record Walk Breadcrumb Trail
+      const now = performance.now();
+      if (now - this.lastBreadcrumbTime > 800) {
+        this.lastBreadcrumbTime = now;
+        this.breadcrumbs.push({ x: camPos.x, z: camPos.z, time: now });
+        if (this.breadcrumbs.length > 50) this.breadcrumbs.shift();
+      }
+
       // Synchronize 2D Radar zoom with 3D camera distance / zoom level
       if (this.autoSyncCamera && !this.isPanning && this.hasModel && !this.modelBounds.isEmpty()) {
         const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 15);
@@ -629,7 +761,7 @@ export class MinimapModule {
       }
 
       // Smooth center tracking when inspecting or in walk mode
-      if (this.autoSyncCamera && !this.isPanning && (this.isWalkMode || this.config.zoom > 10)) {
+      if (this.autoSyncCamera && !this.isPanning && (this.isWalkMode || this.config.zoom > 10 || this.isHeadingUp)) {
         const focalX = this.isWalkMode ? camPos.x : (camPos.x + target.x) / 2;
         const focalZ = this.isWalkMode ? camPos.z : (camPos.z + target.z) / 2;
         const originX = this.hasModel ? this.modelCenter.x : 0;
@@ -640,12 +772,12 @@ export class MinimapModule {
         this.panOffset.y += (desiredPanY - this.panOffset.y) * 0.1;
       }
 
-      // Live Compass Needle Rotation in UI header to face True North
+      // Live Compass Needle Rotation in UI header
       const needle = document.querySelector(".compass-needle") as HTMLElement | null;
       if (needle) {
         const viewAngle = Math.atan2(forward.z, forward.x);
         const bearingDeg = THREE.MathUtils.radToDeg(viewAngle + Math.PI / 2);
-        needle.style.transform = `rotate(${-bearingDeg.toFixed(1)}deg)`;
+        needle.style.transform = `rotate(${(-bearingDeg).toFixed(1)}deg)`;
       }
 
       // Auto-track camera elevation to match floor storey
@@ -677,6 +809,16 @@ export class MinimapModule {
     // Clear background (Deep sleek architectural slate)
     ctx.fillStyle = "rgba(10, 12, 18, 0.95)";
     ctx.fillRect(0, 0, w, h);
+
+    // Save context for possible Heading-Up Rotation
+    ctx.save();
+    let cameraHeading = 0;
+    if (this.isHeadingUp) {
+      cameraHeading = Math.atan2(forward.x, -forward.z); // angle from North
+      ctx.translate(center, center);
+      ctx.rotate(-cameraHeading);
+      ctx.translate(-center, -center);
+    }
 
     // 1. Draw Architectural Metric Radar Grid
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
@@ -728,7 +870,26 @@ export class MinimapModule {
     ctx.fillText("E", w - 8, center);
     ctx.fillText("W", 8, center);
 
-    // 2. Draw Loaded BIM Model Footprints & Slabs
+    // 2. Draw Solar Sun Vector if Solar study active
+    try {
+      const suite = GeoEngineeringSuite.getInstance();
+      const sun = suite.getSunNow();
+      if (sun && sun.elevation > 0) {
+        // Sun vector on perimeter
+        const sunRad = ((sun.azimuth - 90) * Math.PI) / 180;
+        const sunDist = w * 0.43;
+        const sx = center + Math.cos(sunRad) * sunDist;
+        const sy = center + Math.sin(sunRad) * sunDist;
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = "700 6.5px monospace";
+        ctx.fillText("☀", sx, sy - 6);
+      }
+    } catch (e) {}
+
+    // 3. Draw Loaded BIM Model Footprints, Room Zones & Slabs
     const minPt = this.hasModel && !this.modelBounds.isEmpty()
       ? this.worldToMinimap(this.modelBounds.min.x, this.modelBounds.min.z)
       : { x: w * 0.22, y: h * 0.25 };
@@ -745,7 +906,33 @@ export class MinimapModule {
     ctx.fillStyle = this.hasModel ? "rgba(56, 189, 248, 0.14)" : "rgba(56, 189, 248, 0.07)";
     ctx.fillRect(footX, footY, footW, footH);
 
-    // B. Individual Mesh Footprints at Active Storey Level
+    // B. Room / Space Zones Overlays & Labels
+    if (this.roomZones.length > 0 && footW > 50 && footH > 50) {
+      ctx.font = "600 6.5px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const room of this.roomZones) {
+        const p1 = this.worldToMinimap(room.minX, room.minZ);
+        const p2 = this.worldToMinimap(room.maxX, room.maxZ);
+        const rx = Math.min(p1.x, p2.x);
+        const ry = Math.min(p1.y, p2.y);
+        const rw = Math.abs(p2.x - p1.x);
+        const rh = Math.abs(p2.y - p1.y);
+
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.2)";
+        ctx.lineWidth = 0.6;
+        ctx.strokeRect(rx, ry, rw, rh);
+
+        if (rw > 35 && rh > 18) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+          ctx.fillText(room.name, rx + rw / 2, ry + rh / 2 - 2);
+          ctx.fillStyle = "rgba(56, 189, 248, 0.55)";
+          ctx.fillText(`${room.area}m²`, rx + rw / 2, ry + rh / 2 + 5);
+        }
+      }
+    }
+
+    // C. Individual Mesh Footprints at Active Storey Level
     if (this.meshFootprints.length > 0) {
       const activeElev = this.config.levels[this.config.currentLevelIndex]?.elevation ?? 0;
       ctx.strokeStyle = "rgba(56, 189, 248, 0.42)";
@@ -765,12 +952,12 @@ export class MinimapModule {
       }
     }
 
-    // C. Structural Outer Perimeter
+    // D. Structural Outer Perimeter
     ctx.strokeStyle = this.hasModel ? "#38BDF8" : "rgba(56, 189, 248, 0.45)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(footX, footY, footW, footH);
 
-    // D. Internal Storey Grid Partitioning
+    // E. Structural Grid Bubbles & Lines
     ctx.strokeStyle = "rgba(212, 255, 63, 0.22)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -782,7 +969,7 @@ export class MinimapModule {
     ctx.lineTo(footX + footW, footY + footH * 0.5);
     ctx.stroke();
 
-    // E. Corner Structural Pillars
+    // Corner Structural Pillars
     ctx.fillStyle = "#D4FF3F";
     const pillarSize = 3.5;
     [
@@ -794,7 +981,36 @@ export class MinimapModule {
       ctx.fillRect(px, py, pillarSize, pillarSize);
     });
 
-    // 3. Draw Active Multi-Discipline Clash Pins
+    // 4. Draw Walkthrough Breadcrumb Trail
+    if (this.breadcrumbs.length > 1) {
+      const now = performance.now();
+      ctx.beginPath();
+      for (let i = 0; i < this.breadcrumbs.length; i++) {
+        const b = this.breadcrumbs[i];
+        const pt = this.worldToMinimap(b.x, b.z);
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.strokeStyle = "rgba(212, 255, 63, 0.25)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([2, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Breadcrumb dots
+      for (let i = 0; i < this.breadcrumbs.length; i += 3) {
+        const b = this.breadcrumbs[i];
+        const pt = this.worldToMinimap(b.x, b.z);
+        const ageSec = (now - b.time) / 1000;
+        const alpha = Math.max(0.1, 0.6 - ageSec * 0.015);
+        ctx.fillStyle = `rgba(212, 255, 63, ${alpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 5. Draw Active Multi-Discipline Clash Pins
     if (this.showClashPins) {
       try {
         const clashes = ClashDetector.getInstance().getClashes();
@@ -824,7 +1040,7 @@ export class MinimapModule {
       } catch (e) {}
     }
 
-    // 4. Draw Selected Element Crosshair Reticle
+    // 6. Draw Selected Element Crosshair Reticle
     if (this.selectedElementPos) {
       const sp = this.worldToMinimap(this.selectedElementPos.x, this.selectedElementPos.z);
       const now = performance.now() * 0.004;
@@ -841,26 +1057,21 @@ export class MinimapModule {
       ctx.strokeStyle = "#D4FF3F";
       ctx.lineWidth = 1.2;
       const bracketSize = 6;
-      // Top-left
       ctx.beginPath();
       ctx.moveTo(sp.x - bracketSize, sp.y - bracketSize + 3);
       ctx.lineTo(sp.x - bracketSize, sp.y - bracketSize);
       ctx.lineTo(sp.x - bracketSize + 3, sp.y - bracketSize);
-      // Top-right
       ctx.moveTo(sp.x + bracketSize - 3, sp.y - bracketSize);
       ctx.lineTo(sp.x + bracketSize, sp.y - bracketSize);
       ctx.lineTo(sp.x + bracketSize, sp.y - bracketSize + 3);
-      // Bottom-left
       ctx.moveTo(sp.x - bracketSize, sp.y + bracketSize - 3);
       ctx.lineTo(sp.x - bracketSize, sp.y + bracketSize);
       ctx.lineTo(sp.x - bracketSize + 3, sp.y + bracketSize);
-      // Bottom-right
       ctx.moveTo(sp.x + bracketSize - 3, sp.y + bracketSize);
       ctx.lineTo(sp.x + bracketSize, sp.y + bracketSize);
       ctx.lineTo(sp.x + bracketSize, sp.y + bracketSize - 3);
       ctx.stroke();
 
-      // Element Tag
       if (this.selectedExpressId) {
         ctx.font = "700 7px monospace";
         ctx.fillStyle = "#38BDF8";
@@ -868,7 +1079,32 @@ export class MinimapModule {
       }
     }
 
-    // 5. Draw Camera Field of View Frustum Cone, Focal Target & Avatar
+    // 7. Draw 2D Radar Measure Line
+    if (this.isMeasuring && this.measureStart && this.measureEnd) {
+      const p1 = this.worldToMinimap(this.measureStart.x, this.measureStart.z);
+      const p2 = this.worldToMinimap(this.measureEnd.x, this.measureEnd.z);
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 2]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#f59e0b";
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, 3, 0, Math.PI * 2);
+      ctx.arc(p2.x, p2.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      const dist = Math.hypot(this.measureEnd.x - this.measureStart.x, this.measureEnd.z - this.measureStart.z);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText(`${dist.toFixed(2)}m`, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 5);
+    }
+
+    // 8. Draw Camera Field of View Frustum Cone, Focal Target & Avatar
     const rawMapPos = this.worldToMinimap(camPos.x, camPos.z);
     const margin = 12;
     const playerMapPos = {
@@ -876,14 +1112,9 @@ export class MinimapModule {
       y: Math.max(margin, Math.min(h - margin, rawMapPos.y)),
     };
 
-    // Correct viewing angle on 2D canvas (where East is 0 rad and South is +PI/2 rad):
     const viewAngle = Math.atan2(forward.z, forward.x);
-
-    // Dynamic FOV angle matching actual 3D camera
     const fovDegrees = (cam as THREE.PerspectiveCamera)?.fov || 60;
     const fovAngle = THREE.MathUtils.degToRad(fovDegrees);
-
-    // Vision cone length dynamically proportional to camera distance in 2D minimap pixels
     const targetPixelDist = camDist * this.config.zoom;
     const coneRadius = THREE.MathUtils.clamp(targetPixelDist, 24, w * 0.72);
 
@@ -908,8 +1139,7 @@ export class MinimapModule {
 
     // Frustum Side Guide Rays
     ctx.strokeStyle = "rgba(212, 255, 63, 0.6)";
-    ctx.lineWidth = 1.2;
-    ctx.setLineDash([3, 2]);
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(playerMapPos.x, playerMapPos.y);
     ctx.lineTo(
@@ -922,11 +1152,10 @@ export class MinimapModule {
       playerMapPos.y + Math.sin(viewAngle + fovAngle / 2) * coneRadius
     );
     ctx.stroke();
-    ctx.setLineDash([]);
 
-    // Orbit Focal Target Crosshair Reticle (exact 3D focal point on 2D floor plan)
-    const rawTargetPos = this.worldToMinimap(target.x, target.z);
-    if (rawTargetPos.x >= 0 && rawTargetPos.x <= w && rawTargetPos.y >= 0 && rawTargetPos.y <= h) {
+    // Target Focal Crosshair
+    if (!this.isWalkMode) {
+      const rawTargetPos = this.worldToMinimap(target.x, target.z);
       ctx.strokeStyle = "rgba(212, 255, 63, 0.75)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -947,7 +1176,7 @@ export class MinimapModule {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Directional View Arrow in exact viewing orientation
+    // Directional View Arrow
     const headingLength = 14;
     const endX = playerMapPos.x + Math.cos(viewAngle) * headingLength;
     const endY = playerMapPos.y + Math.sin(viewAngle) * headingLength;
@@ -959,16 +1188,14 @@ export class MinimapModule {
     ctx.lineTo(endX, endY);
     ctx.stroke();
 
-    // 6. Draw Live Crosshair when Mouse Hovers Over Radar
+    // 9. Draw Live Crosshair when Mouse Hovers Over Radar
     if (this.hoverPixel) {
       ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
       ctx.lineWidth = 0.8;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
-      // Horizontal
       ctx.moveTo(0, this.hoverPixel.y);
       ctx.lineTo(w, this.hoverPixel.y);
-      // Vertical
       ctx.moveTo(this.hoverPixel.x, 0);
       ctx.lineTo(this.hoverPixel.x, h);
       ctx.stroke();
@@ -979,6 +1206,9 @@ export class MinimapModule {
       ctx.arc(this.hoverPixel.x, this.hoverPixel.y, 3, 0, Math.PI * 2);
       ctx.stroke();
     }
+
+    // Restore context from Heading-Up rotation
+    ctx.restore();
   }
 
   private startRenderLoop() {
