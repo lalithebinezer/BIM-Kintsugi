@@ -105,6 +105,7 @@ export class MinimapModule {
   public init(canvasId: string = "minimap-canvas") {
     if (typeof document === "undefined") return;
 
+    (window as any).viewer_minimap = this;
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
     if (this.canvas) {
       this.canvas.width = this.config.size;
@@ -748,16 +749,24 @@ export class MinimapModule {
         if (this.breadcrumbs.length > 50) this.breadcrumbs.shift();
       }
 
-      // Synchronize 2D Radar zoom with 3D camera distance / zoom level
-      if (this.autoSyncCamera && !this.isPanning && this.hasModel && !this.modelBounds.isEmpty()) {
-        const maxDim = Math.max(this.modelSize.x, this.modelSize.z, 15);
-        const baseOverviewDist = maxDim * 1.5;
-        const baseZoom = (this.config.size * 0.62) / maxDim;
-        const zoomRatio = THREE.MathUtils.clamp(baseOverviewDist / Math.max(3, camDist), 0.5, 4.5);
-        const targetZoom = baseZoom * Math.pow(zoomRatio, 0.7);
+      // Synchronize 2D Radar zoom continuously with 3D workspace camera distance & focal span
+      if (this.autoSyncCamera && !this.isPanning) {
+        let targetZoom: number;
+        if (cam && (cam as any).isOrthographicCamera) {
+          const orthoZoom = (cam as any).zoom || 1.0;
+          targetZoom = orthoZoom * 2.5;
+        } else {
+          // Perspective camera: calculate visible ground/focal extent in workspace
+          const fovRad = THREE.MathUtils.degToRad((cam as THREE.PerspectiveCamera)?.fov || 55);
+          // Effective visible half-span at camera target plane
+          const visibleHalfSpan = Math.max(1.5, camDist * Math.tan(fovRad / 2));
+          // Map viewport half-span to radar half-dimension so radar coverage mirrors workspace field
+          targetZoom = (this.config.size * 0.48) / visibleHalfSpan;
+        }
 
-        // Smooth zoom transition
-        this.config.zoom += (targetZoom - this.config.zoom) * 0.12;
+        // Clamp to sensible range [0.5, 60] and lerp smoothly at 60fps
+        const clampedZoom = THREE.MathUtils.clamp(targetZoom, 0.5, 60);
+        this.config.zoom += (clampedZoom - this.config.zoom) * 0.15;
       }
 
       // Smooth center tracking when inspecting or in walk mode

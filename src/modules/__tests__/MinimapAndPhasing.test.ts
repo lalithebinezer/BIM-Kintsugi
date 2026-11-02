@@ -98,6 +98,18 @@ describe("Minimap & 4D Phasing Modules", () => {
       expect(Math.atan2(forwardEast.z, forwardEast.x)).toBeCloseTo(0);
       expect(Math.atan2(forwardWest.z, forwardWest.x)).toBeCloseTo(Math.PI);
     });
+
+    it('should manage camera zoom synchronization flags', () => {
+      expect(minimap.isCameraSyncEnabled()).toBe(true);
+      minimap.zoomIn();
+      expect(minimap.isCameraSyncEnabled()).toBe(false);
+      minimap.resetView();
+      expect(minimap.isCameraSyncEnabled()).toBe(true);
+      minimap.setAutoSyncCamera(false);
+      expect(minimap.isCameraSyncEnabled()).toBe(false);
+      minimap.setAutoSyncCamera(true);
+      expect(minimap.isCameraSyncEnabled()).toBe(true);
+    });
   });
 
   describe("PhasingTimelineModule", () => {
