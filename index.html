@@ -761,6 +761,61 @@
                 <span>4D Schedule Tasks</span>
               </div>
             </div>
+
+            <!-- Property-Driven Construction Sequence Generator -->
+            <div class="sequence-generator-box" id="sequence-generator-box">
+              <div class="sequence-box-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-400)" stroke-width="2.2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                </svg>
+                <span>Dynamic Sequence Engine</span>
+              </div>
+              <div class="sequence-field-row">
+                <label for="sequence-property-select" class="sequence-field-label">Sequence By Property:</label>
+                <div class="sequence-prop-input-wrap" style="display: flex; gap: 0.35rem; align-items: center;">
+                  <select id="sequence-property-select" class="custom-select sequence-prop-select" title="Select property to group and sequence construction phases" style="flex: 1;">
+                    <option value="Storey">Building Storey (Vertical Progression)</option>
+                    <option value="Category">IFC Category (Trade Progression)</option>
+                    <option value="PredefinedType">Predefined Type</option>
+                    <option value="Name">Element Name</option>
+                    <option value="Phase">Phase Attribute</option>
+                    <option value="Status">Status Attribute</option>
+                    <option value="__custom__">Custom Property / Pset...</option>
+                  </select>
+                  <button id="btn-sequence-pick-hint" class="btn-pick-hint" type="button" title="Tip: You can also click the ⏱ 4D button next to any property in the Properties Inspector on the right to sequence by it!">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  </button>
+                </div>
+                <input type="text" id="sequence-custom-prop-input" class="sequence-input" placeholder="e.g. Pset_WallCommon.Reference or Status" style="display: none; margin-top: 0.25rem;" />
+              </div>
+              <div class="sequence-params-grid">
+                <div class="sequence-param-item">
+                  <label for="sequence-start-date">Start Date:</label>
+                  <input type="date" id="sequence-start-date" class="sequence-input" value="2026-06-18" />
+                </div>
+                <div class="sequence-param-item">
+                  <label for="sequence-duration-days">Duration (d):</label>
+                  <input type="number" id="sequence-duration-days" class="sequence-input" min="1" max="180" value="10" />
+                </div>
+                <div class="sequence-param-item">
+                  <label for="sequence-overlap-days">Overlap (d):</label>
+                  <input type="number" id="sequence-overlap-days" class="sequence-input" min="0" max="60" value="3" />
+                </div>
+                <div class="sequence-param-item">
+                  <label for="sequence-sort-dir">Order:</label>
+                  <select id="sequence-sort-dir" class="custom-select sequence-input">
+                    <option value="asc">Ascending (0 &rarr; Top)</option>
+                    <option value="desc">Descending (Top &rarr; 0)</option>
+                  </select>
+                </div>
+              </div>
+              <button id="btn-calculate-sequence" class="btn-calculate-seq" title="Calculate construction sequence for loaded elements using chosen property">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Calculate 4D Sequence</span>
+              </button>
+              <div id="sequence-status-banner" class="sequence-status-banner" style="display: none;"></div>
+            </div>
+
             <div class="panel-body thin-scrollbar" id="schedule-tasks-list">
               <div class="empty-state">Load a model to view the construction schedule.</div>
             </div>
@@ -2167,6 +2222,10 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> MSP / P6
               <input type="file" id="btn-import-schedule-advanced" aria-label="Import MS Project XML or Primavera P6 XER File" accept=".xml,.xer" style="display: none;" />
             </label>
+
+            <button class="btn-timeline-csv" id="btn-timeline-seq-toggle" title="Configure and Calculate Property-Driven 4D Construction Sequence">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Sequence Engine
+            </button>
 
             <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg> Gantt Chart

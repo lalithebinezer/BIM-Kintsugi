@@ -66,6 +66,7 @@ function getCategoryColor(_theme: string, category: string): string {
   return categoryColorMap[category.toUpperCase()] ?? "#a78bfa";
 }
 import { ScheduleManager } from "./modules/ScheduleManager";
+import { PropertySequenceEngine } from "./modules/PropertySequenceEngine";
 import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
 import { CostRateManager } from "./modules/CostRateManager";
@@ -1509,7 +1510,7 @@ function resolveElementPropertySets(properties: any, elementId: number): Record<
 }
 
 // Helper function to append a row to the property table
-function addPropertyRow(container: Element, label: string, value: string, extraClass: string = "") {
+function addPropertyRow(container: Element, label: string, value: string, extraClass: string = "", propertyKeyOverride?: string) {
   const row = document.createElement("div");
   row.className = "prop-row";
   
@@ -1532,6 +1533,37 @@ function addPropertyRow(container: Element, label: string, value: string, extraC
   
   row.appendChild(labelSpan);
   row.appendChild(valSpan);
+
+  // Add "Pick to 4D" action button for actionable properties
+  const unpickable = ["Express ID", "Type Express ID", "Global ID (GUID)"];
+  if (!unpickable.includes(label) && value && value.trim().length > 0 && value !== "Unassigned") {
+    const actionsSpan = document.createElement("div");
+    actionsSpan.className = "prop-row-actions";
+    
+    const pickBtn = document.createElement("button");
+    pickBtn.className = "btn-pick-to-4d";
+    pickBtn.type = "button";
+    pickBtn.title = `Pick '${label}' for 4D Construction Sequence simulation`;
+    pickBtn.innerHTML = `
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>4D</span>
+    `;
+    
+    const propKeyToUse = propertyKeyOverride || (label === "Storey / Level" ? "Storey" : label === "IFC Entity" ? "Category" : label);
+    pickBtn.onclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (typeof (window as any).pickPropertyFor4D === "function") {
+        (window as any).pickPropertyFor4D(propKeyToUse, label);
+      }
+    };
+    
+    actionsSpan.appendChild(pickBtn);
+    row.appendChild(actionsSpan);
+  }
+
   container.appendChild(row);
 }
 
@@ -1938,7 +1970,7 @@ async function displayElementProperties(model: any, expressId: number) {
 
       const psetProps = psets[psetName];
       for (const propName in psetProps) {
-        addPropertyRow(tableEl, propName, String(psetProps[propName]));
+        addPropertyRow(tableEl, propName, String(psetProps[propName]), "", `${psetName}.${propName}`);
       }
     }
 
@@ -3326,6 +3358,7 @@ async function loadModelData(name: string, buffer: Uint8Array) {
           catMap.set(catName, itemsArr);
         }
         scheduleManager.generateFromCategories(catMap, "2026-06-18");
+        updateSequencePropertyOptions();
       }
 
       // Update 5D cumulative project budget now that twin data is populated
@@ -6692,6 +6725,224 @@ function updateScheduleWidgetUI() {
   }
 }
 
+
+// Property-Driven 4D Construction Sequence Engine Integration
+function updateSequencePropertyOptions() {
+  const select = document.getElementById("sequence-property-select") as HTMLSelectElement | null;
+  const customPropInput = document.getElementById("sequence-custom-prop-input") as HTMLInputElement | null;
+  if (!select) return;
+
+  const models = Array.from(fragments.list.values());
+  const discovered = PropertySequenceEngine.getInstance().discoverAvailableProperties(models, globalElementStoreysMap);
+  
+  const currentVal = select.value;
+  let optionsHtml = "";
+
+  if (discovered.length > 0) {
+    optionsHtml = discovered.map(opt => {
+      const countStr = opt.count ? ` (${opt.count} elements)` : '';
+      const sampleStr = opt.sampleValues && opt.sampleValues.length > 0 ? ` [e.g. ${opt.sampleValues.slice(0, 2).join(", ")}]` : '';
+      return `<option value="${opt.key}">${opt.label}${countStr}${sampleStr}</option>`;
+    }).join("");
+  } else {
+    // Default fallback options if no properties discovered
+    optionsHtml = `
+      <option value="Storey">Building Storey (Vertical Progression)</option>
+      <option value="Category">IFC Category (Trade Progression)</option>
+      <option value="PredefinedType">Predefined Type</option>
+      <option value="Name">Element Name</option>
+      <option value="Phase">Phase Attribute</option>
+      <option value="Status">Status Attribute</option>
+    `;
+  }
+
+  // ALWAYS append the Custom Property option at the end
+  optionsHtml += `<option value="__custom__">Custom Property / Pset...</option>`;
+  select.innerHTML = optionsHtml;
+
+  // Preserve previous selection if available
+  if (currentVal && (currentVal === "__custom__" || discovered.some(d => d.key === currentVal))) {
+    select.value = currentVal;
+  }
+
+  // Ensure custom text input visibility matches selection
+  if (customPropInput) {
+    customPropInput.style.display = select.value === "__custom__" ? "block" : "none";
+  }
+}
+
+function initPropertySequenceEngineUI() {
+  const btnCalculate = document.getElementById("btn-calculate-sequence");
+  const propSelect = document.getElementById("sequence-property-select") as HTMLSelectElement | null;
+  const customPropInput = document.getElementById("sequence-custom-prop-input") as HTMLInputElement | null;
+  const pickHintBtn = document.getElementById("btn-sequence-pick-hint");
+  const startDateInput = document.getElementById("sequence-start-date") as HTMLInputElement | null;
+  const durationInput = document.getElementById("sequence-duration-days") as HTMLInputElement | null;
+  const overlapInput = document.getElementById("sequence-overlap-days") as HTMLInputElement | null;
+  const sortDirSelect = document.getElementById("sequence-sort-dir") as HTMLSelectElement | null;
+  const banner = document.getElementById("sequence-status-banner");
+  const btnSeqToggle = document.getElementById("btn-timeline-seq-toggle");
+
+  // Show/hide custom property text input when dropdown changes
+  propSelect?.addEventListener("change", () => {
+    if (propSelect.value === "__custom__") {
+      if (customPropInput) {
+        customPropInput.style.display = "block";
+        customPropInput.focus();
+      }
+    } else {
+      if (customPropInput) {
+        customPropInput.style.display = "none";
+      }
+    }
+  });
+
+  pickHintBtn?.addEventListener("click", () => {
+    showToast("Tip: Click any ⏱ 4D button in the Properties Inspector on the right to sequence by that property!", "info");
+  });
+
+  // Global handler to pick a property from the inspector table directly into 4D Sequence Engine
+  (window as any).pickPropertyFor4D = (propertyKey: string, displayLabel?: string) => {
+    // 1. Activate 4D mode and switch to Schedule panel
+    document.body.classList.add("mode-4d");
+    document.body.classList.remove("left-sidebar-collapsed");
+    if (typeof (window as any).switchSidebarTab === "function") {
+      (window as any).switchSidebarTab("left-tab-bar", "schedule");
+    } else {
+      const tabBtn = document.querySelector('.sidebar-tab-btn[data-tab="schedule"]') as HTMLElement | null;
+      if (tabBtn) tabBtn.click();
+    }
+
+    // 2. Select or populate option in sequence-property-select
+    if (propSelect) {
+      let optionExists = false;
+      for (let i = 0; i < propSelect.options.length; i++) {
+        if (propSelect.options[i].value.toLowerCase() === propertyKey.toLowerCase()) {
+          propSelect.selectedIndex = i;
+          optionExists = true;
+          break;
+        }
+      }
+
+      if (!optionExists) {
+        // Add new option and select it
+        const newOpt = document.createElement("option");
+        newOpt.value = propertyKey;
+        newOpt.innerText = `Picked: ${displayLabel || propertyKey}`;
+        newOpt.selected = true;
+        propSelect.insertBefore(newOpt, propSelect.firstChild);
+        propSelect.value = propertyKey;
+      }
+
+      if (customPropInput) {
+        customPropInput.value = propertyKey;
+        customPropInput.style.display = optionExists ? "none" : "block";
+      }
+    }
+
+    // 3. Highlight sequence-generator-box and notify user
+    const box = document.getElementById("sequence-generator-box");
+    if (box) {
+      box.scrollIntoView({ behavior: "smooth", block: "start" });
+      box.style.borderColor = "var(--accent-500)";
+      box.style.boxShadow = "0 0 16px rgba(212, 255, 63, 0.4)";
+      setTimeout(() => {
+        box.style.borderColor = "";
+        box.style.boxShadow = "";
+      }, 2000);
+    }
+
+    showToast(`Picked '${displayLabel || propertyKey}' for 4D Sequence. Click 'Calculate 4D Sequence' to run!`, "success");
+  };
+
+  btnSeqToggle?.addEventListener("click", () => {
+    // Switch to 4D mode and open left schedule panel
+    document.body.classList.add("mode-4d");
+    document.body.classList.remove("left-sidebar-collapsed");
+    if (typeof (window as any).switchSidebarTab === "function") {
+      (window as any).switchSidebarTab("left-tab-bar", "schedule");
+    } else {
+      const tabBtn = document.querySelector('.sidebar-tab-btn[data-tab="schedule"]') as HTMLElement | null;
+      if (tabBtn) tabBtn.click();
+    }
+    const box = document.getElementById("sequence-generator-box");
+    if (box) {
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      box.style.borderColor = 'var(--accent-500)';
+      setTimeout(() => { box.style.borderColor = ''; }, 1500);
+    }
+  });
+
+  btnCalculate?.addEventListener("click", async () => {
+    const models = Array.from(fragments.list.values());
+    if (models.length === 0) {
+      showToast("Please load an IFC model first before calculating sequences.", "warning");
+      return;
+    }
+
+    let propertyKey = propSelect?.value || "Storey";
+    if (propertyKey === "__custom__") {
+      propertyKey = customPropInput?.value.trim() || "Storey";
+    }
+    const startDate = startDateInput?.value || "2026-06-18";
+    const taskDurationDays = parseInt(durationInput?.value || "10", 10) || 10;
+    const overlapDays = parseInt(overlapInput?.value || "3", 10) || 0;
+    const sortDirection = (sortDirSelect?.value as 'asc' | 'desc') || 'asc';
+
+    if (btnCalculate) {
+      btnCalculate.setAttribute("disabled", "true");
+      btnCalculate.innerHTML = `
+        <span class="ctrl-icon rotating">⚙</span>
+        <span>Calculating Sequence...</span>
+      `;
+    }
+
+    try {
+      const engine = PropertySequenceEngine.getInstance();
+      const result = engine.calculateSequence(
+        models,
+        {
+          propertyKey,
+          startDate,
+          taskDurationDays,
+          overlapDays,
+          sortDirection
+        },
+        { globalStoreysMap: globalElementStoreysMap }
+      );
+
+      // Apply newly calculated sequence to twinDatabase and ScheduleManager
+      const applyStats = engine.applySequenceToTwinDatabase(result, twinDatabase, scheduleManager);
+
+      // Recompute timeline boundaries and synchronize 4D Engine
+      calculateTimelineBounds();
+      updateScheduleWidgetUI();
+
+      // Ensure 4D Interactive Construction Gantt Drawer is kept in sync
+      InteractiveGanttDrawer.getInstance().render();
+
+      if (banner) {
+        banner.style.display = "flex";
+        banner.innerHTML = `✓ Generated <strong>${result.totalTasks} phases</strong> (${applyStats.updatedElements} elements) sequenced by <strong>${propertyKey}</strong> [${result.projectStartDate} &rarr; ${result.projectEndDate}]`;
+        setTimeout(() => { banner.style.display = "none"; }, 8000);
+      }
+
+      showToast(`4D Sequence recalculated: ${result.totalTasks} phases grouped by ${propertyKey}`, "success");
+    } catch (err: any) {
+      console.error("Sequence calculation error:", err);
+      showToast(`Calculation failed: ${err.message || err}`, "error");
+    } finally {
+      if (btnCalculate) {
+        btnCalculate.removeAttribute("disabled");
+        btnCalculate.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Calculate 4D Sequence</span>
+        `;
+      }
+    }
+  });
+}
+
 function startTimelinePlayback(onStep?: (dateStr: string) => void) {
   if (timelineIsPlaying || !timelineMinDate) return;
   timelineIsPlaying = true;
@@ -7654,6 +7905,7 @@ requestAnimationFrame(renderHUD);
 // ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
 // ═════════════════════════════════════════════════════════════════════
 initEnterpriseSuitesController(world, highlighter);
+  initPropertySequenceEngineUI();
 initGeoEngineeringController(world, (BimEngine.getInstance() as any).fragments?.core);
 
 // ═════════════════════════════════════════════════════════════════════

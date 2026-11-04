@@ -10708,3 +10708,212 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 [data-theme="light"] #gis-panel .geo-check, body.light-theme #gis-panel .geo-check { color: #0f172a; }
 [data-theme="light"] #gis-panel .geo-disc-item, body.light-theme #gis-panel .geo-disc-item { background: #ffffff; border-color: #e2e8f0; color: #0f172a; }
 [data-theme="light"] #gis-panel .geo-val, body.light-theme #gis-panel .geo-val { color: #0e7490; }
+
+
+/* ─── Property-Driven Construction Sequence Generator ─── */
+.sequence-generator-box {
+  background: var(--bg-surface, #18181f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin: 0.4rem 0.5rem 0.65rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.sequence-box-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary, #ffffff);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  padding-bottom: 0.35rem;
+}
+
+.sequence-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sequence-field-label {
+  font-size: 0.68rem;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 600;
+}
+
+.sequence-prop-select {
+  width: 100%;
+  height: 28px;
+  background: var(--bg-input, #0e0e13);
+  border: 1px solid var(--border-default, #2e2e38);
+  border-radius: 6px;
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0 0.5rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.sequence-prop-select:focus {
+  border-color: var(--accent-500, #d4ff3f);
+}
+
+.sequence-params-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.sequence-param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sequence-param-item label {
+  font-size: 0.62rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.sequence-input {
+  width: 100%;
+  height: 26px;
+  background: var(--bg-input, #0e0e13);
+  border: 1px solid var(--border-default, #2e2e38);
+  border-radius: 5px;
+  color: #f1f5f9;
+  font-size: 0.68rem;
+  padding: 0 0.4rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.sequence-input:focus {
+  border-color: var(--accent-500, #d4ff3f);
+}
+
+.btn-calculate-seq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, rgba(212, 255, 63, 0.15) 0%, rgba(212, 255, 63, 0.05) 100%);
+  border: 1px solid var(--accent-500, #d4ff3f);
+  color: var(--accent-400, #e2ff66);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 0.2rem;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-calculate-seq:hover {
+  background: var(--accent-500, #d4ff3f);
+  color: #000000;
+  box-shadow: 0 0 12px rgba(212, 255, 63, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-calculate-seq:active {
+  transform: translateY(0);
+}
+
+.sequence-status-banner {
+  font-size: 0.65rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 5px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ─── Pick to 4D Action Button in Properties Inspector ─── */
+.prop-row {
+  position: relative;
+}
+
+.prop-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.35rem;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.prop-row:hover .prop-row-actions {
+  opacity: 1;
+}
+
+.btn-pick-to-4d {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(212, 255, 63, 0.08);
+  border: 1px solid rgba(212, 255, 63, 0.28);
+  color: var(--accent-400, #d4ff3f);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-pick-to-4d:hover {
+  background: var(--accent-500, #d4ff3f);
+  color: #000000;
+  border-color: var(--accent-500, #d4ff3f);
+  box-shadow: 0 0 8px rgba(212, 255, 63, 0.4);
+  transform: scale(1.05);
+}
+
+.btn-pick-to-4d:active {
+  transform: scale(0.98);
+}
+
+.btn-pick-to-4d svg {
+  pointer-events: none;
+}
+
+.btn-pick-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid var(--border-default, #2e2e38);
+  border-radius: 5px;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-pick-hint:hover {
+  color: var(--accent-400, #d4ff3f);
+  border-color: var(--accent-400, #d4ff3f);
+  background: rgba(212, 255, 63, 0.08);
+}

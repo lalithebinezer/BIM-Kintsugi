@@ -826,9 +826,25 @@ export function initPropertyEditorUI(editor: PropertyEditor, container: HTMLElem
       }
 
       if (typeof value === "string") {
-        return BUI.html`<bim-text-input value=${value} @input=${(e: any) => {
-          editor.updateAttribute(row, e);
-        }}></bim-text-input>`;
+        return BUI.html`
+          <div style="display: flex; align-items: center; gap: 0.25rem; width: 100%;">
+            <bim-text-input style="flex: 1;" value=${value} @input=${(e: any) => {
+              editor.updateAttribute(row, e);
+            }}></bim-text-input>
+            <bim-button
+              icon="material-symbols:timer-outline"
+              title="Pick '${row.Name}' for 4D Construction Sequence"
+              style="transform: scale(0.8); flex-shrink: 0;"
+              @click=${(e: any) => {
+                e.stopPropagation();
+                if (typeof (window as any).pickPropertyFor4D === "function" && row.Name) {
+                  const qualifiedKey = row.ParentName ? `${row.ParentName}.${row.Name}` : row.Name;
+                  (window as any).pickPropertyFor4D(qualifiedKey, row.Name);
+                }
+              }}
+            ></bim-button>
+          </div>
+        `;
       }
 
       if (typeof value === "number") {
