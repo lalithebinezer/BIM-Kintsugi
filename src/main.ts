@@ -3586,15 +3586,13 @@ window.addEventListener("drop", async (e) => {
 // Load Sample Model (Snowdon Towers Structural IFC or School FRAG)
 async function loadSampleModel(sampleType: string = "snowdon") {
   const isSnowdon = sampleType === "snowdon";
-  const url = isSnowdon
-    ? "/Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc"
-    : "https://thatopen.github.io/engine_components/resources/frags/school_arq.frag";
   const fileName = isSnowdon
     ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc"
     : "school_arq.frag";
 
   const loadSampleBtn = document.getElementById("load-sample-btn");
   const loadSampleText = loadSampleBtn ? (loadSampleBtn.querySelector("span") || document.getElementById("load-sample-btn-text")) : null;
+
   try {
     if (loadSampleBtn) {
       loadSampleBtn.setAttribute("disabled", "true");
@@ -3603,12 +3601,65 @@ async function loadSampleModel(sampleType: string = "snowdon") {
       loadSampleText.innerText = "Downloading...";
     }
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const arrayBuffer = await response.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    // Build candidate URLs with fallback paths to ensure robust loading regardless of base URL / proxy
+    const candidates: string[] = [];
+    if (isSnowdon) {
+      const base = (import.meta as any).env?.BASE_URL || "./";
+      const cleanBase = base.endsWith("/") ? base : base + "/";
+      try {
+        candidates.push(new URL("Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc", window.location.href).href);
+        candidates.push(new URL("Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc", window.location.href).href);
+      } catch (e) {}
+      candidates.push(
+        `${cleanBase}Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc`,
+        `${cleanBase}Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc`,
+        "./Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc",
+        "./Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc",
+        "/Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc",
+        "/Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc"
+      );
+    } else {
+      candidates.push("https://thatopen.github.io/engine_components/resources/frags/school_arq.frag");
+    }
 
+    let finalBuffer: ArrayBuffer | null = null;
+    let lastError: Error | null = null;
+
+    for (const candUrl of candidates) {
+      try {
+        const response = await fetch(candUrl, { cache: "no-store" });
+        if (!response.ok) {
+          lastError = new Error(`HTTP error! status: ${response.status}`);
+          continue;
+        }
+        const cType = (response.headers.get("content-type") || "").toLowerCase();
+        if (cType.includes("text/html") && isSnowdon) {
+          // Vite SPA fallback intercepted the missing route; continue to next candidate
+          continue;
+        }
+        const ab = await response.arrayBuffer();
+        if (isSnowdon && ab.byteLength < 1000) {
+          // Empty or short HTML error page
+          continue;
+        }
+        finalBuffer = ab;
+        break;
+      } catch (e: any) {
+        lastError = e;
+      }
+    }
+
+    if (!finalBuffer) {
+      throw lastError || new Error("Failed to fetch sample file from all candidate URLs");
+    }
+
+    if (loadSampleText) {
+      loadSampleText.innerText = "Parsing...";
+    }
+
+    const uint8Array = new Uint8Array(finalBuffer);
     await loadModelData(fileName, uint8Array);
+    showToast(`Successfully loaded ${fileName} (${(finalBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)`, "success");
   } catch (err) {
     console.error("Failed to fetch sample file:", err);
     showToast(`Failed to load sample: ${err instanceof Error ? err.message : err}`, "error");
