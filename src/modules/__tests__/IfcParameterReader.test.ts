@@ -170,4 +170,42 @@ describe('IfcParameterReader Unit Tests', () => {
     expect(names).toContain("Structural Frame");
     expect(names).toContain("Envelope & Enclosure");
   });
+  it('should parse raw STEP IFC text into elements, storeys, and Psets', () => {
+    const sampleIfc = [
+      'ISO-10303-21;',
+      'HEADER;',
+      'ENDSEC;',
+      'DATA;',
+      "#10=IFCBUILDINGSTOREY('guid-1',#1,'Level 1',$,$,$,$,$,$,0.);",
+      "#11=IFCBUILDINGSTOREY('guid-2',#1,'Level 2',$,$,$,$,$,$,4000.);",
+      "#20=IFCBEAM('guid-b1',#1,'Beam 101',$,$,$,$,$);",
+      "#21=IFCCOLUMN('guid-c1',#1,'Column 201',$,$,$,$,$);",
+      "#30=IFCPROPERTYSINGLEVALUE('Reference',$,IFCLABEL('W12X26'),$);",
+      "#31=IFCPROPERTYSINGLEVALUE('LoadBearing',$,IFCBOOLEAN(.T.),$);",
+      "#40=IFCPROPERTYSET('guid-pset1',#1,'Pset_BeamCommon',$,(#30,#31));",
+      "#50=IFCRELDEFINESBYPROPERTIES('guid-rel1',#1,$,$,(#20),#40);",
+      "#60=IFCRELCONTAINEDINSPATIALSTRUCTURE('guid-rel2',#1,$,$,(#20),#10);",
+      "#61=IFCRELCONTAINEDINSPATIALSTRUCTURE('guid-rel3',#1,$,$,(#21),#11);",
+      'ENDSEC;',
+      'END-ISO-10303-21;'
+    ].join('\n');
+
+    const parsed = reader.parseIfcText(sampleIfc, 'test-model');
+    expect(parsed[20]).toBeDefined();
+    expect(parsed[20].type).toBe('IFCBEAM');
+    expect(parsed[20].Storey).toBe('Level 1');
+    expect(parsed[20].psets.Pset_BeamCommon.Reference).toBe('W12X26');
+    expect(parsed[20].psets.Pset_BeamCommon.LoadBearing).toBe('True');
+
+    expect(parsed[21]).toBeDefined();
+    expect(parsed[21].type).toBe('IFCCOLUMN');
+    expect(parsed[21].Storey).toBe('Level 2');
+
+    // Scanning model parameters from parsed properties
+    const params = reader.scanModelParameters([{ modelId: 'test-model', properties: parsed }]);
+    const keys = params.map(p => p.key);
+    expect(keys).toContain('Pset_BeamCommon.Reference');
+    expect(keys).toContain('Storey');
+    expect(keys).toContain('Category');
+  });
 });

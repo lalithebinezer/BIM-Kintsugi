@@ -274,25 +274,30 @@ export class PropertySequenceEngine {
     }
 
     // 5. Look inside resolved Psets if present
-    if (context?.psets) {
+    const psets: Record<string, any> | undefined = context?.psets || props?.psets;
+    if (psets) {
       // Check if propertyKey is in "Pset.Name" format
       if (propertyKey.includes(".")) {
         const [psetName, propName] = propertyKey.split(".");
         const psetLower = psetName.toLowerCase();
         const propLower = propName.toLowerCase();
-        for (const [pName, pset] of Object.entries(context.psets)) {
-          if (pName.toLowerCase() === psetLower) {
-            for (const [k, v] of Object.entries(pset)) {
-              if (k.toLowerCase() === propLower && v) return v;
+        for (const [pName, rawPset] of Object.entries(psets)) {
+          if (pName.toLowerCase() === psetLower && rawPset && typeof rawPset === "object") {
+            const psetObj = rawPset as Record<string, any>;
+            for (const [k, v] of Object.entries(psetObj)) {
+              if (k.toLowerCase() === propLower && v !== undefined && v !== null) return String(v);
             }
           }
         }
       } else {
         // Search across all psets for this propName (exact or case-insensitive)
-        for (const pset of Object.values(context.psets)) {
-          if (pset[propertyKey]) return pset[propertyKey];
-          for (const [k, v] of Object.entries(pset)) {
-            if (k.toLowerCase() === keyLower && v) return v;
+        for (const rawPset of Object.values(psets)) {
+          if (rawPset && typeof rawPset === "object") {
+            const psetObj = rawPset as Record<string, any>;
+            if (psetObj[propertyKey] !== undefined && psetObj[propertyKey] !== null) return String(psetObj[propertyKey]);
+            for (const [k, v] of Object.entries(psetObj)) {
+              if (k.toLowerCase() === keyLower && v !== undefined && v !== null) return String(v);
+            }
           }
         }
       }
@@ -637,8 +642,8 @@ export class PropertySequenceEngine {
         if (!p) continue;
 
         const dbKey = `${modelId}-${expressId}`;
-        const storeyName = context?.globalStoreysMap?.[dbKey];
-        let psets = context?.elementPsetsMap?.[dbKey];
+        const storeyName = p.Storey || context?.globalStoreysMap?.[dbKey];
+        let psets = p.psets || context?.elementPsetsMap?.[dbKey];
         if (!psets && (propertyKey.includes('.') || !['storey', 'category', 'predefinedtype', 'name'].includes(propertyKey.toLowerCase()))) {
           psets = this.resolveElementPsets(properties, expressId, relMap);
         }

@@ -1164,7 +1164,10 @@ async function initializeModelTwinData(model: any) {
   const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
   let properties = model.properties || (model as any).getLocalProperties?.() || {};
 
-  if (!properties || Object.keys(properties).length === 0) {
+  const hasRealProperties = properties && Object.keys(properties).length > 0 &&
+    Object.values(properties).some((p: any) => p && p.type && p.type !== "IFCBUILDINGELEMENT");
+
+  if (!hasRealProperties && (!properties || Object.keys(properties).length === 0)) {
     try {
       const ids = await model.getItemsIds();
       if (ids && ids.length > 0) {
@@ -1220,6 +1223,9 @@ async function initializeModelTwinData(model: any) {
     if (!elementProps) continue;
 
     const dbKey = `${modelId}-${expressId}`;
+    if (elementProps.Storey && !globalElementStoreysMap[dbKey]) {
+      globalElementStoreysMap[dbKey] = elementProps.Storey;
+    }
     if (twinDatabase[dbKey]) continue; // Skip if already customized by user
 
     const ifcType = getIfcEntityName(elementProps.type).toUpperCase();
@@ -3242,6 +3248,19 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
   try {
     let model: any = null;
+    let parsedProperties: Record<number, any> | null = null;
+
+    if (name.endsWith(".ifc") || (buffer && buffer.length > 50 && buffer[0] === 0x49 && buffer[1] === 0x53 && buffer[2] === 0x4F)) {
+      try {
+        console.log(`[IfcParameterReader] Fast-parsing IFC STEP properties for ${name}...`);
+        const dec = new TextDecoder("utf-8", { fatal: false });
+        const ifcText = dec.decode(buffer);
+        parsedProperties = IfcParameterReader.getInstance().parseIfcText(ifcText, name);
+        console.log(`[IfcParameterReader] Extracted ${Object.keys(parsedProperties).length} elements with Psets from ${name}.`);
+      } catch (parseErr) {
+        console.warn("[IfcParameterReader] Error during STEP parsing:", parseErr);
+      }
+    }
 
     if (name.endsWith(".ifc")) {
       if (!isIfcLoaderSetup) {
@@ -3313,6 +3332,15 @@ async function loadModelData(name: string, buffer: Uint8Array) {
     text.innerText = "Building Semantic Model database...";
 
     if (model) {
+      if (parsedProperties && Object.keys(parsedProperties).length > 0) {
+        model.properties = parsedProperties;
+        const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || name;
+        for (const [idStr, el] of Object.entries(parsedProperties)) {
+          if ((el as any).Storey) {
+            globalElementStoreysMap[`${modelId}-${idStr}`] = (el as any).Storey;
+          }
+        }
+      }
       (window as any).viewer_model = model;
       federationModule.registerModel(model, name);
       // Enable shadows if checked
@@ -3563,7 +3591,7 @@ async function loadSampleModel(sampleType: string = "snowdon") {
     : "school_arq.frag";
 
   const loadSampleBtn = document.getElementById("load-sample-btn");
-  const loadSampleText = document.getElementById("load-sample-btn-text");
+  const loadSampleText = loadSampleBtn ? (loadSampleBtn.querySelector("span") || document.getElementById("load-sample-btn-text")) : null;
   try {
     if (loadSampleBtn) {
       loadSampleBtn.setAttribute("disabled", "true");
@@ -3586,7 +3614,7 @@ async function loadSampleModel(sampleType: string = "snowdon") {
       loadSampleBtn.removeAttribute("disabled");
     }
     if (loadSampleText) {
-      loadSampleText.innerText = "Sample Models";
+      loadSampleText.innerText = "Load";
     }
   }
 }
