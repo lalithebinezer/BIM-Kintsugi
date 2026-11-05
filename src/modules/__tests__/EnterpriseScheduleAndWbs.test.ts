@@ -79,6 +79,11 @@ describe("Enterprise Schedule Interchange & Multi-Tier WBS CPM Suite", () => {
       expect(xml).toContain('<PredecessorLink>');
       expect(xml).toContain('<OutlineNumber>1.1</OutlineNumber>');
       expect(xml).toContain('<WBS>1.1</WBS>');
+      expect(xml).toContain('<DurationFormat>7</DurationFormat>');
+      expect(xml).toContain('<Milestone>0</Milestone>');
+      expect(xml).toContain('<ConstraintType>0</ConstraintType>');
+      expect(xml).toContain('<Work>PT112H0M0S</Work>');
+      expect(xml).toContain('<ScheduleFromStart>1</ScheduleFromStart>');
     });
 
     it("should escape special characters in task names and compute duration in hours", () => {

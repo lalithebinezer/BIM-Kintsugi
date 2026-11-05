@@ -852,7 +852,10 @@ export class PropertySequenceEngine {
           const readable = node.tier1.replace(/^IFC/i, '').replace(/STANDARDCASE$/i, '');
           cleanTaskName = `Phase ${wbsCode} — ${readable} Construction Works`;
         } else {
-          cleanTaskName = `${primaryKey}: ${node.tier1}`;
+          // If sequencing by a parameter like SIMULATION or Reference,
+          // output the property value directly (e.g. COL_EP1) so it directly matches
+          // the 3D element property in Synchro 4D Pro for 1-click automatic 3D resource linking!
+          cleanTaskName = node.tier1;
         }
       }
 

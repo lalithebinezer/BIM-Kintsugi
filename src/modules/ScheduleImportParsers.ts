@@ -238,7 +238,6 @@ export class ScheduleImportParsers {
       const e = new Date(t.endDate);
       const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
       const durationHours = days * 8;
-      const pct = t.status === "Completed" ? 100 : t.status === "In Progress" ? 50 : 0;
       const cost = t.unitCost ? t.unitCost * (t.quantity || 1) : 0;
 
       const wbs = t.wbsCode || String(uid);
@@ -271,21 +270,39 @@ export class ScheduleImportParsers {
       </PredecessorLink>`;
       }
 
+      const pctComplete = t.status === "Completed" ? 100 : (t.status === "In Progress" ? 50 : 0);
+      const isMilestone = durationHours <= 0 ? 1 : 0;
+      const actualDurationHours = Math.round((durationHours * pctComplete) / 100);
+      const remainingDurationHours = Math.max(0, durationHours - actualDurationHours);
+
       return `    <Task>
       <UID>${uid}</UID>
       <ID>${uid}</ID>
       <Name>${xmlEscape(t.name)}</Name>
-      <Type>1</Type>
+      <Type>0</Type>
       <IsNull>0</IsNull>
+      <Active>1</Active>
+      <Manual>0</Manual>
+      <Milestone>${isMilestone}</Milestone>
+      <DurationFormat>7</DurationFormat>
+      <Duration>PT${durationHours}H0M0S</Duration>
+      <Work>PT${durationHours}H0M0S</Work>
+      <RemainingDuration>PT${remainingDurationHours}H0M0S</RemainingDuration>
+      <ActualDuration>PT${actualDurationHours}H0M0S</ActualDuration>
+      <RemainingWork>PT${remainingDurationHours}H0M0S</RemainingWork>
+      <ActualWork>PT${actualDurationHours}H0M0S</ActualWork>
+      <Start>${t.startDate}T08:00:00</Start>
+      <Finish>${t.endDate}T17:00:00</Finish>
+      <EarlyStart>${t.startDate}T08:00:00</EarlyStart>
+      <EarlyFinish>${t.endDate}T17:00:00</EarlyFinish>
+      <LateStart>${(t as any).lateStart || t.startDate}T08:00:00</LateStart>
+      <LateFinish>${(t as any).lateFinish || t.endDate}T17:00:00</LateFinish>
+      <PercentComplete>${pctComplete}</PercentComplete>
+      <ConstraintType>0</ConstraintType>
       <OutlineNumber>${xmlEscape(wbs)}</OutlineNumber>
       <OutlineLevel>${outlineLevel}</OutlineLevel>
       <WBS>${xmlEscape(wbs)}</WBS>
       <CalendarUID>1</CalendarUID>
-      <CreateDate>${t.startDate}T08:00:00</CreateDate>
-      <Start>${t.startDate}T08:00:00</Start>
-      <Finish>${t.endDate}T17:00:00</Finish>
-      <Duration>PT${durationHours}H0M0S</Duration>
-      <PercentComplete>${pct}</PercentComplete>
       <Cost>${cost.toFixed(2)}</Cost>
       <TotalSlack>${totalFloatHours * 60}</TotalSlack>
       <Critical>${t.isCritical ? 1 : 0}</Critical>${predecessorXml}
@@ -318,6 +335,13 @@ export class ScheduleImportParsers {
   <CalendarUID>1</CalendarUID>
   <StartDate>${minStart}T08:00:00</StartDate>
   <FinishDate>${maxEnd}T17:00:00</FinishDate>
+  <ScheduleFromStart>1</ScheduleFromStart>
+  <MinutesPerDay>480</MinutesPerDay>
+  <MinutesPerWeek>2400</MinutesPerWeek>
+  <DaysPerMonth>20</DaysPerMonth>
+  <DefaultStartTime>08:00:00</DefaultStartTime>
+  <DefaultFinishTime>17:00:00</DefaultFinishTime>
+  <DefaultTaskType>0</DefaultTaskType>
   <ExtendedAttributes>
     <ExtendedAttribute>
       <FieldID>188743731</FieldID>
