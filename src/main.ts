@@ -6811,25 +6811,25 @@ function updateScheduleWidgetUI() {
 function updateSequencePropertyOptions() {
   const select = document.getElementById("sequence-property-select") as HTMLSelectElement | null;
   const customPropInput = document.getElementById("sequence-custom-prop-input") as HTMLInputElement | null;
+  const datalist = document.getElementById("simulation-params-datalist") as HTMLElement | null;
   if (!select) return;
 
   const models = Array.from(fragments.list.values());
   const discovered = PropertySequenceEngine.getInstance().discoverAvailableProperties(models, globalElementStoreysMap);
   
-  const currentVal = select.value;
+  const currentVal = customPropInput?.value.trim() || select.value;
   let optionsHtml = "";
 
   if (discovered.length > 0) {
     optionsHtml = discovered.map(opt => {
-      const countStr = opt.count ? ` (${opt.count} elements)` : '';
-      const sampleStr = opt.sampleValues && opt.sampleValues.length > 0 ? ` [e.g. ${opt.sampleValues.slice(0, 2).join(", ")}]` : '';
-      return `<option value="${opt.key}">${opt.label}${countStr}${sampleStr}</option>`;
+      const countStr = opt.count ? ` (${opt.count} el)` : '';
+      return `<option value="${opt.key}">${opt.label}${countStr}</option>`;
     }).join("");
   } else {
     // Default fallback options if no properties discovered
     optionsHtml = `
-      <option value="Storey">Building Storey (Vertical Progression)</option>
-      <option value="Category">IFC Category (Trade Progression)</option>
+      <option value="Storey">Building Storey</option>
+      <option value="Category">IFC Category</option>
       <option value="PredefinedType">Predefined Type</option>
       <option value="Name">Element Name</option>
       <option value="Phase">Phase Attribute</option>
@@ -6837,13 +6837,25 @@ function updateSequencePropertyOptions() {
     `;
   }
 
-  // ALWAYS append the Custom Property option at the end
-  optionsHtml += `<option value="__custom__">Custom Property / Pset...</option>`;
+  // Append custom option
+  optionsHtml += `<option value="__custom__">Custom / Type In...</option>`;
   select.innerHTML = optionsHtml;
 
+  // Populate datalist for instant autocomplete in text input
+  if (datalist) {
+    datalist.innerHTML = discovered.map(opt => `<option value="${opt.key}">${opt.label}</option>`).join("");
+  }
+
   // Preserve previous selection if available
-  if (currentVal && (currentVal === "__custom__" || discovered.some(d => d.key === currentVal))) {
-    select.value = currentVal;
+  if (currentVal) {
+    if (discovered.some(d => d.key.toLowerCase() === currentVal.toLowerCase())) {
+      select.value = currentVal;
+    } else {
+      select.value = "__custom__";
+    }
+    if (customPropInput && !customPropInput.value) {
+      customPropInput.value = currentVal;
+    }
   }
 
   // Update IFC Parameter Reader count badge if present
@@ -6851,11 +6863,6 @@ function updateSequencePropertyOptions() {
   if (readerBadge) {
     const params = IfcParameterReader.getInstance().scanModelParameters(models, globalElementStoreysMap);
     readerBadge.textContent = `${params.length} Params`;
-  }
-
-  // Ensure custom text input visibility matches selection
-  if (customPropInput) {
-    customPropInput.style.display = select.value === "__custom__" ? "block" : "none";
   }
 }
 
@@ -6877,6 +6884,22 @@ function initPropertySequenceEngineUI() {
     getModels: () => Array.from(fragments.list.values()),
     getStoreysMap: () => globalElementStoreysMap,
     onSequenceApplied: (result, paramKey) => {
+      const customPropInput = document.getElementById("sequence-custom-prop-input") as HTMLInputElement | null;
+      if (customPropInput) {
+        customPropInput.value = paramKey;
+      }
+      const propSelect = document.getElementById("sequence-property-select") as HTMLSelectElement | null;
+      if (propSelect) {
+        let matched = false;
+        for (let i = 0; i < propSelect.options.length; i++) {
+          if (propSelect.options[i].value.toLowerCase() === paramKey.toLowerCase()) {
+            propSelect.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) propSelect.value = "__custom__";
+      }
       calculateTimelineBounds();
       updateScheduleWidgetUI();
       InteractiveGanttDrawer.getInstance().render();
@@ -6898,17 +6921,31 @@ function initPropertySequenceEngineUI() {
   document.getElementById("btn-timeline-param-reader")?.addEventListener("click", () => openIfcParamReader());
   document.getElementById("btn-inspector-param-reader")?.addEventListener("click", () => openIfcParamReader());
 
-  // Show/hide custom property text input when dropdown changes
+  // Continuous two-way synchronization between Simulation Parameter text input and preset select
   propSelect?.addEventListener("change", () => {
     if (propSelect.value === "__custom__") {
-      if (customPropInput) {
-        customPropInput.style.display = "block";
-        customPropInput.focus();
-      }
+      customPropInput?.focus();
+      customPropInput?.select();
     } else {
       if (customPropInput) {
-        customPropInput.style.display = "none";
+        customPropInput.value = propSelect.value;
       }
+    }
+  });
+
+  customPropInput?.addEventListener("input", () => {
+    const typed = customPropInput.value.trim();
+    if (!propSelect) return;
+    let matched = false;
+    for (let i = 0; i < propSelect.options.length; i++) {
+      if (propSelect.options[i].value.toLowerCase() === typed.toLowerCase()) {
+        propSelect.selectedIndex = i;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      propSelect.value = "__custom__";
     }
   });
 
@@ -6951,7 +6988,6 @@ function initPropertySequenceEngineUI() {
 
       if (customPropInput) {
         customPropInput.value = propertyKey;
-        customPropInput.style.display = optionExists ? "none" : "block";
       }
     }
 
@@ -6995,10 +7031,7 @@ function initPropertySequenceEngineUI() {
       return;
     }
 
-    let propertyKey = propSelect?.value || "Storey";
-    if (propertyKey === "__custom__") {
-      propertyKey = customPropInput?.value.trim() || "Storey";
-    }
+    const propertyKey = customPropInput?.value.trim() || (propSelect?.value !== "__custom__" ? propSelect?.value : null) || "Storey";
     const startDate = startDateInput?.value || "2026-06-18";
     const taskDurationDays = parseInt(durationInput?.value || "10", 10) || 10;
     const overlapDays = parseInt(overlapInput?.value || "3", 10) || 0;

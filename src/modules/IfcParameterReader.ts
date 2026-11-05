@@ -607,6 +607,10 @@ export class IfcParameterReader {
 
             <div class="seq-drawer-params">
               <div class="seq-drawer-param-row">
+                <label for="seq-drawer-param-input">Simulation Parameter:</label>
+                <input type="text" id="seq-drawer-param-input" class="sequence-input" placeholder="e.g. Storey, Pset_QuantityTakeOff.Reference..." style="font-weight: 700; color: var(--accent-400); flex: 1;" />
+              </div>
+              <div class="seq-drawer-param-row">
                 <label>Start Date:</label>
                 <input type="date" id="seq-drawer-start-date" class="sequence-input" value="2026-06-18" />
               </div>
@@ -743,13 +747,18 @@ export class IfcParameterReader {
 
     // Drawer inputs update preview
     const drawerInputs = [
+      "#seq-drawer-param-input",
       "#seq-drawer-start-date",
       "#seq-drawer-duration",
       "#seq-drawer-overlap",
       "#seq-drawer-sort-dir"
     ];
     drawerInputs.forEach(selector => {
-      modal.querySelector(selector)?.addEventListener("input", () => {
+      modal.querySelector(selector)?.addEventListener("input", (e) => {
+        if (selector === "#seq-drawer-param-input") {
+          const val = (e.target as HTMLInputElement).value.trim();
+          if (val) this.selectedParameterKey = val;
+        }
         this.updateDrawerPreview();
       });
       modal.querySelector(selector)?.addEventListener("change", () => {
@@ -955,6 +964,10 @@ export class IfcParameterReader {
     if (paramNameEl) {
       paramNameEl.textContent = `Sequence by: ${param.name}`;
     }
+    const paramInput = modal.querySelector("#seq-drawer-param-input") as HTMLInputElement | null;
+    if (paramInput) {
+      paramInput.value = paramKey;
+    }
 
     drawer.style.display = "flex";
 
@@ -1030,9 +1043,12 @@ export class IfcParameterReader {
   }
 
   private applyDrawerSequence() {
-    if (!this.selectedParameterKey) return;
     const modal = document.getElementById("ifc-parameter-reader-modal");
     if (!modal) return;
+    const paramInput = modal.querySelector("#seq-drawer-param-input") as HTMLInputElement | null;
+    const resolvedKey = paramInput?.value.trim() || this.selectedParameterKey;
+    if (!resolvedKey) return;
+    this.selectedParameterKey = resolvedKey;
 
     const startDateInput = modal.querySelector("#seq-drawer-start-date") as HTMLInputElement | null;
     const durationInput = modal.querySelector("#seq-drawer-duration") as HTMLInputElement | null;

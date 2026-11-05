@@ -390,7 +390,7 @@ export class PropertySequenceEngine {
         if (!p) continue;
 
         // Count storey
-        const storey = globalStoreysMap?.[`${modelId}-${expressId}`];
+        const storey = p.Storey || globalStoreysMap?.[`${modelId}-${expressId}`];
         if (storey) {
           const storeyEntry = discovered.get("Storey")!;
           storeyEntry.values.add(storey);
@@ -449,6 +449,7 @@ export class PropertySequenceEngine {
 
         // Scan Psets for text properties
         const elemPsets: Record<string, Record<string, string>> | null = 
+          p.psets ||
           contextStoreys?.elementPsetsMap?.[`${modelId}-${expressId}`] || 
           (discovered.size < 50 ? this.resolveElementPsets(properties, expressId, relMap) : null);
 
