@@ -59,6 +59,7 @@ export class MinimapModule {
   private selectedExpressId: number | null = null;
 
   private isAutoTrackLevel: boolean = true;
+  private userLevelOverrideUntil: number = 0;
   private showClashPins: boolean = true;
   private isExpanded: boolean = false;
   private autoSyncCamera: boolean = true;
@@ -181,6 +182,8 @@ export class MinimapModule {
   public setLevel(index: number) {
     if (index >= 0 && index < this.config.levels.length) {
       this.config.currentLevelIndex = index;
+      this.userLevelOverrideUntil = Date.now() + 8000;
+      this.generateContextualRoomZones(this.config.levels[index].name);
       const targetElevation = this.config.levels[index].elevation;
 
       try {
@@ -434,32 +437,158 @@ export class MinimapModule {
         this.config.zoom = (this.config.size * 0.65) / maxDim;
       }
 
-      // Generate room zones if not populated
-      if (this.roomZones.length === 0 && this.modelSize.x > 5 && this.modelSize.z > 5) {
-        const sx = this.modelBounds.min.x;
-        const sz = this.modelBounds.min.z;
-        const dx = this.modelSize.x / 3;
-        const dz = this.modelSize.z / 2;
-        const titles = ["Office 101", "Conf Room A", "Lobby / Atrium", "Mechanical", "Office 102", "Corridor West"];
-        let idx = 0;
-        for (let row = 0; row < 2; row++) {
-          for (let col = 0; col < 3; col++) {
-            const rx1 = sx + col * dx;
-            const rx2 = rx1 + dx;
-            const rz1 = sz + row * dz;
-            const rz2 = rz1 + dz;
-            this.roomZones.push({
-              name: titles[idx % titles.length],
-              minX: rx1,
-              maxX: rx2,
-              minZ: rz1,
-              maxZ: rz2,
-              area: Math.round(dx * dz),
-            });
-            idx++;
-          }
-        }
+      // Generate contextual room zones if not populated
+      if (this.roomZones.length === 0 && this.modelSize.x > 2 && this.modelSize.z > 2) {
+        this.generateContextualRoomZones();
       }
+    }
+  }
+
+  /**
+   * Generates contextual zones (structural deck, plant rooms, core, foundations)
+   * tailored to the active building storey or structural discipline.
+   */
+  public generateContextualRoomZones(storeyName?: string): void {
+    if (!this.hasModel || this.modelBounds.isEmpty() || this.modelSize.x <= 2 || this.modelSize.z <= 2) {
+      return;
+    }
+
+    const minX = this.modelBounds.min.x;
+    const maxX = this.modelBounds.max.x;
+    const minZ = this.modelBounds.min.z;
+    const maxZ = this.modelBounds.max.z;
+    const totalW = maxX - minX;
+    const totalD = maxZ - minZ;
+
+    const activeLvlName = (storeyName || this.config.levels[this.config.currentLevelIndex]?.name || "").toLowerCase();
+    this.roomZones = [];
+
+    if (activeLvlName.includes("roof") || activeLvlName.includes("rtos") || activeLvlName.includes("tos")) {
+      // Rooftop structural layout: Central Core Overrun, Rooftop MEP & Plant, and Main Roof Slabs
+      const coreMinX = minX + totalW * 0.35;
+      const coreMaxX = minX + totalW * 0.65;
+      const coreMinZ = minZ + totalD * 0.35;
+      const coreMaxZ = minZ + totalD * 0.65;
+
+      this.roomZones.push({
+        name: "Roof Slab Deck (West)",
+        minX: minX,
+        maxX: coreMinX,
+        minZ: minZ,
+        maxZ: maxZ,
+        area: Math.round((coreMinX - minX) * totalD),
+      });
+
+      this.roomZones.push({
+        name: "Lift Core Overrun",
+        minX: coreMinX,
+        maxX: coreMaxX,
+        minZ: coreMinZ,
+        maxZ: coreMaxZ,
+        area: Math.round((coreMaxX - coreMinX) * (coreMaxZ - coreMinZ)),
+      });
+
+      this.roomZones.push({
+        name: "Rooftop Plant & MEP",
+        minX: coreMinX,
+        maxX: maxX,
+        minZ: minZ,
+        maxZ: coreMinZ,
+        area: Math.round((maxX - coreMinX) * (coreMinZ - minZ)),
+      });
+
+      this.roomZones.push({
+        name: "Roof Slab Deck (East)",
+        minX: coreMaxX,
+        maxX: maxX,
+        minZ: coreMinZ,
+        maxZ: maxZ,
+        area: Math.round((maxX - coreMaxX) * (maxZ - coreMinZ)),
+      });
+    } else if (
+      activeLvlName.includes("fou") ||
+      activeLvlName.includes("footing") ||
+      activeLvlName.includes("parking") ||
+      activeLvlName.includes("basement") ||
+      activeLvlName.includes("sub")
+    ) {
+      // Substructure & Foundation layout
+      const splitX = minX + totalW * 0.5;
+      const splitZ = minZ + totalD * 0.5;
+
+      this.roomZones.push({
+        name: "Foundation Mat (West)",
+        minX: minX,
+        maxX: splitX,
+        minZ: minZ,
+        maxZ: splitZ,
+        area: Math.round((splitX - minX) * (splitZ - minZ)),
+      });
+      this.roomZones.push({
+        name: "Substructure Core Vault",
+        minX: splitX,
+        maxX: maxX,
+        minZ: minZ,
+        maxZ: splitZ,
+        area: Math.round((maxX - splitX) * (splitZ - minZ)),
+      });
+      this.roomZones.push({
+        name: "Parking & Foundation Bay A",
+        minX: minX,
+        maxX: splitX,
+        minZ: splitZ,
+        maxZ: maxZ,
+        area: Math.round((splitX - minX) * (maxZ - splitZ)),
+      });
+      this.roomZones.push({
+        name: "Parking & Foundation Bay B",
+        minX: splitX,
+        maxX: maxX,
+        minZ: splitZ,
+        maxZ: maxZ,
+        area: Math.round((maxX - splitX) * (maxZ - splitZ)),
+      });
+    } else {
+      // Standard superstructure / architectural floor plate
+      const coreMinX = minX + totalW * 0.35;
+      const coreMaxX = minX + totalW * 0.65;
+      const splitZ = minZ + totalD * 0.5;
+
+      this.roomZones.push({
+        name: "Floor Plate (West)",
+        minX: minX,
+        maxX: coreMinX,
+        minZ: minZ,
+        maxZ: maxZ,
+        area: Math.round((coreMinX - minX) * totalD),
+      });
+
+      this.roomZones.push({
+        name: "Central Shear Core",
+        minX: coreMinX,
+        maxX: coreMaxX,
+        minZ: minZ,
+        maxZ: splitZ,
+        area: Math.round((coreMaxX - coreMinX) * (splitZ - minZ)),
+      });
+
+      this.roomZones.push({
+        name: "Vertical Circulation & MEP",
+        minX: coreMinX,
+        maxX: coreMaxX,
+        minZ: splitZ,
+        maxZ: maxZ,
+        area: Math.round((coreMaxX - coreMinX) * (maxZ - splitZ)),
+      });
+
+      this.roomZones.push({
+        name: "Floor Plate (East)",
+        minX: coreMaxX,
+        maxX: maxX,
+        minZ: minZ,
+        maxZ: maxZ,
+        area: Math.round((maxX - coreMaxX) * totalD),
+      });
     }
   }
 
@@ -893,8 +1022,8 @@ export class MinimapModule {
         }
       }
 
-      // Auto-track camera elevation to match floor storey
-      if (this.isAutoTrackLevel && this.config.levels.length > 0) {
+      // Auto-track camera elevation to match floor storey (unless user recently overrode it manually)
+      if (this.isAutoTrackLevel && this.config.levels.length > 0 && Date.now() > this.userLevelOverrideUntil) {
         let matchedIdx = 0;
         let minDiff = Infinity;
         for (let i = 0; i < this.config.levels.length; i++) {
@@ -912,6 +1041,7 @@ export class MinimapModule {
         }
         if (matchedIdx !== this.config.currentLevelIndex) {
           this.config.currentLevelIndex = matchedIdx;
+          this.generateContextualRoomZones(this.config.levels[matchedIdx]?.name);
           const select = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
           if (select) select.value = String(matchedIdx);
           this.updateUI();
@@ -1058,9 +1188,9 @@ export class MinimapModule {
     ctx.fillStyle = this.hasModel ? "rgba(56, 189, 248, 0.14)" : "rgba(56, 189, 248, 0.07)";
     ctx.fillRect(footX, footY, footW, footH);
 
-    // B. Room / Space Zones Overlays & Labels
+    // B. Room / Space Zones Overlays & Labels with Boundary Clipping
     if (this.roomZones.length > 0 && footW > 50 && footH > 50) {
-      ctx.font = "600 6.5px sans-serif";
+      ctx.font = "600 7px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (const room of this.roomZones) {
@@ -1071,16 +1201,35 @@ export class MinimapModule {
         const rw = Math.abs(p2.x - p1.x);
         const rh = Math.abs(p2.y - p1.y);
 
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.2)";
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(rx, ry, rw, rh);
+        ctx.clip();
+
+        // Zone background tint
+        ctx.fillStyle = "rgba(56, 189, 248, 0.05)";
+        ctx.fillRect(rx, ry, rw, rh);
+
+        // Zone boundary border
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.28)";
         ctx.lineWidth = 0.6;
         ctx.strokeRect(rx, ry, rw, rh);
 
-        if (rw > 35 && rh > 18) {
-          ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
-          ctx.fillText(room.name, rx + rw / 2, ry + rh / 2 - 2);
-          ctx.fillStyle = "rgba(56, 189, 248, 0.55)";
-          ctx.fillText(`${room.area}m²`, rx + rw / 2, ry + rh / 2 + 5);
+        if (rw > 32 && rh > 18) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+          let label = room.name;
+          if (ctx.measureText(label).width > rw - 6) {
+            while (label.length > 4 && ctx.measureText(label + "…").width > rw - 6) {
+              label = label.slice(0, -1);
+            }
+            label += "…";
+          }
+          ctx.fillText(label, rx + rw / 2, ry + rh / 2 - 4);
+
+          ctx.fillStyle = "rgba(56, 189, 248, 0.75)";
+          ctx.fillText(`${room.area.toLocaleString()} m²`, rx + rw / 2, ry + rh / 2 + 5);
         }
+        ctx.restore();
       }
     }
 
