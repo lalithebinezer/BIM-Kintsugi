@@ -14,12 +14,14 @@ export interface PropertyOption {
 }
 
 export interface SequenceCalculationOptions {
-  propertyKey: string;              // The property to sequence by
+  propertyKey: string;              // The property to sequence by, or compound "Storey > Category"
+  secondaryPropertyKey?: string;    // Optional secondary property key for multi-tier WBS
   startDate?: string;               // ISO YYYY-MM-DD, defaults to project start (e.g. 2026-06-18)
   taskDurationDays?: number;        // Default duration for each task group in days (e.g. 7-14)
   overlapDays?: number;             // Stagger/overlap in days between consecutive groups
   sortDirection?: 'asc' | 'desc';   // Ordering direction
   customOrder?: string[];           // Optional explicitly defined sequence of values
+  enableCPM?: boolean;              // Compute Critical Path Method float & criticality (default: true)
 }
 
 export interface SequencedTaskResult {
@@ -33,6 +35,15 @@ export interface SequencedTaskResult {
   elementCount: number;
   modelIdMaps: Record<string, number[]>; // modelId -> expressIds
   sampleIfcTypes: string[];
+  wbsCode?: string;                      // WBS numbering, e.g. "1.1", "1.2"
+  tierValues?: string[];                 // Individual tier values, e.g. ["Level 1", "IFCWALL"]
+  earlyStart?: string;                   // CPM Early Start date
+  earlyFinish?: string;                  // CPM Early Finish date
+  lateStart?: string;                    // CPM Late Start date
+  lateFinish?: string;                   // CPM Late Finish date
+  totalFloat?: number;                   // CPM Total Float in days (LS - ES)
+  freeFloat?: number;                    // CPM Free Float in days
+  isCritical?: boolean;                  // True if totalFloat <= 0
 }
 
 export interface SequenceEngineResult {
@@ -42,6 +53,7 @@ export interface SequenceEngineResult {
   projectStartDate: string;
   projectEndDate: string;
   tasks: SequencedTaskResult[];
+  criticalTaskCount?: number;
 }
 
 export class PropertySequenceEngine {
@@ -607,7 +619,7 @@ export class PropertySequenceEngine {
    * Groups loaded IFC elements by the selected property, sorts them into a logical
    * construction timeline, assigns start/finish dates, and returns the sequenced tasks.
    */
-  public calculateSequence(
+    public calculateSequence(
     models: any[],
     options: SequenceCalculationOptions,
     context?: {
@@ -615,19 +627,39 @@ export class PropertySequenceEngine {
       elementPsetsMap?: Record<string, Record<string, Record<string, string>>>;
     }
   ): SequenceEngineResult {
-    const propertyKey = options.propertyKey || "Storey";
+    const rawKey = (options.propertyKey || "Storey").trim();
+    let primaryKey = rawKey;
+    let secondaryKey = options.secondaryPropertyKey ? options.secondaryPropertyKey.trim() : "";
+
+    // Support compound notation e.g. "Storey > Category" or "Storey / Category"
+    if (rawKey.includes(" > ")) {
+      const parts = rawKey.split(" > ");
+      primaryKey = parts[0].trim();
+      secondaryKey = parts[1].trim();
+    } else if (rawKey.includes(" / ")) {
+      const parts = rawKey.split(" / ");
+      primaryKey = parts[0].trim();
+      secondaryKey = parts[1].trim();
+    }
+
+    const isMultiTier = Boolean(secondaryKey && secondaryKey.toLowerCase() !== primaryKey.toLowerCase());
     const startDateStr = options.startDate || "2026-06-18";
     const durationDays = Math.max(1, options.taskDurationDays ?? 10);
     const overlapDays = Math.max(0, Math.min(durationDays - 1, options.overlapDays ?? 3));
-    const stepDays = Math.max(1, durationDays - overlapDays);
+    const enableCPM = options.enableCPM !== false;
 
-    // 1. Group elements by the selected property value
-    const groups: Map<string, {
+    // 1. Hierarchical Multi-Tier Element Grouping
+    // Map: tier1Value -> (Map: tier2Value -> groupData)
+    interface NodeGroup {
+      tier1: string;
+      tier2: string;
+      compositeKey: string;
       modelIdMaps: Record<string, Set<number>>;
       ifcTypes: Set<string>;
       elementCount: number;
-    }> = new Map();
+    }
 
+    const hierarchy = new Map<string, Map<string, NodeGroup>>();
     let totalElements = 0;
 
     for (const model of models) {
@@ -645,7 +677,7 @@ export class PropertySequenceEngine {
         const dbKey = `${modelId}-${expressId}`;
         const storeyName = p.Storey || context?.globalStoreysMap?.[dbKey];
         let psets = p.psets || context?.elementPsetsMap?.[dbKey];
-        if (!psets && (propertyKey.includes('.') || !['storey', 'category', 'predefinedtype', 'name'].includes(propertyKey.toLowerCase()))) {
+        if (!psets && (primaryKey.includes('.') || secondaryKey.includes('.') || !['storey', 'category', 'predefinedtype', 'name'].includes(primaryKey.toLowerCase()))) {
           psets = this.resolveElementPsets(properties, expressId, relMap);
         }
 
@@ -653,101 +685,215 @@ export class PropertySequenceEngine {
         if (ifcType.startsWith("IFCREL") || ifcType.startsWith("IFCPROPERTY") || ifcType === "IFCPROPERTYSINGLEVALUE" || ifcType === "IFCPROPERTYSET") {
           continue;
         }
-        const propVal = this.getElementPropertyValue(p, propertyKey, {
+
+        const tier1Val = this.getElementPropertyValue(p, primaryKey, {
           expressId,
           modelId,
           storeyName,
           psets
         });
 
-        if (!groups.has(propVal)) {
-          groups.set(propVal, {
+        const tier2Val = isMultiTier
+          ? this.getElementPropertyValue(p, secondaryKey, {
+              expressId,
+              modelId,
+              storeyName,
+              psets
+            })
+          : "";
+
+        if (!hierarchy.has(tier1Val)) {
+          hierarchy.set(tier1Val, new Map());
+        }
+        const tier2Map = hierarchy.get(tier1Val)!;
+        const subKey = isMultiTier ? tier2Val : "__single__";
+
+        if (!tier2Map.has(subKey)) {
+          tier2Map.set(subKey, {
+            tier1: tier1Val,
+            tier2: tier2Val,
+            compositeKey: isMultiTier ? `${tier1Val} > ${tier2Val}` : tier1Val,
             modelIdMaps: {},
             ifcTypes: new Set(),
             elementCount: 0
           });
         }
 
-        const group = groups.get(propVal)!;
-        if (!group.modelIdMaps[modelId]) {
-          group.modelIdMaps[modelId] = new Set<number>();
+        const node = tier2Map.get(subKey)!;
+        if (!node.modelIdMaps[modelId]) {
+          node.modelIdMaps[modelId] = new Set<number>();
         }
-        group.modelIdMaps[modelId].add(expressId);
-        group.ifcTypes.add(ifcType);
-        group.elementCount++;
+        node.modelIdMaps[modelId].add(expressId);
+        node.ifcTypes.add(ifcType);
+        node.elementCount++;
         totalElements++;
       }
     }
 
-    // 2. Sort group values into a timeline sequence
-    const uniqueValues = Array.from(groups.keys());
-    const sortedValues = this.sortPropertyValues(
-      uniqueValues,
-      propertyKey,
+    // 2. Hierarchical Sorting
+    // Primary tier sorting (e.g. storeys by elevation)
+    const uniqueTier1 = Array.from(hierarchy.keys());
+    const sortedTier1 = this.sortPropertyValues(
+      uniqueTier1,
+      primaryKey,
       options.sortDirection ?? 'asc',
-      options.customOrder
+      !isMultiTier ? options.customOrder : undefined
     );
 
-    // 3. Compute Dates for Each Sequenced Task
+    // Build ordered list of node groups
+    const orderedNodes: { node: NodeGroup; wbsCode: string }[] = [];
+    sortedTier1.forEach((t1Val, i) => {
+      const tier2Map = hierarchy.get(t1Val);
+      if (!tier2Map) return;
+
+      if (!isMultiTier) {
+        const node = tier2Map.get("__single__");
+        if (node) {
+          orderedNodes.push({ node, wbsCode: String(i + 1) });
+        }
+      } else {
+        const uniqueTier2 = Array.from(tier2Map.keys());
+        const sortedTier2 = this.sortPropertyValues(
+          uniqueTier2,
+          secondaryKey,
+          options.sortDirection ?? 'asc'
+        );
+
+        sortedTier2.forEach((t2Val, j) => {
+          const node = tier2Map.get(t2Val);
+          if (node) {
+            orderedNodes.push({ node, wbsCode: `${i + 1}.${j + 1}` });
+          }
+        });
+      }
+    });
+
+    // 3. CPM Date Calculation (Forward Pass & Backward Pass)
     const MS_PER_DAY = 86400000;
     const baseStartMs = new Date(startDateStr).getTime();
+    const taskCount = orderedNodes.length;
 
+    // Forward Pass: calculate Early Start (ES) and Early Finish (EF)
+    const esMsList: number[] = new Array(taskCount).fill(0);
+    const efMsList: number[] = new Array(taskCount).fill(0);
+
+    for (let k = 0; k < taskCount; k++) {
+      if (k === 0) {
+        esMsList[k] = baseStartMs;
+      } else {
+        // Predecessor finishes at efMsList[k-1]; with overlap, next starts at EF[k-1] - overlap
+        const predecessorFinish = efMsList[k - 1];
+        const earliestWithOverlap = predecessorFinish - (overlapDays * MS_PER_DAY);
+        esMsList[k] = Math.max(baseStartMs, earliestWithOverlap);
+      }
+      efMsList[k] = esMsList[k] + (durationDays * MS_PER_DAY);
+    }
+
+    const projectFinishMs = taskCount > 0 ? Math.max(...efMsList) : baseStartMs;
+
+    // Backward Pass: calculate Late Finish (LF) and Late Start (LS)
+    const lfMsList: number[] = new Array(taskCount).fill(0);
+    const lsMsList: number[] = new Array(taskCount).fill(0);
+    const totalFloatDays: number[] = new Array(taskCount).fill(0);
+    const freeFloatDays: number[] = new Array(taskCount).fill(0);
+
+    for (let k = taskCount - 1; k >= 0; k--) {
+      if (k === taskCount - 1) {
+        lfMsList[k] = projectFinishMs;
+      } else {
+        // Successor k+1 has Late Start lsMsList[k+1].
+        // Because ES[k+1] >= EF[k] - overlapDays, latest EF[k] <= LS[k+1] + overlapDays
+        const latestFromSuccessor = lsMsList[k + 1] + (overlapDays * MS_PER_DAY);
+        lfMsList[k] = Math.min(projectFinishMs, latestFromSuccessor);
+      }
+      lsMsList[k] = lfMsList[k] - (durationDays * MS_PER_DAY);
+
+      const floatMs = lsMsList[k] - esMsList[k];
+      totalFloatDays[k] = Math.max(0, Math.round(floatMs / MS_PER_DAY));
+
+      if (k < taskCount - 1) {
+        const freeFloatMs = esMsList[k + 1] - (efMsList[k] - (overlapDays * MS_PER_DAY));
+        freeFloatDays[k] = Math.max(0, Math.round(freeFloatMs / MS_PER_DAY));
+      } else {
+        freeFloatDays[k] = 0;
+      }
+    }
+
+    // 4. Construct Sequenced Task Results
     const tasks: SequencedTaskResult[] = [];
-    let overallMinMs = baseStartMs;
-    let overallMaxMs = baseStartMs;
+    let criticalCount = 0;
 
-    sortedValues.forEach((val, idx) => {
-      const groupData = groups.get(val);
-      if (!groupData) return;
-
-      const taskStartMs = baseStartMs + (idx * stepDays) * MS_PER_DAY;
-      const taskEndMs = taskStartMs + durationDays * MS_PER_DAY;
-
-      if (idx === 0 || taskStartMs < overallMinMs) overallMinMs = taskStartMs;
-      if (taskEndMs > overallMaxMs) overallMaxMs = taskEndMs;
-
+    orderedNodes.forEach(({ node, wbsCode }, idx) => {
+      const taskStartMs = esMsList[idx];
+      const taskEndMs = efMsList[idx];
       const taskStartDate = new Date(taskStartMs).toISOString().split("T")[0];
       const taskEndDate = new Date(taskEndMs).toISOString().split("T")[0];
+      const lateStartDate = new Date(lsMsList[idx]).toISOString().split("T")[0];
+      const lateFinishDate = new Date(lfMsList[idx]).toISOString().split("T")[0];
+
+      const isCritical = enableCPM && totalFloatDays[idx] <= 0;
+      if (isCritical) criticalCount++;
 
       // Convert Set<number> to number[] for each model
       const modelMapsArray: Record<string, number[]> = {};
-      for (const [mId, idSet] of Object.entries(groupData.modelIdMaps)) {
+      for (const [mId, idSet] of Object.entries(node.modelIdMaps)) {
         modelMapsArray[mId] = Array.from(idSet);
       }
 
-      // Generate a descriptive task name
-      let cleanTaskName = `${propertyKey}: ${val}`;
-      if (propertyKey.toLowerCase() === "storey" || propertyKey.toLowerCase() === "level") {
-        cleanTaskName = `Phase ${idx + 1} — ${val} Superstructure & Finishes`;
-      } else if (propertyKey.toLowerCase() === "category") {
-        const readable = val.replace(/^IFC/i, '').replace(/STANDARDCASE$/i, '');
-        cleanTaskName = `Phase ${idx + 1} — ${readable} Construction Works`;
+      // Generate descriptive task name
+      let cleanTaskName = "";
+      if (isMultiTier) {
+        const cleanCat = node.tier2.replace(/^IFC/i, '').replace(/STANDARDCASE$/i, '');
+        cleanTaskName = `WBS ${wbsCode} — ${node.tier1}: ${cleanCat}`;
+      } else {
+        if (primaryKey.toLowerCase() === "storey" || primaryKey.toLowerCase() === "level") {
+          cleanTaskName = `Phase ${wbsCode} — ${node.tier1} Superstructure & Finishes`;
+        } else if (primaryKey.toLowerCase() === "category") {
+          const readable = node.tier1.replace(/^IFC/i, '').replace(/STANDARDCASE$/i, '');
+          cleanTaskName = `Phase ${wbsCode} — ${readable} Construction Works`;
+        } else {
+          cleanTaskName = `${primaryKey}: ${node.tier1}`;
+        }
       }
 
+      const slug = (isMultiTier ? `${node.tier1}-${node.tier2}` : node.tier1)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-');
+
       tasks.push({
-        id: `seq-task-${idx + 1}-${val.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        id: `seq-task-${wbsCode.replace(/\./g, '_')}-${slug}`,
         name: cleanTaskName,
-        propertyKey,
-        propertyValue: val,
+        propertyKey: isMultiTier ? `${primaryKey} > ${secondaryKey}` : primaryKey,
+        propertyValue: node.compositeKey,
         startDate: taskStartDate,
         endDate: taskEndDate,
         durationDays,
-        elementCount: groupData.elementCount,
+        elementCount: node.elementCount,
         modelIdMaps: modelMapsArray,
-        sampleIfcTypes: Array.from(groupData.ifcTypes).slice(0, 5)
+        sampleIfcTypes: Array.from(node.ifcTypes).slice(0, 5),
+        wbsCode,
+        tierValues: isMultiTier ? [node.tier1, node.tier2] : [node.tier1],
+        earlyStart: taskStartDate,
+        earlyFinish: taskEndDate,
+        lateStart: lateStartDate,
+        lateFinish: lateFinishDate,
+        totalFloat: totalFloatDays[idx],
+        freeFloat: freeFloatDays[idx],
+        isCritical
       });
     });
 
-    const projectStartDate = new Date(overallMinMs).toISOString().split("T")[0];
-    const projectEndDate = new Date(overallMaxMs).toISOString().split("T")[0];
+    const projectStartDate = taskCount > 0 ? new Date(esMsList[0]).toISOString().split("T")[0] : startDateStr;
+    const projectEndDate = taskCount > 0 ? new Date(projectFinishMs).toISOString().split("T")[0] : startDateStr;
 
     return {
-      propertyKey,
+      propertyKey: isMultiTier ? `${primaryKey} > ${secondaryKey}` : primaryKey,
       totalTasks: tasks.length,
       totalElements,
       projectStartDate,
       projectEndDate,
-      tasks
+      tasks,
+      criticalTaskCount: criticalCount
     };
   }
 
@@ -806,7 +952,10 @@ export class PropertySequenceEngine {
             endDate: task.endDate,
             unitCost: existing.unitCost || 250,
             quantity: existing.quantity || 1,
-            calculatedCost: existing.calculatedCost || 250
+            calculatedCost: existing.calculatedCost || 250,
+            wbsCode: task.wbsCode,
+            totalFloat: task.totalFloat,
+            isCritical: task.isCritical
           };
           updatedElements++;
         }
@@ -824,7 +973,10 @@ export class PropertySequenceEngine {
           elementIds: allElementIds,
           modelId: firstModelId,
           unitCost: 250,
-          quantity: allElementIds.size
+          quantity: allElementIds.size,
+          wbsCode: task.wbsCode,
+          totalFloat: task.totalFloat,
+          isCritical: task.isCritical
         });
       }
     }

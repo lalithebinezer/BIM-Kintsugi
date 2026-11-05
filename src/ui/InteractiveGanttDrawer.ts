@@ -1,4 +1,5 @@
 import { ScheduleManager, type ScheduleTask } from "../modules/ScheduleManager";
+import { ScheduleImportParsers } from "../modules/ScheduleImportParsers";
 import { showToast } from "./ToastManager";
 
 /**
@@ -56,6 +57,8 @@ export class InteractiveGanttDrawer {
             <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display: inline-block; vertical-align: middle; margin-right: 2px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 5D Cost Control
             </button>
+            <button id="btn-gantt-export-mspdi" class="btn-gantt-drawer-action" title="Export schedule to Microsoft Project XML (MSPDI)">Export MSP XML</button>
+            <button id="btn-gantt-export-p6" class="btn-gantt-drawer-action" title="Export schedule to Oracle Primavera P6 XER">Export P6 XER</button>
             <button id="btn-gantt-fit-dates" class="btn-gantt-drawer-action" title="Fit all tasks into timeline view">Fit Timeline</button>
             <button id="btn-close-gantt-drawer" class="btn-icon-sm" title="Close Gantt Drawer">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -134,6 +137,14 @@ export class InteractiveGanttDrawer {
     panel.querySelector("#gantt-search-filter")?.addEventListener("input", (e) => {
       const query = (e.target as HTMLInputElement).value.toLowerCase();
       this.filterTasks(query);
+    });
+
+    panel.querySelector("#btn-gantt-export-mspdi")?.addEventListener("click", () => {
+      this.exportSchedule("MSPDI");
+    });
+
+    panel.querySelector("#btn-gantt-export-p6")?.addEventListener("click", () => {
+      this.exportSchedule("P6");
     });
 
     panel.querySelector("#btn-gantt-fit-dates")?.addEventListener("click", () => {
@@ -294,7 +305,9 @@ export class InteractiveGanttDrawer {
       row.innerHTML = `
         <div class="col-task-name" title="${t.name}">
           <span class="task-drag-handle">≡</span>
+          ${t.wbsCode ? `<span class="gantt-wbs-badge" style="font-size: 0.65rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">${t.wbsCode}</span>` : ''}
           <span class="task-text">${t.name}</span>
+          ${t.isCritical ? `<span class="gantt-cpm-badge" style="font-size: 0.62rem; font-weight: 800; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); padding: 1px 3px; border-radius: 2px; margin-left: 4px;" title="Critical Path Task (Float: ${t.totalFloat ?? 0}d)">CPM</span>` : ''}
         </div>
         <div class="col-task-status">
           <span class="gantt-status-tag ${statusClass}">${t.status}</span>
@@ -446,4 +459,35 @@ export class InteractiveGanttDrawer {
       r.style.display = text.includes(query) ? "" : "none";
     });
   }
+
+  public exportSchedule(format: "MSPDI" | "P6"): void {
+    const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+    if (!scheduleManager || scheduleManager.tasks.size === 0) {
+      showToast("No schedule tasks available to export", "warning");
+      return;
+    }
+    const tasks = scheduleManager.getTasksSorted();
+    if (format === "MSPDI") {
+      const xml = ScheduleImportParsers.exportToMSPDI(tasks);
+      this.triggerDownload(xml, "BIM_Kintsugi_Schedule.xml", "application/xml");
+      showToast(`Exported ${tasks.length} tasks to Microsoft Project XML`, "success");
+    } else {
+      const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
+      this.triggerDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
+      showToast(`Exported ${tasks.length} tasks to Oracle Primavera P6 XER`, "success");
+    }
+  }
+
+  private triggerDownload(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
 }

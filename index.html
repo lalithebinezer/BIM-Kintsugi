@@ -868,6 +868,17 @@
                 <span>Calculate 4D Sequence</span>
               </button>
               <div id="sequence-status-banner" class="sequence-status-banner" style="display: none;"></div>
+              <!-- Enterprise Schedule Interchange Exporters -->
+              <div class="schedule-export-actions" style="display: flex; gap: 0.35rem; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border-subtle);">
+                <button type="button" id="btn-export-mspdi-xml" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule to Microsoft Project XML (MSPDI)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>MS Project XML</span>
+                </button>
+                <button type="button" id="btn-export-primavera-p6" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule to Oracle Primavera P6 XER">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Primavera P6</span>
+                </button>
+              </div>
             </div>
 
             <div class="panel-body thin-scrollbar" id="schedule-tasks-list">

@@ -1,5 +1,9 @@
 import { BimEngine } from "../core/BimEngine";
 import { SelectionManager } from "./SelectionManager";
+import { PropertySequenceEngine } from "./PropertySequenceEngine";
+import { ScheduleManager } from "./ScheduleManager";
+import { ScheduleImportParsers } from "./ScheduleImportParsers";
+import { ModelManager } from "../core/ModelManager";
 import { ClashDetector } from "./ClashDetector";
 import { CarbonLcaManager } from "./CarbonLcaManager";
 import { MeasurementSuite } from "./MeasurementSuite";
@@ -51,6 +55,18 @@ export class BimAiCopilot {
   /**
    * Processes natural language query and dispatches BIM commands.
    */
+  private triggerFileDownload(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   public async executeQuery(query: string): Promise<CopilotMessage> {
     this.isProcessing = true;
     const userMsg: CopilotMessage = {
@@ -168,6 +184,60 @@ export class BimAiCopilot {
         executed.push("Preset: Cinematic", "Render Style: Color + Pen + Shadows");
       }
       followUps.push("Switch to Pen drawing style", "Switch to Cinematic style", "Reset selection");
+    }
+
+
+    // 8. 4D Construction Sequencing & WBS Queries
+    else if (q.includes("sequence") || q.includes("4d schedule") || q.includes("wbs") || (q.includes("generate") && q.includes("schedule"))) {
+      let propKey = "Storey";
+      if (q.includes("category")) propKey = "Category";
+      else if (q.includes("storey") && q.includes("category")) propKey = "Storey > Category";
+
+      const seqEngine = PropertySequenceEngine.getInstance();
+      const modelMgr = ModelManager.getInstance();
+      const schedMgr = ScheduleManager.getInstance();
+      const models = modelMgr.getModels();
+
+      if (models.length === 0) {
+        responseText = "No IFC model is currently loaded. Please load an IFC model first to compute 4D sequencing.";
+      } else {
+        const result = seqEngine.calculateSequence(models, {
+          propertyKey: propKey,
+          startDate: "2026-06-18",
+          taskDurationDays: 10,
+          overlapDays: 3,
+          enableCPM: true
+        });
+        const appDb = (window as any).twinDatabase || {};
+        seqEngine.applySequenceToTwinDatabase(result, appDb, schedMgr);
+        const crit = result.criticalTaskCount ?? 0;
+        responseText = `Generated 4D construction sequence by "${propKey}". Created ${result.totalTasks} WBS tasks across ${result.totalElements} elements with CPM float calculation (${crit} tasks on Critical Path). Project timeline: ${result.projectStartDate} to ${result.projectEndDate}.`;
+        executed.push(`Calculate 4D Sequence (${propKey})`, "Compute CPM Critical Path", "Sync Twin Database");
+        followUps.push("Open 4D Gantt drawer", "Export schedule to MS Project", "Export to Primavera P6");
+      }
+    }
+
+    // 9. Enterprise Schedule Exporters (MS Project / Primavera P6)
+    else if (q.includes("export") && (q.includes("msp") || q.includes("project") || q.includes("xml") || q.includes("primavera") || q.includes("p6") || q.includes("xer") || q.includes("schedule"))) {
+      const schedMgr = ScheduleManager.getInstance();
+      const tasks = schedMgr.getTasksSorted();
+      if (tasks.length === 0) {
+        responseText = "There are no schedule tasks available to export. Generate a 4D sequence or load a model first.";
+      } else {
+        const isP6 = q.includes("primavera") || q.includes("p6") || q.includes("xer");
+        if (isP6) {
+          const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
+          this.triggerFileDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
+          responseText = `Exported ${tasks.length} tasks to Oracle Primavera P6 XER format with WBS hierarchy and calendar metadata.`;
+          executed.push("Export Oracle Primavera P6 XER");
+        } else {
+          const xml = ScheduleImportParsers.exportToMSPDI(tasks);
+          this.triggerFileDownload(xml, "BIM_Kintsugi_Schedule.xml", "application/xml");
+          responseText = `Exported ${tasks.length} tasks to Microsoft Project XML (MSPDI) format with WBS codes and dates.`;
+          executed.push("Export Microsoft Project XML");
+        }
+        followUps.push("Open 4D Gantt drawer", "Run clash detection", "Export BOQ as CSV");
+      }
     }
 
     // Default Fallback: Query OBC.ItemsFinder + optional local Ollama LLM

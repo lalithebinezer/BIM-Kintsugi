@@ -324,6 +324,9 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).federationModule = federationModule;
 (window as any).boq5DModule = boq5DModule;
 (window as any).clippingModule = clippingModule;
+(window as any).InteractiveGanttDrawer = InteractiveGanttDrawer;
+(window as any).PropertySequenceEngine = PropertySequenceEngine;
+(window as any).ScheduleImportParsers = ScheduleImportParsers;
 
 // Setup Command Palette (Ctrl + K)
 const commandPalette = new CommandPalette([
@@ -3856,6 +3859,48 @@ if (hintDismissBtn) {
 }
 
 
+
+// --- ENTERPRISE SCHEDULE EXPORTERS (MS Project XML & Primavera P6 XER) ---
+const btnExportMspdi = document.getElementById("btn-export-mspdi-xml");
+btnExportMspdi?.addEventListener("click", () => {
+  const tasks = scheduleManager.getTasksSorted();
+  if (tasks.length === 0) {
+    showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
+    return;
+  }
+  const xml = ScheduleImportParsers.exportToMSPDI(tasks);
+  const blob = new Blob([xml], { type: "application/xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "BIM_Kintsugi_Schedule.xml";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${tasks.length} tasks to MS Project XML (MSPDI)`, "success");
+});
+
+const btnExportP6 = document.getElementById("btn-export-primavera-p6");
+btnExportP6?.addEventListener("click", () => {
+  const tasks = scheduleManager.getTasksSorted();
+  if (tasks.length === 0) {
+    showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
+    return;
+  }
+  const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
+  const blob = new Blob([xer], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "BIM_Kintsugi_Schedule.xer";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${tasks.length} tasks to Oracle Primavera P6 XER`, "success");
+});
+
 // --- STRUCTURED AI PROMPT EXPORTER ---
 const btnExportPrompt = document.getElementById("btn-export-prompt");
 if (btnExportPrompt) {
@@ -3863,7 +3908,7 @@ if (btnExportPrompt) {
     const expressId = document.getElementById("prop-express-id")?.textContent || "-";
     const ifcType = document.getElementById("prop-ifc-type")?.textContent || "-";
     const name = document.getElementById("prop-name")?.textContent || "-";
-    const storey = document.getElementById("prop-storey")?.textContent || "-";
+    const storey = document.getElementById("hover-prop-storey")?.textContent || document.getElementById("breadcrumb-storey")?.textContent || document.getElementById("prop-storey")?.textContent || "-";
     const len = document.getElementById("prop-dim-length")?.textContent || "-";
     const width = document.getElementById("prop-dim-width")?.textContent || "-";
     const height = document.getElementById("prop-dim-height")?.textContent || "-";

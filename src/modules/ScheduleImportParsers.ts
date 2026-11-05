@@ -174,4 +174,86 @@ export class ScheduleImportParsers {
     if (upper.includes("MEP") || upper.includes("HVAC") || upper.includes("DUCT") || upper.includes("PIPE") || upper.includes("ELECTRIC")) return "IFCFLOWSEGMENT";
     return "IFCELEMENT";
   }
+
+  /**
+   * Export schedule tasks to Microsoft Project XML format (MSPDI).
+   */
+  public static exportToMSPDI(tasks: ScheduleTask[], projectName: string = "BIM-Kintsugi 4D Schedule"): string {
+    const minStart = tasks.reduce((min, t) => !min || t.startDate < min ? t.startDate : min, "") || "2026-06-18";
+    const maxEnd = tasks.reduce((max, t) => !max || t.endDate > max ? t.endDate : max, "") || "2026-12-31";
+
+    const xmlEscape = (str: string) => (str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+
+    const taskXml = tasks.map((t, idx) => {
+      const uid = idx + 1;
+      const s = new Date(t.startDate);
+      const e = new Date(t.endDate);
+      const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
+      const durationHours = days * 8;
+      const pct = t.status === "Completed" ? 100 : t.status === "In Progress" ? 50 : 0;
+      const cost = t.unitCost ? t.unitCost * (t.quantity || 1) : 0;
+
+      return `    <Task>
+      <UID>${uid}</UID>
+      <ID>${uid}</ID>
+      <Name>${xmlEscape(t.name)}</Name>
+      <Type>1</Type>
+      <IsNull>0</IsNull>
+      <CreateDate>${t.startDate}T08:00:00</CreateDate>
+      <Start>${t.startDate}T08:00:00</Start>
+      <Finish>${t.endDate}T17:00:00</Finish>
+      <Duration>PT${durationHours}H0M0S</Duration>
+      <PercentComplete>${pct}</PercentComplete>
+      <Cost>${cost.toFixed(2)}</Cost>
+    </Task>`;
+    }).join("\n");
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Project xmlns="http://schemas.microsoft.com/project">
+  <Name>${xmlEscape(projectName)}</Name>
+  <Title>${xmlEscape(projectName)}</Title>
+  <StartDate>${minStart}T08:00:00</StartDate>
+  <FinishDate>${maxEnd}T17:00:00</FinishDate>
+  <Tasks>
+${taskXml}
+  </Tasks>
+</Project>`;
+  }
+
+  /**
+   * Export schedule tasks to Oracle Primavera P6 XER format.
+   */
+  public static exportToPrimaveraP6(tasks: ScheduleTask[], projectName: string = "BIM-Kintsugi 4D Schedule"): string {
+    const minStart = tasks.reduce((min, t) => !min || t.startDate < min ? t.startDate : min, "") || "2026-06-18";
+    const maxEnd = tasks.reduce((max, t) => !max || t.endDate > max ? t.endDate : max, "") || "2026-12-31";
+    const today = new Date().toISOString().split("T")[0];
+
+    let xer = `ERMHDR\t24.12\t${today}\tPROJECTS\tUSER\tBIM-Kintsugi\n`;
+    xer += `%T\tPROJECT\n`;
+    xer += `%F\tproj_id\tproj_short_name\tclndr_id\tplan_start_date\tplan_end_date\n`;
+    xer += `%R\t1\t${projectName.replace(/\t/g, " ").slice(0, 32)}\t1\t${minStart} 08:00\t${maxEnd} 17:00\n`;
+    xer += `%T\tCALENDAR\n`;
+    xer += `%F\tclndr_id\tclndr_name\tclndr_type\tday_hr_cnt\tweek_hr_cnt\n`;
+    xer += `%R\t1\tStandard 5 Day Workweek\tCA_Base\t8.0\t40.0\n`;
+    xer += `%T\tTASK\n`;
+    xer += `%F\ttask_id\tproj_id\ttask_code\ttask_name\tstatus_code\ttarget_start_date\ttarget_end_date\ttarget_cost\n`;
+
+    tasks.forEach((t, idx) => {
+      const taskId = idx + 1;
+      const taskCode = `TK-${String(idx + 1).padStart(3, "0")}`;
+      const status = t.status === "Completed" ? "TK_Complete" : t.status === "In Progress" ? "TK_Active" : "TK_NotStart";
+      const cost = (t.unitCost ? t.unitCost * (t.quantity || 1) : 0).toFixed(2);
+      const safeName = (t.name || `Task ${taskId}`).replace(/\t/g, " ");
+      xer += `%R\t${taskId}\t1\t${taskCode}\t${safeName}\t${status}\t${t.startDate} 08:00\t${t.endDate} 17:00\t${cost}\n`;
+    });
+
+    xer += `%E\n`;
+    return xer;
+  }
+
 }

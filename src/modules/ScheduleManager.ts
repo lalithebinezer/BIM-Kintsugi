@@ -18,6 +18,9 @@ export interface ScheduleTask {
   modelId: string;
   unitCost: number;
   quantity: number;
+  wbsCode?: string;
+  totalFloat?: number;
+  isCritical?: boolean;
 }
 
 export interface ElementCostData {
@@ -33,6 +36,19 @@ export interface ElementCostData {
  * Manages 4D schedule tasks and 5D cost data for the application.
  */
 export class ScheduleManager {
+  private static instance: ScheduleManager;
+
+  public static getInstance(): ScheduleManager {
+    if (!ScheduleManager.instance) {
+      ScheduleManager.instance = new ScheduleManager();
+    }
+    return ScheduleManager.instance;
+  }
+
+  constructor() {
+    ScheduleManager.instance = this;
+  }
+
   /** All schedule tasks keyed by task ID */
   tasks: Map<string, ScheduleTask> = new Map();
 
