@@ -67,6 +67,7 @@ function getCategoryColor(_theme: string, category: string): string {
 }
 import { ScheduleManager } from "./modules/ScheduleManager";
 import { PropertySequenceEngine } from "./modules/PropertySequenceEngine";
+import { IfcParameterReader } from "./modules/IfcParameterReader";
 import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
 import { CostRateManager } from "./modules/CostRateManager";
@@ -6817,6 +6818,13 @@ function updateSequencePropertyOptions() {
     select.value = currentVal;
   }
 
+  // Update IFC Parameter Reader count badge if present
+  const readerBadge = document.getElementById("param-reader-count-badge");
+  if (readerBadge) {
+    const params = IfcParameterReader.getInstance().scanModelParameters(models, globalElementStoreysMap);
+    readerBadge.textContent = `${params.length} Params`;
+  }
+
   // Ensure custom text input visibility matches selection
   if (customPropInput) {
     customPropInput.style.display = select.value === "__custom__" ? "block" : "none";
@@ -6834,6 +6842,33 @@ function initPropertySequenceEngineUI() {
   const sortDirSelect = document.getElementById("sequence-sort-dir") as HTMLSelectElement | null;
   const banner = document.getElementById("sequence-status-banner");
   const btnSeqToggle = document.getElementById("btn-timeline-seq-toggle");
+
+  // IFC Parameter Reader Integration
+  const ifcParamReader = IfcParameterReader.getInstance();
+  ifcParamReader.setCallbacks({
+    getModels: () => Array.from(fragments.list.values()),
+    getStoreysMap: () => globalElementStoreysMap,
+    onSequenceApplied: (result, paramKey) => {
+      calculateTimelineBounds();
+      updateScheduleWidgetUI();
+      InteractiveGanttDrawer.getInstance().render();
+      if (typeof (window as any).updateTimelineVisualState === "function") {
+        (window as any).updateTimelineVisualState();
+      }
+      showToast(`✓ Generated 4D sequence with ${result.totalTasks} phases from '${paramKey}'`, "success");
+    }
+  });
+
+  const openIfcParamReader = (targetKey?: string) => {
+    ifcParamReader.openModal(targetKey);
+  };
+
+  (window as any).openIfcParameterReader = openIfcParamReader;
+
+  document.getElementById("btn-open-param-reader")?.addEventListener("click", () => openIfcParamReader());
+  document.getElementById("btn-dock-ifc-params")?.addEventListener("click", () => openIfcParamReader());
+  document.getElementById("btn-timeline-param-reader")?.addEventListener("click", () => openIfcParamReader());
+  document.getElementById("btn-inspector-param-reader")?.addEventListener("click", () => openIfcParamReader());
 
   // Show/hide custom property text input when dropdown changes
   propSelect?.addEventListener("change", () => {

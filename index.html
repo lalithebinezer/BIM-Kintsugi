@@ -382,6 +382,18 @@
             <span class="dock-tooltip">4D Gantt</span>
           </div>
 
+          <div class="dock-item" data-tooltip="IFC Parameter Reader (Choose for 4D Sequence)">
+            <button class="btn-tool dock-icon" id="btn-dock-ifc-params" aria-label="IFC Parameter Reader">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4FF3F" stroke-width="2.2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <line x1="8" y1="6" x2="16" y2="6"/>
+                <line x1="8" y1="10" x2="16" y2="10"/>
+              </svg>
+            </button>
+            <span class="dock-tooltip">Parameters (4D)</span>
+          </div>
+
           <div class="dock-item" data-tooltip="5D Cost Estimating & Rates">
             <button class="btn-tool dock-icon" id="btn-dock-cost" aria-label="5D Cost Estimating & Rates">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -779,12 +791,26 @@
 
             <!-- Property-Driven Construction Sequence Generator -->
             <div class="sequence-generator-box" id="sequence-generator-box">
-              <div class="sequence-box-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-400)" stroke-width="2.2">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
-                </svg>
-                <span>Dynamic Sequence Engine</span>
+              <div class="sequence-box-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-400)" stroke-width="2.2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                  </svg>
+                  <span>Dynamic Sequence Engine</span>
+                </div>
               </div>
+
+              <!-- Primary IFC Parameter Reader Trigger -->
+              <button id="btn-open-param-reader" class="btn-param-reader-trigger" type="button" title="Open IFC Parameter Reader to inspect all model parameters and generate 4D sequence">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  <line x1="8" y1="6" x2="16" y2="6"/>
+                  <line x1="8" y1="10" x2="16" y2="10"/>
+                </svg>
+                <span>IFC Parameter Reader</span>
+                <span class="param-count-badge" id="param-reader-count-badge">Scan</span>
+              </button>
               <div class="sequence-field-row">
                 <label for="sequence-property-select" class="sequence-field-label">Sequence By Property:</label>
                 <div class="sequence-prop-input-wrap" style="display: flex; gap: 0.35rem; align-items: center;">
@@ -1393,11 +1419,16 @@
                 </svg>
                 <span>Element Properties</span>
               </div>
-              <button type="button" id="btn-panel-clear-selection" class="btn-esc-pill" title="Exit selection (Esc)" style="display: none;">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span>Exit</span>
-                <kbd class="hud-kbd">Esc</kbd>
-              </button>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <button type="button" id="btn-inspector-param-reader" class="btn-inspector-param-reader" title="Open IFC Parameter Reader (Scan all parameters in model)">
+                  📖 Parameters
+                </button>
+                <button type="button" id="btn-panel-clear-selection" class="btn-esc-pill" title="Exit selection (Esc)" style="display: none;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span>Exit</span>
+                  <kbd class="hud-kbd">Esc</kbd>
+                </button>
+              </div>
             </div>
             <div class="panel-body thin-scrollbar">
               <div id="properties-selected-state" style="display:none; flex-direction:column; gap:0.65rem; width:100%;">
@@ -2240,6 +2271,10 @@
 
             <button class="btn-timeline-csv" id="btn-timeline-seq-toggle" title="Configure and Calculate Property-Driven 4D Construction Sequence">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Sequence Engine
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-timeline-param-reader" title="Open IFC Parameter Reader to Choose Any Property for 4D Sequencing" style="border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg> Parameter Reader
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
