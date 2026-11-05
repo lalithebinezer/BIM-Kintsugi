@@ -108,8 +108,11 @@ export class MinimapModule {
     (window as any).viewer_minimap = this;
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
     if (this.canvas) {
-      this.canvas.width = this.config.size;
-      this.canvas.height = this.config.size;
+      const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
+      this.canvas.width = Math.round(this.config.size * dpr);
+      this.canvas.height = Math.round(this.config.size * dpr);
+      this.canvas.style.width = `${this.config.size}px`;
+      this.canvas.style.height = `${this.config.size}px`;
       this.ctx = this.canvas.getContext("2d");
       this.bindEvents();
       this.bindHeaderControls();
@@ -290,8 +293,11 @@ export class MinimapModule {
     const clampedSize = Math.max(140, Math.min(520, size));
     this.config.size = clampedSize;
     if (this.canvas) {
-      this.canvas.width = clampedSize;
-      this.canvas.height = clampedSize;
+      const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
+      this.canvas.width = Math.round(clampedSize * dpr);
+      this.canvas.height = Math.round(clampedSize * dpr);
+      this.canvas.style.width = `${clampedSize}px`;
+      this.canvas.style.height = `${clampedSize}px`;
     }
     const container = document.getElementById("minimap-container");
     if (container) {
@@ -789,9 +795,23 @@ export class MinimapModule {
     this.updateModelBounds();
 
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-    const center = w / 2;
+    const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
+    const displaySize = this.config.size;
+    const targetBuffer = Math.round(displaySize * dpr);
+
+    if (this.canvas.width !== targetBuffer || this.canvas.height !== targetBuffer) {
+      this.canvas.width = targetBuffer;
+      this.canvas.height = targetBuffer;
+      this.canvas.style.width = `${displaySize}px`;
+      this.canvas.style.height = `${displaySize}px`;
+    }
+
+    const w = displaySize;
+    const h = displaySize;
+    const center = displaySize / 2;
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
 
     // 0. Query 3D camera position, forward orientation, orbit target & distance
     const cam = this.engine.world?.camera?.three;
@@ -852,12 +872,25 @@ export class MinimapModule {
         this.panOffset.y += (desiredPanY - this.panOffset.y) * 0.1;
       }
 
-      // Live Compass Needle Rotation in UI header
+      // Live Compass Needle Rotation & Bearing in UI header
       const needle = document.querySelector(".compass-needle") as HTMLElement | null;
-      if (needle) {
-        const viewAngle = Math.atan2(forward.z, forward.x);
-        const bearingDeg = THREE.MathUtils.radToDeg(viewAngle + Math.PI / 2);
-        needle.style.transform = `rotate(${(-bearingDeg).toFixed(1)}deg)`;
+      const compassLabel = document.getElementById("minimap-compass-label");
+      if (needle || compassLabel) {
+        let bearingDeg = Math.round(THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z)));
+        if (bearingDeg < 0) bearingDeg += 360;
+        if (needle) {
+          needle.style.transform = `rotate(${(-bearingDeg).toFixed(1)}deg)`;
+        }
+        if (compassLabel) {
+          const cardinal = bearingDeg >= 337.5 || bearingDeg < 22.5 ? "N"
+            : bearingDeg < 67.5 ? "NE"
+            : bearingDeg < 112.5 ? "E"
+            : bearingDeg < 157.5 ? "SE"
+            : bearingDeg < 202.5 ? "S"
+            : bearingDeg < 247.5 ? "SW"
+            : bearingDeg < 292.5 ? "W" : "NW";
+          compassLabel.textContent = `${String(bearingDeg).padStart(3, "0")}° ${cardinal}`;
+        }
       }
 
       // Auto-track camera elevation to match floor storey
@@ -900,52 +933,91 @@ export class MinimapModule {
       ctx.translate(-center, -center);
     }
 
-    // 1. Draw Architectural Metric Radar Grid
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    // 1. Draw Architectural Metric Radar Grid & Coordinate Crosshairs
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
     ctx.lineWidth = 1;
 
     const step = 20;
-    for (let x = 0; x < w; x += step) {
+    for (let x = 0; x <= w; x += step) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, h);
       ctx.stroke();
     }
-    for (let y = 0; y < h; y += step) {
+    for (let y = 0; y <= h; y += step) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
       ctx.stroke();
     }
 
-    // Outer metric radar range rings
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.18)";
-    ctx.beginPath();
-    ctx.arc(center, center, w * 0.44, 0, Math.PI * 2);
-    ctx.stroke();
+    // Concentric Metric Range Rings with Dynamic Distance Readouts
+    const ringRadii = [w * 0.16, w * 0.30, w * 0.44];
+    for (let i = 0; i < ringRadii.length; i++) {
+      const r = ringRadii[i];
+      ctx.strokeStyle = i === ringRadii.length - 1 ? "rgba(56, 189, 248, 0.24)" : "rgba(255, 255, 255, 0.07)";
+      ctx.lineWidth = i === ringRadii.length - 1 ? 1.2 : 0.8;
+      ctx.setLineDash(i === 1 ? [3, 3] : []);
+      ctx.beginPath();
+      ctx.arc(center, center, r, 0, Math.PI * 2);
+      ctx.stroke();
 
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.12)";
+      // Metric distance label along 45-degree isometric ray
+      if (this.config.zoom > 0) {
+        const distMeters = (r / this.config.zoom).toFixed(0);
+        ctx.fillStyle = "rgba(148, 163, 184, 0.65)";
+        ctx.font = "600 7px monospace";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${distMeters}m`, center + r * 0.707 + 3, center - r * 0.707);
+      }
+    }
+    ctx.setLineDash([]);
+
+    // Subtle Live Tactical Radar Ray Sweep & Radial Gradient Beam
+    const sweepTime = performance.now() * 0.0012;
+    const sweepAngle = (sweepTime * 1.5) % (Math.PI * 2);
+    const sweepRadius = w * 0.44;
+
+    const sweepGrad = ctx.createRadialGradient(center, center, 0, center, center, sweepRadius);
+    sweepGrad.addColorStop(0, "rgba(56, 189, 248, 0.12)");
+    sweepGrad.addColorStop(0.8, "rgba(56, 189, 248, 0.03)");
+    sweepGrad.addColorStop(1, "rgba(56, 189, 248, 0.0)");
+
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(center, center, w * 0.26, 0, Math.PI * 2);
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, sweepRadius, sweepAngle - 0.35, sweepAngle);
+    ctx.closePath();
+    ctx.fillStyle = sweepGrad;
+    ctx.fill();
+
+    // Leading sweep line
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.lineTo(center + Math.cos(sweepAngle) * sweepRadius, center + Math.sin(sweepAngle) * sweepRadius);
     ctx.stroke();
+    ctx.restore();
 
     // Cardinal Points on Radar Perimeter (N, S, E, W)
     ctx.font = "800 8px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // North Marker (Red Accent)
+    // North Marker (High contrast crimson accent with indicator arrow)
     ctx.fillStyle = "#ef4444";
     ctx.fillText("N", center, 10);
     ctx.beginPath();
     ctx.moveTo(center, 15);
-    ctx.lineTo(center - 3, 20);
-    ctx.lineTo(center + 3, 20);
+    ctx.lineTo(center - 3.5, 20);
+    ctx.lineTo(center + 3.5, 20);
     ctx.closePath();
     ctx.fill();
 
     // South, East, West Markers
-    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
     ctx.fillText("S", center, h - 8);
     ctx.fillText("E", w - 8, center);
     ctx.fillText("W", 8, center);
@@ -1288,6 +1360,8 @@ export class MinimapModule {
     }
 
     // Restore context from Heading-Up rotation
+    ctx.restore();
+    // Restore context from Hi-DPI scaling
     ctx.restore();
   }
 

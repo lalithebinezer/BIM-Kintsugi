@@ -525,34 +525,40 @@
         <!-- 2D FLOOR PLAN RADAR MINIMAP & WALK NAVIGATION -->
         <div id="minimap-container" class="minimap-radar-widget" title="2D Tactical Floor Plan Radar">
           <div class="minimap-header">
-            <div class="minimap-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-              <span>2D Radar</span>
+            <div class="minimap-brand">
+              <span class="minimap-beacon-dot"></span>
+              <span class="minimap-title-text">2D RADAR</span>
             </div>
-            <div class="minimap-header-actions">
-              <select id="minimap-level-select" class="custom-select minimap-level-select" title="Active Storey Level">
+            
+            <div class="minimap-level-picker-wrap">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="level-icon"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18"/></svg>
+              <select id="minimap-level-select" class="custom-select minimap-level-select" title="Active Storey Level" aria-label="Active Storey Level">
                 <option value="0">L0 (Ground)</option>
                 <option value="1">L1 (First)</option>
                 <option value="2">L2 (Second)</option>
                 <option value="3">Roof</option>
               </select>
-              <button id="btn-minimap-slice-toggle" class="btn-minimap-tool" title="Slice 3D Model at this Floor">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
+            </div>
+
+            <div class="minimap-header-actions">
+              <button id="btn-minimap-slice-toggle" class="btn-minimap-tool" title="Slice 3D Model at this Floor" aria-label="Slice 3D Model">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
               </button>
-              <button id="btn-minimap-heading-mode" class="btn-minimap-tool" title="Toggle Heading-Up vs North-Up Radar Mode">
+              <button id="btn-minimap-heading-mode" class="btn-minimap-tool" title="Toggle Heading-Up vs North-Up Radar Mode" aria-label="Toggle Heading Mode">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+                <span id="label-minimap-heading" class="minimap-tool-label">N-UP</span>
               </button>
-              <button id="btn-minimap-autolevel" class="btn-minimap-tool active" title="Toggle Auto-Track Camera Storey Elevation">
+              <button id="btn-minimap-autolevel" class="btn-minimap-tool active" title="Toggle Auto-Track Camera Storey Elevation" aria-label="Auto-Track Elevation">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
               </button>
-              <button id="btn-minimap-export" class="btn-minimap-tool" title="Export 2D Floor Plan Snapshot (PNG)">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <button id="btn-minimap-export" class="btn-minimap-tool" title="Export 2D Floor Plan Snapshot (PNG)" aria-label="Export Plan Image">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </button>
-              <button id="btn-minimap-expand" class="btn-minimap-tool" title="Expand / Shrink Radar Size">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <button id="btn-minimap-expand" class="btn-minimap-tool" title="Expand / Shrink Radar Size" aria-label="Expand or Shrink">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
               </button>
-              <button id="btn-minimap-collapse" class="btn-minimap-tool" title="Minimize / Expand 2D Radar">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <button id="btn-minimap-collapse" class="btn-minimap-tool" title="Minimize / Expand 2D Radar" aria-label="Minimize Radar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
             </div>
           </div>
@@ -566,19 +572,19 @@
                 <polygon points="12 21 16 12 12 15 8 12 12 21" fill="#94A3B8" stroke="#64748B" stroke-width="0.8"/>
                 <circle cx="12" cy="12" r="2.2" fill="#FFFFFF" stroke="#334155" stroke-width="0.8"/>
               </svg>
-              <span class="compass-label">N</span>
+              <span class="compass-label" id="minimap-compass-label">N</span>
             </button>
 
             <!-- Floating Quick Zoom & Fit Group -->
             <div class="minimap-floating-controls">
               <button id="btn-minimap-zoom-in" class="minimap-floating-btn" title="Zoom In (+)">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <button id="btn-minimap-zoom-out" class="minimap-floating-btn" title="Zoom Out (-)">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <button id="btn-minimap-fit" class="minimap-floating-btn" title="Reset View & Fit Model">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
               </button>
             </div>
 
@@ -589,19 +595,19 @@
             </div>
           </div>
           <div class="minimap-footer">
-            <div style="display: flex; gap: 0.3rem; align-items: center;">
-              <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" title="Toggle First-Person WASD Walk Navigation">
+            <div style="display: flex; gap: 0.35rem; align-items: center; width: 100%;">
+              <button id="btn-minimap-walk-toggle" class="btn-xs btn-outline minimap-nav-btn" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" title="Toggle First-Person WASD Walk Navigation">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M10 22v-5l-2-3 4-4 4 3v9"/><path d="M6 17l2-2"/></svg>
                 <span id="label-minimap-walk-mode">Orbit Mode</span>
               </button>
               <button id="btn-minimap-pins-toggle" class="btn-minimap-tool active" title="Toggle Clash & Selection Pins on Radar">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
               </button>
             </div>
           </div>
           <!-- Interactive Resize Corner Handle -->
           <div id="minimap-resize-handle" class="minimap-resize-handle" title="Drag to resize 2D Radar">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <line x1="20" y1="4" x2="4" y2="20" />
               <line x1="20" y1="10" x2="10" y2="20" />
               <line x1="20" y1="16" x2="16" y2="20" />
