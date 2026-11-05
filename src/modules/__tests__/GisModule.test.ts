@@ -398,4 +398,44 @@ END-ISO-10303-21;
     expect(reset.z).toBe(0);
     expect(reset.rotationY).toBe(0);
   });
+
+  it("should extract IFCSITE georeference metadata from fragmented properties dictionary", async () => {
+    const mockModel = {
+      modelId: "mock-ifc-model",
+      properties: {
+        1001: {
+          type: "IFCSITE",
+          Name: { value: "Olympic Stadium Site" },
+          RefLatitude: [35, 41, 22, 123456],
+          RefLongitude: [139, 41, 30, 654321],
+          RefElevation: 42.5,
+        },
+      },
+    };
+
+    const parsed = await gis.parseIfcSiteMetadata(mockModel);
+    expect(parsed).toBe(true);
+    const loc = gis.getLocation();
+    expect(loc.latitude).toBeCloseTo(35.6894, 2);
+    expect(loc.longitude).toBeCloseTo(139.6918, 2);
+    expect(loc.elevationAMSL).toBe(42.5);
+    expect(loc.source).toBe("ifc-site");
+    expect(loc.address).toBe("Olympic Stadium Site");
+  });
+
+  it("should handle models with no IFCSITE gracefully by retaining valid site datum", async () => {
+    const emptyModel = {
+      modelId: "empty-ifc-model",
+      properties: {
+        2001: { type: "IFCWALL", Name: { value: "Wall A" } },
+      },
+    };
+
+    const parsed = await gis.parseIfcSiteMetadata(emptyModel);
+    expect(parsed).toBe(false);
+    const loc = gis.getLocation();
+    expect(loc.latitude).toBeDefined();
+    expect(loc.longitude).toBeDefined();
+    expect(loc.source).toBe("project-datum");
+  });
 });

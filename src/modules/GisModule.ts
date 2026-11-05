@@ -10,7 +10,7 @@ export interface GisProjectLocation {
   trueNorthAngle: number; // degrees 0-360 clockwise from +Z
   crsName: string;
   address?: string;
-  source?: "ifc-site" | "manual" | "preset";
+  source?: "ifc-site" | "manual" | "preset" | "project-datum";
 }
 
 export interface GisBasemapConfig {
@@ -623,8 +623,8 @@ export class GisModule {
     return (async () => {
       let foundGeoreference = false;
       try {
+        // Source 1: Check model.getAllPropertiesOfType
         if (typeof model.getAllPropertiesOfType === "function") {
-          // 1. Look for IFCMAPCONVERSION & IFCPROJECTEDCRS (IFC4 standard)
           try {
             const mapConversions = await model.getAllPropertiesOfType("IFCMAPCONVERSION");
             if (mapConversions && Object.keys(mapConversions).length > 0) {
@@ -655,37 +655,114 @@ export class GisModule {
             }
           } catch {}
 
-          // 2. Look for IFCSITE (express type 4096294205 or matching string)
-          const sites = await model.getAllPropertiesOfType("IFCSITE");
-          if (sites && Object.keys(sites).length > 0) {
-            const firstSite = Object.values(sites)[0] as any;
-            let latVal = firstSite.RefLatitude?.value || firstSite.RefLatitude;
-            let lonVal = firstSite.RefLongitude?.value || firstSite.RefLongitude;
-            let elevVal = firstSite.RefElevation?.value || firstSite.RefElevation;
+          // Look for IFCSITE via getAllPropertiesOfType
+          try {
+            const sites = await model.getAllPropertiesOfType("IFCSITE");
+            if (sites && Object.keys(sites).length > 0) {
+              const firstSite = Object.values(sites)[0] as any;
+              let latVal = firstSite.RefLatitude?.value || firstSite.RefLatitude;
+              let lonVal = firstSite.RefLongitude?.value || firstSite.RefLongitude;
+              let elevVal = firstSite.RefElevation?.value || firstSite.RefElevation;
 
-            // Convert IFC DMS array [deg, min, sec, microsec] to decimal degrees
-            if (Array.isArray(latVal) && latVal.length >= 3) {
-              latVal = latVal[0] + latVal[1] / 60 + (latVal[2] + (latVal[3] || 0) / 1000000) / 3600;
+              if (Array.isArray(latVal) && latVal.length >= 3) {
+                latVal = latVal[0] + latVal[1] / 60 + (latVal[2] + (latVal[3] || 0) / 1000000) / 3600;
+              }
+              if (Array.isArray(lonVal) && lonVal.length >= 3) {
+                lonVal = lonVal[0] + lonVal[1] / 60 + (lonVal[2] + (lonVal[3] || 0) / 1000000) / 3600;
+              }
+
+              if (typeof latVal === "number" && typeof lonVal === "number" && !isNaN(latVal) && !isNaN(lonVal)) {
+                this.setLocation({
+                  latitude: Number(latVal.toFixed(6)),
+                  longitude: Number(lonVal.toFixed(6)),
+                  elevationAMSL: typeof elevVal === "number" ? Number(elevVal.toFixed(2)) : this.location.elevationAMSL,
+                  source: "ifc-site",
+                  address: firstSite.Name?.value || firstSite.Name || "IFC Site Location",
+                });
+                return true;
+              }
             }
-            if (Array.isArray(lonVal) && lonVal.length >= 3) {
-              lonVal = lonVal[0] + lonVal[1] / 60 + (lonVal[2] + (lonVal[3] || 0) / 1000000) / 3600;
+          } catch {}
+        }
+
+        // Source 2: Direct scan of model.properties or getLocalProperties
+        let props = model.properties || (model as any).getLocalProperties?.() || {};
+        if (typeof (model as any).getAllProperties === "function" && Object.keys(props).length === 0) {
+          try {
+            props = (await (model as any).getAllProperties()) || {};
+          } catch {}
+        }
+
+        if (props && typeof props === "object") {
+          for (const expressId in props) {
+            const item = props[expressId];
+            if (!item) continue;
+
+            const itemType = String(item.type || "").toUpperCase();
+            // Check for IFCSITE entity
+            if (itemType === "IFCSITE" || itemType.includes("SITE")) {
+              let latVal = item.RefLatitude?.value ?? item.RefLatitude;
+              let lonVal = item.RefLongitude?.value ?? item.RefLongitude;
+              let elevVal = item.RefElevation?.value ?? item.RefElevation;
+
+              if (Array.isArray(latVal) && latVal.length >= 3) {
+                latVal = latVal[0] + latVal[1] / 60 + (latVal[2] + (latVal[3] || 0) / 1000000) / 3600;
+              }
+              if (Array.isArray(lonVal) && lonVal.length >= 3) {
+                lonVal = lonVal[0] + lonVal[1] / 60 + (lonVal[2] + (lonVal[3] || 0) / 1000000) / 3600;
+              }
+
+              if (typeof latVal === "number" && typeof lonVal === "number" && !isNaN(latVal) && !isNaN(lonVal)) {
+                this.setLocation({
+                  latitude: Number(latVal.toFixed(6)),
+                  longitude: Number(lonVal.toFixed(6)),
+                  elevationAMSL: typeof elevVal === "number" ? Number(elevVal.toFixed(2)) : this.location.elevationAMSL,
+                  source: "ifc-site",
+                  address: item.Name?.value || item.Name || "IFC Site Location",
+                });
+                foundGeoreference = true;
+                break;
+              }
             }
 
-            if (typeof latVal === "number" && typeof lonVal === "number" && !isNaN(latVal) && !isNaN(lonVal)) {
-              this.setLocation({
-                latitude: Number(latVal.toFixed(6)),
-                longitude: Number(lonVal.toFixed(6)),
-                elevationAMSL: typeof elevVal === "number" ? Number(elevVal.toFixed(2)) : this.location.elevationAMSL,
-                source: "ifc-site",
-                address: firstSite.Name?.value || "IFC Site Location",
-              });
-              return true;
+            // Check for IFCMAPCONVERSION
+            if (itemType === "IFCMAPCONVERSION") {
+              const elev = item.OrthogonalHeight?.value ?? item.OrthogonalHeight;
+              const xAxisX = item.XAxisAbscissa?.value ?? item.XAxisAbscissa ?? 1;
+              const xAxisY = item.XAxisOrdinate?.value ?? item.XAxisOrdinate ?? 0;
+              const trueNorthRot = (Math.atan2(xAxisY, xAxisX) * 180) / Math.PI;
+
+              if (typeof elev === "number" || typeof trueNorthRot === "number") {
+                this.setLocation({
+                  elevationAMSL: typeof elev === "number" ? Number(elev.toFixed(2)) : this.location.elevationAMSL,
+                  trueNorthAngle: Number(trueNorthRot.toFixed(2)),
+                  source: "ifc-site"
+                });
+                foundGeoreference = true;
+              }
+            }
+
+            // Check for IFCPROJECTEDCRS
+            if (itemType === "IFCPROJECTEDCRS") {
+              const crsName = item.Name?.value || item.Name;
+              if (crsName) {
+                this.location.crsName = String(crsName);
+                foundGeoreference = true;
+              }
             }
           }
         }
       } catch {
         // IFC site not parsed or not available in current model
       }
+
+      // If no explicit georeference was found in IFC, ensure default project location is preserved with clear source status
+      if (!foundGeoreference) {
+        if (this.location.source !== "ifc-site") {
+          this.location.source = "project-datum";
+        }
+      }
+
       return foundGeoreference;
     })();
   }

@@ -1848,14 +1848,14 @@ async function displayElementProperties(model: any, expressId: number) {
   }
 
   // 11. Calculate and populate physical bounding dimensions
+  let elemBbox = new THREE.Box3();
+  let elemHasGeom = false;
+
   try {
     const dimLengthEl = document.getElementById("prop-dim-length");
     const dimWidthEl = document.getElementById("prop-dim-width");
     const dimHeightEl = document.getElementById("prop-dim-height");
     const dimVolumeEl = document.getElementById("prop-dim-volume");
-
-    let bbox = new THREE.Box3();
-    let hasGeom = false;
 
     // 1. Try BoundingBoxer for exact fragment element mesh dimensions
     try {
@@ -1866,8 +1866,8 @@ async function displayElementProperties(model: any, expressId: number) {
         await boundingBoxer.addFromModelIdMap({ [mId]: new Set([expressId]) });
         const box = boundingBoxer.get();
         if (box && !box.isEmpty()) {
-          bbox.copy(box);
-          hasGeom = true;
+          elemBbox.copy(box);
+          elemHasGeom = true;
         }
         boundingBoxer.list.clear();
       }
@@ -1876,7 +1876,7 @@ async function displayElementProperties(model: any, expressId: number) {
     }
 
     // 2. Fallback to model children mesh traversal if needed
-    if (!hasGeom && model) {
+    if (!elemHasGeom && model) {
       const rootObj = (model.object || model) as THREE.Object3D;
       if (rootObj && typeof rootObj.traverse === "function") {
         rootObj.traverse((child: any) => {
@@ -1884,17 +1884,17 @@ async function displayElementProperties(model: any, expressId: number) {
             child.geometry.computeBoundingBox();
             if (child.geometry.boundingBox) {
               const box = child.geometry.boundingBox.clone().applyMatrix4(child.matrixWorld);
-              bbox.union(box);
-              hasGeom = true;
+              elemBbox.union(box);
+              elemHasGeom = true;
             }
           }
         });
       }
     }
 
-    if (hasGeom && !bbox.isEmpty()) {
+    if (elemHasGeom && !elemBbox.isEmpty()) {
       const size = new THREE.Vector3();
-      bbox.getSize(size);
+      elemBbox.getSize(size);
       const l = Math.max(0.05, size.x).toFixed(2);
       const w = Math.max(0.05, size.z).toFixed(2);
       const h = Math.max(0.05, size.y).toFixed(2);
@@ -2008,6 +2008,33 @@ async function displayElementProperties(model: any, expressId: number) {
     }
     if (qtoData.quantity > 0) {
       addPropertyRow(tableEl, `IFC Quantity (${qtoData.quantityType})`, `${qtoData.quantity} ${qtoData.unit}`, "color-green");
+    }
+
+    // Georeference & Site Coordinates Section
+    try {
+      const gis = GisModule.getInstance();
+      const loc = gis.getLocation();
+      const center = new THREE.Vector3();
+      if (elemHasGeom && !elemBbox.isEmpty()) {
+        elemBbox.getCenter(center);
+      }
+      const geoPos = gis.localToGeodetic(center.x, center.z);
+      const elevAmsl = Number((loc.elevationAMSL + center.y).toFixed(2));
+      const utm = gis.toUtm(geoPos.lat, geoPos.lon);
+
+      const gisDivider = document.createElement("div");
+      gisDivider.className = "prop-set-header";
+      gisDivider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: #06b6d4; margin: 0.8rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid rgba(6, 182, 212, 0.3); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
+      gisDivider.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> <span>GIS &amp; Georeference (WGS84)</span>`;
+      tableEl.appendChild(gisDivider);
+
+      addPropertyRow(tableEl, "WGS84 Latitude", `${geoPos.lat.toFixed(6)}° (${gis.toDms(geoPos.lat, true)})`, "color-cyan font-mono");
+      addPropertyRow(tableEl, "WGS84 Longitude", `${geoPos.lon.toFixed(6)}° (${gis.toDms(geoPos.lon, false)})`, "color-cyan font-mono");
+      addPropertyRow(tableEl, "Elevation (AMSL)", `${elevAmsl} m`, "color-green font-bold");
+      addPropertyRow(tableEl, "UTM Coordinate", `${utm.zone} E:${Math.round(utm.easting)}m N:${Math.round(utm.northing)}m`, "font-mono");
+      addPropertyRow(tableEl, "Project Site Datum", loc.address || "Default Site Datum", "text-muted");
+    } catch (gisPropErr) {
+      console.warn("Inspector GIS Georeference display warning:", gisPropErr);
     }
   }
 
@@ -3337,12 +3364,25 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
       // Parse IfcSite georeference coordinates if present
       try {
-        const siteCoords = await GisModule.getInstance().parseIfcSiteMetadata(model);
-        if (siteCoords && typeof (window as any).refreshGisUI === "function") {
+        let siteFound = await GisModule.getInstance().parseIfcSiteMetadata(model);
+        if (!siteFound && buffer && buffer.byteLength > 0 && buffer.byteLength < 50 * 1024 * 1024) {
+          try {
+            const dec = new TextDecoder("utf-8", { fatal: false });
+            const ifcText = dec.decode(buffer.subarray(0, Math.min(buffer.length, 2 * 1024 * 1024)));
+            if (ifcText.includes("IFCSITE") || ifcText.includes("IFCMAPCONVERSION")) {
+              GisModule.getInstance().parseIfcSiteMetadata(ifcText);
+              siteFound = true;
+            }
+          } catch {}
+        }
+        if (typeof (window as any).refreshGisUI === "function") {
           (window as any).refreshGisUI();
         }
       } catch (gisErr) {
         console.warn("GisModule parseIfcSiteMetadata warning:", gisErr);
+        if (typeof (window as any).refreshGisUI === "function") {
+          (window as any).refreshGisUI();
+        }
       }
 
       // Auto-populate 4D Schedule tasks for all elements and categories in loaded model
