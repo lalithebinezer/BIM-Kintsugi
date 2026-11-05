@@ -69,6 +69,16 @@ describe("Enterprise Schedule Interchange & Multi-Tier WBS CPM Suite", () => {
       expect(xml).toContain('<FinishDate>2026-07-15T17:00:00</FinishDate>');
       expect(xml).toContain('<Tasks>');
       expect(xml).toContain('</Tasks>');
+      expect(xml).toContain('<Calendars>');
+      expect(xml).toContain('<Name>Standard 5 Day Workweek</Name>');
+      expect(xml).toContain('<Resources>');
+      expect(xml).toContain('<Assignments>');
+      expect(xml).toContain('<ExtendedAttributes>');
+      expect(xml).toContain('<Alias>IFC Category</Alias>');
+      expect(xml).toContain('<Alias>WBS Code</Alias>');
+      expect(xml).toContain('<PredecessorLink>');
+      expect(xml).toContain('<OutlineNumber>1.1</OutlineNumber>');
+      expect(xml).toContain('<WBS>1.1</WBS>');
     });
 
     it("should escape special characters in task names and compute duration in hours", () => {

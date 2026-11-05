@@ -176,7 +176,9 @@ export class ScheduleImportParsers {
   }
 
   /**
-   * Export schedule tasks to Microsoft Project XML format (MSPDI).
+   * Export schedule tasks to Microsoft Project XML format (MSPDI) with full
+   * enterprise metadata: Calendars, WBS Outline, Trade Resources, Assignments,
+   * Predecessors, and Custom User Fields (UDF).
    */
   public static exportToMSPDI(tasks: ScheduleTask[], projectName: string = "BIM-Kintsugi 4D Schedule"): string {
     const minStart = tasks.reduce((min, t) => !min || t.startDate < min ? t.startDate : min, "") || "2026-06-18";
@@ -189,6 +191,47 @@ export class ScheduleImportParsers {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;");
 
+    // 1. Build Trade Resources from unique IFC categories
+    const tradeMap = new Map<string, { uid: number; name: string }>();
+    let resUidCounter = 1;
+
+    const getTradeName = (category: string) => {
+      const upper = (category || "").toUpperCase();
+      if (upper.includes("FOOT") || upper.includes("PILE")) return "Substructure & Geotechnical Crew";
+      if (upper.includes("COLUMN")) return "Structural Concrete Columns Crew";
+      if (upper.includes("BEAM") || upper.includes("MEMBER")) return "Structural Framing & Steel Crew";
+      if (upper.includes("SLAB")) return "Concrete Slabs & Decks Crew";
+      if (upper.includes("WALL")) return "Wall & Partition Masonry Crew";
+      if (upper.includes("ROOF")) return "Roofing & Waterproofing Trade";
+      if (upper.includes("DOOR") || upper.includes("WINDOW") || upper.includes("CURTAIN")) return "Glazing & Enclosure Trade";
+      if (upper.includes("STAIR") || upper.includes("RAMP")) return "Vertical Circulation Crew";
+      if (upper.includes("FLOW") || upper.includes("MEP") || upper.includes("DUCT") || upper.includes("PIPE")) return "MEP Building Services Trade";
+      if (upper.includes("COVERING") || upper.includes("FINISH")) return "Interior Architectural Finishes Crew";
+      return "General Construction Trade";
+    };
+
+    tasks.forEach(t => {
+      const cat = t.category || "General";
+      if (!tradeMap.has(cat)) {
+        tradeMap.set(cat, {
+          uid: resUidCounter++,
+          name: getTradeName(cat)
+        });
+      }
+    });
+
+    const resourcesXml = Array.from(tradeMap.values()).map(r => `    <Resource>
+      <UID>${r.uid}</UID>
+      <ID>${r.uid}</ID>
+      <Name>${xmlEscape(r.name)}</Name>
+      <Type>1</Type>
+      <MaxUnits>1.0</MaxUnits>
+    </Resource>`).join("\n");
+
+    // 2. Build Task XML with WBS, Predecessors, and UDFs
+    const assignmentsList: string[] = [];
+    let assignUid = 1;
+
     const taskXml = tasks.map((t, idx) => {
       const uid = idx + 1;
       const s = new Date(t.startDate);
@@ -198,30 +241,201 @@ export class ScheduleImportParsers {
       const pct = t.status === "Completed" ? 100 : t.status === "In Progress" ? 50 : 0;
       const cost = t.unitCost ? t.unitCost * (t.quantity || 1) : 0;
 
+      const wbs = t.wbsCode || String(uid);
+      const outlineLevel = wbs.includes(".") ? wbs.split(".").length : 1;
+      const elemCount = t.elementIds ? t.elementIds.size : (t.quantity || 1);
+      const isCrit = t.isCritical ? "YES" : "NO";
+      const totalFloatHours = (t.totalFloat ?? 0) * 8;
+
+      // Assign to trade resource
+      const resource = tradeMap.get(t.category || "General");
+      if (resource) {
+        assignmentsList.push(`    <Assignment>
+      <UID>${assignUid++}</UID>
+      <TaskUID>${uid}</TaskUID>
+      <ResourceUID>${resource.uid}</ResourceUID>
+      <Units>1.0</Units>
+      <Cost>${cost.toFixed(2)}</Cost>
+    </Assignment>`);
+      }
+
+      // Predecessor link: sequential Finish-to-Start link to previous task
+      let predecessorXml = "";
+      if (idx > 0) {
+        predecessorXml = `\n      <PredecessorLink>
+        <PredecessorUID>${idx}</PredecessorUID>
+        <Type>1</Type>
+        <CrossProject>0</CrossProject>
+        <LinkLag>0</LinkLag>
+        <LagFormat>7</LagFormat>
+      </PredecessorLink>`;
+      }
+
       return `    <Task>
       <UID>${uid}</UID>
       <ID>${uid}</ID>
       <Name>${xmlEscape(t.name)}</Name>
       <Type>1</Type>
       <IsNull>0</IsNull>
+      <OutlineNumber>${xmlEscape(wbs)}</OutlineNumber>
+      <OutlineLevel>${outlineLevel}</OutlineLevel>
+      <WBS>${xmlEscape(wbs)}</WBS>
+      <CalendarUID>1</CalendarUID>
       <CreateDate>${t.startDate}T08:00:00</CreateDate>
       <Start>${t.startDate}T08:00:00</Start>
       <Finish>${t.endDate}T17:00:00</Finish>
       <Duration>PT${durationHours}H0M0S</Duration>
       <PercentComplete>${pct}</PercentComplete>
       <Cost>${cost.toFixed(2)}</Cost>
+      <TotalSlack>${totalFloatHours * 60}</TotalSlack>
+      <Critical>${t.isCritical ? 1 : 0}</Critical>${predecessorXml}
+      <ExtendedAttribute>
+        <FieldID>188743731</FieldID>
+        <Value>${xmlEscape(t.category || "IFCELEMENT")}</Value>
+      </ExtendedAttribute>
+      <ExtendedAttribute>
+        <FieldID>188743734</FieldID>
+        <Value>${xmlEscape(wbs)}</Value>
+      </ExtendedAttribute>
+      <ExtendedAttribute>
+        <FieldID>188743737</FieldID>
+        <Value>${elemCount}</Value>
+      </ExtendedAttribute>
+      <ExtendedAttribute>
+        <FieldID>188743740</FieldID>
+        <Value>${isCrit}</Value>
+      </ExtendedAttribute>
     </Task>`;
     }).join("\n");
+
+    const assignmentsXml = assignmentsList.join("\n");
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Project xmlns="http://schemas.microsoft.com/project">
   <Name>${xmlEscape(projectName)}</Name>
   <Title>${xmlEscape(projectName)}</Title>
+  <Company>BIM Kintsugi Enterprise 4D</Company>
+  <CalendarUID>1</CalendarUID>
   <StartDate>${minStart}T08:00:00</StartDate>
   <FinishDate>${maxEnd}T17:00:00</FinishDate>
+  <ExtendedAttributes>
+    <ExtendedAttribute>
+      <FieldID>188743731</FieldID>
+      <FieldName>Text1</FieldName>
+      <Alias>IFC Category</Alias>
+    </ExtendedAttribute>
+    <ExtendedAttribute>
+      <FieldID>188743734</FieldID>
+      <FieldName>Text2</FieldName>
+      <Alias>WBS Code</Alias>
+    </ExtendedAttribute>
+    <ExtendedAttribute>
+      <FieldID>188743737</FieldID>
+      <FieldName>Number1</FieldName>
+      <Alias>BIM Element Count</Alias>
+    </ExtendedAttribute>
+    <ExtendedAttribute>
+      <FieldID>188743740</FieldID>
+      <FieldName>Text3</FieldName>
+      <Alias>Critical Path (CPM)</Alias>
+    </ExtendedAttribute>
+  </ExtendedAttributes>
+  <Calendars>
+    <Calendar>
+      <UID>1</UID>
+      <Name>Standard 5 Day Workweek</Name>
+      <IsBaseCalendar>1</IsBaseCalendar>
+      <WeekDays>
+        <WeekDay>
+          <DayType>1</DayType>
+          <DayWorking>0</DayWorking>
+        </WeekDay>
+        <WeekDay>
+          <DayType>2</DayType>
+          <DayWorking>1</DayWorking>
+          <WorkingTimes>
+            <WorkingTime>
+              <FromTime>08:00:00</FromTime>
+              <ToTime>12:00:00</ToTime>
+            </WorkingTime>
+            <WorkingTime>
+              <FromTime>13:00:00</FromTime>
+              <ToTime>17:00:00</ToTime>
+            </WorkingTime>
+          </WorkingTimes>
+        </WeekDay>
+        <WeekDay>
+          <DayType>3</DayType>
+          <DayWorking>1</DayWorking>
+          <WorkingTimes>
+            <WorkingTime>
+              <FromTime>08:00:00</FromTime>
+              <ToTime>12:00:00</ToTime>
+            </WorkingTime>
+            <WorkingTime>
+              <FromTime>13:00:00</FromTime>
+              <ToTime>17:00:00</ToTime>
+            </WorkingTime>
+          </WorkingTimes>
+        </WeekDay>
+        <WeekDay>
+          <DayType>4</DayType>
+          <DayWorking>1</DayWorking>
+          <WorkingTimes>
+            <WorkingTime>
+              <FromTime>08:00:00</FromTime>
+              <ToTime>12:00:00</ToTime>
+            </WorkingTime>
+            <WorkingTime>
+              <FromTime>13:00:00</FromTime>
+              <ToTime>17:00:00</ToTime>
+            </WorkingTime>
+          </WorkingTimes>
+        </WeekDay>
+        <WeekDay>
+          <DayType>5</DayType>
+          <DayWorking>1</DayWorking>
+          <WorkingTimes>
+            <WorkingTime>
+              <FromTime>08:00:00</FromTime>
+              <ToTime>12:00:00</ToTime>
+            </WorkingTime>
+            <WorkingTime>
+              <FromTime>13:00:00</FromTime>
+              <ToTime>17:00:00</ToTime>
+            </WorkingTime>
+          </WorkingTimes>
+        </WeekDay>
+        <WeekDay>
+          <DayType>6</DayType>
+          <DayWorking>1</DayWorking>
+          <WorkingTimes>
+            <WorkingTime>
+              <FromTime>08:00:00</FromTime>
+              <ToTime>12:00:00</ToTime>
+            </WorkingTime>
+            <WorkingTime>
+              <FromTime>13:00:00</FromTime>
+              <ToTime>17:00:00</ToTime>
+            </WorkingTime>
+          </WorkingTimes>
+        </WeekDay>
+        <WeekDay>
+          <DayType>7</DayType>
+          <DayWorking>0</DayWorking>
+        </WeekDay>
+      </WeekDays>
+    </Calendar>
+  </Calendars>
   <Tasks>
 ${taskXml}
   </Tasks>
+  <Resources>
+${resourcesXml}
+  </Resources>
+  <Assignments>
+${assignmentsXml}
+  </Assignments>
 </Project>`;
   }
 
