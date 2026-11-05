@@ -232,6 +232,36 @@ export class ScheduleImportParsers {
     const assignmentsList: string[] = [];
     let assignUid = 1;
 
+    // Root project summary task (UID 0) required by MSPDI schema & Synchro 4D Pro
+    const minStartMs = new Date(minStart).getTime();
+    const maxEndMs = new Date(maxEnd).getTime();
+    const totalProjectDays = Math.max(1, Math.round((maxEndMs - minStartMs) / (1000 * 60 * 60 * 24)));
+    const totalProjectHours = totalProjectDays * 8;
+
+    const rootTaskXml = `    <Task>
+      <UID>0</UID>
+      <ID>0</ID>
+      <Name>${xmlEscape(projectName)}</Name>
+      <Type>0</Type>
+      <IsNull>0</IsNull>
+      <CreateDate>${minStart}T08:00:00</CreateDate>
+      <Active>1</Active>
+      <Manual>0</Manual>
+      <WBS>0</WBS>
+      <OutlineNumber>0</OutlineNumber>
+      <OutlineLevel>0</OutlineLevel>
+      <Priority>500</Priority>
+      <Start>${minStart}T08:00:00</Start>
+      <Finish>${maxEnd}T17:00:00</Finish>
+      <Duration>PT${totalProjectHours}H0M0S</Duration>
+      <DurationFormat>7</DurationFormat>
+      <Work>PT${totalProjectHours}H0M0S</Work>
+      <Milestone>0</Milestone>
+      <PercentComplete>0</PercentComplete>
+      <ConstraintType>0</ConstraintType>
+      <CalendarUID>1</CalendarUID>
+    </Task>`;
+
     const taskXml = tasks.map((t, idx) => {
       const uid = idx + 1;
       const s = new Date(t.startDate);
@@ -239,6 +269,15 @@ export class ScheduleImportParsers {
       const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
       const durationHours = days * 8;
       const cost = t.unitCost ? t.unitCost * (t.quantity || 1) : 0;
+
+      // Clean task name so it never contains redundant parameter prefixes
+      const cleanName = (t.name || `Task ${uid}`)
+        .replace(/^(Text\.[A-Za-z0-9_]+|SIMULATION|Reference|Pset_[A-Za-z0-9_]+):\s*/i, "")
+        .trim() || t.name;
+
+      const cleanCat = (t.category || "General")
+        .replace(/^(Text\.[A-Za-z0-9_]+|SIMULATION|Reference|Pset_[A-Za-z0-9_]+):\s*/i, "")
+        .trim() || (t.category || "General");
 
       const wbs = t.wbsCode || String(uid);
       const outlineLevel = wbs.includes(".") ? wbs.split(".").length : 1;
@@ -278,37 +317,40 @@ export class ScheduleImportParsers {
       return `    <Task>
       <UID>${uid}</UID>
       <ID>${uid}</ID>
-      <Name>${xmlEscape(t.name)}</Name>
+      <Name>${xmlEscape(cleanName)}</Name>
       <Type>0</Type>
       <IsNull>0</IsNull>
+      <CreateDate>${t.startDate}T08:00:00</CreateDate>
       <Active>1</Active>
       <Manual>0</Manual>
-      <Milestone>${isMilestone}</Milestone>
-      <DurationFormat>7</DurationFormat>
+      <WBS>${xmlEscape(wbs)}</WBS>
+      <OutlineNumber>${xmlEscape(wbs)}</OutlineNumber>
+      <OutlineLevel>${outlineLevel}</OutlineLevel>
+      <Priority>500</Priority>
+      <Start>${t.startDate}T08:00:00</Start>
+      <Finish>${t.endDate}T17:00:00</Finish>
       <Duration>PT${durationHours}H0M0S</Duration>
+      <DurationFormat>7</DurationFormat>
       <Work>PT${durationHours}H0M0S</Work>
       <RemainingDuration>PT${remainingDurationHours}H0M0S</RemainingDuration>
       <ActualDuration>PT${actualDurationHours}H0M0S</ActualDuration>
       <RemainingWork>PT${remainingDurationHours}H0M0S</RemainingWork>
       <ActualWork>PT${actualDurationHours}H0M0S</ActualWork>
-      <Start>${t.startDate}T08:00:00</Start>
-      <Finish>${t.endDate}T17:00:00</Finish>
+      <Milestone>${isMilestone}</Milestone>
+      <PercentComplete>${pctComplete}</PercentComplete>
+      <PercentWorkComplete>${pctComplete}</PercentWorkComplete>
+      <Cost>${cost.toFixed(2)}</Cost>
       <EarlyStart>${t.startDate}T08:00:00</EarlyStart>
       <EarlyFinish>${t.endDate}T17:00:00</EarlyFinish>
       <LateStart>${(t as any).lateStart || t.startDate}T08:00:00</LateStart>
       <LateFinish>${(t as any).lateFinish || t.endDate}T17:00:00</LateFinish>
-      <PercentComplete>${pctComplete}</PercentComplete>
-      <ConstraintType>0</ConstraintType>
-      <OutlineNumber>${xmlEscape(wbs)}</OutlineNumber>
-      <OutlineLevel>${outlineLevel}</OutlineLevel>
-      <WBS>${xmlEscape(wbs)}</WBS>
-      <CalendarUID>1</CalendarUID>
-      <Cost>${cost.toFixed(2)}</Cost>
       <TotalSlack>${totalFloatHours * 60}</TotalSlack>
-      <Critical>${t.isCritical ? 1 : 0}</Critical>${predecessorXml}
+      <Critical>${t.isCritical ? 1 : 0}</Critical>
+      <ConstraintType>0</ConstraintType>
+      <CalendarUID>1</CalendarUID>${predecessorXml}
       <ExtendedAttribute>
         <FieldID>188743731</FieldID>
-        <Value>${xmlEscape(t.category || "IFCELEMENT")}</Value>
+        <Value>${xmlEscape(cleanCat)}</Value>
       </ExtendedAttribute>
       <ExtendedAttribute>
         <FieldID>188743734</FieldID>
@@ -452,6 +494,7 @@ export class ScheduleImportParsers {
     </Calendar>
   </Calendars>
   <Tasks>
+${rootTaskXml}
 ${taskXml}
   </Tasks>
   <Resources>
@@ -486,8 +529,11 @@ ${assignmentsXml}
       const taskCode = `TK-${String(idx + 1).padStart(3, "0")}`;
       const status = t.status === "Completed" ? "TK_Complete" : t.status === "In Progress" ? "TK_Active" : "TK_NotStart";
       const cost = (t.unitCost ? t.unitCost * (t.quantity || 1) : 0).toFixed(2);
-      const safeName = (t.name || `Task ${taskId}`).replace(/\t/g, " ");
-      xer += `%R\t${taskId}\t1\t${taskCode}\t${safeName}\t${status}\t${t.startDate} 08:00\t${t.endDate} 17:00\t${cost}\n`;
+      const cleanName = (t.name || `Task ${taskId}`)
+        .replace(/^(Text\.[A-Za-z0-9_]+|SIMULATION|Reference|Pset_[A-Za-z0-9_]+):\s*/i, "")
+        .replace(/\t/g, " ")
+        .trim();
+      xer += `%R\t${taskId}\t1\t${taskCode}\t${cleanName}\t${status}\t${t.startDate} 08:00\t${t.endDate} 17:00\t${cost}\n`;
     });
 
     xer += `%E\n`;

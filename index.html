@@ -812,9 +812,9 @@
                 <span class="param-count-badge" id="param-reader-count-badge">Scan</span>
               </button>
               <div class="sequence-field-row">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
                   <label for="sequence-custom-prop-input" class="sequence-field-label" style="margin-bottom: 0;">Simulation Parameter (Property):</label>
-                  <span style="font-size: 0.65rem; color: var(--accent-400); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Text Type</span>
+                  <span id="sequence-param-type-badge" style="font-size: 0.62rem; color: var(--accent-400); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Text Type</span>
                 </div>
                 <div class="sequence-prop-input-wrap" style="display: flex; gap: 0.35rem; align-items: center;">
                   <input
@@ -822,12 +822,17 @@
                     id="sequence-custom-prop-input"
                     list="simulation-params-datalist"
                     class="sequence-input"
-                    placeholder="Type parameter, e.g. Storey, Pset_QuantityTakeOff.Reference..."
-                    style="flex: 1; height: 32px; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem;"
+                    placeholder="Type parameter, e.g. Storey, Text.SIMULATION..."
+                    style="flex: 1; height: 32px; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem;"
                     value="Storey"
                     title="Enter or select simulation parameter for 4D sequencing"
                   />
-                  <select id="sequence-property-select" class="custom-select sequence-prop-select" title="Quick pick parameter preset or custom" style="width: 135px; height: 32px; font-size: 0.72rem;">
+                  <button id="btn-sequence-pick-hint" class="btn-pick-hint" type="button" title="Tip: You can pick parameters via IFC Parameter Reader or click ⏱ 4D next to any property in the Inspector!">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  </button>
+                </div>
+                <div class="sequence-presets-wrap" style="margin-top: 0.25rem;">
+                  <select id="sequence-property-select" class="custom-select sequence-prop-select" title="Quick pick parameter preset or custom" style="width: 100%; height: 30px; font-size: 0.72rem;">
                     <option value="Storey">Building Storey</option>
                     <option value="Category">IFC Category</option>
                     <option value="PredefinedType">Predefined Type</option>
@@ -836,9 +841,6 @@
                     <option value="Status">Status Attribute</option>
                     <option value="__custom__">Custom / Type In...</option>
                   </select>
-                  <button id="btn-sequence-pick-hint" class="btn-pick-hint" type="button" title="Tip: You can also click the ⏱ 4D button next to any property in the Properties Inspector on the right to sequence by it!">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  </button>
                 </div>
                 <datalist id="simulation-params-datalist"></datalist>
               </div>

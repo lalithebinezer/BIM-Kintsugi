@@ -65,7 +65,7 @@ function getCategoryColor(_theme: string, category: string): string {
   };
   return categoryColorMap[category.toUpperCase()] ?? "#a78bfa";
 }
-import { ScheduleManager } from "./modules/ScheduleManager";
+import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
 import { PropertySequenceEngine } from "./modules/PropertySequenceEngine";
 import { IfcParameterReader } from "./modules/IfcParameterReader";
 import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
@@ -3860,10 +3860,56 @@ if (hintDismissBtn) {
 
 
 
+// Helper to get all current schedule tasks (from ScheduleManager or twinDatabase fallback)
+function getExportableScheduleTasks(): ScheduleTask[] {
+  let tasks = scheduleManager.getTasksSorted();
+  if (tasks.length > 0) return tasks;
+
+  // Fallback: aggregate tasks from twinDatabase if sequence was applied to twin DB
+  const dbTasks = new Map<string, { name: string; start: string; end: string; count: number; cat: string; elemIds: Set<number> }>();
+  for (const key in twinDatabase) {
+    const item = twinDatabase[key];
+    if (item && item.task) {
+      if (!dbTasks.has(item.task)) {
+        dbTasks.set(item.task, {
+          name: item.task,
+          start: item.startDate || "2026-06-18",
+          end: item.endDate || "2026-06-28",
+          count: 0,
+          cat: item.task,
+          elemIds: new Set<number>()
+        });
+      }
+      const tObj = dbTasks.get(item.task)!;
+      tObj.count++;
+      if (item.expressId) tObj.elemIds.add(item.expressId);
+      if (item.startDate && item.startDate < tObj.start) tObj.start = item.startDate;
+      if (item.endDate && item.endDate > tObj.end) tObj.end = item.endDate;
+    }
+  }
+
+  if (dbTasks.size > 0) {
+    tasks = Array.from(dbTasks.values()).map((dt, idx) => ({
+      id: `task-${idx + 1}`,
+      name: dt.name,
+      category: dt.cat,
+      startDate: dt.start,
+      endDate: dt.end,
+      status: "Planned",
+      elementIds: dt.elemIds,
+      modelId: "default-model",
+      unitCost: 250,
+      quantity: dt.count,
+      wbsCode: String(idx + 1)
+    }));
+  }
+  return tasks;
+}
+
 // --- ENTERPRISE SCHEDULE EXPORTERS (MS Project XML & Primavera P6 XER) ---
 const btnExportMspdi = document.getElementById("btn-export-mspdi-xml");
 btnExportMspdi?.addEventListener("click", () => {
-  const tasks = scheduleManager.getTasksSorted();
+  const tasks = getExportableScheduleTasks();
   if (tasks.length === 0) {
     showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
     return;
@@ -3883,7 +3929,7 @@ btnExportMspdi?.addEventListener("click", () => {
 
 const btnExportP6 = document.getElementById("btn-export-primavera-p6");
 btnExportP6?.addEventListener("click", () => {
-  const tasks = scheduleManager.getTasksSorted();
+  const tasks = getExportableScheduleTasks();
   if (tasks.length === 0) {
     showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
     return;
@@ -6790,9 +6836,14 @@ function updateScheduleWidgetUI() {
     const pct = Math.round((stats.completedCount / stats.totalCount) * 100);
     const badgeClass = taskStatus === "Completed" ? "task-badge-complete" : (taskStatus === "In Progress" ? "task-badge-active" : "task-badge-planned");
 
+    // Clean task title so redundant parameter prefixes (e.g. Text.SIMULATION:) are stripped
+    const cleanDisplayTitle = taskName
+      .replace(/^(Text\.[A-Za-z0-9_]+|SIMULATION|Reference|Pset_[A-Za-z0-9_]+):\s*/i, "")
+      .trim() || taskName;
+
     item.innerHTML = `
       <div class="task-header-row">
-        <span class="task-title" title="${taskName}">${taskName}</span>
+        <span class="task-title" title="${taskName}">${cleanDisplayTitle}</span>
         <span class="task-status-badge ${badgeClass}">${taskStatus}</span>
       </div>
       <div class="task-date-info">

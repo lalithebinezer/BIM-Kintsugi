@@ -8909,10 +8909,15 @@ body.resizing-radar * {
    ═════════════════════════════════════════════════════════════════════ */
 
 #schedule-tasks-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.25rem 0;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.55rem !important;
+  padding: 0.35rem 0.5rem 1rem 0.5rem !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
 }
 
 .schedule-task-item {
@@ -8920,13 +8925,17 @@ body.resizing-radar * {
   border: 1px solid var(--border-subtle, #23232C);
   border-radius: 8px;
   padding: 0.65rem 0.8rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0 !important;
+  min-height: 66px !important;
+  height: auto !important;
+  box-sizing: border-box !important;
 }
 
 .schedule-task-item:hover {
@@ -8936,9 +8945,9 @@ body.resizing-radar * {
 }
 
 .schedule-task-item.active-task {
-  border-color: var(--accent-500, #D4FF3F);
-  box-shadow: 0 0 12px var(--accent-glow, rgba(212, 255, 63, 0.2));
-  background: rgba(212, 255, 63, 0.05);
+  border-color: var(--accent-500, #D4FF3F) !important;
+  box-shadow: 0 0 12px var(--accent-glow, rgba(212, 255, 63, 0.25)) !important;
+  background: rgba(212, 255, 63, 0.06) !important;
 }
 
 .schedule-task-item.active-task::before {
@@ -8956,6 +8965,8 @@ body.resizing-radar * {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-shrink: 0;
+  min-height: 18px;
 }
 
 .task-title {
@@ -8976,6 +8987,7 @@ body.resizing-radar * {
   border-radius: 4px;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .task-badge-planned {
@@ -9004,6 +9016,8 @@ body.resizing-radar * {
   font-size: 0.62rem;
   color: var(--text-muted, #94A3B8);
   font-family: var(--font-mono, monospace);
+  flex-shrink: 0;
+  min-height: 14px;
 }
 
 .task-progress-row {
@@ -9014,6 +9028,8 @@ body.resizing-radar * {
   font-weight: 700;
   color: var(--text-secondary, #CBD5E1);
   font-family: var(--font-mono, monospace);
+  flex-shrink: 0;
+  min-height: 14px;
 }
 
 .task-progress-bar {
@@ -10823,6 +10839,7 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   flex-direction: column;
   gap: 0.45rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0 !important;
 }
 
 .sequence-box-title {
