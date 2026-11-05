@@ -3592,27 +3592,11 @@ async function loadSampleModel(sampleType: string = "snowdon") {
 (window as any).loadSampleModel = loadSampleModel;
 
 const loadSampleBtn = document.getElementById("load-sample-btn");
-const sampleDropdown = document.getElementById("sample-dropdown-menu");
-if (loadSampleBtn && sampleDropdown) {
-  loadSampleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isVisible = sampleDropdown.style.display === "flex";
-    sampleDropdown.style.display = isVisible ? "none" : "flex";
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!sampleDropdown.contains(e.target as Node) && e.target !== loadSampleBtn) {
-      sampleDropdown.style.display = "none";
-    }
-  });
-
-  document.querySelectorAll(".sample-option-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const sample = (btn as HTMLElement).getAttribute("data-sample") || "snowdon";
-      sampleDropdown.style.display = "none";
-      loadSampleModel(sample);
-    });
+const sampleSelect = document.getElementById("sample-model-select") as HTMLSelectElement | null;
+if (loadSampleBtn) {
+  loadSampleBtn.addEventListener("click", () => {
+    const selectedSample = sampleSelect?.value || "snowdon";
+    loadSampleModel(selectedSample);
   });
 }
 
