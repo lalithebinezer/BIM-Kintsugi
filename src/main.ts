@@ -3551,14 +3551,24 @@ window.addEventListener("drop", async (e) => {
   }
 });
 
-// Load Sample Model Button
-async function loadSampleModel() {
-  const url = "https://thatopen.github.io/engine_components/resources/frags/school_arq.frag";
+// Load Sample Model (Snowdon Towers Structural IFC or School FRAG)
+async function loadSampleModel(sampleType: string = "snowdon") {
+  const isSnowdon = sampleType === "snowdon";
+  const url = isSnowdon
+    ? "/Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc"
+    : "https://thatopen.github.io/engine_components/resources/frags/school_arq.frag";
+  const fileName = isSnowdon
+    ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc"
+    : "school_arq.frag";
+
   const loadSampleBtn = document.getElementById("load-sample-btn");
+  const loadSampleText = document.getElementById("load-sample-btn-text");
   try {
     if (loadSampleBtn) {
       loadSampleBtn.setAttribute("disabled", "true");
-      loadSampleBtn.innerText = "Downloading...";
+    }
+    if (loadSampleText) {
+      loadSampleText.innerText = "Downloading...";
     }
 
     const response = await fetch(url);
@@ -3566,26 +3576,44 @@ async function loadSampleModel() {
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    await loadModelData("school_arq.frag", uint8Array);
+    await loadModelData(fileName, uint8Array);
   } catch (err) {
     console.error("Failed to fetch sample file:", err);
+    showToast(`Failed to load sample: ${err instanceof Error ? err.message : err}`, "error");
   } finally {
     if (loadSampleBtn) {
       loadSampleBtn.removeAttribute("disabled");
-      loadSampleBtn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-        </svg>
-        Load Sample
-      `;
+    }
+    if (loadSampleText) {
+      loadSampleText.innerText = "Sample Models";
     }
   }
 }
 (window as any).loadSampleModel = loadSampleModel;
 
 const loadSampleBtn = document.getElementById("load-sample-btn");
-if (loadSampleBtn) {
-  loadSampleBtn.addEventListener("click", loadSampleModel);
+const sampleDropdown = document.getElementById("sample-dropdown-menu");
+if (loadSampleBtn && sampleDropdown) {
+  loadSampleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isVisible = sampleDropdown.style.display === "flex";
+    sampleDropdown.style.display = isVisible ? "none" : "flex";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!sampleDropdown.contains(e.target as Node) && e.target !== loadSampleBtn) {
+      sampleDropdown.style.display = "none";
+    }
+  });
+
+  document.querySelectorAll(".sample-option-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const sample = (btn as HTMLElement).getAttribute("data-sample") || "snowdon";
+      sampleDropdown.style.display = "none";
+      loadSampleModel(sample);
+    });
+  });
 }
 
 
@@ -7564,6 +7592,8 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tab-camera", title: "First Person Camera Controls", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "controls") },
     
     // Viewport & Tools
+    { id: "sample-snowdon", title: "Load Sample: Snowdon Towers (Structural IFC 8.4MB)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`, action: () => loadSampleModel("snowdon") },
+    { id: "sample-school", title: "Load Sample: School Architecture (FRAG)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/></svg>`, action: () => loadSampleModel("school") },
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
     { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: () => PresentationSheetModule.getInstance().export4KBoard() },
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => document.getElementById("btn-4d-mode")?.click() },

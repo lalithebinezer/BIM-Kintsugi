@@ -676,14 +676,35 @@
                   No models loaded. Upload an IFC file or load a sample.
                 </div>
               </div>
-              <div class="file-actions-row">
-                <button class="btn-secondary" id="load-sample-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Load Sample
-                </button>
-                <div class="btn-file-upload">
+              <div class="file-actions-row" style="flex-wrap: wrap; gap: 0.35rem;">
+                <div class="dropdown-sample-group" style="position: relative; flex: 1; min-width: 140px;">
+                  <button class="btn-secondary" id="load-sample-btn" style="width: 100%; justify-content: space-between;" title="Load Sample IFC or FRAG Model">
+                    <span style="display: flex; align-items: center; gap: 0.35rem;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                      </svg>
+                      <span id="load-sample-btn-text">Sample Models</span>
+                    </span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="sample-dropdown-menu hidden" id="sample-dropdown-menu" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface, #1e1e24); border: 1px solid var(--border-color, #333); border-radius: 6px; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.6); overflow: hidden; display: none; flex-direction: column;">
+                    <button type="button" class="sample-option-btn" data-sample="snowdon" style="padding: 0.45rem 0.65rem; text-align: left; background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.08)); font-family: inherit;">
+                      <div style="font-size: 0.72rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 0.3rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        Snowdon Towers (Structural IFC)
+                      </div>
+                      <div style="font-size: 0.62rem; color: var(--text-muted, #888);">8.4 MB Real-World IFC • Brownsville, PA</div>
+                    </button>
+                    <button type="button" class="sample-option-btn" data-sample="school" style="padding: 0.45rem 0.65rem; text-align: left; background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; font-family: inherit;">
+                      <div style="font-size: 0.72rem; font-weight: 700; color: #4ade80; display: flex; align-items: center; gap: 0.3rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/></svg>
+                        School Architecture (FRAG)
+                      </div>
+                      <div style="font-size: 0.62rem; color: var(--text-muted, #888);">Lightweight Fragment Model</div>
+                    </button>
+                  </div>
+                </div>
+                <div class="btn-file-upload" style="flex: 1; min-width: 130px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
