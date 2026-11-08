@@ -21,6 +21,19 @@ export class ScheduleImportParsers {
       projectName = nameMatch[1].trim();
     }
 
+    // Map FieldID -> Alias for ExtendedAttributes (e.g. 188743743 -> "SIMULATION")
+    const extAttrAliasMap = new Map<string, string>();
+    const extAttrDefRegex = /<ExtendedAttribute[\s\S]*?>([\s\S]*?)<\/ExtendedAttribute>/gi;
+    let defMatch: RegExpExecArray | null;
+    while ((defMatch = extAttrDefRegex.exec(xmlText)) !== null) {
+      const defBlock = defMatch[1];
+      const fId = defBlock.match(/<FieldID[^>]*>([\s\S]*?)<\/FieldID>/i)?.[1]?.trim();
+      const alias = defBlock.match(/<Alias[^>]*>([\s\S]*?)<\/Alias>/i)?.[1]?.trim();
+      if (fId && alias) {
+        extAttrAliasMap.set(fId, alias);
+      }
+    }
+
     const tasks: ScheduleTask[] = [];
     const taskRegex = /<Task[\s\S]*?>([\s\S]*?)<\/Task>/gi;
     let match: RegExpExecArray | null;
@@ -35,11 +48,19 @@ export class ScheduleImportParsers {
     while ((match = taskRegex.exec(xmlText)) !== null) {
       const block = match[1];
       const uid = getTag(block, "UID") || `task-${idx}`;
+      
+      // Skip project summary task (UID 0) if other tasks exist
+      if (uid === "0" && xmlText.includes("<UID>1</UID>")) continue;
+
       const name = getTag(block, "Name") || `Task ${idx}`;
       const startRaw = getTag(block, "Start");
       const finishRaw = getTag(block, "Finish");
       const percentComplete = Number(getTag(block, "PercentComplete") || "0");
       const cost = Number(getTag(block, "Cost") || "0");
+      const wbsCode = getTag(block, "WBS") || getTag(block, "OutlineNumber") || String(idx);
+      const isCritical = getTag(block, "Critical") === "1";
+      const totalSlackMinutes = Number(getTag(block, "TotalSlack") || "0");
+      const totalFloat = !isNaN(totalSlackMinutes) ? Math.round(totalSlackMinutes / 480) : 0;
 
       if (!startRaw || !finishRaw) continue;
 
@@ -49,6 +70,25 @@ export class ScheduleImportParsers {
       let status: TaskStatus = "Planned";
       if (percentComplete >= 100) status = "Completed";
       else if (percentComplete > 0) status = "In Progress";
+
+      // Extract custom simulation property from ExtendedAttribute
+      let simulationKey = "";
+      const taskExtRegex = /<ExtendedAttribute[\s\S]*?>([\s\S]*?)<\/ExtendedAttribute>/gi;
+      let taskExtMatch: RegExpExecArray | null;
+      while ((taskExtMatch = taskExtRegex.exec(block)) !== null) {
+        const tBlock = taskExtMatch[1];
+        const fId = tBlock.match(/<FieldID[^>]*>([\s\S]*?)<\/FieldID>/i)?.[1]?.trim();
+        const val = tBlock.match(/<Value[^>]*>([\s\S]*?)<\/Value>/i)?.[1]?.trim();
+        if (fId && val) {
+          const alias = extAttrAliasMap.get(fId) || "";
+          if (alias.toUpperCase() === "SIMULATION") {
+            simulationKey = val;
+          }
+        }
+      }
+      if (!simulationKey) {
+        simulationKey = name;
+      }
 
       const category = this.guessCategoryFromName(name);
 
@@ -63,6 +103,10 @@ export class ScheduleImportParsers {
         modelId: "",
         unitCost: cost,
         quantity: 1,
+        wbsCode,
+        totalFloat,
+        isCritical,
+        simulationKey,
       });
       idx++;
     }

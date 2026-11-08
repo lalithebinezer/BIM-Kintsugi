@@ -2679,7 +2679,7 @@ btn4dVariance?.addEventListener("click", () => {
   updateTimelineVisualState(true);
 });
 
-// Advanced Schedule Import (MS Project XML & Primavera P6 XER)
+// Advanced Schedule Import (MS Project XML & Primavera P6 XER) with Automatic SIMULATION Property Linking
 const btnImportScheduleAdv = document.getElementById("btn-import-schedule-advanced") as HTMLInputElement | null;
 btnImportScheduleAdv?.addEventListener("change", async (e) => {
   const target = e.target as HTMLInputElement;
@@ -2693,19 +2693,147 @@ btnImportScheduleAdv?.addEventListener("change", async (e) => {
       res = ScheduleImportParsers.parsePrimaveraP6(text);
     }
     if (res && res.tasks.length > 0) {
+      scheduleManager.tasks.clear();
       for (const t of res.tasks) {
         scheduleManager.tasks.set(t.id, t);
       }
+
+      // Synchronize imported schedule tasks with 3D elements in model via SIMULATION property
+      const models = Array.from(fragments.list.values());
+      const syncStats = scheduleManager.syncTasksWithModelSimulation(models, twinDatabase);
+
       calculateTimelineBounds();
+      if (timelineMinDate) {
+        currentTimelineDate = new Date(timelineMinDate);
+        if (timelineSlider) timelineSlider.value = "0";
+        updateTimelineDateUI();
+      }
+      updateScheduleWidgetUI();
+      InteractiveGanttDrawer.getInstance().render();
       if (currentTimelineDate) {
         await updateTimelineVisualState(true);
       }
-      showToast(`Imported ${res.tasks.length} tasks from ${res.format} (${file.name})!`, "success");
+      showToast(`✓ Imported ${res.tasks.length} tasks from ${file.name} (${syncStats.matchedTasks} tasks linked to ${syncStats.totalElementsLinked} elements via SIMULATION)`, "success");
     } else {
       showToast("Could not parse schedule tasks from selected file.", "warning");
     }
     target.value = "";
   }
+});
+
+// Synchronize 4D sequence directly with Synchro Schedule XML (Capestone_SYNCHRO_Schedule.xml) and SIMULATION property
+async function sync4DWithSimulationProperty(customXmlUrl?: string) {
+  const models = Array.from(fragments.list.values());
+  if (models.length === 0) {
+    showToast("Please load the IFC model first before syncing 4D sequence.", "warning");
+    return;
+  }
+
+  showToast("Loading & synchronizing Synchro 4D Schedule...", "info");
+
+  const candidates: string[] = [];
+  if (customXmlUrl) {
+    candidates.push(customXmlUrl);
+  }
+  const base = (import.meta as any).env?.BASE_URL || "./";
+  const cleanBase = base.endsWith("/") ? base : base + "/";
+  try {
+    candidates.push(new URL("Capestone_SYNCHRO_Schedule.xml", window.location.href).href);
+  } catch (e) {}
+  candidates.push(
+    `${cleanBase}Capestone_SYNCHRO_Schedule.xml`,
+    "./Capestone_SYNCHRO_Schedule.xml",
+    "/Capestone_SYNCHRO_Schedule.xml"
+  );
+
+  let xmlText = "";
+  for (const cand of candidates) {
+    try {
+      const resp = await fetch(cand, { cache: "no-store" });
+      if (resp.ok) {
+        const text = await resp.text();
+        if (text.includes("<Project") && text.includes("<Task")) {
+          xmlText = text;
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!xmlText) {
+    // If schedule XML file is not reached via URL, calculate sequence directly from SIMULATION property
+    showToast("Generating 4D sequence directly from SIMULATION property...", "info");
+    const engine = PropertySequenceEngine.getInstance();
+    const result = engine.calculateSequence(
+      models,
+      {
+        propertyKey: "Text.SIMULATION",
+        startDate: "2026-11-19",
+        taskDurationDays: 14,
+        overlapDays: 3,
+        sortDirection: "asc",
+      },
+      { globalStoreysMap: globalElementStoreysMap }
+    );
+    engine.applySequenceToTwinDatabase(result, twinDatabase, scheduleManager);
+    calculateTimelineBounds();
+    updateScheduleWidgetUI();
+    InteractiveGanttDrawer.getInstance().render();
+    if (typeof (window as any).updateTimelineVisualState === "function") {
+      (window as any).updateTimelineVisualState(true);
+    }
+    showToast(`✓ Generated 4D sequence with ${result.totalTasks} phases directly from 'SIMULATION' property!`, "success");
+    return;
+  }
+
+  // Parse MSPDI XML from Synchro
+  const res = ScheduleImportParsers.parseMSPDI(xmlText);
+  if (!res || res.tasks.length === 0) {
+    showToast("Could not parse tasks from Synchro Schedule XML.", "error");
+    return;
+  }
+
+  scheduleManager.tasks.clear();
+  for (const t of res.tasks) {
+    scheduleManager.tasks.set(t.id, t);
+  }
+
+  // Synchronize tasks with model elements via SIMULATION property
+  const syncStats = scheduleManager.syncTasksWithModelSimulation(models, twinDatabase);
+
+  // Set timeline bounds to match schedule
+  calculateTimelineBounds();
+  if (timelineMinDate) {
+    currentTimelineDate = new Date(timelineMinDate);
+    if (timelineSlider) timelineSlider.value = "0";
+    updateTimelineDateUI();
+  }
+
+  // Update UIs
+  updateScheduleWidgetUI();
+  InteractiveGanttDrawer.getInstance().render();
+  await updateTimelineVisualState(true);
+
+  // Switch to 4D mode and open left schedule panel
+  document.body.classList.add("mode-4d");
+  document.body.classList.remove("left-sidebar-collapsed");
+  if (typeof (window as any).switchSidebarTab === "function") {
+    (window as any).switchSidebarTab("left-tab-bar", "schedule");
+  }
+
+  const banner = document.getElementById("sequence-status-banner");
+  if (banner) {
+    banner.style.display = "flex";
+    banner.innerHTML = `✓ Synchro 4D Synchronized: <strong>${syncStats.matchedTasks} tasks</strong> linked to <strong>${syncStats.totalElementsLinked} elements</strong> via <strong>SIMULATION</strong> property [${res.tasks[0]?.startDate} &rarr; ${res.tasks[res.tasks.length - 1]?.endDate}]`;
+    setTimeout(() => { banner.style.display = "none"; }, 10000);
+  }
+
+  showToast(`✓ Synchro 4D Synchronized: ${syncStats.matchedTasks} tasks linked to ${syncStats.totalElementsLinked} elements via SIMULATION!`, "success");
+}
+(window as any).sync4DWithSimulationProperty = sync4DWithSimulationProperty;
+
+document.getElementById("btn-sync-synchro-simulation")?.addEventListener("click", () => {
+  sync4DWithSimulationProperty();
 });
 
 // 7D COBie Facility Management Export

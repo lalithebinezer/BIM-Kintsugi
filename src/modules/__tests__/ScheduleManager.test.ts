@@ -80,4 +80,94 @@ describe("ScheduleManager Unit Tests", () => {
     expect(ScheduleManager.getStatusColor("In Progress")).toBe("#F59E0B");
     expect(ScheduleManager.getStatusColor("Completed")).toBe("#10B981");
   });
+
+  it("should synchronize schedule tasks with 3D elements via SIMULATION property", () => {
+    // Mock model with elements having SIMULATION property
+    const mockModel = {
+      modelId: "snowdon-model",
+      properties: {
+        101: {
+          SIMULATION: "COL_EPit",
+        },
+        102: {
+          SIMULATION: "COL_EPit",
+        },
+        201: {
+          psets: {
+            Text: {
+              SIMULATION: "WALL_LL1_35_Low",
+            },
+          },
+        },
+        301: {
+          psets: {
+            CustomParams: {
+              "Text.SIMULATION": "FLO_LL1_35_Low",
+            },
+          },
+        },
+      },
+    };
+
+    manager.tasks.set("t1", {
+      id: "t1",
+      name: "COL_EPit",
+      category: "IFCCOLUMN",
+      startDate: "2026-12-03",
+      endDate: "2026-12-04",
+      status: "Planned",
+      elementIds: new Set<number>(),
+      modelId: "",
+      unitCost: 8750,
+      quantity: 0,
+      simulationKey: "COL_EPit",
+    });
+
+    manager.tasks.set("t2", {
+      id: "t2",
+      name: "WALL_LL1_35_Low",
+      category: "IFCWALL",
+      startDate: "2027-01-10",
+      endDate: "2027-01-20",
+      status: "Planned",
+      elementIds: new Set<number>(),
+      modelId: "",
+      unitCost: 12000,
+      quantity: 0,
+    });
+
+    manager.tasks.set("t3", {
+      id: "t3",
+      name: "FLO_LL1_35_Low",
+      category: "IFCSLAB",
+      startDate: "2027-02-01",
+      endDate: "2027-02-15",
+      status: "Planned",
+      elementIds: new Set<number>(),
+      modelId: "",
+      unitCost: 15000,
+      quantity: 0,
+    });
+
+    const twinDb: Record<string, any> = {};
+    const result = manager.syncTasksWithModelSimulation([mockModel], twinDb);
+
+    expect(result.matchedTasks).toBe(3);
+    expect(result.totalElementsLinked).toBe(4);
+
+    const task1 = manager.tasks.get("t1")!;
+    expect(task1.elementIds.has(101)).toBe(true);
+    expect(task1.elementIds.has(102)).toBe(true);
+    expect(task1.modelId).toBe("snowdon-model");
+    expect(task1.quantity).toBe(2);
+
+    const task2 = manager.tasks.get("t2")!;
+    expect(task2.elementIds.has(201)).toBe(true);
+
+    const task3 = manager.tasks.get("t3")!;
+    expect(task3.elementIds.has(301)).toBe(true);
+
+    expect(twinDb["snowdon-model-101"]?.task).toBe("COL_EPit");
+    expect(twinDb["snowdon-model-201"]?.task).toBe("WALL_LL1_35_Low");
+  });
 });

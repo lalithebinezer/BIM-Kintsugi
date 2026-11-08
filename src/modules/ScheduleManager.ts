@@ -21,6 +21,7 @@ export interface ScheduleTask {
   wbsCode?: string;
   totalFloat?: number;
   isCritical?: boolean;
+  simulationKey?: string;
 }
 
 export interface ElementCostData {
@@ -368,6 +369,191 @@ export class ScheduleManager {
     }
 
     return importedCount;
+  }
+
+  /**
+   * Synchronizes schedule tasks with loaded 3D BIM model elements by matching
+   * task names or task simulation keys against the IFC model's SIMULATION property.
+   */
+  public syncTasksWithModelSimulation(
+    models: any[],
+    twinDatabase?: Record<string, any>,
+    options?: {
+      targetProperty?: string;
+    }
+  ): {
+    matchedTasks: number;
+    totalTasks: number;
+    totalElementsLinked: number;
+    tasksMatched: Array<{ taskId: string; name: string; count: number }>;
+  } {
+    const targetProp = (options?.targetProperty || "SIMULATION").toLowerCase();
+    
+    // 1. Build an index of: simulationValue (normalized uppercase) -> Array<{ modelId: string; expressId: number }>
+    const simIndex = new Map<string, Array<{ modelId: string; expressId: number }>>();
+
+    const addSimEntry = (simVal: string, modelId: string, expressId: number) => {
+      if (!simVal) return;
+      const cleanVal = String(simVal).trim();
+      if (!cleanVal || cleanVal.toLowerCase() === "unassigned") return;
+
+      const upper = cleanVal.toUpperCase();
+      if (!simIndex.has(upper)) {
+        simIndex.set(upper, []);
+      }
+      simIndex.get(upper)!.push({ modelId, expressId });
+
+      // Also index stripped prefix variants (e.g. "Text.SIMULATION: COL_EPit" -> "COL_EPit")
+      if (cleanVal.includes(":")) {
+        const afterColon = cleanVal.split(":").pop()!.trim().toUpperCase();
+        if (!simIndex.has(afterColon)) {
+          simIndex.set(afterColon, []);
+        }
+        simIndex.get(afterColon)!.push({ modelId, expressId });
+      }
+    };
+
+    // Scan loaded model properties
+    for (const model of models) {
+      if (!model) continue;
+      const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
+      const properties = model.properties || (model as any).getLocalProperties?.() || {};
+
+      for (const expressIdStr in properties) {
+        const expressId = Number(expressIdStr);
+        if (isNaN(expressId)) continue;
+        const p = properties[expressId];
+        if (!p) continue;
+
+        // A. Direct property
+        if (p.SIMULATION) {
+          const val = typeof p.SIMULATION === "object" ? (p.SIMULATION.value ?? p.SIMULATION.NominalValue) : p.SIMULATION;
+          if (val) addSimEntry(String(val), modelId, expressId);
+        }
+
+        // B. Property sets (Psets)
+        if (p.psets && typeof p.psets === "object") {
+          for (const rawPset of Object.values(p.psets)) {
+            if (rawPset && typeof rawPset === "object") {
+              for (const [k, v] of Object.entries(rawPset as Record<string, any>)) {
+                if (k.toLowerCase() === targetProp || k.toLowerCase().endsWith(`.${targetProp}`)) {
+                  if (v !== undefined && v !== null) {
+                    addSimEntry(String(v), modelId, expressId);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Also check IfcParameterReader parsed properties cache
+    try {
+      const reader = (window as any).IfcParameterReader?.getInstance?.();
+      if (reader && typeof reader.getParsedPropertiesMap === "function") {
+        const parsedMap = reader.getParsedPropertiesMap();
+        for (const [mId, elemPropsMap] of parsedMap.entries()) {
+          for (const [eid, elemData] of Object.entries(elemPropsMap as Record<number, any>)) {
+            const eidNum = Number(eid);
+            if (elemData && elemData.psets) {
+              for (const rawPset of Object.values(elemData.psets)) {
+                if (rawPset && typeof rawPset === "object") {
+                  for (const [k, v] of Object.entries(rawPset as Record<string, any>)) {
+                    if (k.toLowerCase() === targetProp || k.toLowerCase().endsWith(`.${targetProp}`)) {
+                      if (v !== undefined && v !== null) {
+                        addSimEntry(String(v), mId, eidNum);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Match each schedule task to the indexed elements
+    let matchedTasks = 0;
+    let totalElementsLinked = 0;
+    const tasksMatched: Array<{ taskId: string; name: string; count: number }> = [];
+
+    const nowMs = Date.now();
+
+    for (const [, task] of this.tasks) {
+      const searchKeys: string[] = [];
+      if (task.simulationKey) searchKeys.push(task.simulationKey.trim().toUpperCase());
+      if (task.name) searchKeys.push(task.name.trim().toUpperCase());
+      if (task.name.includes(":")) {
+        searchKeys.push(task.name.split(":").pop()!.trim().toUpperCase());
+      }
+
+      let matchedElements: Array<{ modelId: string; expressId: number }> = [];
+      for (const k of searchKeys) {
+        if (simIndex.has(k)) {
+          matchedElements = simIndex.get(k)!;
+          break;
+        }
+      }
+
+      if (matchedElements.length > 0) {
+        matchedTasks++;
+        task.elementIds = new Set<number>();
+
+        const taskStartMs = new Date(task.startDate).getTime();
+        const taskEndMs = new Date(task.endDate).getTime();
+        let taskStatus: TaskStatus = "Planned";
+        if (nowMs > taskEndMs) taskStatus = "Completed";
+        else if (nowMs >= taskStartMs && nowMs <= taskEndMs) taskStatus = "In Progress";
+        task.status = taskStatus;
+
+        for (const { modelId, expressId } of matchedElements) {
+          task.elementIds.add(expressId);
+          task.modelId = modelId;
+          totalElementsLinked++;
+
+          if (twinDatabase) {
+            const dbKey = `${modelId}-${expressId}`;
+            const existing = twinDatabase[dbKey] || {
+              modelId,
+              expressId,
+              quantity: 1,
+            };
+
+            twinDatabase[dbKey] = {
+              ...existing,
+              modelId,
+              expressId,
+              task: task.name,
+              status: taskStatus,
+              startDate: task.startDate,
+              endDate: task.endDate,
+              wbsCode: task.wbsCode,
+              totalFloat: task.totalFloat,
+              isCritical: task.isCritical,
+              unitCost: task.unitCost || 250,
+              calculatedCost: (task.unitCost || 250) * (existing.quantity || 1),
+              isCustomized: true,
+            };
+          }
+        }
+
+        task.quantity = task.elementIds.size;
+        tasksMatched.push({
+          taskId: task.id,
+          name: task.name,
+          count: task.elementIds.size,
+        });
+      }
+    }
+
+    return {
+      matchedTasks,
+      totalTasks: this.tasks.size,
+      totalElementsLinked,
+      tasksMatched,
+    };
   }
 
   /**

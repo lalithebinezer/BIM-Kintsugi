@@ -61,6 +61,10 @@ export class IfcParameterReader {
     if (options.onSequenceApplied) this.onSequenceAppliedCallback = options.onSequenceApplied;
   }
 
+  public getParsedPropertiesMap(): Map<string, Record<number, any>> {
+    return this.parsedModelProperties;
+  }
+
   /**
    * Scans loaded models and indexes every single IFC parameter and Pset.
    */

@@ -57,6 +57,7 @@ export class InteractiveGanttDrawer {
             <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display: inline-block; vertical-align: middle; margin-right: 2px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 5D Cost Control
             </button>
+            <button id="btn-gantt-sync-synchro" class="btn-gantt-drawer-action" title="Synchronize 4D Sequence with Synchro Schedule XML and model SIMULATION property" style="border-color: rgba(56, 189, 248, 0.5); color: #38BDF8;">⚡ Sync Synchro (SIMULATION)</button>
             <button id="btn-gantt-export-mspdi" class="btn-gantt-drawer-action" title="Export schedule to Microsoft Project XML (MSPDI)">Export MSP XML</button>
             <button id="btn-gantt-export-p6" class="btn-gantt-drawer-action" title="Export schedule to Oracle Primavera P6 XER">Export P6 XER</button>
             <button id="btn-gantt-fit-dates" class="btn-gantt-drawer-action" title="Fit all tasks into timeline view">Fit Timeline</button>
@@ -137,6 +138,12 @@ export class InteractiveGanttDrawer {
     panel.querySelector("#gantt-search-filter")?.addEventListener("input", (e) => {
       const query = (e.target as HTMLInputElement).value.toLowerCase();
       this.filterTasks(query);
+    });
+
+    panel.querySelector("#btn-gantt-sync-synchro")?.addEventListener("click", () => {
+      if (typeof (window as any).sync4DWithSimulationProperty === "function") {
+        (window as any).sync4DWithSimulationProperty();
+      }
     });
 
     panel.querySelector("#btn-gantt-export-mspdi")?.addEventListener("click", () => {
