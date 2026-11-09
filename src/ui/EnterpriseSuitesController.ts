@@ -1322,18 +1322,42 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   const btnMinimapCollapse = document.getElementById("btn-minimap-collapse");
   const minimapContainer = document.getElementById("minimap-container");
-  btnMinimapCollapse?.addEventListener("click", () => {
+  const minimapHeader = minimapContainer?.querySelector(".minimap-header");
+
+  const toggleMinimapCollapse = () => {
     if (minimapContainer) {
       const isCollapsed = minimapContainer.classList.toggle("collapsed");
-      btnMinimapCollapse.innerHTML = isCollapsed
-        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>`
-        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`;
-      const w = minimapContainer.offsetWidth || 210;
+      if (btnMinimapCollapse) {
+        btnMinimapCollapse.innerHTML = isCollapsed
+          ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>`
+          : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`;
+      }
+      const w = isCollapsed ? 120 : (minimapContainer.offsetWidth || 210);
       document.documentElement.style.setProperty("--radar-w", `${w}px`);
       document.body.style.setProperty("--radar-w", `${w}px`);
       SoundManager.getInstance().playClick();
     }
+  };
+
+  btnMinimapCollapse?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMinimapCollapse();
   });
+
+  // Easy tap target on mobile: clicking header outside controls toggles collapse
+  minimapHeader?.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("select, button")) return;
+    toggleMinimapCollapse();
+  });
+
+  // Default to collapsed mode on mobile viewports (< 640px or landscape phone < 500px)
+  if (typeof window !== "undefined" && minimapContainer && (window.innerWidth <= 640 || window.innerHeight <= 500)) {
+    minimapContainer.classList.add("collapsed");
+    if (btnMinimapCollapse) {
+      btnMinimapCollapse.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>`;
+    }
+  }
 
   // Apple Dock Spring Magnifier
   initAppleDockMagnifier();

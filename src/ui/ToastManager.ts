@@ -28,35 +28,39 @@ export function showToast(
   const resolvedIcon = resolveToastIcon(icon);
 
   const toast = document.createElement("div");
+  toast.className = "bim-toast-item";
   toast.style.cssText = `
-    background: var(--bg-panel, #18181b);
+    background: var(--bg-panel, rgba(18, 20, 28, 0.94));
     color: var(--text-primary, #ffffff);
-    border: 2px solid var(--border-strong, #000000);
-    border-radius: 4px;
-    padding: 0.5rem 0.85rem;
-    box-shadow: var(--shadow-brutal, 4px 4px 0px #000000);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.16));
+    border-radius: 9999px;
+    padding: 0.42rem 0.95rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
     font-size: 0.72rem;
-    font-weight: 800;
+    font-weight: 700;
     font-family: var(--font-body, sans-serif);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     pointer-events: auto;
-    animation: popIn 0.15s ease-out;
-    max-width: 320px;
+    animation: popIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: min(90vw, 360px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    user-select: none;
   `;
 
   toast.innerHTML = `
     <span style="display: inline-flex; align-items: center; flex-shrink: 0;">${resolvedIcon}</span>
-    <span style="flex: 1; line-height: 1.35;">${escapeHtml(message)}</span>
+    <span style="flex: 1; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+    toast.style.transition = "opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)";
     toast.style.opacity = "0";
-    toast.style.transform = "translateY(10px)";
-    setTimeout(() => toast.remove(), 220);
+    toast.style.transform = "translateY(-8px) scale(0.96)";
+    setTimeout(() => toast.remove(), 240);
   }, durationMs);
 }

@@ -5268,27 +5268,36 @@ body[data-theme="light"] {
   }
 }
 
-/* Portrait Tablets & Narrower Screens (641px to 960px) */
-@media (min-width: 641px) and (max-width: 960px) {
-  .hud-anchor-bottom-right {
-    display: flex !important;
-    position: fixed;
-    bottom: 4.4rem;
-    right: 0.65rem;
-    z-index: 9990;
-    --radar-w: 125px;
+/* Tablets in Portrait & Landscape (641px to 1080px) */
+@media (min-width: 641px) and (max-width: 1080px) {
+  .hud-anchor-top-left {
+    max-width: calc(100vw - 90px) !important;
   }
-}
 
-/* Landscape Tablets & Netbooks (961px to 1080px) */
-@media (min-width: 961px) and (max-width: 1080px) {
+  .view-cube-layer {
+    transform: scale(0.72) !important;
+    transform-origin: top right !important;
+    top: var(--header-bottom) !important;
+    right: 0.55rem !important;
+  }
+
   .hud-anchor-bottom-right {
     display: flex !important;
-    position: fixed;
-    bottom: 4.8rem !important;
-    right: 0.75rem;
-    z-index: 9990;
+    position: fixed !important;
+    bottom: 4.6rem !important;
+    top: auto !important;
+    right: 0.75rem !important;
+    z-index: 9990 !important;
     --radar-w: 135px;
+  }
+
+  .viewport-scale-bar {
+    display: none !important;
+  }
+
+  .minimap-radar-widget {
+    width: 180px !important;
+    max-width: 180px !important;
   }
 }
 
@@ -5312,6 +5321,7 @@ body[data-theme="light"] {
   header {
     padding: 0 0.4rem;
     gap: 0.25rem;
+    overflow-x: hidden;
   }
 
   .header-controls {
@@ -5345,36 +5355,91 @@ body[data-theme="light"] {
     display: none !important;
   }
 
+  /* Top-left Quick Camera: Compact, non-overlapping with ViewCube */
+  .hud-anchor-top-left {
+    max-width: calc(100vw - 78px) !important;
+    padding: 0.2rem 0.35rem !important;
+    gap: 0.15rem !important;
+  }
+
+  .quick-view-toolbar {
+    gap: 0.2rem !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .btn-quick-view {
+    padding: 0.25rem 0.35rem !important;
+    min-width: 28px !important;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.65rem !important;
+    justify-content: center !important;
+  }
+
+  .btn-quick-view span,
+  #quick-explode-text,
+  #label-ground-grid {
+    display: none !important;
+  }
+
+  /* Hide secondary desktop-only camera tools on phones */
+  #camera-speed-capsule,
+  #btn-shortcuts-toggle,
+  #btn-drone-orbit,
+  #btn-play-tour,
+  #btn-toggle-storey-slice,
+  #btn-view-snapshot {
+    display: none !important;
+  }
+
+  #bim-breadcrumbs-bar {
+    max-width: 100% !important;
+    font-size: 0.6rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Scaled ViewCube positioned cleanly at top-right */
+  .view-cube-layer {
+    transform: scale(0.62) !important;
+    transform-origin: top right !important;
+    top: calc(var(--header-bottom) + 0.12rem) !important;
+    right: 0.35rem !important;
+  }
+
   /* Non-overlapping centered Magic Dock */
   .hud-anchor-bottom-center {
     display: flex !important;
     position: fixed !important;
-    bottom: max(0.85rem, env(safe-area-inset-bottom)) !important;
+    bottom: max(0.65rem, env(safe-area-inset-bottom)) !important;
     left: 50% !important;
     right: auto !important;
     transform: translateX(-50%) !important;
-    max-width: min(96vw, 560px);
+    max-width: min(96vw, 480px) !important;
     z-index: 9999;
     pointer-events: none;
-    gap: 0.25rem;
+    gap: 0.2rem;
     align-items: center;
   }
 
   .bottom-toolbar.magic-dock {
     display: inline-flex !important;
     pointer-events: auto;
-    height: 44px;
-    max-width: min(94vw, 540px);
-    padding: 0 1rem;
-    gap: 0.2rem;
+    height: 44px !important;
+    max-width: min(94vw, 460px) !important;
+    padding: 0 0.65rem !important;
+    gap: 0.2rem !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    scroll-behavior: smooth;
-    border-radius: 9999px;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x !important;
+    overscroll-behavior-x: contain !important;
+    scrollbar-width: none !important;
+    scroll-behavior: smooth !important;
+    border-radius: 9999px !important;
   }
 
   .bottom-toolbar.magic-dock:hover {
@@ -5388,44 +5453,177 @@ body[data-theme="light"] {
     min-width: 32px !important;
   }
 
-  /* Non-colliding elevated 2D radar positioned cleanly on right under ViewCube */
+  /* Non-colliding elevated 2D radar positioned safely above dock in bottom-right */
   .hud-anchor-bottom-right {
     display: flex !important;
     position: fixed !important;
-    top: calc(var(--header-bottom) + 85px) !important;
-    bottom: auto !important;
+    bottom: 4.4rem !important;
+    top: auto !important;
     right: 0.5rem !important;
-    z-index: 9990;
-    --radar-w: 115px;
+    z-index: 9990 !important;
+    --radar-w: 120px;
   }
 
   .viewport-scale-bar {
     display: none !important;
   }
 
+  /* In mobile portrait, minimap collapses to sleek pill unless expanded */
+  .minimap-radar-widget:not(.expanded) .minimap-canvas-wrap,
+  .minimap-radar-widget:not(.expanded) .minimap-footer,
+  .minimap-radar-widget:not(.expanded) .minimap-resize-handle {
+    display: none !important;
+  }
+
+  .minimap-radar-widget:not(.expanded) {
+    width: auto !important;
+    max-width: 130px !important;
+    border-radius: 8px !important;
+  }
+
+  .minimap-radar-widget.expanded {
+    width: min(240px, 86vw) !important;
+    max-width: 86vw !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65) !important;
+  }
+
+  /* Sidebars & Drawers: Mobile Bottom-Sheets */
   .left-sidebar, .right-sidebar {
     bottom: 12px;
     width: min(330px, 92vw);
   }
-}
 
-/* Very Small Mobile Screens (<= 520px) */
-@media (max-width: 520px) {
-  /* Collapse radar into a sleek non-intrusive badge unless expanded */
-  .minimap-radar-widget:not(.force-expand) .minimap-canvas-wrap,
-  .minimap-radar-widget:not(.force-expand) .minimap-footer {
-    display: none !important;
+  .enterprise-drawer {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 75vh !important;
+    max-height: 82vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    border-bottom: none !important;
+    z-index: 10002 !important;
   }
 
-  .minimap-radar-widget:not(.force-expand) {
-    width: auto;
-    max-width: 110px;
+  .interactive-gantt-drawer {
+    height: 70vh !important;
+    max-height: 80vh !important;
+    z-index: 10002 !important;
+  }
+}
+
+/* Very Small Mobile Screens (<= 480px / 360px) */
+@media (max-width: 480px) {
+  .hud-anchor-top-left {
+    max-width: calc(100vw - 68px) !important;
+  }
+
+  .view-cube-layer {
+    transform: scale(0.58) !important;
+    right: 0.25rem !important;
+  }
+
+  .hud-anchor-bottom-center {
+    max-width: calc(100vw - 0.6rem) !important;
+    bottom: max(0.45rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .bottom-toolbar.magic-dock {
+    height: 42px !important;
+    padding: 0 0.5rem !important;
+    gap: 0.18rem !important;
+  }
+
+  .dock-icon.btn-tool {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+
+  .dock-icon.btn-tool svg {
+    width: 14px !important;
+    height: 14px !important;
   }
 
   .hud-anchor-bottom-right {
-    top: calc(var(--header-bottom) + 85px) !important;
+    bottom: 4.1rem !important;
+    right: 0.4rem !important;
+  }
+
+  .minimap-radar-widget:not(.expanded) {
+    max-width: 115px !important;
+  }
+}
+
+/* Landscape Mobile Phones (Ultra-Constrained Height <= 500px) */
+@media (max-height: 500px) {
+  body {
+    --header-bottom: 2.75rem;
+  }
+
+  header {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+  }
+
+  .hud-anchor-top-left {
+    max-width: calc(100vw - 160px) !important;
+    padding: 0.15rem 0.35rem !important;
+  }
+
+  .view-cube-layer {
+    transform: scale(0.52) !important;
+    transform-origin: top right !important;
+    top: calc(var(--header-bottom) + 0.1rem) !important;
+    right: 0.35rem !important;
+  }
+
+  /* In landscape mobile, place collapsed minimap pill next to ViewCube */
+  .hud-anchor-bottom-right {
+    position: fixed !important;
+    top: calc(var(--header-bottom) + 0.15rem) !important;
     bottom: auto !important;
-    right: 0.5rem !important;
+    right: 3.8rem !important;
+    z-index: 9990 !important;
+  }
+
+  .minimap-radar-widget:not(.force-expand):not(.expanded) {
+    width: auto !important;
+    max-width: 125px !important;
+  }
+
+  .minimap-radar-widget:not(.force-expand):not(.expanded) .minimap-canvas-wrap,
+  .minimap-radar-widget:not(.force-expand):not(.expanded) .minimap-footer,
+  .minimap-radar-widget:not(.force-expand):not(.expanded) .minimap-resize-handle {
+    display: none !important;
+  }
+
+  .viewport-scale-bar {
+    display: none !important;
+  }
+
+  #bim-toast-container,
+  .bim-toast-container {
+    top: calc(var(--header-bottom) + 3.8rem) !important;
+  }
+
+  .hud-anchor-bottom-center {
+    bottom: 0.35rem !important;
+  }
+
+  .bottom-toolbar.magic-dock {
+    height: 40px !important;
+    padding: 0 0.5rem !important;
+  }
+
+  .dock-icon.btn-tool {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
   }
 }
 
@@ -6416,35 +6614,52 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   color: #ffffff;
 }
 
-/* Toast Notifications */
+/* Toast Notifications — Floating Dynamic Island Pill (Zero Dock / UI Collision) */
+#bim-toast-container,
 .bim-toast-container {
-  position: absolute;
-  top: 6rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100010;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  pointer-events: none;
+  position: fixed !important;
+  top: calc(var(--header-bottom) + 4.2rem) !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 100010 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  pointer-events: none !important;
+  width: auto !important;
+  max-width: min(92vw, 380px) !important;
 }
 
+.bim-toast-item,
 .bim-toast-msg {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--bg-surface);
-  backdrop-filter: blur(var(--glass-blur)) saturate(190%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(190%);
-  border: 1px solid var(--border-accent);
-  border-radius: 20px;
-  padding: 0.5rem 0.95rem;
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: 0.74rem;
-  font-weight: 700;
-  box-shadow: var(--shadow-float);
-  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  background: var(--bg-surface, rgba(18, 20, 28, 0.94)) !important;
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(190%) !important;
+  border: 1px solid var(--border-accent, rgba(255, 255, 255, 0.16)) !important;
+  border-radius: 9999px !important;
+  padding: 0.42rem 0.95rem !important;
+  color: var(--text-primary, #ffffff) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  max-width: min(90vw, 360px) !important;
+}
+
+[data-theme="light"] .bim-toast-item,
+[data-theme="light"] .bim-toast-msg {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
 }
 
 @keyframes slideUpFade {
@@ -6550,7 +6765,7 @@ body.right-sidebar-collapsed .right-sidebar {
   }
 }
 
-@media (max-width: 768px) {
+@media (min-width: 641px) and (max-width: 768px) {
   .brand-text {
     display: none;
   }
