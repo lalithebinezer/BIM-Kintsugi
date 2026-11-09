@@ -6,7 +6,7 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.4.3-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-83%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-165%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
@@ -231,21 +231,21 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 83-test Vitest suite across all core and enterprise modules:
+Run strict TypeScript type-checking and the 165-test Vitest suite across all 22 core and enterprise modules:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 13 unit test suites (83 tests)
+# Run all 22 unit test suites (165 tests)
 npm test -- --run
 ```
 
 The automated testing harness also executes a headless Chrome (Playwright) visual audit:
 - **0 runtime page errors**, **0 duplicate DOM IDs**.
-- **83/83 unit tests passing** across 13 test suites (100% green).
+- **165/165 unit tests passing** across 22 test suites (100% green).
 - **100% WCAG 2.2 AA Compliance** across 199 interactive buttons and 78 form inputs.
-- **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), netbook (`1100×750`), and mobile viewports (`640px`).
+- **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), tablet (`768px–1080px`), and mobile viewports (`360px–640px`).
 
 ---
 
@@ -258,6 +258,9 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 | **`+` / `PageUp`** | **Zoom In Camera** | Smoothly zoom camera into the model (proportional to distance & zoom speed) |
 | **`-` / `PageDown`** | **Zoom Out Camera** | Smoothly zoom camera out from the model (proportional to distance & zoom speed) |
 | **`[` / `]`** | **Camera Zoom Speed** | Decrease or increase camera zoom/dolly speed dynamically (0.1x to 5.0x) |
+| **`Shift + G`** | **Ground Reference Grid** | Toggle transparent ground reference plane with theme synchronization |
+| **`G`** | **GeoBIM GIS Basemap** | Open GeoBIM GIS & 3D Geospatial satellite terrain basemap suite |
+| **`V`** | **4D Variance Mode** | Toggle 4D planned vs. actual schedule variance ($SV) and delay cost impact ($CV) |
 | **`F`** | **Fit to Screen** | Frame all visible BIM geometry in the viewport |
 | **`H`** | **Reset Visibility** | Unhide all isolated/hidden elements and clear active highlights |
 | **`I`** | **Isolate Selection** | Isolate currently selected BIM elements |
@@ -277,6 +280,22 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 
 ## 📝 Recent Changes & Enhancements
 
+- **Synchro-Grade 4D Appearance Profiles & Growth Animation Engine** ([`AppearanceProfileEngine.ts`](src/modules/AppearanceProfileEngine.ts)):
+  - **4 Standard Action Profiles**: Implements Bentley Synchro-grade action profiles: `Install` (planned appearance $\to$ active growth plane $\to$ end material), `Remove` (demolition highlighting $\to$ ghosting $\to$ removal), `Temporary` (erection $\to$ active use $\to$ teardown), and `Maintain` (in-situ preservation).
+  - **Active Growth Cutting Plane**: Animated cutting plane growth interpolating along custom vectors (Z-axis bottom-up, top-down, lateral) during active task execution.
+  - **Dynamic Color Overrides & Transparency**: Configurable start/active/end appearance states with custom RGB colors and alpha blending.
+- **Schedule Variance & Delay Impact Engine** ([`DelayImpactEngine.ts`](src/modules/DelayImpactEngine.ts)):
+  - **Earned Value Variance Analytics**: Computes real-time Schedule Variance ($SV = EV - PV$), Schedule Performance Index ($SPI = EV / PV$), Cost Variance ($CV = EV - AC$), and Cost Performance Index ($CPI = EV / AC$).
+  - **Critical Path Impact Detection**: Flags critical vs. non-critical path task delays, automatically categorizing activities into `ahead`, `on-time`, `minor-delay`, and `critical-delay`.
+  - **Actual Dates in CSV & Schedule Imports**: Tracks `ActualStartDate` and `ActualEndDate` across CSV, MSPDI XML, and Primavera P6 XER imports/exports with prominent active state button indicators in the 4D timeline.
+- **Transparent Ground Reference Grid with Dynamic Theme Synchronization** ([`SceneManager.ts`](src/core/SceneManager.ts)):
+  - **Zero-Clutter Ground Plane**: Subtle `0.15` opacity transparent ground grid eliminating harsh ground plane shadows while maintaining clear spatial grounding.
+  - **Dynamic Theme Palette Sync**: Automatically switches grid line tones between Obsidian Dark (`#242b35`), Light Studio (`#b0b8c4`), Zen Minimalist, Cyberpunk, and Blueprint.
+  - **Instant Keyboard & Toolbar Toggle**: Dedicated `Shift+G` hotkey and Quick View tools ribbon button for immediate grid toggle.
+- **All-Device Screen Responsiveness & ViewCube Collision-Free Layout** ([`style.css`](src/style.css)):
+  - **Fluid ViewCube Clearance**: Dynamic `--header-bottom` offsets and `calc(var(--header-bottom) + 14px)` positioning ensuring the 3D ViewCube is never visually clipped or occluded by top navigation bars across all screen widths.
+  - **Intelligent Toolbar Compacting**: Automatically hides secondary camera tools, zoom speed capsules, and zoom steppers below 1080px to provide over 300px of horizontal breathing room between the quick toolbar and ViewCube.
+  - **Full Cross-Device Testing**: Verified zero overlap across small phones (`360px–480px`), tablets (`768px–1080px`), laptops (`1280px–1380px`), and desktop monitors (`1440px–1920px`).
 - **Dynamic Camera Zoom & Dolly Speed Engine** – Full interactive camera zoom control suite:
   - **Canvas HUD Stepper & Capsule**: Instant `[-]` and `[+]` speed adjustment buttons and current speed badge (`⚡ 1.0x`) placed directly in the top-left canvas toolbar.
   - **Touchscreen Direct Zoom**: 1-tap Zoom In (`+`) and Zoom Out (`-`) buttons for mobile, tablet, or trackpad navigation without requiring a physical mouse wheel.

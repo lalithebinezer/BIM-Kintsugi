@@ -326,7 +326,7 @@ html, body {
    ============================================================ */
 
 body {
-  --header-bottom: 4.15rem;
+  --header-bottom: 4.35rem;
   --left-panel-w: 310px;
   --right-panel-w: 360px;
   --radar-w: 210px;
@@ -377,10 +377,10 @@ header, .sidebar, .tactical-ticker-bar, .hud-anchor-top-left, .hud-anchor-bottom
 .view-cube-layer {
   pointer-events: none;
   position: absolute;
-  top: var(--header-bottom);
+  top: calc(var(--header-bottom) + 14px);
   right: var(--right-safe-offset);
   transition: right var(--ease-normal), top var(--ease-normal), opacity 0.2s ease;
-  z-index: 90;
+  z-index: 100;
 }
 
 /* ============================================================
@@ -5066,7 +5066,7 @@ body[data-theme="light"] {
    ============================================================ */
 @media (max-width: 1080px) {
   body {
-    --header-bottom: 3.5rem;
+    --header-bottom: 4.25rem;
     --left-safe-offset: 0.65rem;
     --right-safe-offset: 0.65rem;
     --radar-w: 135px;
@@ -5268,17 +5268,25 @@ body[data-theme="light"] {
   }
 }
 
-/* Tablets in Portrait & Landscape (641px to 1080px) */
+/* Tablets & Medium Screens (641px to 1080px) */
 @media (min-width: 641px) and (max-width: 1080px) {
   .hud-anchor-top-left {
-    max-width: calc(100vw - 90px) !important;
+    max-width: calc(100vw - 110px) !important;
+  }
+
+  /* Hide zoom speed stepper and zoom action buttons below 1080px to prevent crowding ViewCube */
+  #camera-speed-capsule,
+  #btn-zoom-in,
+  #btn-zoom-out {
+    display: none !important;
   }
 
   .view-cube-layer {
     transform: scale(0.72) !important;
     transform-origin: top right !important;
-    top: var(--header-bottom) !important;
-    right: 0.55rem !important;
+    top: calc(var(--header-bottom) + 12px) !important;
+    right: 0.65rem !important;
+    z-index: 100 !important;
   }
 
   .hud-anchor-bottom-right {
@@ -5307,7 +5315,7 @@ body[data-theme="light"] {
    ============================================================ */
 @media (max-width: 640px) {
   body {
-    --header-bottom: 3.2rem;
+    --header-bottom: 3.85rem;
   }
 
   .brand-text {
@@ -5390,7 +5398,9 @@ body[data-theme="light"] {
   #btn-drone-orbit,
   #btn-play-tour,
   #btn-toggle-storey-slice,
-  #btn-view-snapshot {
+  #btn-view-snapshot,
+  #btn-zoom-in,
+  #btn-zoom-out {
     display: none !important;
   }
 
@@ -5406,8 +5416,9 @@ body[data-theme="light"] {
   .view-cube-layer {
     transform: scale(0.62) !important;
     transform-origin: top right !important;
-    top: calc(var(--header-bottom) + 0.12rem) !important;
-    right: 0.35rem !important;
+    top: calc(var(--header-bottom) + 10px) !important;
+    right: 0.45rem !important;
+    z-index: 100 !important;
   }
 
   /* Non-overlapping centered Magic Dock */
@@ -5523,7 +5534,10 @@ body[data-theme="light"] {
 
   .view-cube-layer {
     transform: scale(0.58) !important;
-    right: 0.25rem !important;
+    transform-origin: top right !important;
+    top: calc(var(--header-bottom) + 8px) !important;
+    right: 0.35rem !important;
+    z-index: 100 !important;
   }
 
   .hud-anchor-bottom-center {
@@ -5561,7 +5575,7 @@ body[data-theme="light"] {
 /* Landscape Mobile Phones (Ultra-Constrained Height <= 500px) */
 @media (max-height: 500px) {
   body {
-    --header-bottom: 2.75rem;
+    --header-bottom: 3.25rem;
   }
 
   header {
@@ -5578,8 +5592,9 @@ body[data-theme="light"] {
   .view-cube-layer {
     transform: scale(0.52) !important;
     transform-origin: top right !important;
-    top: calc(var(--header-bottom) + 0.1rem) !important;
+    top: calc(var(--header-bottom) + 6px) !important;
     right: 0.35rem !important;
+    z-index: 100 !important;
   }
 
   /* In landscape mobile, place collapsed minimap pill next to ViewCube */
@@ -6781,11 +6796,14 @@ body.right-sidebar-collapsed .right-sidebar {
     gap: 0.2rem;
   }
 
-  /* Hide secondary camera quick-actions on smaller screens */
+  /* Hide secondary camera quick-actions and zoom controls on medium screens to keep ViewCube clear */
   #btn-drone-orbit,
   #btn-play-tour,
   #btn-toggle-storey-slice,
-  #btn-view-snapshot {
+  #btn-view-snapshot,
+  #camera-speed-capsule,
+  #btn-zoom-in,
+  #btn-zoom-out {
     display: none !important;
   }
 
@@ -6828,10 +6846,11 @@ body.right-sidebar-collapsed .right-sidebar {
 
   /* ViewCube scaled smoothly to avoid crowding */
   .view-cube-layer {
-    transform: scale(0.7);
-    transform-origin: top right;
-    top: var(--header-bottom);
-    right: 0.5rem;
+    transform: scale(0.7) !important;
+    transform-origin: top right !important;
+    top: calc(var(--header-bottom) + 12px) !important;
+    right: 0.55rem !important;
+    z-index: 100 !important;
   }
 
   /* Timeline & debug stats */
