@@ -2768,10 +2768,23 @@ function bindLegendColorPickers() {
   });
 }
 
+function updateVarianceButtonUI(varianceActive: boolean) {
+  const btn = document.getElementById("btn-4d-variance-toggle");
+  if (!btn) return;
+  btn.classList.toggle("active", varianceActive);
+  if (varianceActive) {
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg> <span class="variance-status-dot"></span> Variance: ON`;
+    btn.title = "4D Variance Mode ACTIVE (Ahead / On Track / Delayed / Critical Delay). Click to disable.";
+  } else {
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg> Variance Mode`;
+    btn.title = "Toggle Planned vs. Actual Variance Coloring & Delay Exposure";
+  }
+}
+
 const btn4dVariance = document.getElementById("btn-4d-variance-toggle");
 btn4dVariance?.addEventListener("click", () => {
   isVarianceMode = !isVarianceMode;
-  btn4dVariance.classList.toggle("active", isVarianceMode);
+  updateVarianceButtonUI(isVarianceMode);
   updateVarianceLegendUI(isVarianceMode);
   showToast(
     isVarianceMode ? "4D Variance Mode: Ahead (Blue), On Track (Slate), Delayed (Amber), Critical (Red)" : "Standard 4D Phasing Mode Active",
@@ -7788,11 +7801,20 @@ function apply4dMode(active: boolean) {
     if (btn4dLabel) btn4dLabel.textContent = 'Activate 4D';
     // Stop playback and restore all element visibility when leaving 4D mode
     stopTimelinePlayback();
+    if (isVarianceMode) {
+      isVarianceMode = false;
+      updateVarianceButtonUI(false);
+      updateVarianceLegendUI(false);
+    }
     const hider = components.get(OBC.Hider);
     hider.set(true);
     highlighter.clear("timeline-planned");
     highlighter.clear("timeline-inprogress");
     highlighter.clear("timeline-completed");
+    highlighter.clear("timeline-variance-ahead");
+    highlighter.clear("timeline-variance-onschedule");
+    highlighter.clear("timeline-variance-delayed");
+    highlighter.clear("timeline-variance-critical");
   }
   updateHeaderLabel();
 }

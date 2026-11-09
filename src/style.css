@@ -4055,6 +4055,27 @@ body[data-theme="light"] {
   color: #1E293B !important;
 }
 
+[data-theme="light"] .btn-timeline-csv.active,
+[data-theme="light"] #btn-4d-variance-toggle.active {
+  background: linear-gradient(135deg, #0284C7, #0369A1) !important;
+  color: #FFFFFF !important;
+  border-color: #0284C7 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45) !important;
+  font-weight: 800 !important;
+  transform: translateY(-1px);
+}
+
+[data-theme="light"] .btn-timeline-csv.active:hover,
+[data-theme="light"] #btn-4d-variance-toggle.active:hover {
+  background: linear-gradient(135deg, #0369A1, #075985) !important;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55) !important;
+}
+
+[data-theme="light"] .btn-timeline-csv.active svg,
+[data-theme="light"] #btn-4d-variance-toggle.active svg {
+  stroke: #FFFFFF !important;
+}
+
 [data-theme="light"] .btn-close-4d {
   background: rgba(0, 0, 0, 0.04) !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
@@ -4710,6 +4731,43 @@ body[data-theme="light"] {
 .btn-query-execute:hover,
 .btn-timeline-csv:hover {
   background: var(--accent-400);
+}
+
+.btn-timeline-csv.active,
+#btn-4d-variance-toggle.active {
+  background: linear-gradient(135deg, #0284C7, #0369A1) !important;
+  color: #FFFFFF !important;
+  border-color: #38BDF8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+  font-weight: 800 !important;
+  transform: translateY(-1px);
+}
+
+.btn-timeline-csv.active:hover,
+#btn-4d-variance-toggle.active:hover {
+  background: linear-gradient(135deg, #0369A1, #075985) !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 4px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+.btn-timeline-csv.active svg,
+#btn-4d-variance-toggle.active svg {
+  stroke: #FFFFFF !important;
+}
+
+.variance-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38BDF8;
+  box-shadow: 0 0 6px #38BDF8;
+  margin-right: 3px;
+  animation: pulseVarianceDot 1.6s infinite ease-in-out;
+}
+
+@keyframes pulseVarianceDot {
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px #38BDF8; }
+  50% { transform: scale(1.4); opacity: 0.8; box-shadow: 0 0 12px #38BDF8; }
 }
 
 .btn-filter-chip {
