@@ -3932,6 +3932,7 @@ body[data-theme="light"] {
   background: #EEF2FF;
   color: #4F46E5;
   border-color: #4F46E5;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2), inset 0 0 0 1px rgba(79, 70, 229, 0.15);
 }
 
 /* Enterprise Suites Drawers (Clashes, Dimensions, 6D Carbon, AI Copilot, Collaboration) */
