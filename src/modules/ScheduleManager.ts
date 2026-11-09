@@ -26,6 +26,7 @@ export interface ScheduleTask {
   totalFloat?: number;
   isCritical?: boolean;
   simulationKey?: string;
+  appearanceProfileId?: string;
 }
 
 export interface ElementCostData {
@@ -509,6 +510,7 @@ export class ScheduleManager {
     const idsIdx = findCol("ExpressIDs", "ElementIDs", "IDs", "ExpressID");
     const unitCostIdx = findCol("UnitCost", "UnitRate", "Rate", "Unit_Cost");
     const totalCostIdx = findCol("TotalCost", "Cost", "Total_Cost", "Budget", "PlannedCost", "Price");
+    const profileIdx = findCol("AppearanceProfile", "Profile", "ProfileID", "Appearance");
 
     const cleanNumber = (val: string): number => {
       if (!val) return 0;
@@ -557,6 +559,8 @@ export class ScheduleManager {
         totalCost = Math.round((unitCost * count) * 100) / 100;
       }
 
+      const appearanceProfileId = getCol(profileIdx) || undefined;
+
       const task: ScheduleTask = {
         id,
         name,
@@ -569,6 +573,7 @@ export class ScheduleManager {
         unitCost,
         totalCost,
         quantity: count,
+        appearanceProfileId,
       };
 
       this.tasks.set(id, task);

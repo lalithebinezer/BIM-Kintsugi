@@ -108,6 +108,7 @@ import { PlanOverlayModule } from "./modules/PlanOverlayModule";
 import { SoundManager } from "./core/SoundManager";
 import { CinematicTourManager } from "./modules/CinematicTourManager";
 import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
+import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 
 BUI.Manager.init();
 
@@ -327,6 +328,8 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).InteractiveGanttDrawer = InteractiveGanttDrawer;
 (window as any).PropertySequenceEngine = PropertySequenceEngine;
 (window as any).ScheduleImportParsers = ScheduleImportParsers;
+(window as any).AppearanceProfileEngine = AppearanceProfileEngine;
+(window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
 
 // Setup Command Palette (Ctrl + K)
 const commandPalette = new CommandPalette([
@@ -6969,19 +6972,44 @@ async function updateTimelineVisualState(force: boolean = false) {
       await highlighter.highlightByID("timeline-variance-critical", vBuckets.critical, false, false);
     }
   } else {
-    const buckets = schedule4DEngine.getStatusBuckets(dateMs);
+    // If schedule tasks exist, use AppearanceProfileEngine to evaluate dynamic appearance and clipping planes
+    if (scheduleManager && scheduleManager.tasks && scheduleManager.tasks.size > 0) {
+      const profileEngine = AppearanceProfileEngine.getInstance();
+      const tasksList = scheduleManager.getTasksSorted();
+      const profileEval = profileEngine.evaluateTimelineFrame(dateMs, tasksList, fragments.list);
 
-    // Update visibility & highlight with status colors
-    if (buckets.counts.planned > 0) {
-      await hider.set(false, buckets.planned);
-    }
-    if (buckets.counts.inProgress > 0) {
-      await hider.set(true, buckets.inProgress);
-      await highlighter.highlightByID("timeline-inprogress", buckets.inProgress, false, false);
-    }
-    if (buckets.counts.completed > 0) {
-      await hider.set(true, buckets.completed);
-      await highlighter.highlightByID("timeline-completed", buckets.completed, false, false);
+      await profileEngine.applyEvaluationResult(profileEval, {
+        renderer: world.renderer?.three,
+        hider,
+        highlighter,
+        models: fragments.list,
+      });
+
+      // Highlight completed elements
+      const completedMap: Record<string, Set<number>> = {};
+      for (const [, state] of profileEval.elements) {
+        if (state.visible && state.progress >= 1.0) {
+          (completedMap[state.modelId] ??= new Set<number>()).add(state.expressId);
+        }
+      }
+      if (Object.keys(completedMap).length > 0) {
+        await highlighter.highlightByID("timeline-completed", completedMap, false, false);
+      }
+    } else {
+      const buckets = schedule4DEngine.getStatusBuckets(dateMs);
+
+      // Update visibility & highlight with status colors
+      if (buckets.counts.planned > 0) {
+        await hider.set(false, buckets.planned);
+      }
+      if (buckets.counts.inProgress > 0) {
+        await hider.set(true, buckets.inProgress);
+        await highlighter.highlightByID("timeline-inprogress", buckets.inProgress, false, false);
+      }
+      if (buckets.counts.completed > 0) {
+        await hider.set(true, buckets.completed);
+        await highlighter.highlightByID("timeline-completed", buckets.completed, false, false);
+      }
     }
   }
 
