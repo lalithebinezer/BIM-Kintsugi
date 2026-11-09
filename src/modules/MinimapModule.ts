@@ -112,8 +112,9 @@ export class MinimapModule {
       const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
       this.canvas.width = Math.round(this.config.size * dpr);
       this.canvas.height = Math.round(this.config.size * dpr);
-      this.canvas.style.width = `${this.config.size}px`;
-      this.canvas.style.height = `${this.config.size}px`;
+      this.canvas.style.width = "100%";
+      this.canvas.style.height = "auto";
+      this.canvas.style.aspectRatio = "1 / 1";
       this.ctx = this.canvas.getContext("2d");
       this.bindEvents();
       this.bindHeaderControls();
@@ -128,7 +129,7 @@ export class MinimapModule {
     if (container) {
       container.classList.toggle("hidden", !this.isVisible);
       if (typeof document !== "undefined") {
-        const radarW = !this.isVisible ? "0px" : `${container.offsetWidth || 385}px`;
+        const radarW = !this.isVisible ? "0px" : `${container.offsetWidth || 210}px`;
         document.documentElement.style.setProperty("--radar-w", radarW);
         document.body.style.setProperty("--radar-w", radarW);
       }
@@ -325,8 +326,9 @@ export class MinimapModule {
       const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
       this.canvas.width = Math.round(clampedSize * dpr);
       this.canvas.height = Math.round(clampedSize * dpr);
-      this.canvas.style.width = `${clampedSize}px`;
-      this.canvas.style.height = `${clampedSize}px`;
+      this.canvas.style.width = "100%";
+      this.canvas.style.height = "auto";
+      this.canvas.style.aspectRatio = "1 / 1";
     }
     const container = document.getElementById("minimap-container");
     if (container) {
@@ -403,9 +405,10 @@ export class MinimapModule {
       }
     } catch (e) {}
 
-    // 2. Scan ThatOpen Fragments Manager & Three.js Scene objects for 2D slice footprints
-    if (this.engine.fragments && this.engine.fragments.list) {
-      for (const [, model] of this.engine.fragments.list) {
+    // 2. Scan ThatOpen Fragments Manager for 2D slice footprints (only when IFC fragments loaded)
+    const fragmentsList = this.engine.fragments?.list;
+    if (fragmentsList && fragmentsList.size > 0) {
+      for (const [, model] of fragmentsList) {
         if (model) {
           const modelObj = (model.object || model) as THREE.Object3D;
           if (modelObj && typeof modelObj.traverse === "function") {
@@ -431,34 +434,6 @@ export class MinimapModule {
       }
     }
 
-    const scene = this.engine.world?.scene?.three;
-    if (scene) {
-      scene.traverse((obj) => {
-        if (
-          obj instanceof THREE.Mesh &&
-          obj.name !== "BIM_GroundContactShadow" &&
-          !obj.name.includes("Measurement") &&
-          !obj.name.includes("Selection")
-        ) {
-          this.modelBounds.expandByObject(obj);
-          this.hasModel = true;
-          if (this.meshFootprints.length < 240) {
-            const box = new THREE.Box3().setFromObject(obj);
-            if (!box.isEmpty()) {
-              this.meshFootprints.push({
-                minX: box.min.x,
-                minZ: box.min.z,
-                maxX: box.max.x,
-                maxZ: box.max.z,
-                minY: box.min.y,
-                maxY: box.max.y,
-              });
-            }
-          }
-        }
-      });
-    }
-
     if (this.hasModel && !this.modelBounds.isEmpty()) {
       this.modelBounds.getCenter(this.modelCenter);
       this.modelBounds.getSize(this.modelSize);
@@ -476,151 +451,11 @@ export class MinimapModule {
   }
 
   /**
-   * Generates contextual zones (structural deck, plant rooms, core, foundations)
-   * tailored to the active building storey or structural discipline.
+   * Room zone helper kept for backwards-compatibility;
+   * avoids generating fake procedural mock rooms to keep floor plan clean and functional.
    */
-  public generateContextualRoomZones(storeyName?: string): void {
-    if (!this.hasModel || this.modelBounds.isEmpty() || this.modelSize.x <= 2 || this.modelSize.z <= 2) {
-      return;
-    }
-
-    const minX = this.modelBounds.min.x;
-    const maxX = this.modelBounds.max.x;
-    const minZ = this.modelBounds.min.z;
-    const maxZ = this.modelBounds.max.z;
-    const totalW = maxX - minX;
-    const totalD = maxZ - minZ;
-
-    const activeLvlName = (storeyName || this.config.levels[this.config.currentLevelIndex]?.name || "").toLowerCase();
+  public generateContextualRoomZones(_storeyName?: string): void {
     this.roomZones = [];
-
-    if (activeLvlName.includes("roof") || activeLvlName.includes("rtos") || activeLvlName.includes("tos")) {
-      // Rooftop structural layout: Central Core Overrun, Rooftop MEP & Plant, and Main Roof Slabs
-      const coreMinX = minX + totalW * 0.35;
-      const coreMaxX = minX + totalW * 0.65;
-      const coreMinZ = minZ + totalD * 0.35;
-      const coreMaxZ = minZ + totalD * 0.65;
-
-      this.roomZones.push({
-        name: "Roof Slab Deck (West)",
-        minX: minX,
-        maxX: coreMinX,
-        minZ: minZ,
-        maxZ: maxZ,
-        area: Math.round((coreMinX - minX) * totalD),
-      });
-
-      this.roomZones.push({
-        name: "Lift Core Overrun",
-        minX: coreMinX,
-        maxX: coreMaxX,
-        minZ: coreMinZ,
-        maxZ: coreMaxZ,
-        area: Math.round((coreMaxX - coreMinX) * (coreMaxZ - coreMinZ)),
-      });
-
-      this.roomZones.push({
-        name: "Rooftop Plant & MEP",
-        minX: coreMinX,
-        maxX: maxX,
-        minZ: minZ,
-        maxZ: coreMinZ,
-        area: Math.round((maxX - coreMinX) * (coreMinZ - minZ)),
-      });
-
-      this.roomZones.push({
-        name: "Roof Slab Deck (East)",
-        minX: coreMaxX,
-        maxX: maxX,
-        minZ: coreMinZ,
-        maxZ: maxZ,
-        area: Math.round((maxX - coreMaxX) * (maxZ - coreMinZ)),
-      });
-    } else if (
-      activeLvlName.includes("fou") ||
-      activeLvlName.includes("footing") ||
-      activeLvlName.includes("parking") ||
-      activeLvlName.includes("basement") ||
-      activeLvlName.includes("sub")
-    ) {
-      // Substructure & Foundation layout
-      const splitX = minX + totalW * 0.5;
-      const splitZ = minZ + totalD * 0.5;
-
-      this.roomZones.push({
-        name: "Foundation Mat (West)",
-        minX: minX,
-        maxX: splitX,
-        minZ: minZ,
-        maxZ: splitZ,
-        area: Math.round((splitX - minX) * (splitZ - minZ)),
-      });
-      this.roomZones.push({
-        name: "Substructure Core Vault",
-        minX: splitX,
-        maxX: maxX,
-        minZ: minZ,
-        maxZ: splitZ,
-        area: Math.round((maxX - splitX) * (splitZ - minZ)),
-      });
-      this.roomZones.push({
-        name: "Parking & Foundation Bay A",
-        minX: minX,
-        maxX: splitX,
-        minZ: splitZ,
-        maxZ: maxZ,
-        area: Math.round((splitX - minX) * (maxZ - splitZ)),
-      });
-      this.roomZones.push({
-        name: "Parking & Foundation Bay B",
-        minX: splitX,
-        maxX: maxX,
-        minZ: splitZ,
-        maxZ: maxZ,
-        area: Math.round((maxX - splitX) * (maxZ - splitZ)),
-      });
-    } else {
-      // Standard superstructure / architectural floor plate
-      const coreMinX = minX + totalW * 0.35;
-      const coreMaxX = minX + totalW * 0.65;
-      const splitZ = minZ + totalD * 0.5;
-
-      this.roomZones.push({
-        name: "Floor Plate (West)",
-        minX: minX,
-        maxX: coreMinX,
-        minZ: minZ,
-        maxZ: maxZ,
-        area: Math.round((coreMinX - minX) * totalD),
-      });
-
-      this.roomZones.push({
-        name: "Central Shear Core",
-        minX: coreMinX,
-        maxX: coreMaxX,
-        minZ: minZ,
-        maxZ: splitZ,
-        area: Math.round((coreMaxX - coreMinX) * (splitZ - minZ)),
-      });
-
-      this.roomZones.push({
-        name: "Vertical Circulation & MEP",
-        minX: coreMinX,
-        maxX: coreMaxX,
-        minZ: splitZ,
-        maxZ: maxZ,
-        area: Math.round((coreMaxX - coreMinX) * (maxZ - splitZ)),
-      });
-
-      this.roomZones.push({
-        name: "Floor Plate (East)",
-        minX: coreMaxX,
-        maxX: maxX,
-        minZ: minZ,
-        maxZ: maxZ,
-        area: Math.round((maxX - coreMaxX) * totalD),
-      });
-    }
   }
 
   public teleportToWorldCoordinates(worldX: number, worldZ: number) {
@@ -1080,8 +915,16 @@ export class MinimapModule {
       }
     }
 
-    // Clear background (Deep sleek architectural slate)
-    ctx.fillStyle = "rgba(10, 12, 18, 0.95)";
+    // Theme check for architectural canvas rendering
+    const isLight = typeof document !== "undefined" && (
+      document.documentElement.getAttribute("data-theme") === "light" ||
+      document.body.getAttribute("data-theme") === "light"
+    );
+    const accentRgb = isLight ? "2, 132, 199" : "56, 189, 248";
+    const accentColor = isLight ? "#0284C7" : "#38BDF8";
+
+    // Clear background (Deep sleek architectural slate or crisp drafting paper)
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.96)" : "rgba(11, 15, 23, 0.96)";
     ctx.fillRect(0, 0, w, h);
 
     // Save context for possible Heading-Up Rotation
@@ -1094,8 +937,8 @@ export class MinimapModule {
       ctx.translate(-center, -center);
     }
 
-    // 1. Draw Architectural Metric Radar Grid & Coordinate Crosshairs
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+    // 1. Draw Architectural Drafting Hairline Grid
+    ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.04)" : "rgba(255, 255, 255, 0.04)";
     ctx.lineWidth = 1;
 
     const step = 20;
@@ -1112,210 +955,98 @@ export class MinimapModule {
       ctx.stroke();
     }
 
-    // Concentric Metric Range Rings with Dynamic Distance Readouts
-    const ringRadii = [w * 0.16, w * 0.30, w * 0.44];
-    for (let i = 0; i < ringRadii.length; i++) {
-      const r = ringRadii[i];
-      ctx.strokeStyle = i === ringRadii.length - 1 ? "rgba(56, 189, 248, 0.24)" : "rgba(255, 255, 255, 0.07)";
-      ctx.lineWidth = i === ringRadii.length - 1 ? 1.2 : 0.8;
-      ctx.setLineDash(i === 1 ? [3, 3] : []);
-      ctx.beginPath();
-      ctx.arc(center, center, r, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Metric distance label along 45-degree isometric ray
-      if (this.config.zoom > 0) {
-        const distMeters = (r / this.config.zoom).toFixed(0);
-        ctx.fillStyle = "rgba(148, 163, 184, 0.65)";
-        ctx.font = "600 7px monospace";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${distMeters}m`, center + r * 0.707 + 3, center - r * 0.707);
-      }
-    }
-    ctx.setLineDash([]);
-
-    // Subtle Live Tactical Radar Ray Sweep & Radial Gradient Beam
-    const sweepTime = performance.now() * 0.0012;
-    const sweepAngle = (sweepTime * 1.5) % (Math.PI * 2);
-    const sweepRadius = w * 0.44;
-
-    const sweepGrad = ctx.createRadialGradient(center, center, 0, center, center, sweepRadius);
-    sweepGrad.addColorStop(0, "rgba(56, 189, 248, 0.12)");
-    sweepGrad.addColorStop(0.8, "rgba(56, 189, 248, 0.03)");
-    sweepGrad.addColorStop(1, "rgba(56, 189, 248, 0.0)");
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, sweepRadius, sweepAngle - 0.35, sweepAngle);
-    ctx.closePath();
-    ctx.fillStyle = sweepGrad;
-    ctx.fill();
-
-    // Leading sweep line
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+    // Subtle Architectural Perimeter Boundary Circle
+    ctx.strokeStyle = isLight ? "rgba(2, 132, 199, 0.16)" : "rgba(56, 189, 248, 0.16)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.lineTo(center + Math.cos(sweepAngle) * sweepRadius, center + Math.sin(sweepAngle) * sweepRadius);
+    ctx.arc(center, center, w * 0.44, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.restore();
 
-    // Cardinal Points on Radar Perimeter (N, S, E, W)
-    ctx.font = "800 8px monospace";
+    // Subtle Cardinal North Indicator at top
+    ctx.fillStyle = "#EF4444";
+    ctx.font = "700 8px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
-    // North Marker (High contrast crimson accent with indicator arrow)
-    ctx.fillStyle = "#ef4444";
-    ctx.fillText("N", center, 10);
+    ctx.fillText("N", center, 9);
     ctx.beginPath();
-    ctx.moveTo(center, 15);
-    ctx.lineTo(center - 3.5, 20);
-    ctx.lineTo(center + 3.5, 20);
+    ctx.moveTo(center, 13);
+    ctx.lineTo(center - 2.5, 17);
+    ctx.lineTo(center + 2.5, 17);
     ctx.closePath();
     ctx.fill();
-
-    // South, East, West Markers
-    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-    ctx.fillText("S", center, h - 8);
-    ctx.fillText("E", w - 8, center);
-    ctx.fillText("W", 8, center);
 
     // 2. Draw Solar Sun Vector if Solar study active
     try {
       const suite = GeoEngineeringSuite.getInstance();
       const sun = suite.getSunNow();
       if (sun && sun.elevation > 0) {
-        // Sun vector on perimeter
         const sunRad = ((sun.azimuth - 90) * Math.PI) / 180;
         const sunDist = w * 0.43;
         const sx = center + Math.cos(sunRad) * sunDist;
         const sy = center + Math.sin(sunRad) * sunDist;
-        ctx.fillStyle = "#f59e0b";
+        ctx.fillStyle = "#F59E0B";
         ctx.beginPath();
-        ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.font = "700 6.5px monospace";
-        ctx.fillText("☀", sx, sy - 6);
+        ctx.fillText("☀", sx, sy - 5);
       }
     } catch (e) {}
 
-    // 3. Draw Loaded BIM Model Footprints, Room Zones & Slabs
-    const minPt = this.hasModel && !this.modelBounds.isEmpty()
-      ? this.worldToMinimap(this.modelBounds.min.x, this.modelBounds.min.z)
-      : { x: w * 0.22, y: h * 0.25 };
-    const maxPt = this.hasModel && !this.modelBounds.isEmpty()
-      ? this.worldToMinimap(this.modelBounds.max.x, this.modelBounds.max.z)
-      : { x: w * 0.78, y: h * 0.75 };
+    // 3. Draw Real BIM Model Geometry or Drafting Origin State
+    if (this.hasModel && !this.modelBounds.isEmpty()) {
+      const minPt = this.worldToMinimap(this.modelBounds.min.x, this.modelBounds.min.z);
+      const maxPt = this.worldToMinimap(this.modelBounds.max.x, this.modelBounds.max.z);
 
-    const footX = Math.min(minPt.x, maxPt.x);
-    const footY = Math.min(minPt.y, maxPt.y);
-    const footW = Math.abs(maxPt.x - minPt.x);
-    const footH = Math.abs(maxPt.y - minPt.y);
+      const footX = Math.min(minPt.x, maxPt.x);
+      const footY = Math.min(minPt.y, maxPt.y);
+      const footW = Math.abs(maxPt.x - minPt.x);
+      const footH = Math.abs(maxPt.y - minPt.y);
 
-    // A. Building Footprint Glow Fill
-    ctx.fillStyle = this.hasModel ? "rgba(56, 189, 248, 0.14)" : "rgba(56, 189, 248, 0.07)";
-    ctx.fillRect(footX, footY, footW, footH);
+      // Building Footprint Blueprint Wash
+      ctx.fillStyle = isLight ? "rgba(2, 132, 199, 0.06)" : "rgba(56, 189, 248, 0.08)";
+      ctx.fillRect(footX, footY, footW, footH);
 
-    // B. Room / Space Zones Overlays & Labels with Boundary Clipping
-    if (this.roomZones.length > 0 && footW > 50 && footH > 50) {
-      ctx.font = "600 7px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      for (const room of this.roomZones) {
-        const p1 = this.worldToMinimap(room.minX, room.minZ);
-        const p2 = this.worldToMinimap(room.maxX, room.maxZ);
-        const rx = Math.min(p1.x, p2.x);
-        const ry = Math.min(p1.y, p2.y);
-        const rw = Math.abs(p2.x - p1.x);
-        const rh = Math.abs(p2.y - p1.y);
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(rx, ry, rw, rh);
-        ctx.clip();
-
-        // Zone background tint
-        ctx.fillStyle = "rgba(56, 189, 248, 0.05)";
-        ctx.fillRect(rx, ry, rw, rh);
-
-        // Zone boundary border
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.28)";
-        ctx.lineWidth = 0.6;
-        ctx.strokeRect(rx, ry, rw, rh);
-
-        if (rw > 32 && rh > 18) {
-          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-          let label = room.name;
-          if (ctx.measureText(label).width > rw - 6) {
-            while (label.length > 4 && ctx.measureText(label + "…").width > rw - 6) {
-              label = label.slice(0, -1);
-            }
-            label += "…";
+      // Real Mesh Footprints at Active Storey Level (slabs, columns, walls)
+      if (this.meshFootprints.length > 0) {
+        const activeElev = this.config.levels[this.config.currentLevelIndex]?.elevation ?? 0;
+        ctx.strokeStyle = isLight ? "rgba(2, 132, 199, 0.45)" : "rgba(56, 189, 248, 0.45)";
+        ctx.fillStyle = isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.14)";
+        ctx.lineWidth = 0.8;
+        for (const fp of this.meshFootprints) {
+          if (fp.maxY >= activeElev - 1.0 && fp.minY <= activeElev + 4.5) {
+            const pA = this.worldToMinimap(fp.minX, fp.minZ);
+            const pB = this.worldToMinimap(fp.maxX, fp.maxZ);
+            const rx = Math.min(pA.x, pB.x);
+            const ry = Math.min(pA.y, pB.y);
+            const rw = Math.max(1, Math.abs(pB.x - pA.x));
+            const rh = Math.max(1, Math.abs(pB.y - pA.y));
+            ctx.fillRect(rx, ry, rw, rh);
+            ctx.strokeRect(rx, ry, rw, rh);
           }
-          ctx.fillText(label, rx + rw / 2, ry + rh / 2 - 4);
-
-          ctx.fillStyle = "rgba(56, 189, 248, 0.75)";
-          ctx.fillText(`${room.area.toLocaleString()} m²`, rx + rw / 2, ry + rh / 2 + 5);
-        }
-        ctx.restore();
-      }
-    }
-
-    // C. Individual Mesh Footprints at Active Storey Level
-    if (this.meshFootprints.length > 0) {
-      const activeElev = this.config.levels[this.config.currentLevelIndex]?.elevation ?? 0;
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.42)";
-      ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
-      ctx.lineWidth = 0.8;
-      for (const fp of this.meshFootprints) {
-        if (fp.maxY >= activeElev - 1.0 && fp.minY <= activeElev + 4.5) {
-          const pA = this.worldToMinimap(fp.minX, fp.minZ);
-          const pB = this.worldToMinimap(fp.maxX, fp.maxZ);
-          const rx = Math.min(pA.x, pB.x);
-          const ry = Math.min(pA.y, pB.y);
-          const rw = Math.max(1.5, Math.abs(pB.x - pA.x));
-          const rh = Math.max(1.5, Math.abs(pB.y - pA.y));
-          ctx.fillRect(rx, ry, rw, rh);
-          ctx.strokeRect(rx, ry, rw, rh);
         }
       }
+
+      // Structural Outer Boundary Line
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(footX, footY, footW, footH);
+    } else {
+      // Subtle drafting origin state when no model is loaded
+      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(center - 16, center);
+      ctx.lineTo(center + 16, center);
+      ctx.moveTo(center, center - 16);
+      ctx.lineTo(center, center + 16);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
-    // D. Structural Outer Perimeter
-    ctx.strokeStyle = this.hasModel ? "#38BDF8" : "rgba(56, 189, 248, 0.45)";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(footX, footY, footW, footH);
-
-    // E. Structural Grid Bubbles & Lines
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.22)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(footX + footW * 0.33, footY);
-    ctx.lineTo(footX + footW * 0.33, footY + footH);
-    ctx.moveTo(footX + footW * 0.66, footY);
-    ctx.lineTo(footX + footW * 0.66, footY + footH);
-    ctx.moveTo(footX, footY + footH * 0.5);
-    ctx.lineTo(footX + footW, footY + footH * 0.5);
-    ctx.stroke();
-
-    // Corner Structural Pillars
-    ctx.fillStyle = "#D4FF3F";
-    const pillarSize = 3.5;
-    [
-      [footX, footY],
-      [footX + footW - pillarSize, footY],
-      [footX, footY + footH - pillarSize],
-      [footX + footW - pillarSize, footY + footH - pillarSize],
-    ].forEach(([px, py]) => {
-      ctx.fillRect(px, py, pillarSize, pillarSize);
-    });
-
-    // 4. Draw Walkthrough Breadcrumb Trail
+    // 4. Draw Walkthrough Breadcrumb Trail (Clean translucent dots)
     if (this.breadcrumbs.length > 1) {
-      const now = performance.now();
       ctx.beginPath();
       for (let i = 0; i < this.breadcrumbs.length; i++) {
         const b = this.breadcrumbs[i];
@@ -1323,23 +1054,11 @@ export class MinimapModule {
         if (i === 0) ctx.moveTo(pt.x, pt.y);
         else ctx.lineTo(pt.x, pt.y);
       }
-      ctx.strokeStyle = "rgba(212, 255, 63, 0.25)";
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = `rgba(${accentRgb}, 0.22)`;
+      ctx.lineWidth = 1;
       ctx.setLineDash([2, 3]);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // Breadcrumb dots
-      for (let i = 0; i < this.breadcrumbs.length; i += 3) {
-        const b = this.breadcrumbs[i];
-        const pt = this.worldToMinimap(b.x, b.z);
-        const ageSec = (now - b.time) / 1000;
-        const alpha = Math.max(0.1, 0.6 - ageSec * 0.015);
-        ctx.fillStyle = `rgba(212, 255, 63, ${alpha.toFixed(2)})`;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
-        ctx.fill();
-      }
     }
 
     // 5. Draw Active Multi-Discipline Clash Pins
@@ -1352,62 +1071,42 @@ export class MinimapModule {
             const cp = this.worldToMinimap(clash.intersectionPoint[0], clash.intersectionPoint[2]);
             const isCritical = clash.severity === "critical";
 
-            // Warning Halo Pulse
-            ctx.fillStyle = isCritical ? "rgba(239, 68, 68, 0.35)" : "rgba(245, 158, 11, 0.35)";
+            ctx.fillStyle = isCritical ? "rgba(239, 68, 68, 0.3)" : "rgba(245, 158, 11, 0.3)";
             ctx.beginPath();
-            ctx.arc(cp.x, cp.y, 7, 0, Math.PI * 2);
+            ctx.arc(cp.x, cp.y, 5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Diamond Center
-            ctx.fillStyle = isCritical ? "#ef4444" : "#f59e0b";
+            ctx.fillStyle = isCritical ? "#EF4444" : "#F59E0B";
             ctx.beginPath();
-            ctx.moveTo(cp.x, cp.y - 4);
-            ctx.lineTo(cp.x + 4, cp.y);
-            ctx.lineTo(cp.x, cp.y + 4);
-            ctx.lineTo(cp.x - 4, cp.y);
-            ctx.closePath();
+            ctx.arc(cp.x, cp.y, 2.5, 0, Math.PI * 2);
             ctx.fill();
           }
         }
       } catch (e) {}
     }
 
-    // 6. Draw Selected Element Crosshair Reticle
+    // 6. Draw Selected Element Reticle
     if (this.selectedElementPos) {
       const sp = this.worldToMinimap(this.selectedElementPos.x, this.selectedElementPos.z);
       const now = performance.now() * 0.004;
-      const pulse = 8 + Math.sin(now) * 2;
+      const pulse = 7 + Math.sin(now) * 1.5;
 
-      // Pulsing outer ring
-      ctx.strokeStyle = "#38BDF8";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, pulse, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Corner crosshair brackets
-      ctx.strokeStyle = "#D4FF3F";
-      ctx.lineWidth = 1.2;
-      const bracketSize = 6;
+      ctx.fillStyle = accentColor;
       ctx.beginPath();
-      ctx.moveTo(sp.x - bracketSize, sp.y - bracketSize + 3);
-      ctx.lineTo(sp.x - bracketSize, sp.y - bracketSize);
-      ctx.lineTo(sp.x - bracketSize + 3, sp.y - bracketSize);
-      ctx.moveTo(sp.x + bracketSize - 3, sp.y - bracketSize);
-      ctx.lineTo(sp.x + bracketSize, sp.y - bracketSize);
-      ctx.lineTo(sp.x + bracketSize, sp.y - bracketSize + 3);
-      ctx.moveTo(sp.x - bracketSize, sp.y + bracketSize - 3);
-      ctx.lineTo(sp.x - bracketSize, sp.y + bracketSize);
-      ctx.lineTo(sp.x - bracketSize + 3, sp.y + bracketSize);
-      ctx.moveTo(sp.x + bracketSize - 3, sp.y + bracketSize);
-      ctx.lineTo(sp.x + bracketSize, sp.y + bracketSize);
-      ctx.lineTo(sp.x + bracketSize, sp.y + bracketSize - 3);
-      ctx.stroke();
+      ctx.arc(sp.x, sp.y, 2, 0, Math.PI * 2);
+      ctx.fill();
 
       if (this.selectedExpressId) {
         ctx.font = "700 7px monospace";
-        ctx.fillStyle = "#38BDF8";
-        ctx.fillText(`#${this.selectedExpressId}`, sp.x, sp.y + bracketSize + 6);
+        ctx.fillStyle = accentColor;
+        ctx.textAlign = "center";
+        ctx.fillText(`#${this.selectedExpressId}`, sp.x, sp.y + pulse + 6);
       }
     }
 
@@ -1415,30 +1114,31 @@ export class MinimapModule {
     if (this.isMeasuring && this.measureStart && this.measureEnd) {
       const p1 = this.worldToMinimap(this.measureStart.x, this.measureStart.z);
       const p2 = this.worldToMinimap(this.measureEnd.x, this.measureEnd.z);
-      ctx.strokeStyle = "#f59e0b";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 2]);
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 2]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = "#f59e0b";
+      ctx.fillStyle = "#F59E0B";
       ctx.beginPath();
-      ctx.arc(p1.x, p1.y, 3, 0, Math.PI * 2);
-      ctx.arc(p2.x, p2.y, 3, 0, Math.PI * 2);
+      ctx.arc(p1.x, p1.y, 2.5, 0, Math.PI * 2);
+      ctx.arc(p2.x, p2.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
       const dist = Math.hypot(this.measureEnd.x - this.measureStart.x, this.measureEnd.z - this.measureStart.z);
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = isLight ? "#0F172A" : "#FFFFFF";
       ctx.font = "bold 8px monospace";
+      ctx.textAlign = "center";
       ctx.fillText(`${dist.toFixed(2)}m`, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 5);
     }
 
     // 8. Draw Camera Field of View Frustum Cone, Focal Target & Avatar
     const rawMapPos = this.worldToMinimap(camPos.x, camPos.z);
-    const margin = 12;
+    const margin = 10;
     const playerMapPos = {
       x: Math.max(margin, Math.min(w - margin, rawMapPos.x)),
       y: Math.max(margin, Math.min(h - margin, rawMapPos.y)),
@@ -1448,13 +1148,13 @@ export class MinimapModule {
     const fovDegrees = (cam as THREE.PerspectiveCamera)?.fov || 60;
     const fovAngle = THREE.MathUtils.degToRad(fovDegrees);
     const targetPixelDist = camDist * this.config.zoom;
-    const coneRadius = THREE.MathUtils.clamp(targetPixelDist, 24, w * 0.72);
+    const coneRadius = THREE.MathUtils.clamp(targetPixelDist, 20, w * 0.65);
 
-    // Gradient Vision Cone
+    // Subtle Architectural Vision Frustum Cone
     const grad = ctx.createRadialGradient(playerMapPos.x, playerMapPos.y, 2, playerMapPos.x, playerMapPos.y, coneRadius);
-    grad.addColorStop(0, "rgba(212, 255, 63, 0.45)");
-    grad.addColorStop(0.6, "rgba(212, 255, 63, 0.14)");
-    grad.addColorStop(1, "rgba(212, 255, 63, 0.0)");
+    grad.addColorStop(0, `rgba(${accentRgb}, 0.22)`);
+    grad.addColorStop(0.65, `rgba(${accentRgb}, 0.05)`);
+    grad.addColorStop(1, `rgba(${accentRgb}, 0.0)`);
 
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -1470,8 +1170,8 @@ export class MinimapModule {
     ctx.fill();
 
     // Frustum Side Guide Rays
-    ctx.strokeStyle = "rgba(212, 255, 63, 0.6)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(${accentRgb}, 0.35)`;
+    ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(playerMapPos.x, playerMapPos.y);
     ctx.lineTo(
@@ -1485,44 +1185,44 @@ export class MinimapModule {
     );
     ctx.stroke();
 
-    // Target Focal Crosshair
+    // Orbit Focal Target Crosshair
     if (!this.isWalkMode) {
       const rawTargetPos = this.worldToMinimap(target.x, target.z);
-      ctx.strokeStyle = "rgba(212, 255, 63, 0.75)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(${accentRgb}, 0.45)`;
+      ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.arc(rawTargetPos.x, rawTargetPos.y, 3, 0, Math.PI * 2);
-      ctx.moveTo(rawTargetPos.x - 5, rawTargetPos.y);
-      ctx.lineTo(rawTargetPos.x + 5, rawTargetPos.y);
-      ctx.moveTo(rawTargetPos.x, rawTargetPos.y - 5);
-      ctx.lineTo(rawTargetPos.x, rawTargetPos.y + 5);
+      ctx.arc(rawTargetPos.x, rawTargetPos.y, 2.5, 0, Math.PI * 2);
+      ctx.moveTo(rawTargetPos.x - 4, rawTargetPos.y);
+      ctx.lineTo(rawTargetPos.x + 4, rawTargetPos.y);
+      ctx.moveTo(rawTargetPos.x, rawTargetPos.y - 4);
+      ctx.lineTo(rawTargetPos.x, rawTargetPos.y + 4);
       ctx.stroke();
     }
 
-    // Player / Camera Avatar Dot
-    ctx.fillStyle = "#D4FF3F";
-    ctx.shadowColor = "#D4FF3F";
-    ctx.shadowBlur = 8;
+    // Camera Avatar Dot (Crisp white center with accent ring)
+    ctx.fillStyle = "#FFFFFF";
     ctx.beginPath();
-    ctx.arc(playerMapPos.x, playerMapPos.y, 4, 0, Math.PI * 2);
+    ctx.arc(playerMapPos.x, playerMapPos.y, 3.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
 
-    // Directional View Arrow
-    const headingLength = 14;
+    // Directional View Heading Tick
+    const headingLength = 9;
     const endX = playerMapPos.x + Math.cos(viewAngle) * headingLength;
     const endY = playerMapPos.y + Math.sin(viewAngle) * headingLength;
 
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(playerMapPos.x, playerMapPos.y);
+    ctx.moveTo(playerMapPos.x + Math.cos(viewAngle) * 3.5, playerMapPos.y + Math.sin(viewAngle) * 3.5);
     ctx.lineTo(endX, endY);
     ctx.stroke();
 
     // 9. Draw Live Crosshair when Mouse Hovers Over Radar
     if (this.hoverPixel) {
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.strokeStyle = `rgba(${accentRgb}, 0.3)`;
       ctx.lineWidth = 0.8;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -1533,9 +1233,9 @@ export class MinimapModule {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.strokeStyle = "#38BDF8";
+      ctx.strokeStyle = accentColor;
       ctx.beginPath();
-      ctx.arc(this.hoverPixel.x, this.hoverPixel.y, 3, 0, Math.PI * 2);
+      ctx.arc(this.hoverPixel.x, this.hoverPixel.y, 2.5, 0, Math.PI * 2);
       ctx.stroke();
     }
 
