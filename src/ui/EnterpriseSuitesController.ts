@@ -1325,6 +1325,9 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       btnMinimapCollapse.innerHTML = isCollapsed
         ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>`
         : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`;
+      const w = minimapContainer.offsetWidth || 385;
+      document.documentElement.style.setProperty("--radar-w", `${w}px`);
+      document.body.style.setProperty("--radar-w", `${w}px`);
       SoundManager.getInstance().playClick();
     }
   });

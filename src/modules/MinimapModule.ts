@@ -117,6 +117,7 @@ export class MinimapModule {
       this.ctx = this.canvas.getContext("2d");
       this.bindEvents();
       this.bindHeaderControls();
+      this.initSizeObserver();
       this.startRenderLoop();
     }
   }
@@ -126,8 +127,33 @@ export class MinimapModule {
     const container = document.getElementById("minimap-container");
     if (container) {
       container.classList.toggle("hidden", !this.isVisible);
+      if (typeof document !== "undefined") {
+        const radarW = !this.isVisible ? "0px" : `${container.offsetWidth || 385}px`;
+        document.documentElement.style.setProperty("--radar-w", radarW);
+        document.body.style.setProperty("--radar-w", radarW);
+      }
     }
     return this.isVisible;
+  }
+
+  private initSizeObserver() {
+    if (typeof document === "undefined" || typeof ResizeObserver === "undefined") return;
+    const container = document.getElementById("minimap-container");
+    if (!container) return;
+    try {
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const isHidden = container.classList.contains("hidden") || container.style.display === "none";
+          const width = isHidden ? 0 : Math.round(entry.borderBoxSize?.[0]?.inlineSize || entry.contentRect.width || container.offsetWidth);
+          if (width > 0) {
+            const wPx = `${width}px`;
+            document.documentElement.style.setProperty("--radar-w", wPx);
+            document.body.style.setProperty("--radar-w", wPx);
+          }
+        }
+      });
+      ro.observe(container);
+    } catch (e) {}
   }
 
   public toggleHeadingUp(enable?: boolean): boolean {
@@ -304,8 +330,13 @@ export class MinimapModule {
     }
     const container = document.getElementById("minimap-container");
     if (container) {
-      container.style.setProperty("--radar-w", `${clampedSize + 20}px`);
-      container.style.width = `${clampedSize + 20}px`;
+      const radarW = `${clampedSize + 20}px`;
+      container.style.setProperty("--radar-w", radarW);
+      container.style.width = radarW;
+      if (typeof document !== "undefined") {
+        document.documentElement.style.setProperty("--radar-w", radarW);
+        document.body.style.setProperty("--radar-w", radarW);
+      }
     }
     if (saveToStorage && typeof localStorage !== "undefined") {
       try {

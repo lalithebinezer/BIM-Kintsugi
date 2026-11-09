@@ -329,7 +329,8 @@ body {
   --header-bottom: 4.15rem;
   --left-panel-w: 310px;
   --right-panel-w: 360px;
-  --radar-w: 360px;
+  --radar-w: 385px;
+  --timeline-deck-h: 96px;
   --left-safe-offset: calc(var(--left-panel-w) + 1.35rem);
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
 }
@@ -346,9 +347,16 @@ body:has(.enterprise-drawer:not(.hidden)) {
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
 }
 
-body:has(#minimap-container.hidden),
+body:has(#minimap-container.hidden) {
+  --radar-w: 0px;
+}
+
+body:has(#minimap-container.expanded) {
+  --radar-w: 420px;
+}
+
 body:has(#minimap-container.collapsed) {
-  --radar-w: 132px;
+  --radar-w: 385px;
 }
 
 .ui-layer {
@@ -887,6 +895,21 @@ body.mode-4d .bottom-toolbar.magic-dock {
 
 body.mode-4d .hud-anchor-bottom-center {
   display: none !important;
+}
+
+/* Non-colliding responsive alignment between 4D Timeline Deck & 2D Tactical Radar */
+body.mode-4d .timeline-panel {
+  right: calc(var(--right-safe-offset) + var(--radar-w, 385px) + 1.25rem);
+}
+
+@media (max-width: 1420px) {
+  body.mode-4d .hud-anchor-bottom-right {
+    bottom: calc(var(--timeline-deck-h, 96px) + 1.25rem) !important;
+    right: var(--right-safe-offset) !important;
+  }
+  body.mode-4d .timeline-panel {
+    right: var(--right-safe-offset) !important;
+  }
 }
 
 body.mode-4d::after {
@@ -2878,10 +2901,11 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   position: absolute;
   bottom: 0.85rem;
   left: var(--left-safe-offset);
-  right: calc(var(--right-safe-offset) + var(--radar-w) + 0.85rem);
+  right: calc(var(--right-safe-offset) + var(--radar-w) + 1.25rem);
   width: auto;
   min-width: 0;
   max-width: none;
+  box-sizing: border-box;
   background: var(--bg-surface, rgba(14, 16, 22, 0.94));
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
@@ -6360,7 +6384,6 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 290px;
     --right-panel-w: 315px;
-    --radar-w: 210px;
   }
   .header-center-info #status-text {
     max-width: 110px;
@@ -6380,7 +6403,6 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 270px;
     --right-panel-w: 295px;
-    --radar-w: 195px;
   }
   .header-center-info {
     display: none !important;
@@ -6410,7 +6432,6 @@ body.right-sidebar-collapsed .right-sidebar {
   body {
     --left-panel-w: 250px;
     --right-panel-w: 275px;
-    --radar-w: 180px;
   }
   .brand-badge {
     display: none;
