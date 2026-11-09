@@ -24,14 +24,17 @@ export interface ThemePresetConfig {
   hover3D: string;
   select3D: string;
   background3D: number;
+  gridPrimary?: number;
+  gridSecondary?: number;
+  gridOpacity?: number;
 }
 
 export const THEME_PRESET_MAP: Record<string, ThemePresetConfig> = {
-  obsidian: { name: "obsidian", label: "Obsidian Dark", hover3D: "#D4FF3F", select3D: "#00D2FF", background3D: 0x0A0A0C },
-  zen: { name: "zen", label: "Zen Minimalist", hover3D: "#F59E0B", select3D: "#3B82F6", background3D: 0x121316 },
-  cyberpunk: { name: "cyberpunk", label: "Cyberpunk Neon", hover3D: "#00F0FF", select3D: "#EC4899", background3D: 0x070913 },
-  blueprint: { name: "blueprint", label: "CAD Blueprint", hover3D: "#64FFDA", select3D: "#38BDF8", background3D: 0x0A192F },
-  light: { name: "light", label: "Light Studio", hover3D: "#4F46E5", select3D: "#0284C7", background3D: 0xF8FAFC },
+  obsidian: { name: "obsidian", label: "Obsidian Dark", hover3D: "#D4FF3F", select3D: "#00D2FF", background3D: 0x0A0A0C, gridPrimary: 0x64748b, gridSecondary: 0x334155, gridOpacity: 0.22 },
+  zen: { name: "zen", label: "Zen Minimalist", hover3D: "#F59E0B", select3D: "#3B82F6", background3D: 0x121316, gridPrimary: 0x71717a, gridSecondary: 0x3f3f46, gridOpacity: 0.20 },
+  cyberpunk: { name: "cyberpunk", label: "Cyberpunk Neon", hover3D: "#00F0FF", select3D: "#EC4899", background3D: 0x070913, gridPrimary: 0x00f0ff, gridSecondary: 0x1e1b4b, gridOpacity: 0.25 },
+  blueprint: { name: "blueprint", label: "CAD Blueprint", hover3D: "#64FFDA", select3D: "#38BDF8", background3D: 0x0A192F, gridPrimary: 0x38bdf8, gridSecondary: 0x1e3a5f, gridOpacity: 0.26 },
+  light: { name: "light", label: "Light Studio", hover3D: "#4F46E5", select3D: "#0284C7", background3D: 0xF8FAFC, gridPrimary: 0x64748b, gridSecondary: 0x94a3b8, gridOpacity: 0.22 },
 };
 
 export function initEnterpriseSuitesController(world: any, highlighter: any) {
@@ -1355,6 +1358,30 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     try {
       if (world?.scene?.three) {
         world.scene.three.background = new THREE.Color(preset.background3D);
+      }
+    } catch (e) {}
+
+    // Synchronize 3D Ground Grid Helper (transparent & themed)
+    try {
+      const gh = typeof window !== "undefined" ? (window as any).viewer_grid_helper as THREE.GridHelper | undefined : undefined;
+      if (gh && gh.geometry?.attributes?.color) {
+        const colorAttr = gh.geometry.attributes.color;
+        const color1 = new THREE.Color(preset.gridPrimary ?? 0x64748b);
+        const color2 = new THREE.Color(preset.gridSecondary ?? 0x334155);
+        for (let i = 0; i < colorAttr.count; i += 2) {
+          const isCenter = (i === 60 || i === 60 + Math.floor(colorAttr.count / 2));
+          const c = isCenter ? color1 : color2;
+          colorAttr.setXYZ(i, c.r, c.g, c.b);
+          colorAttr.setXYZ(i + 1, c.r, c.g, c.b);
+        }
+        colorAttr.needsUpdate = true;
+
+        if (gh.material instanceof THREE.Material) {
+          gh.material.transparent = true;
+          gh.material.opacity = preset.gridOpacity ?? 0.22;
+          gh.material.depthWrite = false;
+          gh.material.needsUpdate = true;
+        }
       }
     } catch (e) {}
 

@@ -527,10 +527,30 @@ try {
   simpleGrid = (grids as any).list?.values()?.next()?.value;
 }
 (window as any).viewer_grid = simpleGrid;
+// Disable redundant shader grid to avoid duplicate moiré & dots, keep material ready & transparent
+if (simpleGrid?.three) {
+  simpleGrid.three.visible = false;
+  if (simpleGrid.three.material) {
+    simpleGrid.three.material.transparent = true;
+    simpleGrid.three.material.depthWrite = false;
+  }
+}
+if (simpleGrid?.config) {
+  simpleGrid.config.visible = false;
+}
 
+// Architectural Ground Reference Grid with true transparency
 const grid = new THREE.GridHelper(120, 60, 0x64748b, 0x334155);
+grid.name = "BIM_GroundGridHelper";
 grid.position.y = -0.01;
+if (grid.material instanceof THREE.Material) {
+  grid.material.transparent = true;
+  grid.material.opacity = 0.22;
+  grid.material.depthWrite = false;
+  grid.material.needsUpdate = true;
+}
 world.scene.three.add(grid);
+(window as any).viewer_grid_helper = grid;
 
 // Multi-Selection State Storage
 let activeExpressId: number | null = null;
@@ -4576,10 +4596,18 @@ bgColorPicker.addEventListener("input", () => {
   }
 });
 
-const gridToggle = document.getElementById("settings-toggle-grid")! as HTMLInputElement;
-gridToggle.addEventListener("change", () => {
-  grid.visible = gridToggle.checked;
-});
+const gridToggle = document.getElementById("settings-toggle-grid") as HTMLInputElement | null;
+if (gridToggle) {
+  gridToggle.addEventListener("change", () => {
+    grid.visible = gridToggle.checked;
+    if (simpleGrid?.three) {
+      simpleGrid.three.visible = false;
+    }
+    if (simpleGrid?.config) {
+      simpleGrid.config.visible = false;
+    }
+  });
+}
 
 const logoToggle = document.getElementById("settings-toggle-logo")! as HTMLInputElement;
 const viewerLogoEl = document.getElementById("viewer-logo") as HTMLImageElement | null;

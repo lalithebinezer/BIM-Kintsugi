@@ -18,6 +18,16 @@ export class ViewportController {
       // Grid already created for world
       this.grid = (grids as any).list?.values()?.next()?.value;
     }
+    if (this.grid?.three) {
+      this.grid.three.visible = false;
+      if (this.grid.three.material) {
+        this.grid.three.material.transparent = true;
+        this.grid.three.material.depthWrite = false;
+      }
+    }
+    if (this.grid?.config) {
+      this.grid.config.visible = false;
+    }
   }
 
   public setCameraMode(mode: "Orbit" | "FirstPerson" | "Plan") {
@@ -44,11 +54,19 @@ export class ViewportController {
     if (this.grid && this.grid.config) {
       this.grid.config.visible = visible;
     }
+    const gh = typeof window !== "undefined" ? (window as any).viewer_grid_helper : null;
+    if (gh) {
+      gh.visible = visible;
+    }
   }
 
   public setGridElevation(elevation: number) {
     if (this.grid && this.grid.three) {
       this.grid.three.position.y = elevation;
+    }
+    const gh = typeof window !== "undefined" ? (window as any).viewer_grid_helper : null;
+    if (gh) {
+      gh.position.y = elevation - 0.01;
     }
   }
 }
