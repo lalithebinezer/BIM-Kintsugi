@@ -4596,16 +4596,67 @@ bgColorPicker.addEventListener("input", () => {
   }
 });
 
+function setGroundGridVisibility(visible: boolean) {
+  grid.visible = visible;
+  if (simpleGrid?.three) {
+    simpleGrid.three.visible = false;
+  }
+  if (simpleGrid?.config) {
+    simpleGrid.config.visible = false;
+  }
+  
+  // Update Quick Toolbar button
+  const btnQuick = document.getElementById("btn-toggle-ground-grid");
+  if (btnQuick) {
+    btnQuick.classList.toggle("active", visible);
+    btnQuick.title = visible ? "Hide Ground Grid (Shift+G)" : "Show Ground Grid (Shift+G)";
+  }
+
+  // Update Bottom Dock button
+  const btnDock = document.getElementById("btn-dock-toggle-grid");
+  if (btnDock) {
+    btnDock.classList.toggle("active", visible);
+    btnDock.title = visible ? "Hide Ground Grid (Shift+G)" : "Show Ground Grid (Shift+G)";
+  }
+
+  // Update Settings Drawer toggle
+  const gridToggle = document.getElementById("settings-toggle-grid") as HTMLInputElement | null;
+  if (gridToggle) {
+    gridToggle.checked = visible;
+  }
+
+  if (typeof window !== "undefined") {
+    (window as any).viewer_grid_visible = visible;
+  }
+}
+
+// Global hook for keyboard controller and suites
+(window as any).toggleGroundGrid = () => {
+  setGroundGridVisibility(!grid.visible);
+  return grid.visible;
+};
+
+// Wire Quick Tools Toolbar Button
+const btnQuickGrid = document.getElementById("btn-toggle-ground-grid");
+if (btnQuickGrid) {
+  btnQuickGrid.addEventListener("click", () => {
+    setGroundGridVisibility(!grid.visible);
+  });
+}
+
+// Wire Bottom Dock Tools Button
+const btnDockGrid = document.getElementById("btn-dock-toggle-grid");
+if (btnDockGrid) {
+  btnDockGrid.addEventListener("click", () => {
+    setGroundGridVisibility(!grid.visible);
+  });
+}
+
+// Wire Settings Drawer Toggle
 const gridToggle = document.getElementById("settings-toggle-grid") as HTMLInputElement | null;
 if (gridToggle) {
   gridToggle.addEventListener("change", () => {
-    grid.visible = gridToggle.checked;
-    if (simpleGrid?.three) {
-      simpleGrid.three.visible = false;
-    }
-    if (simpleGrid?.config) {
-      simpleGrid.config.visible = false;
-    }
+    setGroundGridVisibility(gridToggle.checked);
   });
 }
 
@@ -8615,14 +8666,32 @@ initGeoEngineeringController(world, (BimEngine.getInstance() as any).fragments?.
 // ═════════════════════════════════════════════════════════════════════
 if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .then((reg) => {
-        console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
-      })
-      .catch((err) => {
-        console.warn("[PWA] ServiceWorker registration failed:", err);
+    // In local development, purge stale caches and unregister service workers
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          reg.unregister();
+        }
       });
+      if ("caches" in window) {
+        caches.keys().then((names) => {
+          for (const name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+    } else {
+      navigator.serviceWorker
+        .register("./sw.js")
+        .then((reg) => {
+          console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
+          // Check for service worker updates immediately
+          reg.update().catch(() => {});
+        })
+        .catch((err) => {
+          console.warn("[PWA] ServiceWorker registration failed:", err);
+        });
+    }
   });
 }
 

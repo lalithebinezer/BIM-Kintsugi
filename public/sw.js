@@ -5,7 +5,7 @@
  * and static assets to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v4";
+const CACHE_NAME = "bim-kintsugi-cache-v5";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -51,7 +51,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for WASM and worker scripts
+  // 1. Navigation / HTML documents: Network-First so updates & new builds load immediately
+  if (
+    event.request.mode === "navigate" ||
+    event.request.destination === "document" ||
+    url.pathname.endsWith(".html") ||
+    url.pathname === "/" ||
+    url.pathname.endsWith("/")
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 2. Cache-first for heavy WASM and worker scripts
   if (url.pathname.endsWith(".wasm") || url.pathname.endsWith("worker.mjs")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -70,10 +92,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-while-revalidate for local scripts and styles
+  // 3. Network-First with cache fallback for code bundles and assets
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -81,9 +103,7 @@ self.addEventListener("fetch", (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => cached);
-
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

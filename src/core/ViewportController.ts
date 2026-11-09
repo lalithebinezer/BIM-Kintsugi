@@ -58,6 +58,23 @@ export class ViewportController {
     if (gh) {
       gh.visible = visible;
     }
+    if (typeof document !== "undefined") {
+      document.getElementById("btn-toggle-ground-grid")?.classList.toggle("active", visible);
+      document.getElementById("btn-dock-toggle-grid")?.classList.toggle("active", visible);
+      const st = document.getElementById("settings-toggle-grid") as HTMLInputElement | null;
+      if (st) st.checked = visible;
+    }
+    if (typeof window !== "undefined") {
+      (window as any).viewer_grid_visible = visible;
+    }
+  }
+
+  public toggleGrid(): boolean {
+    const gh = typeof window !== "undefined" ? (window as any).viewer_grid_helper : null;
+    const current = gh ? gh.visible : true;
+    const next = !current;
+    this.setGridVisible(next);
+    return next;
   }
 
   public setGridElevation(elevation: number) {

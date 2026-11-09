@@ -100,7 +100,15 @@ export class KeyboardController {
         (document.getElementById('btn-focus') || document.getElementById('btn-view-fit'))?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'g') {
         e.preventDefault();
-        document.getElementById('btn-dock-gis')?.click();
+        if (e.shiftKey) {
+          if (typeof (window as any).toggleGroundGrid === 'function') {
+            (window as any).toggleGroundGrid();
+          } else {
+            (document.getElementById('btn-toggle-ground-grid') || document.getElementById('btn-dock-toggle-grid'))?.click();
+          }
+        } else {
+          document.getElementById('btn-dock-gis')?.click();
+        }
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'h') {
         e.preventDefault();
         (document.getElementById('btn-hide-selected') || document.getElementById('btn-dock-hide'))?.click();
