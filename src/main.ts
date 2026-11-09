@@ -552,6 +552,12 @@ if (grid.material instanceof THREE.Material) {
 world.scene.three.add(grid);
 (window as any).viewer_grid_helper = grid;
 
+// Purge any ground contact shadow
+const existingGroundShadow = world.scene.three.getObjectByName("BIM_GroundContactShadow");
+if (existingGroundShadow) {
+  world.scene.three.remove(existingGroundShadow);
+}
+
 // Multi-Selection State Storage
 let activeExpressId: number | null = null;
 let activeModelId: string | null = null;

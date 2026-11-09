@@ -22,7 +22,7 @@ export class GraphicsVFXManager {
     if (savedStyle && ["color", "pen", "pen-shadows", "color-pen-shadows", "gloss"].includes(savedStyle)) {
       this.renderStyle = savedStyle;
     }
-    this.initGroundShadow();
+    this.removeGroundShadow();
     this.applyPreset(this.preset);
   }
 
@@ -33,41 +33,22 @@ export class GraphicsVFXManager {
     return GraphicsVFXManager.instance;
   }
 
-  private initGroundShadow() {
-    const scene = this.engine.world?.scene?.three;
-    if (!scene) return;
-
-    // Create radial soft ambient ground shadow texture via canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const grad = ctx.createRadialGradient(256, 256, 10, 256, 256, 250);
-      grad.addColorStop(0, "rgba(0, 0, 0, 0.75)");
-      grad.addColorStop(0.35, "rgba(0, 0, 0, 0.45)");
-      grad.addColorStop(0.7, "rgba(0, 0, 0, 0.15)");
-      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 512, 512);
+  public removeGroundShadow() {
+    if (this.groundShadowMesh) {
+      if (this.groundShadowMesh.geometry) this.groundShadowMesh.geometry.dispose();
+      if (this.groundShadowMesh.material instanceof THREE.Material) {
+        this.groundShadowMesh.material.dispose();
+      }
+      this.groundShadowMesh.parent?.remove(this.groundShadowMesh);
+      this.groundShadowMesh = null;
     }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const shadowGeo = new THREE.PlaneGeometry(80, 80);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      opacity: 0.7,
-      depthWrite: false,
-    });
-
-    this.groundShadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-    this.groundShadowMesh.rotation.x = -Math.PI / 2;
-    this.groundShadowMesh.position.y = -0.01;
-    this.groundShadowMesh.name = "BIM_GroundContactShadow";
-    this.groundShadowMesh.renderOrder = 1;
-    scene.add(this.groundShadowMesh);
+    const scene = this.engine.world?.scene?.three;
+    if (scene) {
+      const existing = scene.getObjectByName("BIM_GroundContactShadow");
+      if (existing) {
+        existing.parent?.remove(existing);
+      }
+    }
   }
 
   public getPreset(): GraphicsPreset {
@@ -124,10 +105,6 @@ export class GraphicsVFXManager {
     if (preset === "cinematic") {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.15;
-      if (this.groundShadowMesh) {
-        this.groundShadowMesh.visible = true;
-        (this.groundShadowMesh.material as THREE.MeshBasicMaterial).opacity = 0.85;
-      }
       try {
         const post = (this.engine.world?.renderer as OBF.PostproductionRenderer)?.postproduction;
         if (post) {
@@ -139,10 +116,6 @@ export class GraphicsVFXManager {
     } else if (preset === "balanced") {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.0;
-      if (this.groundShadowMesh) {
-        this.groundShadowMesh.visible = true;
-        (this.groundShadowMesh.material as THREE.MeshBasicMaterial).opacity = 0.55;
-      }
       try {
         const post = (this.engine.world?.renderer as OBF.PostproductionRenderer)?.postproduction;
         if (post) {
@@ -155,9 +128,6 @@ export class GraphicsVFXManager {
       // performance
       renderer.toneMapping = THREE.LinearToneMapping;
       renderer.toneMappingExposure = 1.0;
-      if (this.groundShadowMesh) {
-        this.groundShadowMesh.visible = false;
-      }
       try {
         const post = (this.engine.world?.renderer as OBF.PostproductionRenderer)?.postproduction;
         if (post) {
