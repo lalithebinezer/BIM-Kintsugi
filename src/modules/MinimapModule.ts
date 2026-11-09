@@ -874,6 +874,7 @@ export class MinimapModule {
         let bearingDeg = Math.round(THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z)));
         if (bearingDeg < 0) bearingDeg += 360;
         if (needle) {
+          needle.style.transformOrigin = "50% 50%";
           needle.style.transform = `rotate(${(-bearingDeg).toFixed(1)}deg)`;
         }
         if (compassLabel) {
