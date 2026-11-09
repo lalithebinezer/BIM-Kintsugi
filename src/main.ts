@@ -68,7 +68,7 @@ function getCategoryColor(_theme: string, category: string): string {
 import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
 import { PropertySequenceEngine } from "./modules/PropertySequenceEngine";
 import { IfcParameterReader } from "./modules/IfcParameterReader";
-import { Schedule4DEngine, type ElementSchedule } from "./modules/Schedule4DEngine";
+import { Schedule4DEngine, type ElementSchedule, type Milestone } from "./modules/Schedule4DEngine";
 import { exportBOQAsCSV, generateBOQSummary, extractQuantityData, type BOQLineItem } from "./modules/BoqGenerator";
 import { CostRateManager } from "./modules/CostRateManager";
 
@@ -2663,6 +2663,13 @@ if (btnImport4dCsvInput) {
         saveDatabase();
         updateDashboardMetrics();
         calculateTimelineBounds();
+        if (timelineMinDate) {
+          currentTimelineDate = new Date(timelineMinDate);
+          if (timelineSlider) timelineSlider.value = "0";
+          updateTimelineDateUI();
+        }
+        updateScheduleWidgetUI();
+        InteractiveGanttDrawer.getInstance().render();
         if (currentTimelineDate) {
           await updateTimelineVisualState(true);
         }
@@ -6739,6 +6746,8 @@ const timelineSpeedSelect = document.getElementById("timeline-speed") as HTMLSel
 
 function syncScheduleEngine() {
   const elements: ElementSchedule[] = [];
+  const hasSchedule = scheduleManager && scheduleManager.tasks && scheduleManager.tasks.size > 0;
+  const mgrBounds = hasSchedule ? scheduleManager.getProjectDateRange() : null;
 
   for (const [, model] of fragments.list) {
     const anyModel = model as any;
@@ -6754,6 +6763,12 @@ function syncScheduleEngine() {
 
       const ifcType = String(elementProps.type ?? "").toUpperCase();
       const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
+
+      // If an explicit schedule is active, only include customized elements or elements linked to schedule tasks
+      // so mock fallback dates from unlinked elements don't distort the true schedule timeline bounds!
+      if (hasSchedule && !twinData.isCustomized) {
+        continue;
+      }
 
       if (twinData.startDate && twinData.endDate) {
         const start = new Date(twinData.startDate).getTime();
@@ -6774,19 +6789,69 @@ function syncScheduleEngine() {
     }
   }
 
-  schedule4DEngine.setElements(elements);
-  const bounds = schedule4DEngine.getBounds();
+  // Also include schedule tasks in element list if they have unlinked elements or summary tasks
+  if (hasSchedule) {
+    for (const [, task] of scheduleManager.tasks) {
+      if (task.elementIds.size === 0 && task.startDate && task.endDate) {
+        const s = new Date(task.startDate).getTime();
+        const e = new Date(task.endDate).getTime();
+        if (Number.isFinite(s) && Number.isFinite(e)) {
+          elements.push({
+            modelId: task.modelId || "virtual",
+            expressId: 0,
+            task: task.name,
+            group: task.name,
+            start: s,
+            end: e,
+            cost: task.totalCost || 0,
+            statusOverride: task.status,
+          });
+        }
+      }
+    }
+  }
 
-  if (bounds) {
-    timelineMinDate = new Date(bounds.min);
-    timelineMaxDate = new Date(bounds.max);
+  schedule4DEngine.setElements(elements);
+  const elementBounds = schedule4DEngine.getBounds();
+
+  let minMs: number | null = null;
+  let maxMs: number | null = null;
+
+  if (mgrBounds && elementBounds) {
+    minMs = Math.min(mgrBounds.min.getTime(), elementBounds.min.getTime());
+    maxMs = Math.max(mgrBounds.max.getTime(), elementBounds.max.getTime());
+  } else if (mgrBounds) {
+    minMs = mgrBounds.min.getTime();
+    maxMs = mgrBounds.max.getTime();
+  } else if (elementBounds) {
+    minMs = elementBounds.min.getTime();
+    maxMs = elementBounds.max.getTime();
+  }
+
+  if (minMs !== null && maxMs !== null && maxMs >= minMs) {
+    timelineMinDate = new Date(minMs);
+    timelineMaxDate = new Date(maxMs);
     // 1-day safety buffer
     timelineMinDate.setDate(timelineMinDate.getDate() - 1);
     timelineMaxDate.setDate(timelineMaxDate.getDate() + 1);
 
-    const totalWeeks = Schedule4DEngine.totalWeeks(bounds.min, bounds.max);
+    const totalWeeks = Schedule4DEngine.totalWeeks(timelineMinDate, timelineMaxDate);
     GanttPhasingModule.getInstance().setTotalWeeks(totalWeeks);
-    GanttPhasingModule.getInstance().setMilestones(schedule4DEngine.getMilestones());
+
+    if (hasSchedule) {
+      const sortedTasks = scheduleManager.getTasksSorted();
+      const milestones: Milestone[] = sortedTasks.map((t) => ({
+        name: t.name,
+        start: new Date(t.startDate).getTime(),
+        end: new Date(t.endDate).getTime(),
+        cost: t.totalCost || (t.unitCost * (t.quantity || t.elementIds.size)) || 0,
+        elementCount: t.elementIds.size,
+        elements: { [t.modelId || "default-model"]: t.elementIds },
+      }));
+      GanttPhasingModule.getInstance().setMilestones(milestones);
+    } else {
+      GanttPhasingModule.getInstance().setMilestones(schedule4DEngine.getMilestones());
+    }
   } else {
     const start = new Date("2026-06-18");
     const end = new Date("2026-08-18");
@@ -6819,8 +6884,12 @@ function syncScheduleEngine() {
 
 function calculateTimelineBounds() {
   syncScheduleEngine();
+  try {
+    InteractiveGanttDrawer.getInstance().render();
+  } catch (e) {}
   updateTimelineVisualState(true);
 }
+(window as any).calculateTimelineBounds = calculateTimelineBounds;
 
 function updateTimelineDateUI() {
   if (!currentTimelineDate) return;

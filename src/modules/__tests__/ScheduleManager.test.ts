@@ -107,6 +107,41 @@ task-custom,"Steel Framing",IFCBEAM,2026-05-01,2026-05-10,Planned,model-2,"701;7
     expect(ScheduleManager.getStatusColor("Completed")).toBe("#10B981");
   });
 
+  it("should accurately auto-adjust project date range enclosing long-running and overlapping tasks", () => {
+    // Task 1 starts early and lasts long
+    manager.tasks.set("t1", {
+      id: "t1",
+      name: "Long Infrastructure Works",
+      category: "IFCSITE",
+      startDate: "2027-01-01",
+      endDate: "2027-12-31",
+      status: "Planned",
+      elementIds: new Set([1]),
+      modelId: "m1",
+      unitCost: 100,
+      quantity: 1,
+    });
+    // Task 2 starts later but finishes earlier
+    manager.tasks.set("t2", {
+      id: "t2",
+      name: "Quick Slab Pour",
+      category: "IFCSLAB",
+      startDate: "2027-06-01",
+      endDate: "2027-06-30",
+      status: "Planned",
+      elementIds: new Set([2]),
+      modelId: "m1",
+      unitCost: 200,
+      quantity: 1,
+    });
+
+    const range = manager.getProjectDateRange();
+    expect(range).not.toBeNull();
+    expect(range?.min.toISOString().split("T")[0]).toBe("2027-01-01");
+    // Ensure max is 2027-12-31, NOT prematurely truncated to 2027-06-30
+    expect(range?.max.toISOString().split("T")[0]).toBe("2027-12-31");
+  });
+
   it("should synchronize schedule tasks with 3D elements via SIMULATION property", () => {
     // Mock model with elements having SIMULATION property
     const mockModel = {

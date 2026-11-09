@@ -162,6 +162,35 @@ export class ScheduleManager {
       };
 
       this.tasks.set(taskId, task);
+
+      for (const id of allElementIds) {
+        this.elementData.set(`${taskModelId}:${id}`, {
+          unitCost: taskUnitCost,
+          quantity: 1,
+          taskName: task.name,
+          taskStatus: 'Planned',
+          startDate: phaseStart,
+          endDate: phaseEnd,
+        });
+
+        if (typeof window !== "undefined" && (window as any).twinDatabase) {
+          const dbKey = `${taskModelId}-${id}`;
+          const existing = (window as any).twinDatabase[dbKey] || {
+            modelId: taskModelId,
+            expressId: id,
+            quantity: 1,
+            unitCost: taskUnitCost,
+            calculatedCost: taskUnitCost,
+          };
+          existing.task = task.name;
+          existing.startDate = phaseStart;
+          existing.endDate = phaseEnd;
+          existing.status = 'Planned';
+          existing.isCustomized = true;
+          (window as any).twinDatabase[dbKey] = existing;
+        }
+      }
+
       phaseIndex++;
     }
   }
@@ -199,14 +228,23 @@ export class ScheduleManager {
   }
 
   /**
-   * Get the overall project date range.
+   * Get the overall project date range enclosing all schedule tasks.
    */
   getProjectDateRange(): { min: Date; max: Date } | null {
-    const tasks = this.getTasksSorted();
-    if (tasks.length === 0) return null;
-    const min = new Date(tasks[0].startDate);
-    const max = new Date(tasks[tasks.length - 1].endDate);
-    return { min, max };
+    if (this.tasks.size === 0) return null;
+    let minMs = Infinity;
+    let maxMs = -Infinity;
+    for (const task of this.tasks.values()) {
+      if (!task.startDate || !task.endDate) continue;
+      const s = new Date(task.startDate).getTime();
+      const e = new Date(task.endDate).getTime();
+      if (Number.isFinite(s) && Number.isFinite(e)) {
+        if (s < minMs) minMs = s;
+        if (e > maxMs) maxMs = e;
+      }
+    }
+    if (minMs === Infinity || maxMs === -Infinity) return null;
+    return { min: new Date(minMs), max: new Date(maxMs) };
   }
 
   /**
