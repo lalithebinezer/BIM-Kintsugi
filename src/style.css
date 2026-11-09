@@ -897,19 +897,17 @@ body.mode-4d .hud-anchor-bottom-center {
   display: none !important;
 }
 
-/* Non-colliding responsive alignment between 4D Timeline Deck & 2D Tactical Radar */
-body.mode-4d .timeline-panel {
-  right: calc(var(--right-safe-offset) + var(--radar-w, 385px) + 1.25rem);
+/* Non-colliding responsive alignment between 4D Timeline Deck & 2D Tactical Radar.
+   In 4D mode, the bottom of the screen is dedicated to the full-width 4D timeline deck.
+   The 2D radar minimap and scale ruler float cleanly stacked ABOVE the timeline deck with zero overlap. */
+body.mode-4d .hud-anchor-bottom-right {
+  bottom: calc(var(--timeline-deck-h, 104px) + 1.45rem) !important;
+  right: var(--right-safe-offset) !important;
+  transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1), right 0.25s ease;
 }
 
-@media (max-width: 1420px) {
-  body.mode-4d .hud-anchor-bottom-right {
-    bottom: calc(var(--timeline-deck-h, 96px) + 1.25rem) !important;
-    right: var(--right-safe-offset) !important;
-  }
-  body.mode-4d .timeline-panel {
-    right: var(--right-safe-offset) !important;
-  }
+body.mode-4d .timeline-panel {
+  right: var(--right-safe-offset) !important;
 }
 
 body.mode-4d::after {

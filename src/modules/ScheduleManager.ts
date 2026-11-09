@@ -7,6 +7,7 @@
 
 import { CostRateManager } from "./CostRateManager";
 import { resolveCategoryUnitCost } from "./BoqGenerator";
+import { DelayImpactEngine } from "./DelayImpactEngine";
 
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
@@ -16,11 +17,16 @@ export interface ScheduleTask {
   category: string;
   startDate: string;      // ISO date string YYYY-MM-DD
   endDate: string;        // ISO date string YYYY-MM-DD
+  actualStartDate?: string; // ISO date string YYYY-MM-DD
+  actualEndDate?: string;   // ISO date string YYYY-MM-DD
   status: TaskStatus;
   elementIds: Set<number>;
   modelId: string;
   unitCost: number;
   totalCost?: number;
+  actualCost?: number;
+  delayDays?: number;
+  costImpact?: number;
   quantity: number;
   wbsCode?: string;
   totalFloat?: number;
@@ -36,6 +42,10 @@ export interface ElementCostData {
   taskStatus: TaskStatus;
   startDate: string;
   endDate: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  delayDays?: number;
+  costImpact?: number;
 }
 
 /**
@@ -434,7 +444,7 @@ export class ScheduleManager {
   }
 
   /**
-   * Export all tasks as a downloadable CSV template with 5D unit and total costs included.
+   * Export all tasks as a downloadable CSV template with 5D costs and 4D variance/actual dates included.
    */
   exportScheduleTemplateCSV(): string {
     const headers = [
@@ -443,11 +453,15 @@ export class ScheduleManager {
       "Category",
       "StartDate",
       "EndDate",
+      "ActualStartDate",
+      "ActualEndDate",
       "Status",
       "ModelID",
       "ElementCount",
       "UnitCost",
       "TotalCost",
+      "DelayDays",
+      "CostImpact",
       "ExpressIDs"
     ];
     const rows: string[] = [headers.join(",")];
@@ -462,17 +476,26 @@ export class ScheduleManager {
       task.unitCost = unitCost;
       task.totalCost = totalCost;
 
+      // Compute delay days and financial impact via DelayImpactEngine
+      const impact = DelayImpactEngine.getInstance().computeTaskDelay(task);
+      task.delayDays = impact.delayDays;
+      task.costImpact = impact.totalCostImpact;
+
       const row = [
         task.id,
         cleanTaskName,
         task.category,
         task.startDate,
         task.endDate,
+        task.actualStartDate || "",
+        task.actualEndDate || "",
         task.status,
         task.modelId,
         task.elementIds.size,
         unitCost.toFixed(2),
         totalCost.toFixed(2),
+        impact.delayDays,
+        impact.totalCostImpact.toFixed(2),
         expressIdsStr
       ];
       rows.push(row.join(","));
@@ -482,7 +505,7 @@ export class ScheduleManager {
   }
 
   /**
-   * Import schedule CSV and update tasks, element data, and itemized 5D costs.
+   * Import schedule CSV and update tasks, element data, itemized 5D costs, and 4D actual variance dates.
    */
   importScheduleFromCSV(csvText: string): number {
     const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -505,11 +528,16 @@ export class ScheduleManager {
     const catIdx = findCol("Category", "Type", "Trade");
     const startIdx = findCol("StartDate", "Start", "EarlyStart", "TargetStart");
     const endIdx = findCol("EndDate", "End", "Finish", "EarlyFinish", "TargetEnd");
+    const actualStartIdx = findCol("ActualStartDate", "ActualStart", "ActStart", "Actual_Start", "Act_Start");
+    const actualEndIdx = findCol("ActualEndDate", "ActualEnd", "ActualFinish", "ActFinish", "Actual_End", "Act_Finish");
     const statusIdx = findCol("Status", "State", "Progress");
     const modelIdx = findCol("ModelID", "Model");
     const idsIdx = findCol("ExpressIDs", "ElementIDs", "IDs", "ExpressID");
     const unitCostIdx = findCol("UnitCost", "UnitRate", "Rate", "Unit_Cost");
     const totalCostIdx = findCol("TotalCost", "Cost", "Total_Cost", "Budget", "PlannedCost", "Price");
+    const actualCostIdx = findCol("ActualCost", "ActCost", "Actual_Cost");
+    const delayDaysIdx = findCol("DelayDays", "Delay", "VarianceDays", "Slippage");
+    const costImpactIdx = findCol("CostImpact", "DelayCost", "CostVariance");
     const profileIdx = findCol("AppearanceProfile", "Profile", "ProfileID", "Appearance");
 
     const cleanNumber = (val: string): number => {
@@ -530,11 +558,16 @@ export class ScheduleManager {
       const category = getCol(catIdx) || "IFCELEMENT";
       const startDate = getCol(startIdx);
       const endDate = getCol(endIdx);
+      const actualStartDate = getCol(actualStartIdx) || undefined;
+      const actualEndDate = getCol(actualEndIdx) || undefined;
       const status = (getCol(statusIdx) as TaskStatus) || "Planned";
       const modelId = getCol(modelIdx) || "";
       const idsRaw = getCol(idsIdx);
       const rawUnitCost = cleanNumber(getCol(unitCostIdx));
       const rawTotalCost = cleanNumber(getCol(totalCostIdx));
+      const rawActualCost = cleanNumber(getCol(actualCostIdx));
+      const rawDelayDays = cleanNumber(getCol(delayDaysIdx));
+      const rawCostImpact = cleanNumber(getCol(costImpactIdx));
 
       if (!startDate || !endDate) continue;
 
@@ -567,14 +600,24 @@ export class ScheduleManager {
         category,
         startDate,
         endDate,
+        actualStartDate,
+        actualEndDate,
         status,
         elementIds,
         modelId,
         unitCost,
         totalCost,
+        actualCost: rawActualCost > 0 ? rawActualCost : undefined,
+        delayDays: rawDelayDays !== 0 ? rawDelayDays : undefined,
+        costImpact: rawCostImpact !== 0 ? rawCostImpact : undefined,
         quantity: count,
         appearanceProfileId,
       };
+
+      // Calculate task delay and cost impact using DelayImpactEngine
+      const impact = DelayImpactEngine.getInstance().computeTaskDelay(task);
+      task.delayDays = impact.delayDays;
+      task.costImpact = impact.totalCostImpact;
 
       this.tasks.set(id, task);
 
@@ -586,6 +629,10 @@ export class ScheduleManager {
           taskStatus: status,
           startDate,
           endDate,
+          actualStartDate,
+          actualEndDate,
+          delayDays: impact.delayDays,
+          costImpact: impact.totalCostImpact,
         });
       }
 

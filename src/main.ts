@@ -109,6 +109,7 @@ import { SoundManager } from "./core/SoundManager";
 import { CinematicTourManager } from "./modules/CinematicTourManager";
 import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
+import { DelayImpactEngine } from "./modules/DelayImpactEngine";
 
 BUI.Manager.init();
 
@@ -330,6 +331,7 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).ScheduleImportParsers = ScheduleImportParsers;
 (window as any).AppearanceProfileEngine = AppearanceProfileEngine;
 (window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
+(window as any).DelayImpactEngine = DelayImpactEngine;
 
 // Setup Command Palette (Ctrl + K)
 const commandPalette = new CommandPalette([
@@ -866,6 +868,12 @@ highlighter.styles.set("timeline-completed", {
 highlighter.styles.set("timeline-variance-ahead", {
   color: new THREE.Color("#38bdf8"), // Sky Blue Ahead
   opacity: 0.8,
+  transparent: true,
+  renderedFaces: true as any,
+});
+highlighter.styles.set("timeline-variance-onschedule", {
+  color: new THREE.Color("#64748b"), // Slate Grey On Schedule
+  opacity: 0.65,
   transparent: true,
   renderedFaces: true as any,
 });
@@ -2698,13 +2706,75 @@ btn4dGantt?.addEventListener("click", () => {
   InteractiveGanttDrawer.getInstance().toggle();
 });
 
-// Planned vs Actual Variance Toggle
+// Planned vs Actual Variance Toggle & Dynamic Legend Switcher
+function updateVarianceLegendUI(varianceActive: boolean) {
+  const legendEl = document.getElementById("timeline-legend") || document.querySelector(".timeline-legend");
+  if (!legendEl) return;
+  if (varianceActive) {
+    legendEl.setAttribute("data-mode", "variance");
+    legendEl.innerHTML = `
+      <span class="legend-item" title="Ahead of schedule (actual finish < planned finish)" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#38BDF8;box-shadow:0 0 6px rgba(56,189,248,0.5);"></span>
+        <span>Ahead</span>
+      </span>
+      <span class="legend-item" title="On schedule (within buffer days)" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#64748B;"></span>
+        <span>On Track</span>
+      </span>
+      <span class="legend-item" title="Delayed past planned completion date" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F59E0B;box-shadow:0 0 6px rgba(245,158,11,0.5);"></span>
+        <span>Delayed</span>
+      </span>
+      <span class="legend-item" title="Critical path delay or > 7 days slippage" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#EF4444;box-shadow:0 0 6px rgba(239,68,68,0.5);"></span>
+        <span>Critical</span>
+      </span>
+    `;
+  } else {
+    legendEl.removeAttribute("data-mode");
+    legendEl.innerHTML = `
+      <label class="legend-item" title="Click to change Planned status model color">
+        <input type="color" id="4d-color-planned" aria-label="4D Planned Activity Color" value="${ScheduleManager.statusColors['Planned'] || '#6b7280'}" class="legend-color-picker" />
+        <span>Planned</span>
+      </label>
+      <label class="legend-item" title="Click to change In Progress status model color">
+        <input type="color" id="4d-color-active" aria-label="4D In-Progress Activity Color" value="${ScheduleManager.statusColors['In Progress'] || '#f59e0b'}" class="legend-color-picker" />
+        <span>In Progress</span>
+      </label>
+      <label class="legend-item" title="Click to change Completed status model color">
+        <input type="color" id="4d-color-complete" aria-label="4D Completed Activity Color" value="${ScheduleManager.statusColors['Completed'] || '#10b981'}" class="legend-color-picker" />
+        <span>Completed</span>
+      </label>
+    `;
+    bindLegendColorPickers();
+  }
+}
+
+function bindLegendColorPickers() {
+  const pPicker = document.getElementById("4d-color-planned") as HTMLInputElement | null;
+  pPicker?.addEventListener("input", () => {
+    ScheduleManager.statusColors['Planned'] = pPicker.value;
+    if (currentTimelineDate) updateTimelineVisualState();
+  });
+  const aPicker = document.getElementById("4d-color-active") as HTMLInputElement | null;
+  aPicker?.addEventListener("input", () => {
+    ScheduleManager.statusColors['In Progress'] = aPicker.value;
+    if (currentTimelineDate) updateTimelineVisualState();
+  });
+  const cPicker = document.getElementById("4d-color-complete") as HTMLInputElement | null;
+  cPicker?.addEventListener("input", () => {
+    ScheduleManager.statusColors['Completed'] = cPicker.value;
+    if (currentTimelineDate) updateTimelineVisualState();
+  });
+}
+
 const btn4dVariance = document.getElementById("btn-4d-variance-toggle");
 btn4dVariance?.addEventListener("click", () => {
   isVarianceMode = !isVarianceMode;
   btn4dVariance.classList.toggle("active", isVarianceMode);
+  updateVarianceLegendUI(isVarianceMode);
   showToast(
-    isVarianceMode ? "4D Variance Mode: Ahead (Blue), Delayed (Amber), Critical (Red)" : "Standard 4D Phasing Mode Active",
+    isVarianceMode ? "4D Variance Mode: Ahead (Blue), On Track (Slate), Delayed (Amber), Critical (Red)" : "Standard 4D Phasing Mode Active",
     isVarianceMode ? "info" : "success"
   );
   updateTimelineVisualState(true);
@@ -6957,19 +7027,58 @@ async function updateTimelineVisualState(force: boolean = false) {
 
   if (isVarianceMode) {
     await highlighter.clear("timeline-variance-ahead");
+    await highlighter.clear("timeline-variance-onschedule");
     await highlighter.clear("timeline-variance-delayed");
     await highlighter.clear("timeline-variance-critical");
 
-    const vBuckets = schedule4DEngine.getVarianceBuckets(dateMs);
+    const delayEngine = DelayImpactEngine.getInstance();
+    const tasksList = scheduleManager?.getTasksSorted() ?? [];
+    const vBuckets = tasksList.length > 0
+      ? delayEngine.getVarianceBuckets(dateMs, tasksList)
+      : schedule4DEngine.getVarianceBuckets(dateMs);
+
     await hider.set(true); // make all visible in variance audit mode
     if (vBuckets.counts.ahead > 0) {
       await highlighter.highlightByID("timeline-variance-ahead", vBuckets.ahead, false, false);
+    }
+    if ((vBuckets as any).onSchedule && vBuckets.counts.onSchedule > 0) {
+      await highlighter.highlightByID("timeline-variance-onschedule", (vBuckets as any).onSchedule, false, false);
     }
     if (vBuckets.counts.delayed > 0) {
       await highlighter.highlightByID("timeline-variance-delayed", vBuckets.delayed, false, false);
     }
     if (vBuckets.counts.critical > 0) {
       await highlighter.highlightByID("timeline-variance-critical", vBuckets.critical, false, false);
+    }
+
+    if (tasksList.length > 0) {
+      const delayReport = delayEngine.computeProjectDelayReport(tasksList, dateMs);
+      const costBadge = document.getElementById("gantt-evm-cost");
+      if (costBadge) {
+        costBadge.innerText = `$${Math.round(delayReport.earnedValue).toLocaleString("en-US")} / $${Math.round(delayReport.totalPlannedCost).toLocaleString("en-US")}`;
+        costBadge.title =
+          `Variance & Delay Exposure Report:\n` +
+          `Project Slippage: ${delayReport.projectSlippageDays > 0 ? "+" : ""}${delayReport.projectSlippageDays} Days\n` +
+          `Total Delay Exposure: $${Math.round(delayReport.totalCostImpact).toLocaleString("en-US")}\n` +
+          `  - Prolongation Overhead: $${Math.round(delayReport.totalProlongationCost).toLocaleString("en-US")}\n` +
+          `  - Liquidated Damages/Penalties: $${Math.round(delayReport.totalPenaltyCost).toLocaleString("en-US")}\n` +
+          `Schedule Variance (SV): ${delayReport.scheduleVariance >= 0 ? "+" : "−"}$${Math.round(Math.abs(delayReport.scheduleVariance)).toLocaleString("en-US")}\n` +
+          `SPI: ${delayReport.spi.toFixed(2)} | CPI: ${delayReport.cpi.toFixed(2)}`;
+      }
+      const progBadge = document.getElementById("gantt-progress-val");
+      if (progBadge) {
+        const delayedTotal = delayReport.delayedCount + delayReport.criticalDelayCount;
+        progBadge.innerText = delayedTotal > 0
+          ? `${delayedTotal} Delayed (${delayReport.criticalDelayCount} Crit)`
+          : `All Tasks On Track`;
+        progBadge.style.color = delayedTotal > 0 ? "#F59E0B" : "#10B981";
+      }
+      const spiBadge = document.getElementById("gantt-spi-val");
+      if (spiBadge) {
+        spiBadge.innerText = `SPI ${delayReport.spi.toFixed(2)}`;
+        spiBadge.classList.toggle("behind", delayReport.spi < 0.95);
+        spiBadge.classList.toggle("ahead", delayReport.spi > 1.05);
+      }
     }
   } else {
     // If schedule tasks exist, use AppearanceProfileEngine to evaluate dynamic appearance and clipping planes
