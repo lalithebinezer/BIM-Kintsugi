@@ -47,7 +47,7 @@ describe("ScheduleManager Unit Tests", () => {
     expect(elData?.quantity).toBe(4);
   });
 
-  it("should export and import schedule CSV cleanly", () => {
+  it("should export and import schedule CSV cleanly with 5D itemized unit and total costs", () => {
     const task: ScheduleTask = {
       id: "task-01",
       name: "Concrete Pouring",
@@ -58,6 +58,7 @@ describe("ScheduleManager Unit Tests", () => {
       elementIds: new Set([501, 502, 503]),
       modelId: "model-1",
       unitCost: 200,
+      totalCost: 600,
       quantity: 3,
     };
 
@@ -65,14 +66,39 @@ describe("ScheduleManager Unit Tests", () => {
 
     const csv = manager.exportScheduleTemplateCSV();
     expect(csv).toContain("TaskID,TaskName,Category");
+    expect(csv).toContain("UnitCost,TotalCost");
     expect(csv).toContain("Concrete Pouring");
     expect(csv).toContain("501;502;503");
+    expect(csv).toContain("200.00,600.00");
 
     const newManager = new ScheduleManager();
     const imported = newManager.importScheduleFromCSV(csv);
     expect(imported).toBe(1);
     expect(newManager.tasks.has("task-01")).toBe(true);
-    expect(newManager.tasks.get("task-01")?.elementIds.size).toBe(3);
+    const importedTask = newManager.tasks.get("task-01");
+    expect(importedTask?.elementIds.size).toBe(3);
+    expect(importedTask?.unitCost).toBe(200);
+    expect(importedTask?.totalCost).toBe(600);
+
+    // Verify element data cost mapping
+    const elData = newManager.getElementData("model-1", 501);
+    expect(elData?.unitCost).toBe(200);
+    expect(elData?.taskName).toBe("Concrete Pouring");
+  });
+
+  it("should parse flexible CSV column variants and currency formats", () => {
+    const customCsv = `Task ID, Task Name, Category, Start Date, End Date, Status, Model, Element IDs, Unit Rate, Total Budget
+task-custom,"Steel Framing",IFCBEAM,2026-05-01,2026-05-10,Planned,model-2,"701;702","$350.50","$701.00"`;
+
+    const flexibleManager = new ScheduleManager();
+    const count = flexibleManager.importScheduleFromCSV(customCsv);
+    expect(count).toBe(1);
+    const task = flexibleManager.tasks.get("task-custom");
+    expect(task).toBeDefined();
+    expect(task?.name).toBe("Steel Framing");
+    expect(task?.unitCost).toBe(350.5);
+    expect(task?.totalCost).toBe(701);
+    expect(task?.elementIds.size).toBe(2);
   });
 
   it("should resolve status colors properly", () => {

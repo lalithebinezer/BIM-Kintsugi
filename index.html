@@ -879,11 +879,15 @@
               <div class="schedule-export-actions" style="display: flex; gap: 0.35rem; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border-subtle);">
                 <button type="button" id="btn-export-mspdi-xml" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule to Microsoft Project XML (MSPDI)">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>MS Project XML</span>
+                  <span>MSP XML</span>
                 </button>
                 <button type="button" id="btn-export-primavera-p6" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule to Oracle Primavera P6 XER">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>Primavera P6</span>
+                  <span>P6 XER</span>
+                </button>
+                <button type="button" id="btn-export-schedule-csv" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule with Itemized 5D Costs to CSV">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>CSV (Cost)</span>
                 </button>
               </div>
             </div>
@@ -2286,8 +2290,8 @@
             </div>
 
             <button class="btn-timeline-csv" id="btn-export-4d-csv"
-              title="Download Auto-Generated 4D Schedule CSV Template">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV Template
+              title="Download 4D Schedule CSV with Itemized 5D Unit & Total Costs">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV (Cost)
             </button>
 
             <label class="btn-timeline-csv" title="Upload Custom 4D Schedule CSV with Adjusted Dates">

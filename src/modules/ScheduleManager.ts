@@ -5,6 +5,9 @@
  * Supports auto-generation from model categories and manual editing.
  */
 
+import { CostRateManager } from "./CostRateManager";
+import { resolveCategoryUnitCost } from "./BoqGenerator";
+
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
 export interface ScheduleTask {
@@ -17,6 +20,7 @@ export interface ScheduleTask {
   elementIds: Set<number>;
   modelId: string;
   unitCost: number;
+  totalCost?: number;
   quantity: number;
   wbsCode?: string;
   totalFloat?: number;
@@ -140,6 +144,9 @@ export class ScheduleManager {
         .replace(/([A-Z])/g, ' $1')
         .trim();
 
+      const taskUnitCost = this.resolveFallbackUnitCost(categoryName);
+      const taskTotalCost = Math.round(taskUnitCost * Math.max(1, allElementIds.size) * 100) / 100;
+
       const task: ScheduleTask = {
         id: taskId,
         name: `${cleanName} Works`,
@@ -149,7 +156,8 @@ export class ScheduleManager {
         status: 'Planned',
         elementIds: allElementIds,
         modelId: taskModelId,
-        unitCost: 0,
+        unitCost: taskUnitCost,
+        totalCost: taskTotalCost,
         quantity: allElementIds.size,
       };
 
@@ -276,15 +284,145 @@ export class ScheduleManager {
   }
 
   /**
-   * Export all tasks as a downloadable CSV template.
+   * Resolves a benchmark fallback unit cost for an IFC category.
+   */
+  public resolveFallbackUnitCost(category: string): number {
+    try {
+      const rate = CostRateManager.getInstance().getRate(category);
+      if (rate && rate.unitRate > 0) {
+        return rate.unitRate;
+      }
+    } catch (e) {}
+    return resolveCategoryUnitCost(category, 0);
+  }
+
+  /**
+   * Resolves the unit cost for a schedule task using linked elements,
+   * cost rate manager, or standard category benchmarks.
+   */
+  public getTaskUnitCost(task: ScheduleTask): number {
+    if (task.unitCost && task.unitCost > 0) {
+      return task.unitCost;
+    }
+
+    let elemCostSum = 0;
+    let elemCostCount = 0;
+    const twinDb = typeof window !== "undefined" ? (window as any).twinDatabase : undefined;
+
+    if (task.elementIds && task.elementIds.size > 0) {
+      for (const expId of task.elementIds) {
+        const edKey = `${task.modelId}:${expId}`;
+        const ed = this.elementData.get(edKey);
+        if (ed && ed.unitCost > 0) {
+          elemCostSum += ed.unitCost;
+          elemCostCount++;
+          continue;
+        }
+        if (twinDb) {
+          const twinKey = `${task.modelId}-${expId}`;
+          const twin = twinDb[twinKey] || twinDb[String(expId)];
+          if (twin && twin.unitCost > 0) {
+            elemCostSum += twin.unitCost;
+            elemCostCount++;
+          }
+        }
+      }
+    }
+
+    if (elemCostCount > 0) {
+      return Math.round((elemCostSum / elemCostCount) * 100) / 100;
+    }
+
+    return this.resolveFallbackUnitCost(task.category);
+  }
+
+  /**
+   * Resolves the total cost for a schedule task.
+   */
+  public getTaskTotalCost(task: ScheduleTask): number {
+    if (task.totalCost && task.totalCost > 0) {
+      return task.totalCost;
+    }
+
+    const count = Math.max(1, task.elementIds.size || task.quantity || 1);
+    const unitRate = this.getTaskUnitCost(task);
+
+    const twinDb = typeof window !== "undefined" ? (window as any).twinDatabase : undefined;
+    if (twinDb && task.elementIds.size > 0) {
+      let sum = 0;
+      let matched = 0;
+      for (const expId of task.elementIds) {
+        const twinKey = `${task.modelId}-${expId}`;
+        const twin = twinDb[twinKey] || twinDb[String(expId)];
+        if (twin && (twin.calculatedCost !== undefined || twin.unitCost !== undefined)) {
+          sum += twin.calculatedCost ?? (twin.unitCost * (twin.quantity || 1));
+          matched++;
+        }
+      }
+      if (matched > 0 && sum > 0) {
+        return Math.round(sum * 100) / 100;
+      }
+    }
+
+    return Math.round(unitRate * count * 100) / 100;
+  }
+
+  /**
+   * Parses a single CSV line respecting double quotes and escaped quotes.
+   */
+  public parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // skip escaped quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+  /**
+   * Export all tasks as a downloadable CSV template with 5D unit and total costs included.
    */
   exportScheduleTemplateCSV(): string {
-    const headers = ["TaskID", "TaskName", "Category", "StartDate", "EndDate", "Status", "ModelID", "ElementCount", "ExpressIDs", "UnitCost"];
+    const headers = [
+      "TaskID",
+      "TaskName",
+      "Category",
+      "StartDate",
+      "EndDate",
+      "Status",
+      "ModelID",
+      "ElementCount",
+      "UnitCost",
+      "TotalCost",
+      "ExpressIDs"
+    ];
     const rows: string[] = [headers.join(",")];
 
     for (const [, task] of this.tasks) {
       const expressIdsStr = `"${Array.from(task.elementIds).join(";")}"`;
       const cleanTaskName = `"${task.name.replace(/"/g, '""')}"`;
+      const unitCost = this.getTaskUnitCost(task);
+      const totalCost = this.getTaskTotalCost(task);
+
+      // Cache resolved costs on task
+      task.unitCost = unitCost;
+      task.totalCost = totalCost;
+
       const row = [
         task.id,
         cleanTaskName,
@@ -294,8 +432,9 @@ export class ScheduleManager {
         task.status,
         task.modelId,
         task.elementIds.size,
-        expressIdsStr,
-        task.unitCost || 0
+        unitCost.toFixed(2),
+        totalCost.toFixed(2),
+        expressIdsStr
       ];
       rows.push(row.join(","));
     }
@@ -304,7 +443,7 @@ export class ScheduleManager {
   }
 
   /**
-   * Import schedule CSV and update tasks and element data.
+   * Import schedule CSV and update tasks, element data, and itemized 5D costs.
    */
   importScheduleFromCSV(csvText: string): number {
     const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -312,22 +451,37 @@ export class ScheduleManager {
 
     let importedCount = 0;
     const headerLine = lines[0];
-    const headers = headerLine.split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+    const headers = this.parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ""));
 
-    const idIdx = headers.indexOf("TaskID");
-    const nameIdx = headers.indexOf("TaskName");
-    const catIdx = headers.indexOf("Category");
-    const startIdx = headers.indexOf("StartDate");
-    const endIdx = headers.indexOf("EndDate");
-    const statusIdx = headers.indexOf("Status");
-    const modelIdx = headers.indexOf("ModelID");
-    const idsIdx = headers.indexOf("ExpressIDs");
-    const costIdx = headers.indexOf("UnitCost");
+    const findCol = (...aliases: string[]) => {
+      const lower = aliases.map(a => a.toLowerCase().replace(/[\s_\-]/g, ""));
+      return headers.findIndex(h => {
+        const cleanH = h.toLowerCase().replace(/[\s_\-]/g, "");
+        return lower.includes(cleanH);
+      });
+    };
+
+    const idIdx = findCol("TaskID", "ID", "UID", "Code");
+    const nameIdx = findCol("TaskName", "Name", "Description", "Task");
+    const catIdx = findCol("Category", "Type", "Trade");
+    const startIdx = findCol("StartDate", "Start", "EarlyStart", "TargetStart");
+    const endIdx = findCol("EndDate", "End", "Finish", "EarlyFinish", "TargetEnd");
+    const statusIdx = findCol("Status", "State", "Progress");
+    const modelIdx = findCol("ModelID", "Model");
+    const idsIdx = findCol("ExpressIDs", "ElementIDs", "IDs", "ExpressID");
+    const unitCostIdx = findCol("UnitCost", "UnitRate", "Rate", "Unit_Cost");
+    const totalCostIdx = findCol("TotalCost", "Cost", "Total_Cost", "Budget", "PlannedCost", "Price");
+
+    const cleanNumber = (val: string): number => {
+      if (!val) return 0;
+      const numStr = val.replace(/[^0-9.-]/g, "");
+      const num = Number(numStr);
+      return isNaN(num) ? 0 : num;
+    };
 
     for (let i = 1; i < lines.length; i++) {
-      // Basic CSV regex split supporting quoted commas
-      const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(",");
-      if (cols.length < 5) continue;
+      const cols = this.parseCsvLine(lines[i]);
+      if (cols.length < 4) continue;
 
       const getCol = (idx: number) => (idx >= 0 && cols[idx] ? cols[idx].trim().replace(/^"|"$/g, "") : "");
 
@@ -339,7 +493,8 @@ export class ScheduleManager {
       const status = (getCol(statusIdx) as TaskStatus) || "Planned";
       const modelId = getCol(modelIdx) || "";
       const idsRaw = getCol(idsIdx);
-      const unitCost = Number(getCol(costIdx)) || 0;
+      const rawUnitCost = cleanNumber(getCol(unitCostIdx));
+      const rawTotalCost = cleanNumber(getCol(totalCostIdx));
 
       if (!startDate || !endDate) continue;
 
@@ -349,6 +504,19 @@ export class ScheduleManager {
           const num = Number(val.trim());
           if (!isNaN(num) && num > 0) elementIds.add(num);
         });
+      }
+
+      const count = Math.max(1, elementIds.size);
+      let unitCost = rawUnitCost;
+      let totalCost = rawTotalCost;
+
+      if (totalCost > 0 && unitCost === 0) {
+        unitCost = Math.round((totalCost / count) * 100) / 100;
+      } else if (unitCost > 0 && totalCost === 0) {
+        totalCost = Math.round((unitCost * count) * 100) / 100;
+      } else if (unitCost === 0 && totalCost === 0) {
+        unitCost = this.resolveFallbackUnitCost(category);
+        totalCost = Math.round((unitCost * count) * 100) / 100;
       }
 
       const task: ScheduleTask = {
@@ -361,10 +529,23 @@ export class ScheduleManager {
         elementIds,
         modelId,
         unitCost,
-        quantity: elementIds.size,
+        totalCost,
+        quantity: count,
       };
 
       this.tasks.set(id, task);
+
+      for (const expressId of elementIds) {
+        this.elementData.set(`${modelId}:${expressId}`, {
+          unitCost,
+          quantity: 1,
+          taskName: name,
+          taskStatus: status,
+          startDate,
+          endDate,
+        });
+      }
+
       importedCount++;
     }
 
@@ -508,10 +689,25 @@ export class ScheduleManager {
         else if (nowMs >= taskStartMs && nowMs <= taskEndMs) taskStatus = "In Progress";
         task.status = taskStatus;
 
+        const taskUnitCost = this.getTaskUnitCost(task);
+        const taskTotalCost = Math.round(taskUnitCost * Math.max(1, matchedElements.length) * 100) / 100;
+        task.unitCost = taskUnitCost;
+        task.totalCost = taskTotalCost;
+        task.quantity = matchedElements.length;
+
         for (const { modelId, expressId } of matchedElements) {
           task.elementIds.add(expressId);
           task.modelId = modelId;
           totalElementsLinked++;
+
+          this.elementData.set(`${modelId}:${expressId}`, {
+            unitCost: taskUnitCost,
+            quantity: 1,
+            taskName: task.name,
+            taskStatus: taskStatus,
+            startDate: task.startDate,
+            endDate: task.endDate,
+          });
 
           if (twinDatabase) {
             const dbKey = `${modelId}-${expressId}`;
@@ -532,8 +728,8 @@ export class ScheduleManager {
               wbsCode: task.wbsCode,
               totalFloat: task.totalFloat,
               isCritical: task.isCritical,
-              unitCost: task.unitCost || 250,
-              calculatedCost: (task.unitCost || 250) * (existing.quantity || 1),
+              unitCost: taskUnitCost,
+              calculatedCost: taskUnitCost * (existing.quantity || 1),
               isCustomized: true,
             };
           }

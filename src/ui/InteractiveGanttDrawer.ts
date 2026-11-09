@@ -60,6 +60,7 @@ export class InteractiveGanttDrawer {
             <button id="btn-gantt-sync-synchro" class="btn-gantt-drawer-action" title="Synchronize 4D Sequence with Synchro Schedule XML and model SIMULATION property" style="border-color: rgba(56, 189, 248, 0.5); color: #38BDF8;">⚡ Sync Synchro (SIMULATION)</button>
             <button id="btn-gantt-export-mspdi" class="btn-gantt-drawer-action" title="Export schedule to Microsoft Project XML (MSPDI)">Export MSP XML</button>
             <button id="btn-gantt-export-p6" class="btn-gantt-drawer-action" title="Export schedule to Oracle Primavera P6 XER">Export P6 XER</button>
+            <button id="btn-gantt-export-csv" class="btn-gantt-drawer-action" title="Export schedule to CSV with itemized 5D unit & total costs">Export CSV (Cost)</button>
             <button id="btn-gantt-fit-dates" class="btn-gantt-drawer-action" title="Fit all tasks into timeline view">Fit Timeline</button>
             <button id="btn-close-gantt-drawer" class="btn-icon-sm" title="Close Gantt Drawer">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -152,6 +153,10 @@ export class InteractiveGanttDrawer {
 
     panel.querySelector("#btn-gantt-export-p6")?.addEventListener("click", () => {
       this.exportSchedule("P6");
+    });
+
+    panel.querySelector("#btn-gantt-export-csv")?.addEventListener("click", () => {
+      this.exportSchedule("CSV");
     });
 
     panel.querySelector("#btn-gantt-fit-dates")?.addEventListener("click", () => {
@@ -467,7 +472,7 @@ export class InteractiveGanttDrawer {
     });
   }
 
-  public exportSchedule(format: "MSPDI" | "P6"): void {
+  public exportSchedule(format: "MSPDI" | "P6" | "CSV"): void {
     const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
     if (!scheduleManager || scheduleManager.tasks.size === 0) {
       showToast("No schedule tasks available to export", "warning");
@@ -478,10 +483,15 @@ export class InteractiveGanttDrawer {
       const xml = ScheduleImportParsers.exportToMSPDI(tasks);
       this.triggerDownload(xml, "BIM_Kintsugi_Schedule.xml", "application/xml");
       showToast(`Exported ${tasks.length} tasks to Microsoft Project XML`, "success");
-    } else {
+    } else if (format === "P6") {
       const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
       this.triggerDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
       showToast(`Exported ${tasks.length} tasks to Oracle Primavera P6 XER`, "success");
+    } else if (format === "CSV") {
+      const csv = scheduleManager.exportScheduleTemplateCSV();
+      const dateStr = new Date().toISOString().split("T")[0];
+      this.triggerDownload(csv, `4D_Schedule_Cost_${dateStr}.csv`, "text/csv;charset=utf-8;");
+      showToast(`Exported ${tasks.length} tasks with itemized 5D costs to CSV`, "success");
     }
   }
 

@@ -2593,20 +2593,26 @@ btnRunIdsAudit?.addEventListener("click", triggerIdsAudit);
 document.getElementById("drawer-btn-run-ids")?.addEventListener("click", triggerIdsAudit);
 
 // Wire 4D Schedule CSV Template Export & Import Listeners
+const exportScheduleCsvHandler = () => {
+  const csvData = scheduleManager.exportScheduleTemplateCSV();
+  const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `4D_Schedule_Cost_${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  updateViewportHint("4D Schedule CSV with itemized 5D unit & total costs downloaded!");
+  showToast("4D Schedule CSV with itemized 5D costs downloaded!", "success");
+};
+
 const btnExport4dCsv = document.getElementById("btn-export-4d-csv");
-if (btnExport4dCsv) {
-  btnExport4dCsv.addEventListener("click", () => {
-    const csvData = scheduleManager.exportScheduleTemplateCSV();
-    const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `4D_Schedule_Template_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    updateViewportHint("4D Schedule CSV Template downloaded! Open in Excel to edit task dates.");
-  });
-}
+btnExport4dCsv?.addEventListener("click", exportScheduleCsvHandler);
+
+const btnExportScheduleCsv = document.getElementById("btn-export-schedule-csv");
+btnExportScheduleCsv?.addEventListener("click", exportScheduleCsvHandler);
 
 const btnImport4dCsvInput = document.getElementById("btn-import-4d-csv-input") as HTMLInputElement | null;
 if (btnImport4dCsvInput) {
@@ -2617,8 +2623,13 @@ if (btnImport4dCsvInput) {
       const text = await file.text();
       const count = scheduleManager.importScheduleFromCSV(text);
       if (count > 0) {
-        // Sync imported schedule tasks into twin database elements
+        // Sync imported schedule tasks and 5D itemized costs into twin database elements
         for (const [, task] of scheduleManager.tasks) {
+          const taskElementCount = Math.max(1, task.elementIds.size);
+          const perElementCost = (task.totalCost && task.totalCost > 0)
+            ? Math.round((task.totalCost / taskElementCount) * 100) / 100
+            : (task.unitCost || 0);
+
           for (const expressId of task.elementIds) {
             const mId = task.modelId || "default-model";
             const dbKey = `${mId}-${expressId}`;
@@ -2633,22 +2644,32 @@ if (btnImport4dCsvInput) {
             existing.endDate = task.endDate;
             existing.status = task.status;
             existing.isCustomized = true;
+
             if (task.unitCost > 0) {
               existing.unitCost = task.unitCost;
-              existing.calculatedCost = task.unitCost * (existing.quantity || 1);
+            } else if (perElementCost > 0) {
+              existing.unitCost = perElementCost;
             }
+
+            if (perElementCost > 0) {
+              existing.calculatedCost = perElementCost * (existing.quantity || 1);
+            } else if (existing.unitCost > 0) {
+              existing.calculatedCost = existing.unitCost * (existing.quantity || 1);
+            }
+
             twinDatabase[dbKey] = existing as any;
           }
         }
         saveDatabase();
+        updateDashboardMetrics();
         calculateTimelineBounds();
         if (currentTimelineDate) {
           await updateTimelineVisualState(true);
         }
-        alert(`Imported ${count} custom 4D schedule tasks from CSV!\nTimeline and simulation playback updated.`);
-        updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated)`);
+        alert(`Imported ${count} custom 4D schedule tasks with 5D costs from CSV!\nTimeline, EVM budget, and simulation playback updated.`);
+        updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated with costs)`);
       } else {
-        alert("Could not parse valid 4D tasks from the CSV file. Please check column headers (TaskID, StartDate, EndDate).");
+        alert("Could not parse valid 4D tasks from the CSV file. Please check column headers (TaskID, StartDate, EndDate, UnitCost, TotalCost).");
       }
       target.value = "";
     }
