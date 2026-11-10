@@ -253,6 +253,10 @@ export class InteractiveGanttDrawer {
     this.render();
   }
 
+  public open(): void {
+    this.show();
+  }
+
   public hide(): void {
     this.container?.classList.add("hidden");
     this.isVisible = false;
@@ -319,6 +323,8 @@ export class InteractiveGanttDrawer {
           <span class="task-drag-handle">≡</span>
           ${t.wbsCode ? `<span class="gantt-wbs-badge" style="font-size: 0.65rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">${t.wbsCode}</span>` : ''}
           <span class="task-text">${t.name}</span>
+          <span class="gantt-badge-elements" style="font-size: 0.6rem; font-weight: 700; background: rgba(212, 255, 63, 0.15); color: var(--accent-500); padding: 1px 4px; border-radius: 2px; margin-left: 4px;" title="${t.elementIds.size} 3D elements assigned to task">${t.elementIds.size} 3D</span>
+          <button type="button" class="btn-gantt-link-3d" data-task-id="${t.id}" style="font-size: 0.58rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 3px; padding: 1px 5px; cursor: pointer; margin-left: 6px;" title="Assign currently selected 3D elements in viewport to this task">🔗 Link 3D</button>
           ${t.isCritical ? `<span class="gantt-cpm-badge" style="font-size: 0.62rem; font-weight: 800; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); padding: 1px 3px; border-radius: 2px; margin-left: 4px;" title="Critical Path Task (Float: ${t.totalFloat ?? 0}d)">CPM</span>` : ''}
         </div>
         <div class="col-task-status">
@@ -339,7 +345,34 @@ export class InteractiveGanttDrawer {
       `;
 
       // Click task: scrub timeline to task start and isolate elements in 3D
-      row.addEventListener("click", () => {
+      row.addEventListener("click", (e) => {
+        const linkBtn = (e.target as HTMLElement)?.closest(".btn-gantt-link-3d");
+        if (linkBtn) {
+          e.stopPropagation();
+          const selMap = (window as any).getActiveSelectionMap ? (window as any).getActiveSelectionMap() : {};
+          let totalSelected = 0;
+          for (const mId in selMap) totalSelected += selMap[mId].size;
+
+          if (totalSelected === 0) {
+            showToast("Select 3D elements in the viewport first (Click or Shift+Click)", "warning");
+            return;
+          }
+
+          const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
+          if (scheduleManager) {
+            const linked = scheduleManager.assignElementsToTask(t.id, selMap);
+            if (typeof (window as any).updateCumulative5DCost === "function") {
+              (window as any).updateCumulative5DCost();
+            }
+            if (typeof (window as any).updateTimelineVisualState === "function") {
+              (window as any).updateTimelineVisualState(true);
+            }
+            this.render();
+            showToast(`✓ Assigned ${linked} 3D elements to task "${t.name}"!`, "success");
+          }
+          return;
+        }
+
         this.selectTask(t);
       });
 
@@ -415,6 +448,10 @@ export class InteractiveGanttDrawer {
       if (playIcon) playIcon.textContent = "▶";
       if (playText) playText.textContent = "Play";
     }
+  }
+
+  public getActiveTaskId(): string | null {
+    return this.activeTaskId;
   }
 
   public selectTask(task: ScheduleTask): void {

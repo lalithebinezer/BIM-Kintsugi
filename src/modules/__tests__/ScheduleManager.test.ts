@@ -298,4 +298,43 @@ msp-8,COL_LTOS,IFCELEMENT,11-03-27,11-03-27,,,Planned,Dynamo_NCP_Snowdon_Towers_
     expect(t2.elementIds.size).toBe(5);
     expect(t2.totalCost).toBe(15000);
   });
+
+  it("should support 1-click assigning selected 3D elements to a task (assignElementsToTask)", () => {
+    manager.tasks.set("task-col", {
+      id: "task-col",
+      name: "Columns Erection",
+      category: "IFCCOLUMN",
+      startDate: "2026-08-01",
+      endDate: "2026-08-10",
+      status: "Planned",
+      elementIds: new Set<number>([1001]),
+      modelId: "model-alpha",
+      unitCost: 500,
+      totalCost: 500,
+      quantity: 1,
+    });
+
+    const selMap: Record<string, Set<number>> = {
+      "model-alpha": new Set<number>([1002, 1003, 1004]),
+    };
+
+    const linked = manager.assignElementsToTask("task-col", selMap);
+    expect(linked).toBe(3);
+
+    const updatedTask = manager.tasks.get("task-col")!;
+    expect(updatedTask.elementIds.size).toBe(4);
+    expect(updatedTask.elementIds.has(1001)).toBe(true);
+    expect(updatedTask.elementIds.has(1002)).toBe(true);
+    expect(updatedTask.elementIds.has(1003)).toBe(true);
+    expect(updatedTask.elementIds.has(1004)).toBe(true);
+    expect(updatedTask.quantity).toBe(4);
+    expect(updatedTask.totalCost).toBe(2000); // 500 * 4
+
+    // Verify elementData is populated
+    const elData = manager.elementData.get("model-alpha:1003")!;
+    expect(elData).toBeDefined();
+    expect(elData.taskName).toBe("Columns Erection");
+    expect(elData.startDate).toBe("2026-08-01");
+    expect(elData.endDate).toBe("2026-08-10");
+  });
 });

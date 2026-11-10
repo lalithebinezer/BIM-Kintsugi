@@ -915,6 +915,18 @@ highlighter.styles.set("timeline-variance-critical", {
   transparent: true,
   renderedFaces: true as any,
 });
+highlighter.styles.set("audit-unassigned", {
+  color: new THREE.Color("#f97316"), // Vivid Glowing Orange/Amber for unassigned QA elements
+  opacity: 0.92,
+  transparent: true,
+  renderedFaces: true as any,
+});
+highlighter.styles.set("audit-ghost", {
+  color: new THREE.Color("#334155"), // Muted Dark Slate for assigned elements during audit
+  opacity: 0.15,
+  transparent: true,
+  renderedFaces: true as any,
+});
 
 // --- ITEMS FINDER / SEMANTIC QUERIES ---
 const finder = components.get(OBC.ItemsFinder);
@@ -2754,11 +2766,36 @@ function syncImportedScheduleWithActiveModels(): number {
   return linkedElementsCount;
 }
 
-async function handleScheduleCsvFile(file: File) {
-  updateViewportHint("Parsing 4D/5D Schedule CSV...");
+export function getActiveSelectionMap(): Record<string, Set<number>> {
+  const sel = highlighter?.selection?.["select"];
+  if (sel && Object.keys(sel).length > 0) {
+    let count = 0;
+    for (const m in sel) count += sel[m]?.size || 0;
+    if (count > 0) return sel;
+  }
+  const mgrSel = SelectionManager.getInstance().getSelectionInfo().modelIdMap;
+  if (mgrSel && Object.keys(mgrSel).length > 0) {
+    let count = 0;
+    for (const m in mgrSel) count += mgrSel[m]?.size || 0;
+    if (count > 0) return mgrSel;
+  }
+  return {};
+}
+(window as any).getActiveSelectionMap = getActiveSelectionMap;
+
+async function handleScheduleFile(file: File) {
+  const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+  updateViewportHint(`Parsing 4D/5D Schedule (${isExcel ? "Excel" : "CSV"})...`);
   try {
-    const text = await file.text();
-    const count = scheduleManager.importScheduleFromCSV(text);
+    let count = 0;
+    if (isExcel) {
+      const buffer = await file.arrayBuffer();
+      count = scheduleManager.importScheduleFromExcel(buffer, file.name);
+    } else {
+      const text = await file.text();
+      count = scheduleManager.importScheduleFromCSV(text);
+    }
+
     if (count > 0) {
       syncImportedScheduleWithActiveModels();
       updateDashboardMetrics();
@@ -2774,16 +2811,154 @@ async function handleScheduleCsvFile(file: File) {
       if (currentTimelineDate) {
         await updateTimelineVisualState(true);
       }
-      showToast(`Imported ${count} 4D tasks with 5D costs from CSV!`, "success");
-      updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated with costs)`);
+      showToast(`Imported ${count} 4D tasks with 5D costs from ${file.name}!`, "success");
+      updateViewportHint(`Custom 4D Schedule applied (${count} tasks updated with costs)`);
     } else {
-      showToast("Could not parse valid 4D tasks from the CSV file. Please check column headers.", "warning");
+      showToast(`Could not parse valid 4D tasks from ${file.name}. Please check column headers or sheet names.`, "warning");
     }
   } catch (err: any) {
-    console.error("CSV Import Error:", err);
-    showToast("CSV import error: " + (err?.message || "Format error"), "error");
+    console.error("Schedule Import Error:", err);
+    showToast("Schedule import error: " + (err?.message || "Format error"), "error");
   }
 }
+(window as any).handleScheduleFile = handleScheduleFile;
+
+let isUnassignedAuditActive = false;
+
+export async function toggleUnassignedAudit(forceState?: boolean): Promise<boolean> {
+  isUnassignedAuditActive = forceState !== undefined ? forceState : !isUnassignedAuditActive;
+
+  const btnDock = document.getElementById("btn-timeline-audit-unassigned");
+  const btnModal = document.getElementById("btn-timeline-audit-unassigned-modal");
+
+  if (!isUnassignedAuditActive) {
+    btnDock?.classList.remove("active");
+    btnModal?.classList.remove("active");
+    await highlighter.clear("audit-unassigned");
+    await highlighter.clear("audit-ghost");
+    if (currentTimelineDate) {
+      await updateTimelineVisualState(true);
+    }
+    showToast("Audit closed — 4D timeline appearance restored.", "info");
+    return false;
+  }
+
+  if (fragments.list.size === 0) {
+    showToast("Load a 3D IFC model first to audit unassigned elements.", "warning");
+    isUnassignedAuditActive = false;
+    return false;
+  }
+
+  // 1. Gather all assigned element expressIds from scheduleManager.tasks and scheduleManager.elementData
+  const assignedByModel = new Map<string, Set<number>>();
+  for (const [, task] of scheduleManager.tasks) {
+    for (const eid of task.elementIds) {
+      const mId = task.modelId || "all";
+      if (!assignedByModel.has(mId)) assignedByModel.set(mId, new Set<number>());
+      assignedByModel.get(mId)!.add(eid);
+    }
+  }
+  for (const key of scheduleManager.elementData.keys()) {
+    const parts = key.split(":");
+    if (parts.length === 2) {
+      const mId = parts[0];
+      const eid = Number(parts[1]);
+      if (!isNaN(eid)) {
+        if (!assignedByModel.has(mId)) assignedByModel.set(mId, new Set<number>());
+        assignedByModel.get(mId)!.add(eid);
+      }
+    }
+  }
+
+  // 2. Scan all models in fragments.list
+  const unassignedMap: Record<string, Set<number>> = {};
+  const assignedMap: Record<string, Set<number>> = {};
+  let totalModelElements = 0;
+  let totalUnassigned = 0;
+
+  for (const [fragModelId, model] of fragments.list) {
+    const anyModel = model as any;
+    const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || fragModelId;
+    const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
+
+    const unassignedSet = new Set<number>();
+    const assignedSet = new Set<number>();
+    const assignedForThis = assignedByModel.get(modelId) || assignedByModel.get(fragModelId) || assignedByModel.get("all") || new Set<number>();
+
+    for (const eidStr in properties) {
+      const eid = Number(eidStr);
+      if (isNaN(eid)) continue;
+      const p = properties[eid];
+      const type = String(p?.type ?? "").toUpperCase();
+      if (type.includes("PROJECT") || type.includes("SITE") || type.includes("OWNERHISTORY")) continue;
+
+      totalModelElements++;
+      if (assignedForThis.has(eid)) {
+        assignedSet.add(eid);
+      } else {
+        unassignedSet.add(eid);
+        totalUnassigned++;
+      }
+    }
+
+    if (unassignedSet.size > 0) unassignedMap[fragModelId] = unassignedSet;
+    if (assignedSet.size > 0) assignedMap[fragModelId] = assignedSet;
+  }
+
+  btnDock?.classList.add("active");
+  btnModal?.classList.add("active");
+
+  await highlighter.clear("audit-unassigned");
+  await highlighter.clear("audit-ghost");
+
+  if (Object.keys(unassignedMap).length > 0) {
+    await highlighter.highlightByID("audit-unassigned", unassignedMap, false, false);
+  }
+  if (Object.keys(assignedMap).length > 0) {
+    await highlighter.highlightByID("audit-ghost", assignedMap, false, false);
+  }
+
+  const pct = totalModelElements > 0 ? Math.round((totalUnassigned / totalModelElements) * 100) : 0;
+  if (totalUnassigned === 0) {
+    showToast(`✓ 100% Scheduled! All ${totalModelElements} 3D elements are assigned to schedule tasks.`, "success");
+  } else {
+    showToast(
+      `QA Audit: ${totalUnassigned} of ${totalModelElements} elements (${pct}%) unassigned (Glowing Amber). Select elements and click '🔗 Link 3D' in Gantt to assign.`,
+      "warning"
+    );
+  }
+  return true;
+}
+(window as any).toggleUnassignedAudit = toggleUnassignedAudit;
+
+export function recordFull4DSimulation(): void {
+  const rec = TimelapseRecorderModule.getInstance();
+  if (rec.isRecording()) {
+    rec.stopRecording();
+    stopTimelinePlayback();
+    showToast("4D Video recording stopped. Generating video file...", "info");
+    return;
+  }
+
+  if (!timelineMinDate || !timelineMaxDate) {
+    showToast("No active 4D schedule timeline to record.", "warning");
+    return;
+  }
+
+  // Rewind timeline to start date
+  currentTimelineDate = new Date(timelineMinDate);
+  if (timelineSlider) timelineSlider.value = "0";
+  updateTimelineDateUI();
+  updateTimelineVisualState(true);
+
+  // Start video capture
+  const started = rec.startRecording(30);
+  if (started) {
+    showToast("🎬 Recording 4D presentation simulation... Video will download automatically upon completion.", "info");
+    startTimelinePlayback();
+  }
+}
+(window as any).recordFull4DSimulation = recordFull4DSimulation;
 
 async function loadSampleCapeStoneSchedule() {
   updateViewportHint("Loading CapeStone 4D/5D Sample Schedule...");
@@ -2822,7 +2997,7 @@ if (btnImport4dCsvInput) {
   btnImport4dCsvInput.addEventListener("change", async (e) => {
     const target = e.target as HTMLInputElement;
     if (target.files && target.files[0]) {
-      await handleScheduleCsvFile(target.files[0]);
+      await handleScheduleFile(target.files[0]);
       target.value = "";
     }
   });
@@ -2833,11 +3008,64 @@ if (drawerImportCostCsv) {
   drawerImportCostCsv.addEventListener("change", async (e) => {
     const target = e.target as HTMLInputElement;
     if (target.files && target.files[0]) {
-      await handleScheduleCsvFile(target.files[0]);
+      await handleScheduleFile(target.files[0]);
       target.value = "";
     }
   });
 }
+
+// Drag & drop Excel/CSV file onto viewport
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", async (e) => {
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    const file = e.dataTransfer.files[0];
+    if (/\.(xlsx|xls|csv)$/i.test(file.name)) {
+      e.preventDefault();
+      e.stopPropagation();
+      await handleScheduleFile(file);
+    }
+  }
+});
+
+// Viewport floating HUD 1-click Link 4D trigger
+document.getElementById("btn-selection-hud-link-4d")?.addEventListener("click", () => {
+  const selMap = getActiveSelectionMap();
+  let totalSelected = 0;
+  for (const mId in selMap) totalSelected += selMap[mId].size;
+  if (totalSelected === 0) {
+    showToast("Select 3D elements in viewport first (click or marquee drag)", "warning");
+    return;
+  }
+  const activeTaskId = InteractiveGanttDrawer.getInstance().getActiveTaskId();
+  if (!activeTaskId) {
+    InteractiveGanttDrawer.getInstance().open();
+    showToast(`Gantt opened: Click "🔗 Link 3D" next to any task to assign the ${totalSelected} selected elements`, "info");
+    return;
+  }
+  const linked = scheduleManager.assignElementsToTask(activeTaskId, selMap);
+  updateCumulative5DCost();
+  updateDashboardMetrics();
+  InteractiveGanttDrawer.getInstance().render();
+  if (currentTimelineDate) {
+    updateTimelineVisualState(true);
+  }
+  const task = scheduleManager.tasks.get(activeTaskId);
+  showToast(`✓ Linked ${linked} 3D elements to task "${task?.name || activeTaskId}"!`, "success");
+});
+
+// Audit Unassigned & Video Export Buttons
+document.getElementById("btn-timeline-audit-unassigned")?.addEventListener("click", () => {
+  toggleUnassignedAudit();
+});
+document.getElementById("btn-timeline-audit-unassigned-modal")?.addEventListener("click", () => {
+  toggleUnassignedAudit();
+});
+document.getElementById("btn-timeline-export-video")?.addEventListener("click", () => {
+  recordFull4DSimulation();
+});
+document.getElementById("btn-timeline-export-video-modal")?.addEventListener("click", () => {
+  recordFull4DSimulation();
+});
 
 document.getElementById("drawer-btn-demo-schedule")?.addEventListener("click", () => {
   loadSampleCapeStoneSchedule();
@@ -3219,9 +3447,20 @@ export function updateCumulative5DCost() {
     }
   }
 
-  // 2. Schedule Fallback: If no elements costed from models or schedule tasks exist,
-  // compute cumulative 5D cost from schedule tasks so the 5D Cost Control suite is always dynamic
-  if ((elementCount === 0 || grandTotal === 0) && scheduleManager && scheduleManager.tasks.size > 0) {
+  // 2. Schedule Fallback: If no elements costed from models or schedule tasks have authoritative budget,
+  // compute cumulative 5D cost from schedule tasks so the 5D Cost Control suite is always strictly synchronized
+  let scheduleTasksTotalCost = 0;
+  let scheduleTasksElementCount = 0;
+  if (scheduleManager && scheduleManager.tasks.size > 0) {
+    for (const [, task] of scheduleManager.tasks) {
+      const count = Math.max(1, task.elementIds.size || task.quantity || 1);
+      const taskCost = task.totalCost || (task.unitCost * count) || 0;
+      scheduleTasksTotalCost += taskCost;
+      scheduleTasksElementCount += count;
+    }
+  }
+
+  if ((elementCount === 0 || grandTotal === 0 || (scheduleTasksTotalCost > 0 && grandTotal < scheduleTasksTotalCost)) && scheduleManager && scheduleManager.tasks.size > 0) {
     grandTotal = 0;
     elementCount = 0;
     categoryMap.clear();

@@ -258,6 +258,10 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               <span>Inspect</span>
             </button>
+            <button type="button" id="btn-selection-hud-link-4d" class="btn-hud-action" title="Assign Selected 3D Elements to Active Gantt Task (Synchro 4D Style)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>Link 4D</span>
+            </button>
             <button type="button" id="btn-viewport-esc-selection" class="btn-hud-esc" title="Exit from selection (Esc)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               <span>Exit</span>
@@ -2303,10 +2307,10 @@
 
           <!-- Central Core 4D Workflows -->
           <div class="timeline-cluster cluster-core">
-            <label class="btn-timeline-csv btn-timeline-primary" title="Import 4D Schedule CSV with Itemized 5D Costs">
+            <label class="btn-timeline-csv btn-timeline-primary" title="Import 4D Schedule (Excel .xlsx / .xls or CSV) with Itemized 5D Costs">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Import CSV</span>
-              <input type="file" id="btn-import-4d-csv-input" aria-label="Import 4D CSV Schedule File" accept=".csv" style="display: none;" />
+              <span>Import Schedule</span>
+              <input type="file" id="btn-import-4d-csv-input" aria-label="Import 4D Excel or CSV Schedule File" accept=".xlsx,.xls,.csv" style="display: none;" />
             </label>
 
             <label class="btn-timeline-csv" title="Import MS Project (.xml) or Primavera (.xer) Schedule">
@@ -2328,6 +2332,16 @@
             <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
               <span>Variance Mode</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-timeline-audit-unassigned" title="Audit Unassigned 3D Elements (Heatmap glowing amber for unassigned, ghost assigned)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <span>Audit 3D</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-timeline-export-video" title="Export 4D Client Presentation Video (Records 72-week simulation to WebM)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <span>Export Video</span>
             </button>
           </div>
 
@@ -2393,6 +2407,10 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>
                   <span>Parameter Reader</span>
                 </button>
+                <button class="btn-timeline-opt" id="btn-timeline-audit-unassigned-modal" title="Highlight unassigned 3D elements in glowing amber to verify schedule coverage">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <span>Audit 3D Elements</span>
+                </button>
               </div>
             </div>
 
@@ -2403,6 +2421,10 @@
                 <button class="btn-timeline-opt" id="btn-export-4d-csv" title="Download 4D Schedule CSV with Itemized 5D Unit & Total Costs">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   <span>Export CSV</span>
+                </button>
+                <button class="btn-timeline-opt" id="btn-timeline-export-video-modal" title="Record complete 4D simulation walkthrough video for client presentations">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  <span>Export 4D Video</span>
                 </button>
                 <button class="btn-timeline-opt" id="btn-4d-record" title="Record 4D simulation playback to WebM video">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
@@ -3167,10 +3189,10 @@
             </svg>
             <span>Export BOQ</span>
           </button>
-          <label class="btn-cost-action boq" for="drawer-import-cost-csv" style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.3rem; margin: 0; padding: 0.45rem 0.4rem;" title="Import 4D/5D Schedule CSV">
+          <label class="btn-cost-action boq" for="drawer-import-cost-csv" style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.3rem; margin: 0; padding: 0.45rem 0.4rem;" title="Import 4D/5D Schedule (Excel .xlsx / .xls or CSV)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span>Import CSV</span>
-            <input type="file" id="drawer-import-cost-csv" accept=".csv" class="hidden" />
+            <span>Import XLSX / CSV</span>
+            <input type="file" id="drawer-import-cost-csv" accept=".xlsx,.xls,.csv" class="hidden" />
           </label>
           <button type="button" class="btn-cost-action rates" id="drawer-btn-demo-schedule"
             title="Load CapeStone 4D/5D Sample Schedule (1,356 elements, $17.9M)">

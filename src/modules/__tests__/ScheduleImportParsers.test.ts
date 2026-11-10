@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import * as XLSX from "xlsx";
 import { ScheduleImportParsers } from "../ScheduleImportParsers";
 
 describe("ScheduleImportParsers", () => {
@@ -141,6 +142,79 @@ describe("ScheduleImportParsers", () => {
 
     expect(res.tasks[2].status).toBe("Planned");
     expect(res.tasks[2].category).toBe("IFCFLOWSEGMENT");
+  });
+
+  it("should parse single-sheet Excel workbooks (.xlsx) with serial dates and element IDs", () => {
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ["TaskID", "TaskName", "StartDate", "EndDate", "Category", "TotalCost", "ExpressIDs"],
+      ["TK-EX-1", "Ground Slab Pouring", 46359, 46369, "IFCSLAB", 45000, "101;102;103"],
+      ["TK-EX-2", "Steel Beams Frame", 46370, 46380, "IFCBEAM", 80000, "201;202"],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+
+    const res = ScheduleImportParsers.parseExcel(buffer, "Project_Schedule.xlsx");
+    expect(res.format).toBe("EXCEL_WORKBOOK");
+    expect(res.projectName).toBe("Project_Schedule");
+    expect(res.tasks.length).toBe(2);
+
+    expect(res.tasks[0].id).toBe("TK-EX-1");
+    expect(res.tasks[0].name).toBe("Ground Slab Pouring");
+    expect(res.tasks[0].startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(res.tasks[0].endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(res.tasks[0].category).toBe("IFCSLAB");
+    expect(res.tasks[0].totalCost).toBe(45000);
+    expect(res.tasks[0].elementIds.has(101)).toBe(true);
+    expect(res.tasks[0].elementIds.has(102)).toBe(true);
+    expect(res.tasks[0].elementIds.size).toBe(3);
+  });
+
+  it("should parse multi-sheet Synchro 4D Pro export workbooks (Tasks, ResourceAssignments, DirectCosts)", () => {
+    const wb = XLSX.utils.book_new();
+    const tasksData = [
+      ["TaskID(*)", "TaskName", "Duration", "Start", "Finish", "3DResources(*)"],
+      ["SYN-01", "Foundation Raft", "10d", 46359.33, 46369.33, "RES_RAFT"],
+      ["SYN-02", "Level 1 Columns", "8d", 46370.33, 46378.33, "RES_COL"],
+    ];
+    const wsTasks = XLSX.utils.aoa_to_sheet(tasksData);
+    XLSX.utils.book_append_sheet(wb, wsTasks, "Tasks");
+
+    const resData = [
+      ["ResourceID", "ResourceName", "Objects3D", "TaskID"],
+      ["RES_RAFT", "Concrete Raft Elements", "1001, 1002, 1003", "SYN-01"],
+      ["RES_COL", "Steel Columns", "2001, 2002", "SYN-02"],
+    ];
+    const wsRes = XLSX.utils.aoa_to_sheet(resData);
+    XLSX.utils.book_append_sheet(wb, wsRes, "ResourceAssignments");
+
+    const costData = [
+      ["TaskID", "DirectCost"],
+      ["SYN-01", 125000],
+      ["SYN-02", 95000],
+    ];
+    const wsCost = XLSX.utils.aoa_to_sheet(costData);
+    XLSX.utils.book_append_sheet(wb, wsCost, "DirectCosts");
+
+    const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const res = ScheduleImportParsers.parseExcel(buffer, "Project_DIE.xls");
+
+    expect(res.format).toBe("EXCEL_WORKBOOK");
+    expect(res.projectName).toBe("Project_DIE");
+    expect(res.tasks.length).toBe(2);
+
+    expect(res.tasks[0].id).toBe("SYN-01");
+    expect(res.tasks[0].name).toBe("Foundation Raft");
+    expect(res.tasks[0].totalCost).toBe(125000);
+    expect(res.tasks[0].elementIds.has(1001)).toBe(true);
+    expect(res.tasks[0].elementIds.has(1002)).toBe(true);
+    expect(res.tasks[0].elementIds.has(1003)).toBe(true);
+
+    expect(res.tasks[1].id).toBe("SYN-02");
+    expect(res.tasks[1].totalCost).toBe(95000);
+    expect(res.tasks[1].elementIds.has(2001)).toBe(true);
+    expect(res.tasks[1].elementIds.has(2002)).toBe(true);
   });
 });
 

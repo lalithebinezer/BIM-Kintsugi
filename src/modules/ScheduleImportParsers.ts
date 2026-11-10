@@ -1,12 +1,14 @@
+import * as XLSX from "xlsx";
 import type { ScheduleTask, TaskStatus } from "./ScheduleManager";
 
 /**
- * ScheduleImportParsers — Importers for MS Project (MSPDI XML) and Oracle Primavera (P6 XER).
+ * ScheduleImportParsers — Importers for MS Project (MSPDI XML), Oracle Primavera (P6 XER),
+ * and Bentley Synchro / Standard Excel Spreadsheets (.xlsx / .xls).
  */
 
 export interface ParsedScheduleResult {
   tasks: ScheduleTask[];
-  format: "MSPDI_XML" | "PRIMAVERA_P6_XER";
+  format: "MSPDI_XML" | "PRIMAVERA_P6_XER" | "EXCEL_WORKBOOK";
   projectName: string;
 }
 
@@ -582,6 +584,212 @@ ${assignmentsXml}
 
     xer += `%E\n`;
     return xer;
+  }
+
+  /**
+   * Parse Bentley SYNCHRO 4D Pro Multi-Sheet Workbooks or Standard Excel Spreadsheets (.xlsx / .xls).
+   */
+  public static parseExcel(buffer: ArrayBuffer | Uint8Array, fileName: string = "Excel Project Schedule"): ParsedScheduleResult {
+    let wb: XLSX.WorkBook;
+    try {
+      wb = XLSX.read(buffer, { type: "array" });
+    } catch (e: any) {
+      console.error("XLSX read error:", e);
+      return { tasks: [], format: "EXCEL_WORKBOOK", projectName: fileName };
+    }
+
+    const toIsoDate = (val: any): string => {
+      if (val === null || val === undefined || val === "") return "";
+      if (typeof val === "number") {
+        const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+        return !isNaN(date.getTime()) ? date.toISOString().split("T")[0] : "";
+      }
+      const str = String(val).trim();
+      if (!str) return "";
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+      return str;
+    };
+
+    const cleanNum = (val: any): number => {
+      if (val === null || val === undefined) return 0;
+      if (typeof val === "number") return isNaN(val) ? 0 : val;
+      const n = Number(String(val).replace(/[^0-9.-]/g, ""));
+      return isNaN(n) ? 0 : n;
+    };
+
+    const tasks: ScheduleTask[] = [];
+
+    // CASE 1: Bentley SYNCHRO 4D Pro Excel Export Workbook (contains "Tasks" sheet)
+    if (wb.Sheets["Tasks"]) {
+      const tasksSheet = wb.Sheets["Tasks"];
+      const rawRows = XLSX.utils.sheet_to_json(tasksSheet, { header: 1 }) as any[][];
+      if (rawRows.length > 1) {
+        const headers = rawRows[0].map(h => String(h || "").trim().toLowerCase());
+        const idCol = headers.findIndex(h => h.includes("taskid") || h.includes("id"));
+        const nameCol = headers.findIndex(h => h.includes("taskname") || h.includes("name"));
+        const startCol = headers.findIndex(h => h.includes("start"));
+        const finishCol = headers.findIndex(h => h.includes("finish") || h.includes("end"));
+        const resCol = headers.findIndex(h => h.includes("3dresource") || h.includes("resource"));
+
+        // Optional: read DirectCosts or CostTotals sheet if present
+        const taskCostMap = new Map<string, number>();
+        if (wb.Sheets["DirectCosts"]) {
+          const costRows = XLSX.utils.sheet_to_json(wb.Sheets["DirectCosts"], { header: 1 }) as any[][];
+          if (costRows.length > 1) {
+            const ch = costRows[0].map(h => String(h || "").trim().toLowerCase());
+            const cTaskIdCol = ch.findIndex(h => h.includes("taskid"));
+            const cCostCol = ch.findIndex(h => h.includes("cost") || h.includes("directcost") || h.includes("total"));
+            if (cTaskIdCol >= 0 && cCostCol >= 0) {
+              for (let i = 1; i < costRows.length; i++) {
+                const tid = String(costRows[i][cTaskIdCol] || "").trim();
+                const cost = cleanNum(costRows[i][cCostCol]);
+                if (tid && cost > 0) {
+                  taskCostMap.set(tid, (taskCostMap.get(tid) || 0) + cost);
+                }
+              }
+            }
+          }
+        }
+
+        // Read ResourceAssignments or 3DResources sheet if present to link element expressIds
+        const taskElementMap = new Map<string, Set<number>>();
+        const resSheet = wb.Sheets["ResourceAssignments"] || wb.Sheets["3DResources"] || wb.Sheets["Resources"];
+        if (resSheet) {
+          const resRows = XLSX.utils.sheet_to_json(resSheet, { header: 1 }) as any[][];
+          if (resRows.length > 1) {
+            const rh = resRows[0].map(h => String(h || "").trim().toLowerCase().replace(/[\s_\-]/g, ""));
+            const rTaskCol = rh.findIndex(h => h.includes("taskid") || h.includes("task"));
+            const rObjCol = rh.findIndex(h => h.includes("objects3d") || h.includes("object") || h.includes("element") || h.includes("expressid"));
+            const rResIdCol = rh.findIndex(h => h.includes("resourceid") || h.includes("resource"));
+
+            for (let i = 1; i < resRows.length; i++) {
+              const row = resRows[i];
+              if (!row) continue;
+              const tid = rTaskCol >= 0 && row[rTaskCol] ? String(row[rTaskCol]).trim() : "";
+              const objStr = rObjCol >= 0 && row[rObjCol] ? String(row[rObjCol]).trim() : "";
+              const resId = rResIdCol >= 0 && row[rResIdCol] ? String(row[rResIdCol]).trim() : "";
+              const targetKey = tid || resId;
+              if (targetKey && objStr) {
+                if (!taskElementMap.has(targetKey)) taskElementMap.set(targetKey, new Set<number>());
+                const set = taskElementMap.get(targetKey)!;
+                objStr.split(/[,;\s|]+/).forEach(part => {
+                  const num = cleanNum(part);
+                  if (num > 0) set.add(num);
+                });
+              }
+            }
+          }
+        }
+
+        for (let i = 1; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row || row.length === 0) continue;
+          const id = idCol >= 0 && row[idCol] ? String(row[idCol]).trim() : `synchro-task-${i}`;
+          const name = nameCol >= 0 && row[nameCol] ? String(row[nameCol]).trim() : `Task ${id}`;
+          const startDate = startCol >= 0 ? toIsoDate(row[startCol]) : "";
+          const endDate = finishCol >= 0 ? toIsoDate(row[finishCol]) : "";
+          if (!startDate || !endDate) continue;
+
+          const assignedRes = resCol >= 0 && row[resCol] ? String(row[resCol]).trim() : "";
+          const totalCost = taskCostMap.get(id) || 0;
+          const elementIds = taskElementMap.get(id) || (assignedRes ? taskElementMap.get(assignedRes) : undefined) || new Set<number>();
+
+          tasks.push({
+            id,
+            name,
+            category: "IFCELEMENT",
+            startDate,
+            endDate,
+            status: "Planned",
+            modelId: "",
+            elementIds,
+            unitCost: totalCost > 0 ? totalCost : 0,
+            totalCost,
+            quantity: Math.max(1, elementIds.size),
+            simulationKey: assignedRes || name,
+          });
+        }
+
+        if (tasks.length > 0) {
+          return { tasks, format: "EXCEL_WORKBOOK", projectName: fileName.replace(/\.[^/.]+$/, "") };
+        }
+      }
+    }
+
+    // CASE 2: Generic / Single-Sheet Excel Schedule (e.g. NEW!.xlsx or Cost Schedule)
+    const sheetName = wb.SheetNames.find(n => /schedule|tasks|cape|gantt/i.test(n)) || wb.SheetNames[0];
+    const sheet = wb.Sheets[sheetName];
+    if (sheet) {
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      if (rows.length > 1) {
+        const headers = rows[0].map(h => String(h || "").trim().toLowerCase().replace(/[\s_\-]/g, ""));
+        const findCol = (...keys: string[]) => {
+          const lower = keys.map(k => k.toLowerCase().replace(/[\s_\-]/g, ""));
+          const exact = headers.findIndex(h => lower.includes(h));
+          if (exact >= 0) return exact;
+          return headers.findIndex(h => lower.some(k => h === k || h.startsWith(k)));
+        };
+
+        const idCol = findCol("taskid", "id", "code", "uid", "wbs");
+        let nameCol = findCol("taskname", "activityname", "name", "activity", "description", "title");
+        if (nameCol === idCol) {
+          nameCol = headers.findIndex((h, idx) => idx !== idCol && (h.includes("name") || h.includes("desc") || h.includes("act")));
+        }
+        const startCol = findCol("startdate", "start", "targetstart", "earlystart");
+        const finishCol = findCol("finishdate", "finish", "enddate", "end", "targetend", "earlyfinish");
+        const costCol = findCol("totalcost", "cost", "budget", "amount", "total");
+        const unitCostCol = findCol("unitcost", "unitrate", "rate");
+        const catCol = findCol("category", "trade", "discipline", "type");
+        const statusCol = findCol("status", "state", "progress");
+        const idsCol = findCol("expressids", "elementids", "ids", "elements");
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+          const id = idCol >= 0 && row[idCol] ? String(row[idCol]).trim() : `task-${i}`;
+          const name = nameCol >= 0 && row[nameCol] ? String(row[nameCol]).trim() : `Task ${id}`;
+          const startDate = startCol >= 0 ? toIsoDate(row[startCol]) : "";
+          const endDate = finishCol >= 0 ? toIsoDate(row[finishCol]) : "";
+          if (!startDate || !endDate) continue;
+
+          const totalCost = costCol >= 0 ? cleanNum(row[costCol]) : 0;
+          const unitCost = unitCostCol >= 0 ? cleanNum(row[unitCostCol]) : (totalCost > 0 ? totalCost : 0);
+          const category = catCol >= 0 && row[catCol] ? String(row[catCol]).trim() : "IFCELEMENT";
+          const statusRaw = statusCol >= 0 && row[statusCol] ? String(row[statusCol]).trim() : "Planned";
+          const status = /complete/i.test(statusRaw) ? "Completed" : /progress|active/i.test(statusRaw) ? "In Progress" : "Planned";
+
+          const elementIds = new Set<number>();
+          if (idsCol >= 0 && row[idsCol]) {
+            String(row[idsCol]).split(/[;,|]/).forEach(v => {
+              const num = cleanNum(v);
+              if (num > 0) elementIds.add(num);
+            });
+          }
+
+          tasks.push({
+            id,
+            name,
+            category,
+            startDate,
+            endDate,
+            status,
+            modelId: "",
+            elementIds,
+            unitCost,
+            totalCost: totalCost || (unitCost * Math.max(1, elementIds.size)),
+            quantity: Math.max(1, elementIds.size),
+            simulationKey: name,
+          });
+        }
+      }
+    }
+
+    return {
+      tasks,
+      format: "EXCEL_WORKBOOK",
+      projectName: fileName.replace(/\.[^/.]+$/, ""),
+    };
   }
 
 }

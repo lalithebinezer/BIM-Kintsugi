@@ -8,6 +8,7 @@
 import { CostRateManager } from "./CostRateManager";
 import { resolveCategoryUnitCost } from "./BoqGenerator";
 import { DelayImpactEngine } from "./DelayImpactEngine";
+import { ScheduleImportParsers } from "./ScheduleImportParsers";
 
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
@@ -701,6 +702,69 @@ export class ScheduleManager {
     }
 
     return importedCount;
+  }
+
+  /**
+   * Import schedule from Excel workbook (.xlsx / .xls) including Bentley Synchro multi-sheet workbooks.
+   */
+  importScheduleFromExcel(buffer: ArrayBuffer | Uint8Array, fileName?: string): number {
+    const res = ScheduleImportParsers.parseExcel(buffer, fileName);
+    if (!res || res.tasks.length === 0) return 0;
+
+    let importedCount = 0;
+    for (const task of res.tasks) {
+      this.tasks.set(task.id, task);
+      importedCount++;
+
+      for (const expressId of task.elementIds) {
+        this.elementData.set(`${task.modelId || "default-model"}:${expressId}`, {
+          unitCost: task.unitCost || 0,
+          quantity: 1,
+          taskName: task.name,
+          taskStatus: task.status,
+          startDate: task.startDate,
+          endDate: task.endDate,
+        });
+      }
+    }
+
+    return importedCount;
+  }
+
+  /**
+   * Link selected 3D elements to a specific task (Synchro-style manual resource assignment).
+   */
+  assignElementsToTask(taskId: string, elementMap: Record<string, Set<number>>): number {
+    const task = this.tasks.get(taskId);
+    if (!task) return 0;
+
+    let totalLinked = 0;
+    for (const [modelId, elemSet] of Object.entries(elementMap)) {
+      if (!task.modelId && modelId) {
+        task.modelId = modelId;
+      }
+      for (const id of elemSet) {
+        if (!task.elementIds.has(id)) {
+          task.elementIds.add(id);
+          totalLinked++;
+        }
+        const key = `${modelId}:${id}`;
+        this.elementData.set(key, {
+          unitCost: task.unitCost || 0,
+          quantity: 1,
+          taskName: task.name,
+          taskStatus: task.status,
+          startDate: task.startDate,
+          endDate: task.endDate,
+        });
+      }
+    }
+
+    task.quantity = Math.max(1, task.elementIds.size);
+    if (task.unitCost > 0) {
+      task.totalCost = task.unitCost * task.quantity;
+    }
+    return totalLinked;
   }
 
   /**
