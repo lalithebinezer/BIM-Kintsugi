@@ -2160,6 +2160,11 @@ async function displayElementProperties(model: any, expressId: number) {
   } catch (e) {
     MinimapModule.getInstance().setSelectedElement(null);
   }
+
+  // 17. Strictly synchronize Interactive Gantt Drawer active task
+  try {
+    InteractiveGanttDrawer.getInstance().highlightTaskForElement(activeModelId || "default-model", expressId);
+  } catch (e) {}
 }
 (window as any).displayElementProperties = displayElementProperties;
 
@@ -3389,8 +3394,19 @@ saveBtn.addEventListener("click", () => {
     isCustomized: true,
   };
 
+  scheduleManager.elementData.set(`${activeModelId}:${activeExpressId}`, {
+    unitCost,
+    quantity,
+    taskName: task,
+    taskStatus: (status as any) || "Planned",
+    startDate,
+    endDate,
+  });
+
   saveDatabase();
+  updateCumulative5DCost();
   updateDashboardMetrics();
+  InteractiveGanttDrawer.getInstance().render();
   // Refresh timeline at current scrub position — properly await the async call
   if (currentTimelineDate) {
     (async () => { await updateTimelineVisualState(); })();
