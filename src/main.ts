@@ -8211,6 +8211,8 @@ document.querySelectorAll(".panel").forEach((panel) => {
   // Create minimize button on the right side of header
   const minimizeBtn = document.createElement("button");
   minimizeBtn.className = "btn-panel-minimize";
+  minimizeBtn.setAttribute("aria-label", "Toggle panel visibility");
+  minimizeBtn.title = "Toggle panel";
   minimizeBtn.innerHTML = `
     <svg class="minimize-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <polyline points="18 15 12 9 6 15"></polyline>
