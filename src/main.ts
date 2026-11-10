@@ -131,7 +131,7 @@ const container = document.getElementById("container")!;
 world.renderer = new OBF.PostproductionRenderer(components, container);
 world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 world.renderer.three.shadowMap.enabled = true;
-world.renderer.three.shadowMap.type = THREE.PCFSoftShadowMap;
+world.renderer.three.shadowMap.type = THREE.PCFShadowMap;
 
 // WebGL Context Loss & Recovery Guard
 const glCanvas = world.renderer.three.domElement;
