@@ -2749,38 +2749,94 @@ function syncImportedScheduleWithActiveModels(): number {
   return linkedElementsCount;
 }
 
+async function handleScheduleCsvFile(file: File) {
+  updateViewportHint("Parsing 4D/5D Schedule CSV...");
+  try {
+    const text = await file.text();
+    const count = scheduleManager.importScheduleFromCSV(text);
+    if (count > 0) {
+      syncImportedScheduleWithActiveModels();
+      updateDashboardMetrics();
+      calculateTimelineBounds();
+      updateCumulative5DCost();
+      if (timelineMinDate) {
+        currentTimelineDate = new Date(timelineMinDate);
+        if (timelineSlider) timelineSlider.value = "0";
+        updateTimelineDateUI();
+      }
+      updateScheduleWidgetUI();
+      InteractiveGanttDrawer.getInstance().render();
+      if (currentTimelineDate) {
+        await updateTimelineVisualState(true);
+      }
+      showToast(`Imported ${count} 4D tasks with 5D costs from CSV!`, "success");
+      updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated with costs)`);
+    } else {
+      showToast("Could not parse valid 4D tasks from the CSV file. Please check column headers.", "warning");
+    }
+  } catch (err: any) {
+    console.error("CSV Import Error:", err);
+    showToast("CSV import error: " + (err?.message || "Format error"), "error");
+  }
+}
+
+async function loadSampleCapeStoneSchedule() {
+  updateViewportHint("Loading CapeStone 4D/5D Sample Schedule...");
+  try {
+    const res = await fetch("/sample_schedule.csv");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const count = scheduleManager.importScheduleFromCSV(text);
+    if (count > 0) {
+      syncImportedScheduleWithActiveModels();
+      updateDashboardMetrics();
+      calculateTimelineBounds();
+      updateCumulative5DCost();
+      if (timelineMinDate) {
+        currentTimelineDate = new Date(timelineMinDate);
+        if (timelineSlider) timelineSlider.value = "0";
+        updateTimelineDateUI();
+      }
+      updateScheduleWidgetUI();
+      InteractiveGanttDrawer.getInstance().render();
+      if (currentTimelineDate) {
+        await updateTimelineVisualState(true);
+      }
+      showToast(`Loaded CapeStone 4D/5D Schedule: ${count} tasks linked ($17.9M budget)`, "success");
+      updateViewportHint("CapeStone 4D/5D Schedule active");
+    }
+  } catch (err: any) {
+    console.error("Failed to load sample schedule:", err);
+    showToast("Failed to fetch sample schedule: " + (err?.message || "File error"), "error");
+  }
+}
+(window as any).loadSampleCapeStoneSchedule = loadSampleCapeStoneSchedule;
+
 const btnImport4dCsvInput = document.getElementById("btn-import-4d-csv-input") as HTMLInputElement | null;
 if (btnImport4dCsvInput) {
   btnImport4dCsvInput.addEventListener("change", async (e) => {
     const target = e.target as HTMLInputElement;
     if (target.files && target.files[0]) {
-      const file = target.files[0];
-      const text = await file.text();
-      const count = scheduleManager.importScheduleFromCSV(text);
-      if (count > 0) {
-        syncImportedScheduleWithActiveModels();
-        updateDashboardMetrics();
-        calculateTimelineBounds();
-        updateCumulative5DCost();
-        if (timelineMinDate) {
-          currentTimelineDate = new Date(timelineMinDate);
-          if (timelineSlider) timelineSlider.value = "0";
-          updateTimelineDateUI();
-        }
-        updateScheduleWidgetUI();
-        InteractiveGanttDrawer.getInstance().render();
-        if (currentTimelineDate) {
-          await updateTimelineVisualState(true);
-        }
-        alert(`Imported ${count} custom 4D schedule tasks with 5D costs from CSV!\nTimeline, EVM budget, and simulation playback updated.`);
-        updateViewportHint(`Custom 4D Schedule CSV applied (${count} tasks updated with costs)`);
-      } else {
-        alert("Could not parse valid 4D tasks from the CSV file. Please check column headers (TaskID, StartDate, EndDate, UnitCost, TotalCost).");
-      }
+      await handleScheduleCsvFile(target.files[0]);
       target.value = "";
     }
   });
 }
+
+const drawerImportCostCsv = document.getElementById("drawer-import-cost-csv") as HTMLInputElement | null;
+if (drawerImportCostCsv) {
+  drawerImportCostCsv.addEventListener("change", async (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+      await handleScheduleCsvFile(target.files[0]);
+      target.value = "";
+    }
+  });
+}
+
+document.getElementById("drawer-btn-demo-schedule")?.addEventListener("click", () => {
+  loadSampleCapeStoneSchedule();
+});
 
 // Centralized Timeline Options Modal & Floating Hub Controller
 const btnTimelineOptionsHub = document.getElementById("btn-timeline-options-hub");
@@ -3203,10 +3259,11 @@ export function updateCumulative5DCost() {
     drawerCurrencyBadge.textContent = `${cur.code} ${cur.symbol}`;
   }
 
+  const hasCostData = grandTotal > 0 || elementCount > 0;
   CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap);
   CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap, "drawer-cost-breakdown-container");
-  CostChartComponent.getInstance().renderSCurveProgressChart();
-  CostChartComponent.getInstance().renderSCurveProgressChart("drawer-scurve-container");
+  CostChartComponent.getInstance().renderSCurveProgressChart("scurve-chart-container", hasCostData);
+  CostChartComponent.getInstance().renderSCurveProgressChart("drawer-scurve-container", hasCostData);
 
   // Dynamically update the Trade Budget Distribution stacked bar
   let concreteCost = 0;
@@ -3253,6 +3310,18 @@ export function updateCumulative5DCost() {
     if (dbSteel) { dbSteel.style.width = `${pSteel}%`; dbSteel.title = `Structural Steel: ${pSteel}% (${formatCurrency(steelCost)})`; }
     if (dbMep) { dbMep.style.width = `${pMep}%`; dbMep.title = `MEP & Services: ${pMep}% (${formatCurrency(mepCost)})`; }
     if (dbFin) { dbFin.style.width = `${pFin}%`; dbFin.title = `Finishes & Facade: ${pFin}% (${formatCurrency(finishesCost)})`; }
+  } else {
+    // Zero-state: Reset all trade bars to 0% width so no false distribution is displayed
+    for (const prefix of ["", "drawer-"]) {
+      const bConc = document.getElementById(`${prefix}bar-trade-concrete`);
+      const bSteel = document.getElementById(`${prefix}bar-trade-steel`);
+      const bMep = document.getElementById(`${prefix}bar-trade-mep`);
+      const bFin = document.getElementById(`${prefix}bar-trade-finishes`);
+      if (bConc) { bConc.style.width = "0%"; bConc.title = "No concrete cost data"; }
+      if (bSteel) { bSteel.style.width = "0%"; bSteel.title = "No steel cost data"; }
+      if (bMep) { bMep.style.width = "0%"; bMep.title = "No MEP cost data"; }
+      if (bFin) { bFin.style.width = "0%"; bFin.title = "No finishes cost data"; }
+    }
   }
 }
 (window as any).updateCumulative5DCost = updateCumulative5DCost;
@@ -8089,6 +8158,11 @@ function apply4dMode(active: boolean) {
     document.body.classList.remove('mode-4d');
     if (btn4dMode) btn4dMode.classList.remove('active');
     if (btn4dLabel) btn4dLabel.textContent = 'Activate 4D';
+    // Clean up timeline options dropup and hub button state
+    const optionsModal = document.getElementById("timeline-options-modal");
+    if (optionsModal) optionsModal.classList.add("hidden");
+    const hubBtn = document.getElementById("btn-timeline-options-hub");
+    if (hubBtn) hubBtn.classList.remove("active");
     // Stop playback and restore all element visibility when leaving 4D mode
     stopTimelinePlayback();
     if (isVarianceMode) {
@@ -8118,6 +8192,11 @@ if (btn4dToggle) {
     apply4dMode(!is4dMode);
   });
 }
+
+// Close 4D timeline bar button
+document.getElementById('btn-close-gantt-bar')?.addEventListener('click', () => {
+  apply4dMode(false);
+});
 
 (window as any).toggle4DMode = (active?: boolean) => {
   apply4dMode(typeof active === 'boolean' ? active : !is4dMode);

@@ -8147,6 +8147,31 @@ body.right-sidebar-collapsed .right-sidebar {
   display: none !important;
 }
 
+.enterprise-drawer.centralized {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(440px, calc(100vw - 1.5rem)) !important;
+  max-width: calc(100vw - 1.5rem) !important;
+  max-height: min(85vh, 760px) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  animation: drawerCenterZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+@keyframes drawerCenterZoom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 @keyframes drawerSlideIn {
   from {
     opacity: 0;

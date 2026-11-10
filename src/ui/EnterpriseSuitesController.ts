@@ -64,6 +64,11 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     closeAllEnterpriseDrawers();
     if (!isCurrentlyOpen) {
       panel.classList.remove("hidden");
+      if (localStorage.getItem("bim-drawer-centralized") === "true") {
+        panel.classList.add("centralized");
+      } else {
+        panel.classList.remove("centralized");
+      }
       if (!document.body.classList.contains("right-sidebar-collapsed")) {
         document.body.classList.add("right-sidebar-collapsed");
       }
@@ -73,6 +78,22 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       SoundManager.getInstance().playClick();
     }
   }
+
+  // Delegated click listener for centralized workspace toggle button
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement)?.closest(".drawer-center-toggle-btn") as HTMLElement | null;
+    if (btn) {
+      e.stopPropagation();
+      const targetId = btn.getAttribute("data-target");
+      const targetPanel = targetId ? document.getElementById(targetId) : btn.closest(".enterprise-drawer");
+      if (targetPanel) {
+        targetPanel.classList.toggle("centralized");
+        const isCentralized = targetPanel.classList.contains("centralized");
+        localStorage.setItem("bim-drawer-centralized", String(isCentralized));
+        showToast(isCentralized ? "Suite Centralized in Viewport" : "Suite Docked to Right Panel", "info");
+      }
+    }
+  });
 
   const renderBcfIssues = () => {
     const bcfList = document.getElementById("bcf-issues-list");

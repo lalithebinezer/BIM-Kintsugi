@@ -51,6 +51,8 @@ export class KeyboardController {
         const cmdModal = document.getElementById('command-palette-modal');
         if (cmdModal) cmdModal.style.display = 'none';
         document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+        document.getElementById('timeline-options-modal')?.classList.add('hidden');
+        document.getElementById('btn-timeline-options-hub')?.classList.remove('active');
         return;
       }
 

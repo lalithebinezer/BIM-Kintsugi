@@ -24,7 +24,21 @@ export class CostChartComponent {
     if (!container) return;
 
     if (categoryMap.size === 0) {
-      container.innerHTML = `<div style="font-size: 0.68rem; color: var(--text-muted); text-align: center; padding: 0.5rem; background: var(--bg-card); border-radius: 4px; border: 1px dashed var(--border-subtle);">Load a model to view 5D element category distribution.</div>`;
+      container.innerHTML = `
+        <div style="font-size: 0.68rem; color: var(--text-muted); text-align: center; padding: 0.75rem 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px dashed var(--border-subtle); display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+          <span style="line-height: 1.35;">No 5D element category distribution active yet.<br/><span style="font-size: 0.6rem; color: var(--text-secondary);">Load an IFC model or import a 4D/5D project schedule.</span></span>
+          <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn-secondary" style="font-size: 0.62rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem;" onclick="(document.getElementById('drawer-import-cost-csv') || document.getElementById('btn-import-4d-csv-input'))?.click();">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Import CSV</span>
+            </button>
+            <button type="button" class="btn-accent" style="font-size: 0.62rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem;" onclick="window.loadSampleCapeStoneSchedule && window.loadSampleCapeStoneSchedule();">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Demo CapeStone (5D)</span>
+            </button>
+          </div>
+        </div>
+      `;
       return;
     }
 
@@ -76,9 +90,19 @@ export class CostChartComponent {
     `;
   }
 
-  public renderSCurveProgressChart(containerId: string = "scurve-chart-container") {
+  public renderSCurveProgressChart(containerId: string = "scurve-chart-container", hasData: boolean = true) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    if (!hasData) {
+      container.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px dashed var(--border-subtle); padding: 0.75rem 0.5rem; border-radius: 6px; margin-top: 0.5rem; text-align: center;">
+          <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">4D/5D EVM S-Curve</div>
+          <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 0.25rem;">Awaiting schedule or model loading to compute Earned Value S-Curve.</div>
+        </div>
+      `;
+      return;
+    }
 
     const width = 280;
     const height = 120;

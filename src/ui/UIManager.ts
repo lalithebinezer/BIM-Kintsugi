@@ -146,6 +146,9 @@ export class UIManager {
       document.querySelector('.right-sidebar')?.classList.remove('open');
       document.getElementById('sidebar-backdrop')?.classList.remove('active');
       document.querySelectorAll('.mobile-nav-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+      document.getElementById('timeline-options-modal')?.classList.add('hidden');
+      document.getElementById('btn-timeline-options-hub')?.classList.remove('active');
     };
     (window as any).closeAllSidebars = closeAllSidebars;
 

@@ -200,6 +200,11 @@ export class AppearanceProfileEngine {
     for (const [id, profile] of Object.entries(PRESET_APPEARANCE_PROFILES)) {
       this.profiles.set(id, profile);
     }
+    // Register UI dropdown aliases
+    this.profiles.set("Construct_BottomUp", PRESET_APPEARANCE_PROFILES.Install_BottomUp);
+    this.profiles.set("Demolish_TopDown", PRESET_APPEARANCE_PROFILES.Remove_TopDown);
+    this.profiles.set("Temporary_Scaffolding", PRESET_APPEARANCE_PROFILES.Temporary_Equipment);
+    this.profiles.set("Maintain_Inspection", PRESET_APPEARANCE_PROFILES.Maintain_Highlight);
   }
 
   public registerProfile(profile: AppearanceProfile): void {
@@ -223,6 +228,12 @@ export class AppearanceProfileEngine {
   public inferProfileForTask(task: TaskLike): AppearanceProfile {
     if (task.appearanceProfileId && this.profiles.has(task.appearanceProfileId)) {
       return this.profiles.get(task.appearanceProfileId)!;
+    }
+
+    // Check if user has explicitly selected a manual active profile override
+    if (this.activeProfileId && this.profiles.has(this.activeProfileId) &&
+        this.activeProfileId !== "Install_BottomUp" && this.activeProfileId !== "Construct_BottomUp") {
+      return this.profiles.get(this.activeProfileId)!;
     }
 
     const name = (task.name || "").toLowerCase();
