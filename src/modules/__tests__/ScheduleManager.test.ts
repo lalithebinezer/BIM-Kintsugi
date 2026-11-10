@@ -278,4 +278,24 @@ msp-49,Unassigned,IFCELEMENT,11-03-27,11-03-27,,,Planned,,0,8750,8750,0,0,`;
     expect(twinDb["snowdon-model-101"]?.task).toBe("COL_EPit");
     expect(twinDb["snowdon-model-201"]?.task).toBe("WALL_LL1_35_Low");
   });
+
+  it("should parse complex CSV schedule with mixed date formats and calculate project date range", () => {
+    const csv = `TaskID,TaskName,Category,StartDate,EndDate,ActualStartDate,ActualEndDate,Status,ModelID,ElementCount,UnitCost,TotalCost,DelayDays,CostImpact,ExpressIDs
+msp-1,COL_EPit,IFCELEMENT,09-Dec-26,11-Dec-26,,,Completed,,0,1,8750,0,0,
+msp-2,COL_LL1_35_Low,IFCELEMENT,26-12-26,28-12-26,,,Planned,Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc,5,8750,15000,0,0,3923;3955;4164;4375;24794
+msp-8,COL_LTOS,IFCELEMENT,11-03-27,11-03-27,,,Planned,Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc,2,8750,45000,0,0,154936;155008`;
+
+    const count = manager.importScheduleFromCSV(csv);
+    expect(count).toBe(3);
+    const range = manager.getProjectDateRange();
+    expect(range).not.toBeNull();
+    expect(range?.min.toISOString().slice(0, 10)).toBe("2026-12-09");
+    expect(range?.max.toISOString().slice(0, 10)).toBe("2027-03-11");
+
+    const t2 = manager.tasks.get("msp-2")!;
+    expect(t2.startDate).toBe("2026-12-26");
+    expect(t2.endDate).toBe("2026-12-28");
+    expect(t2.elementIds.size).toBe(5);
+    expect(t2.totalCost).toBe(15000);
+  });
 });

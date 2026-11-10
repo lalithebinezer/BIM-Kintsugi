@@ -2252,7 +2252,11 @@
           </div>
 
           <div class="gantt-bar-center">
-            <input type="range" class="timeline-slider" id="timeline-slider" aria-label="4D Construction Timeline Progress Scrubber" min="0" max="60" value="0" />
+            <div class="timeline-slider-wrapper">
+              <span class="timeline-bound-badge" id="timeline-bound-start" title="Project Construction Start Date">--</span>
+              <input type="range" class="timeline-slider" id="timeline-slider" aria-label="4D Construction Timeline Progress Scrubber" min="0" max="60" value="0" />
+              <span class="timeline-bound-badge" id="timeline-bound-end" title="Project Construction Completion Date">--</span>
+            </div>
             <div class="gantt-milestones-row">
               <span class="gantt-pill active" data-week="1">1. Foundations</span>
               <span class="gantt-pill" data-week="8">2. Columns</span>
@@ -2276,82 +2280,140 @@
           </div>
         </div>
 
-        <!-- Row 2: Speed Pills + CSV Template/Import + Status Color Legend -->
-        <div class="timeline-controls-row">
-          <div class="timeline-left-controls">
-            <div class="speed-select-wrapper">
-              <span class="speed-label">Speed:</span>
-              <div class="speed-pills-group" id="timeline-speed-pills">
-                <button class="btn-speed-pill" data-speed="1">1x</button>
-                <button class="btn-speed-pill active" data-speed="2">2x</button>
-                <button class="btn-speed-pill" data-speed="5">5x</button>
-                <button class="btn-speed-pill" data-speed="10">10x</button>
-              </div>
-              <select id="timeline-speed" aria-label="4D Simulation Playback Speed" class="timeline-speed-select" style="display: none;">
-                <option value="1">1 Day/s</option>
-                <option value="2" selected>2 Days/s</option>
-                <option value="5">5 Days/s</option>
-                <option value="10">10 Days/s</option>
-              </select>
+        <!-- Row 2: Centralized Timeline Controls Row -->
+        <div class="timeline-controls-row centralized-options-row">
+          <!-- Playback Velocity Cluster -->
+          <div class="timeline-cluster cluster-speed">
+            <span class="speed-label">Speed:</span>
+            <div class="speed-pills-group" id="timeline-speed-pills">
+              <button class="btn-speed-pill" data-speed="1">1x</button>
+              <button class="btn-speed-pill active" data-speed="2">2x</button>
+              <button class="btn-speed-pill" data-speed="5">5x</button>
+              <button class="btn-speed-pill" data-speed="10">10x</button>
             </div>
+            <select id="timeline-speed" aria-label="4D Simulation Playback Speed" class="timeline-speed-select" style="display: none;">
+              <option value="1">1 Day/s</option>
+              <option value="2" selected>2 Days/s</option>
+              <option value="5">5 Days/s</option>
+              <option value="10">10 Days/s</option>
+            </select>
+          </div>
 
-            <button class="btn-timeline-csv" id="btn-export-4d-csv"
-              title="Download 4D Schedule CSV with Itemized 5D Unit & Total Costs">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV (Cost)
-            </button>
+          <div class="timeline-cluster-divider"></div>
 
-            <label class="btn-timeline-csv" title="Upload Custom 4D Schedule CSV with Adjusted Dates">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV
+          <!-- Central Core 4D Workflows -->
+          <div class="timeline-cluster cluster-core">
+            <label class="btn-timeline-csv btn-timeline-primary" title="Import 4D Schedule CSV with Itemized 5D Costs">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Import CSV</span>
               <input type="file" id="btn-import-4d-csv-input" aria-label="Import 4D CSV Schedule File" accept=".csv" style="display: none;" />
             </label>
 
             <label class="btn-timeline-csv" title="Import MS Project (.xml) or Primavera (.xer) Schedule">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> MSP / P6
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              <span>MSP / P6</span>
               <input type="file" id="btn-import-schedule-advanced" aria-label="Import MS Project XML or Primavera P6 XER File" accept=".xml,.xer" style="display: none;" />
             </label>
 
-            <button class="btn-timeline-csv" id="btn-timeline-seq-toggle" title="Configure and Calculate Property-Driven 4D Construction Sequence">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Sequence Engine
-            </button>
-
-            <button class="btn-timeline-csv" id="btn-timeline-param-reader" title="Open IFC Parameter Reader to Choose Any Property for 4D Sequencing" style="border-color: rgba(56, 189, 248, 0.4); color: #38BDF8;">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg> Parameter Reader
-            </button>
-
             <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg> Gantt Chart
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+              <span>Gantt Chart</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-timeline-cost-control" title="Open Unified 5D Project Cost Control Suite">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 5D Cost Control
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span>5D Cost Control</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg> Variance Mode
-            </button>
-
-            <button class="btn-timeline-csv" id="btn-4d-record" title="Record 4D simulation playback to WebM video">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg> Record 4D
-            </button>
-
-            <button class="btn-timeline-csv" id="btn-export-cobie-csv" title="Export 7D COBie Facility Management Lifecycle Data">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg> 7D COBie
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+              <span>Variance Mode</span>
             </button>
           </div>
 
-          <div class="timeline-legend">
-            <label class="legend-item" title="Click to change Planned status model color">
-              <input type="color" id="4d-color-planned" aria-label="4D Planned Activity Color" value="#6b7280" class="legend-color-picker" />
-              <span>Planned</span>
-            </label>
-            <label class="legend-item" title="Click to change In Progress status model color">
-              <input type="color" id="4d-color-active" aria-label="4D In-Progress Activity Color" value="#f59e0b" class="legend-color-picker" />
-              <span>In Progress</span>
-            </label>
-            <label class="legend-item" title="Click to change Completed status model color">
-              <input type="color" id="4d-color-complete" aria-label="4D Completed Activity Color" value="#10b981" class="legend-color-picker" />
-              <span>Completed</span>
-            </label>
+          <div class="timeline-cluster-divider"></div>
+
+          <!-- Centralized Timeline Options Modal Trigger -->
+          <div class="timeline-cluster cluster-options">
+            <button class="btn-timeline-csv btn-timeline-options-hub" id="btn-timeline-options-hub" title="Open Centralized 4D Simulation & Timeline Options Hub">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Timeline Options</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Centralized 4D Simulation & Timeline Options Dropup Card -->
+        <div class="timeline-options-modal hidden" id="timeline-options-modal">
+          <div class="timeline-options-header">
+            <div class="timeline-options-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>4D Simulation &amp; Timeline Options</span>
+            </div>
+            <button class="btn-icon-sm" id="btn-close-timeline-options" title="Close Options">✕</button>
+          </div>
+          
+          <div class="timeline-options-grid">
+            <!-- Section 1: Appearance Profiles & Colors -->
+            <div class="options-group">
+              <div class="options-group-title">Appearance &amp; 4D Colors</div>
+              <div class="options-row">
+                <label for="select-4d-appearance-profile">Growth Profile:</label>
+                <select id="select-4d-appearance-profile" class="timeline-options-select">
+                  <option value="Install_BottomUp" selected>Install — Bottom to Top Growth</option>
+                  <option value="Demolish_TopDown">Demolition — Top to Bottom Shrink</option>
+                  <option value="Temporary_Scaffolding">Temporary Equipment (Active Only)</option>
+                  <option value="Maintain_Inspection">Maintain (Inspection Pulse)</option>
+                </select>
+              </div>
+              <div class="options-row colors-row">
+                <label class="color-item" title="Model color for scheduled/planned activities">
+                  <input type="color" id="4d-color-planned" aria-label="4D Planned Activity Color" value="#6b7280" class="legend-color-picker" />
+                  <span>Planned</span>
+                </label>
+                <label class="color-item" title="Model color for active in-progress activities">
+                  <input type="color" id="4d-color-active" aria-label="4D In-Progress Activity Color" value="#f59e0b" class="legend-color-picker" />
+                  <span>In Progress</span>
+                </label>
+                <label class="color-item" title="Model color for completed activities">
+                  <input type="color" id="4d-color-complete" aria-label="4D Completed Activity Color" value="#10b981" class="legend-color-picker" />
+                  <span>Completed</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Section 2: Sequencing & Property Engines -->
+            <div class="options-group">
+              <div class="options-group-title">Sequencing &amp; Parameters</div>
+              <div class="options-btn-grid">
+                <button class="btn-timeline-opt" id="btn-timeline-seq-toggle" title="Configure and Calculate Property-Driven 4D Construction Sequence">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                  <span>Sequence Engine</span>
+                </button>
+                <button class="btn-timeline-opt" id="btn-timeline-param-reader" title="Open IFC Parameter Reader to Choose Any Property for 4D Sequencing">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>
+                  <span>Parameter Reader</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 3: Data Export & Lifecycle -->
+            <div class="options-group">
+              <div class="options-group-title">Export &amp; Lifecycle</div>
+              <div class="options-btn-grid">
+                <button class="btn-timeline-opt" id="btn-export-4d-csv" title="Download 4D Schedule CSV with Itemized 5D Unit & Total Costs">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Export CSV</span>
+                </button>
+                <button class="btn-timeline-opt" id="btn-4d-record" title="Record 4D simulation playback to WebM video">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+                  <span>Record 4D</span>
+                </button>
+                <button class="btn-timeline-opt" id="btn-export-cobie-csv" title="Export 7D COBie Facility Management Lifecycle Data">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>
+                  <span>7D COBie</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

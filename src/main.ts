@@ -1156,6 +1156,18 @@ function getOrGenerateTwinData(modelId: string, expressId: number, ifcType: stri
     return twinDatabase[dbKey];
   }
 
+  // Robust alias fallback: match if this expressId exists under another model key or UUID
+  const suffix = `-${expressId}`;
+  for (const k in twinDatabase) {
+    if (k.endsWith(suffix) || k === String(expressId)) {
+      const match = twinDatabase[k];
+      if (match) {
+        twinDatabase[dbKey] = match;
+        return match;
+      }
+    }
+  }
+
   const storeyName = globalElementStoreysMap[dbKey] || "Entry Level";
   const storeyIndex = getStoreyIndex(storeyName);
   
@@ -2651,6 +2663,92 @@ btnExport4dCsv?.addEventListener("click", exportScheduleCsvHandler);
 const btnExportScheduleCsv = document.getElementById("btn-export-schedule-csv");
 btnExportScheduleCsv?.addEventListener("click", exportScheduleCsvHandler);
 
+// Synchronize imported schedule tasks and 5D itemized costs into active loaded fragment models
+function syncImportedScheduleWithActiveModels(): number {
+  if (!scheduleManager || scheduleManager.tasks.size === 0) return 0;
+
+  const activeModels = Array.from(fragments.list.entries());
+  const singleActiveModel = activeModels.length === 1 ? activeModels[0] : null;
+  let linkedElementsCount = 0;
+
+  for (const [, task] of scheduleManager.tasks) {
+    const taskElementCount = Math.max(1, task.elementIds.size || task.quantity || 1);
+    const perElementCost = (task.totalCost && task.totalCost > 0)
+      ? Math.round((task.totalCost / taskElementCount) * 100) / 100
+      : (task.unitCost || 0);
+
+    // Resolve target model ID to active loaded fragment model
+    let resolvedModelId = task.modelId;
+    let resolvedModel: any = null;
+
+    if (activeModels.length > 0) {
+      if (singleActiveModel) {
+        resolvedModelId = singleActiveModel[0];
+        resolvedModel = singleActiveModel[1];
+      } else {
+        const targetClean = (task.modelId || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const found = activeModels.find(([mId, model]: [string, any]) => {
+          const mName = (model.modelId || model.name || mId).toLowerCase().replace(/[^a-z0-9]/g, "");
+          return targetClean && (mName === targetClean || mName.includes(targetClean) || targetClean.includes(mName));
+        });
+        if (found) {
+          resolvedModelId = found[0];
+          resolvedModel = found[1];
+        } else {
+          resolvedModelId = activeModels[0][0];
+          resolvedModel = activeModels[0][1];
+        }
+      }
+    }
+
+    if (resolvedModelId) {
+      task.modelId = resolvedModelId;
+    }
+
+    for (const expressId of task.elementIds) {
+      const keysToSet = new Set<string>();
+      if (resolvedModelId) keysToSet.add(`${resolvedModelId}-${expressId}`);
+      if (resolvedModel?.modelId) keysToSet.add(`${resolvedModel.modelId}-${expressId}`);
+      if (task.modelId) keysToSet.add(`${task.modelId}-${expressId}`);
+      keysToSet.add(String(expressId));
+
+      let existing = twinDatabase[`${resolvedModelId}-${expressId}`] ||
+        twinDatabase[String(expressId)] || {
+          modelId: resolvedModelId || "default-model",
+          expressId,
+          quantity: 1,
+          calculatedCost: 0,
+        };
+
+      existing.task = task.name;
+      existing.startDate = task.startDate;
+      existing.endDate = task.endDate;
+      existing.status = task.status;
+      existing.isCustomized = true;
+      existing.unitCost = perElementCost;
+      existing.calculatedCost = perElementCost * (existing.quantity || 1);
+
+      for (const k of keysToSet) {
+        twinDatabase[k] = existing as any;
+      }
+
+      scheduleManager.elementData.set(`${resolvedModelId || task.modelId}:${expressId}`, {
+        unitCost: perElementCost,
+        quantity: 1,
+        taskName: task.name,
+        taskStatus: task.status,
+        startDate: task.startDate,
+        endDate: task.endDate,
+      });
+
+      linkedElementsCount++;
+    }
+  }
+
+  saveDatabase();
+  return linkedElementsCount;
+}
+
 const btnImport4dCsvInput = document.getElementById("btn-import-4d-csv-input") as HTMLInputElement | null;
 if (btnImport4dCsvInput) {
   btnImport4dCsvInput.addEventListener("change", async (e) => {
@@ -2660,73 +2758,10 @@ if (btnImport4dCsvInput) {
       const text = await file.text();
       const count = scheduleManager.importScheduleFromCSV(text);
       if (count > 0) {
-        // Sync imported schedule tasks and 5D itemized costs into twin database elements
-        const activeModels = Array.from(fragments.list.entries());
-        const singleActiveModel = activeModels.length === 1 ? activeModels[0] : null;
-
-        for (const [, task] of scheduleManager.tasks) {
-          const taskElementCount = Math.max(1, task.elementIds.size);
-          const perElementCost = (task.totalCost && task.totalCost > 0)
-            ? Math.round((task.totalCost / taskElementCount) * 100) / 100
-            : (task.unitCost || 0);
-
-          // Resolve target model ID to active loaded fragment model
-          let resolvedModelId = task.modelId;
-          if (!resolvedModelId || !fragments.list.has(resolvedModelId)) {
-            const found = activeModels.find(([mId, model]: [string, any]) => {
-              const name = (model.modelId || model.name || mId).toLowerCase();
-              const target = (task.modelId || "").toLowerCase();
-              return target && (name === target || name.includes(target) || target.includes(name));
-            });
-            if (found) {
-              resolvedModelId = found[0];
-            } else if (singleActiveModel) {
-              resolvedModelId = singleActiveModel[0];
-            } else {
-              resolvedModelId = task.modelId || "default-model";
-            }
-          }
-          task.modelId = resolvedModelId;
-
-          for (const expressId of task.elementIds) {
-            let dbKey = `${resolvedModelId}-${expressId}`;
-            if (!twinDatabase[dbKey]) {
-              const matchKey = Object.keys(twinDatabase).find(k => k.endsWith(`-${expressId}`));
-              if (matchKey) {
-                dbKey = matchKey;
-              }
-            }
-
-            const existing = twinDatabase[dbKey] || {
-              modelId: resolvedModelId,
-              expressId,
-              quantity: 1,
-              calculatedCost: 0,
-            };
-            existing.task = task.name;
-            existing.startDate = task.startDate;
-            existing.endDate = task.endDate;
-            existing.status = task.status;
-            existing.isCustomized = true;
-
-            if (task.unitCost > 0) {
-              existing.unitCost = task.unitCost;
-            } else if (perElementCost > 0) {
-              existing.unitCost = perElementCost;
-            }
-
-            if (perElementCost > 0) {
-              existing.calculatedCost = perElementCost * (existing.quantity || 1);
-            } else if (existing.unitCost > 0) {
-              existing.calculatedCost = existing.unitCost * (existing.quantity || 1);
-            }
-
-            twinDatabase[dbKey] = existing as any;
-          }
-        }
-        saveDatabase();
+        syncImportedScheduleWithActiveModels();
         updateDashboardMetrics();
         calculateTimelineBounds();
+        updateCumulative5DCost();
         if (timelineMinDate) {
           currentTimelineDate = new Date(timelineMinDate);
           if (timelineSlider) timelineSlider.value = "0";
@@ -2746,6 +2781,72 @@ if (btnImport4dCsvInput) {
     }
   });
 }
+
+// Centralized Timeline Options Modal & Floating Hub Controller
+const btnTimelineOptionsHub = document.getElementById("btn-timeline-options-hub");
+const timelineOptionsModal = document.getElementById("timeline-options-modal");
+const btnCloseTimelineOptions = document.getElementById("btn-close-timeline-options");
+
+btnTimelineOptionsHub?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (timelineOptionsModal) {
+    const isHidden = timelineOptionsModal.classList.toggle("hidden");
+    btnTimelineOptionsHub.classList.toggle("active", !isHidden);
+  }
+});
+
+btnCloseTimelineOptions?.addEventListener("click", () => {
+  if (timelineOptionsModal) {
+    timelineOptionsModal.classList.add("hidden");
+    btnTimelineOptionsHub?.classList.remove("active");
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (timelineOptionsModal && !timelineOptionsModal.classList.contains("hidden")) {
+    const target = e.target as HTMLElement;
+    if (!timelineOptionsModal.contains(target) && !btnTimelineOptionsHub?.contains(target)) {
+      timelineOptionsModal.classList.add("hidden");
+      btnTimelineOptionsHub?.classList.remove("active");
+    }
+  }
+});
+
+// Appearance Growth Profile Selector
+const selectAppearanceProfile = document.getElementById("select-4d-appearance-profile") as HTMLSelectElement | null;
+selectAppearanceProfile?.addEventListener("change", () => {
+  const profileId = selectAppearanceProfile.value;
+  AppearanceProfileEngine.getInstance().setActiveProfile(profileId);
+  showToast(`4D Growth Profile: ${selectAppearanceProfile.selectedOptions[0]?.text || profileId}`, "info");
+  if (currentTimelineDate) {
+    updateTimelineVisualState(true);
+  }
+});
+
+document.getElementById("btn-export-cobie-csv")?.addEventListener("click", () => {
+  CobieExportModule.getInstance().exportCobieCSV();
+  showToast("Exported 7D Asset Management Lifecycle Package (COBie.csv)", "success");
+});
+
+// Interactive Milestone Pills Click-to-Seek Listener
+const milestonesRow = document.querySelector(".gantt-milestones-row");
+milestonesRow?.addEventListener("click", async (e) => {
+  const pill = (e.target as HTMLElement).closest(".gantt-pill") as HTMLElement | null;
+  if (!pill) return;
+  const startMsStr = pill.dataset.start;
+  if (startMsStr && timelineMinDate && timelineMaxDate) {
+    const targetMs = Number(startMsStr);
+    if (!isNaN(targetMs)) {
+      currentTimelineDate = new Date(targetMs);
+      const diffDays = Math.max(0, Math.floor((currentTimelineDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24)));
+      if (timelineSlider) {
+        timelineSlider.value = String(diffDays);
+      }
+      updateTimelineDateUI();
+      await updateTimelineVisualState(true);
+    }
+  }
+});
 
 // 4D Video Recording
 const btn4dRecord = document.getElementById("btn-4d-record");
@@ -2868,8 +2969,10 @@ btnImportScheduleAdv?.addEventListener("change", async (e) => {
       // Synchronize imported schedule tasks with 3D elements in model via SIMULATION property
       const models = Array.from(fragments.list.values());
       const syncStats = scheduleManager.syncTasksWithModelSimulation(models, twinDatabase);
+      syncImportedScheduleWithActiveModels();
 
       calculateTimelineBounds();
+      updateCumulative5DCost();
       if (timelineMinDate) {
         currentTimelineDate = new Date(timelineMinDate);
         if (timelineSlider) timelineSlider.value = "0";
@@ -3016,56 +3119,93 @@ btnExportCobie?.addEventListener("click", () => {
 export function updateCumulative5DCost() {
   const grandTotalEl = document.getElementById("cost-project-grand-total");
   const countEl = document.getElementById("cost-project-elements-count");
-  if (!grandTotalEl || !countEl) return;
+  const drawerGrandTotal = document.getElementById("drawer-cost-grand-total");
+  const drawerCount = document.getElementById("drawer-cost-elements-count");
+  const drawerCurrencyBadge = document.getElementById("drawer-cost-currency-badge");
 
   let grandTotal = 0;
   let elementCount = 0;
   const categoryMap = new Map<string, { cost: number; count: number }>();
 
-  for (const [, model] of fragments.list) {
-    const anyModel = model as any;
-    const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || anyModel.object?.uuid || "default-model";
-    const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
+  // 1. Try to aggregate from active fragment models
+  if (fragments.list.size > 0) {
+    for (const [, model] of fragments.list) {
+      const anyModel = model as any;
+      const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || anyModel.object?.uuid || "default-model";
+      const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
 
-    for (const expressIdStr in properties) {
-      const expressId = Number(expressIdStr);
-      if (isNaN(expressId)) continue;
+      for (const expressIdStr in properties) {
+        const expressId = Number(expressIdStr);
+        if (isNaN(expressId)) continue;
 
-      const elementProps = properties[expressId];
-      if (!elementProps) continue;
+        const elementProps = properties[expressId];
+        if (!elementProps) continue;
 
-      const ifcType = String(elementProps.type ?? "").toUpperCase();
-      const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
+        const ifcType = String(elementProps.type ?? "").toUpperCase();
+        const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
 
-      const cost = twinData.calculatedCost || 0;
-      if (cost > 0) {
-        grandTotal += cost;
-        elementCount++;
+        const cost = twinData.calculatedCost || 0;
+        if (cost > 0) {
+          grandTotal += cost;
+          elementCount++;
+        }
+
+        const current = categoryMap.get(ifcType) || { cost: 0, count: 0 };
+        current.cost += cost;
+        current.count += 1;
+        categoryMap.set(ifcType, current);
       }
-
-      const current = categoryMap.get(ifcType) || { cost: 0, count: 0 };
-      current.cost += cost;
-      current.count += 1;
-      categoryMap.set(ifcType, current);
     }
   }
 
-  grandTotalEl.textContent = formatCurrency(grandTotal);
-  countEl.textContent = formatItemCount(elementCount);
-  CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap);
-  CostChartComponent.getInstance().renderSCurveProgressChart();
+  // 2. Schedule Fallback: If no elements costed from models or schedule tasks exist,
+  // compute cumulative 5D cost from schedule tasks so the 5D Cost Control suite is always dynamic
+  if ((elementCount === 0 || grandTotal === 0) && scheduleManager && scheduleManager.tasks.size > 0) {
+    grandTotal = 0;
+    elementCount = 0;
+    categoryMap.clear();
 
-  // Also synchronize the Unified 5D Project Cost Control Drawer
-  const drawerGrandTotal = document.getElementById("drawer-cost-grand-total");
-  const drawerCount = document.getElementById("drawer-cost-elements-count");
-  const drawerCurrencyBadge = document.getElementById("drawer-cost-currency-badge");
-  if (drawerGrandTotal) drawerGrandTotal.textContent = formatCurrency(grandTotal);
-  if (drawerCount) drawerCount.textContent = formatItemCount(elementCount);
+    for (const [, task] of scheduleManager.tasks) {
+      const count = Math.max(1, task.elementIds.size || task.quantity || 1);
+      const taskCost = task.totalCost || (task.unitCost * count) || 0;
+      grandTotal += taskCost;
+      elementCount += count;
+
+      let cat = task.category || "IFCELEMENT";
+      if (!cat || cat === "IFCELEMENT") {
+        const u = task.name.toUpperCase();
+        if (u.includes("COL") || u.includes("COLUMN")) cat = "IFCCOLUMN";
+        else if (u.includes("BEAM") || u.includes("GIRDER")) cat = "IFCBEAM";
+        else if (u.includes("SLAB") || u.includes("FLOOR") || u.includes("DECK")) cat = "IFCSLAB";
+        else if (u.includes("WALL")) cat = "IFCWALL";
+        else if (u.includes("FOOT") || u.includes("FOUND") || u.includes("PIT")) cat = "IFCFOOTING";
+        else if (u.includes("STAIR")) cat = "IFCSTAIR";
+        else if (u.includes("ROOF")) cat = "IFCROOF";
+        else cat = "IFCELEMENT";
+      }
+
+      const current = categoryMap.get(cat) || { cost: 0, count: 0 };
+      current.cost += taskCost;
+      current.count += count;
+      categoryMap.set(cat, current);
+    }
+  }
+
+  const formattedTotal = formatCurrency(grandTotal);
+  const formattedCount = formatItemCount(elementCount);
+
+  if (grandTotalEl) grandTotalEl.textContent = formattedTotal;
+  if (countEl) countEl.textContent = formattedCount;
+  if (drawerGrandTotal) drawerGrandTotal.textContent = formattedTotal;
+  if (drawerCount) drawerCount.textContent = formattedCount;
   if (drawerCurrencyBadge) {
     const cur = CostRateManager.getInstance().getCurrency();
     drawerCurrencyBadge.textContent = `${cur.code} ${cur.symbol}`;
   }
+
+  CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap);
   CostChartComponent.getInstance().renderCategoryCostBreakdown(categoryMap, "drawer-cost-breakdown-container");
+  CostChartComponent.getInstance().renderSCurveProgressChart();
   CostChartComponent.getInstance().renderSCurveProgressChart("drawer-scurve-container");
 
   // Dynamically update the Trade Budget Distribution stacked bar
@@ -3715,16 +3855,23 @@ async function loadModelData(name: string, buffer: Uint8Array) {
       // Auto-populate 4D Schedule tasks for all elements and categories in loaded model
       const categoriesGroup = classifier.list.get("Categories");
       if (categoriesGroup) {
-        const catMap = new Map<string, { modelId: string; elementIds: number[] }[]>();
-        for (const [catName, groupData] of categoriesGroup) {
-          const res = await groupData.get();
-          const itemsArr: { modelId: string; elementIds: number[] }[] = [];
-          for (const mId in res) {
-            itemsArr.push({ modelId: mId, elementIds: Array.from(res[mId]) });
+        if (!scheduleManager || scheduleManager.tasks.size === 0) {
+          const catMap = new Map<string, { modelId: string; elementIds: number[] }[]>();
+          for (const [catName, groupData] of categoriesGroup) {
+            const res = await groupData.get();
+            const itemsArr: { modelId: string; elementIds: number[] }[] = [];
+            for (const mId in res) {
+              itemsArr.push({ modelId: mId, elementIds: Array.from(res[mId]) });
+            }
+            catMap.set(catName, itemsArr);
           }
-          catMap.set(catName, itemsArr);
+          scheduleManager.generateFromCategories(catMap, "2026-06-18");
+        } else {
+          // A custom/imported schedule is already present: bind its tasks to newly loaded model!
+          syncImportedScheduleWithActiveModels();
+          const models = Array.from(fragments.list.values());
+          scheduleManager.syncTasksWithModelSimulation(models, twinDatabase);
         }
-        scheduleManager.generateFromCategories(catMap, "2026-06-18");
         updateSequencePropertyOptions();
       }
 
@@ -6947,63 +7094,78 @@ function syncScheduleEngine() {
   const hasSchedule = scheduleManager && scheduleManager.tasks && scheduleManager.tasks.size > 0;
   const mgrBounds = hasSchedule ? scheduleManager.getProjectDateRange() : null;
 
-  for (const [, model] of fragments.list) {
-    const anyModel = model as any;
-    const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || anyModel.object?.uuid || "default-model";
-    const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
-
-    for (const expressIdStr in properties) {
-      const expressId = Number(expressIdStr);
-      if (isNaN(expressId)) continue;
-
-      const elementProps = properties[expressId];
-      if (!elementProps) continue;
-
-      const ifcType = String(elementProps.type ?? "").toUpperCase();
-      const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
-
-      // If an explicit schedule is active, only include customized elements or elements linked to schedule tasks
-      // so mock fallback dates from unlinked elements don't distort the true schedule timeline bounds!
-      if (hasSchedule && !twinData.isCustomized) {
-        continue;
-      }
-
-      if (twinData.startDate && twinData.endDate) {
-        const start = new Date(twinData.startDate).getTime();
-        const end = new Date(twinData.endDate).getTime();
-        if (Number.isFinite(start) && Number.isFinite(end)) {
-          elements.push({
-            modelId,
-            expressId,
-            task: twinData.task || "General Construction Works",
-            group: twinData.task || "General Construction Works",
-            start,
-            end,
-            cost: twinData.calculatedCost || (twinData.unitCost * (twinData.quantity || 1)) || 0,
-            statusOverride: twinData.isCustomized ? twinData.status : undefined,
-          });
-        }
-      }
-    }
-  }
-
-  // Also include schedule tasks in element list if they have unlinked elements or summary tasks
   if (hasSchedule) {
+    // When a schedule is active, directly bind all schedule tasks and elements to the 4D timeline engine
     for (const [, task] of scheduleManager.tasks) {
-      if (task.elementIds.size === 0 && task.startDate && task.endDate) {
-        const s = new Date(task.startDate).getTime();
-        const e = new Date(task.endDate).getTime();
-        if (Number.isFinite(s) && Number.isFinite(e)) {
+      if (!task.startDate || !task.endDate) continue;
+      const s = new Date(task.startDate).getTime();
+      const e = new Date(task.endDate).getTime();
+      if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+
+      const elementCount = Math.max(1, task.elementIds.size || task.quantity || 1);
+      const perElementCost = (task.totalCost && task.totalCost > 0)
+        ? Math.round((task.totalCost / elementCount) * 100) / 100
+        : (task.unitCost || 0);
+
+      if (task.elementIds && task.elementIds.size > 0) {
+        for (const expressId of task.elementIds) {
           elements.push({
-            modelId: task.modelId || "virtual",
-            expressId: 0,
+            modelId: task.modelId || "default-model",
+            expressId,
             task: task.name,
-            group: task.name,
+            group: task.category || task.name,
             start: s,
             end: e,
-            cost: task.totalCost || 0,
+            cost: perElementCost,
             statusOverride: task.status,
           });
+        }
+      } else {
+        // Summary or unlinked milestone task
+        elements.push({
+          modelId: task.modelId || "virtual",
+          expressId: 0,
+          task: task.name,
+          group: task.category || task.name,
+          start: s,
+          end: e,
+          cost: task.totalCost || 0,
+          statusOverride: task.status,
+        });
+      }
+    }
+  } else {
+    // Fallback: generate from active fragment models properties
+    for (const [, model] of fragments.list) {
+      const anyModel = model as any;
+      const modelId = anyModel.modelId || anyModel.uuid || anyModel.id || anyModel.object?.uuid || "default-model";
+      const properties = anyModel.properties || anyModel.getLocalProperties?.() || {};
+
+      for (const expressIdStr in properties) {
+        const expressId = Number(expressIdStr);
+        if (isNaN(expressId)) continue;
+
+        const elementProps = properties[expressId];
+        if (!elementProps) continue;
+
+        const ifcType = String(elementProps.type ?? "").toUpperCase();
+        const twinData = getOrGenerateTwinData(modelId, expressId, ifcType);
+
+        if (twinData.startDate && twinData.endDate) {
+          const start = new Date(twinData.startDate).getTime();
+          const end = new Date(twinData.endDate).getTime();
+          if (Number.isFinite(start) && Number.isFinite(end)) {
+            elements.push({
+              modelId,
+              expressId,
+              task: twinData.task || "General Construction Works",
+              group: twinData.task || "General Construction Works",
+              start,
+              end,
+              cost: twinData.calculatedCost || (twinData.unitCost * (twinData.quantity || 1)) || 0,
+              statusOverride: twinData.isCustomized ? twinData.status : undefined,
+            });
+          }
         }
       }
     }
@@ -7097,6 +7259,22 @@ function updateTimelineDateUI() {
     const month = String(currentTimelineDate.getMonth() + 1).padStart(2, '0');
     const day = String(currentTimelineDate.getDate()).padStart(2, '0');
     badge.innerText = `${year}-${month}-${day}`;
+  }
+
+  // Update Start & End bound badges on the timeline slider
+  const boundStart = document.getElementById("timeline-bound-start");
+  if (boundStart && timelineMinDate) {
+    const sYear = timelineMinDate.getFullYear();
+    const sMonth = String(timelineMinDate.getMonth() + 1).padStart(2, '0');
+    const sDay = String(timelineMinDate.getDate()).padStart(2, '0');
+    boundStart.innerText = `${sYear}-${sMonth}-${sDay}`;
+  }
+  const boundEnd = document.getElementById("timeline-bound-end");
+  if (boundEnd && timelineMaxDate) {
+    const eYear = timelineMaxDate.getFullYear();
+    const eMonth = String(timelineMaxDate.getMonth() + 1).padStart(2, '0');
+    const eDay = String(timelineMaxDate.getDate()).padStart(2, '0');
+    boundEnd.innerText = `${eYear}-${eMonth}-${eDay}`;
   }
 
   const dateMs = currentTimelineDate.getTime();

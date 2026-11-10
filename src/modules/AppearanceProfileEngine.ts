@@ -184,6 +184,18 @@ export class AppearanceProfileEngine {
     return AppearanceProfileEngine.instance;
   }
 
+  public activeProfileId: string = "Install_BottomUp";
+
+  public setActiveProfile(id: string): void {
+    if (this.profiles.has(id)) {
+      this.activeProfileId = id;
+    }
+  }
+
+  public getActiveProfile(): AppearanceProfile {
+    return this.profiles.get(this.activeProfileId) || PRESET_APPEARANCE_PROFILES.Install_BottomUp;
+  }
+
   public registerPresets(): void {
     for (const [id, profile] of Object.entries(PRESET_APPEARANCE_PROFILES)) {
       this.profiles.set(id, profile);
