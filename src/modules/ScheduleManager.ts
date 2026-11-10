@@ -444,6 +444,65 @@ export class ScheduleManager {
   }
 
   /**
+   * Normalizes any incoming date string (ISO YYYY-MM-DD, DD-MM-YY, DD-MM-YYYY, DD-MMM-YY, MM/DD/YYYY)
+   * into standard ISO YYYY-MM-DD.
+   */
+  public normalizeDateString(val?: string): string {
+    if (!val) return "";
+    const s = val.trim();
+    if (!s) return "";
+
+    // Already ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return s;
+    }
+
+    // DD-MMM-YY or DD-MMM-YYYY (e.g. 09-Dec-26 or 09-Dec-2026)
+    const mmmMatch = s.match(/^(\d{1,2})[-/ ]([A-Za-z]{3})[-/ ](\d{2,4})$/);
+    if (mmmMatch) {
+      const day = parseInt(mmmMatch[1], 10);
+      const mStr = mmmMatch[2].toLowerCase();
+      const months: Record<string, string> = {
+        jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+        jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12"
+      };
+      const month = months[mStr];
+      let year = parseInt(mmmMatch[3], 10);
+      if (year < 100) year += 2000;
+      if (month && day >= 1 && day <= 31) {
+        return `${year}-${month}-${String(day).padStart(2, "0")}`;
+      }
+    }
+
+    // DD-MM-YY or DD-MM-YYYY or DD/MM/YY or DD/MM/YYYY
+    const numMatch = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+    if (numMatch) {
+      const p1 = parseInt(numMatch[1], 10);
+      const p2 = parseInt(numMatch[2], 10);
+      let year = parseInt(numMatch[3], 10);
+      if (year < 100) year += 2000;
+
+      let day = p1;
+      let month = p2;
+      // If p1 <= 12 and p2 > 12, p2 is Day and p1 is Month (MM/DD/YYYY)
+      if (p1 <= 12 && p2 > 12) {
+        day = p2;
+        month = p1;
+      }
+
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+
+    // Fallback: Native JavaScript Date
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split("T")[0];
+    }
+
+    return s;
+  }
+
+  /**
    * Export all tasks as a downloadable CSV template with 5D costs and 4D variance/actual dates included.
    */
   exportScheduleTemplateCSV(): string {
@@ -556,10 +615,12 @@ export class ScheduleManager {
       const id = getCol(idIdx) || `csv-task-${i}`;
       const name = getCol(nameIdx) || `Custom Task ${i}`;
       const category = getCol(catIdx) || "IFCELEMENT";
-      const startDate = getCol(startIdx);
-      const endDate = getCol(endIdx);
-      const actualStartDate = getCol(actualStartIdx) || undefined;
-      const actualEndDate = getCol(actualEndIdx) || undefined;
+      const startDate = this.normalizeDateString(getCol(startIdx));
+      const endDate = this.normalizeDateString(getCol(endIdx));
+      const actualStartDateRaw = getCol(actualStartIdx);
+      const actualEndDateRaw = getCol(actualEndIdx);
+      const actualStartDate = actualStartDateRaw ? this.normalizeDateString(actualStartDateRaw) : undefined;
+      const actualEndDate = actualEndDateRaw ? this.normalizeDateString(actualEndDateRaw) : undefined;
       const status = (getCol(statusIdx) as TaskStatus) || "Planned";
       const modelId = getCol(modelIdx) || "";
       const idsRaw = getCol(idsIdx);

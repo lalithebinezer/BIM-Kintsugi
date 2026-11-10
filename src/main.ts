@@ -2661,17 +2661,44 @@ if (btnImport4dCsvInput) {
       const count = scheduleManager.importScheduleFromCSV(text);
       if (count > 0) {
         // Sync imported schedule tasks and 5D itemized costs into twin database elements
+        const activeModels = Array.from(fragments.list.entries());
+        const singleActiveModel = activeModels.length === 1 ? activeModels[0] : null;
+
         for (const [, task] of scheduleManager.tasks) {
           const taskElementCount = Math.max(1, task.elementIds.size);
           const perElementCost = (task.totalCost && task.totalCost > 0)
             ? Math.round((task.totalCost / taskElementCount) * 100) / 100
             : (task.unitCost || 0);
 
+          // Resolve target model ID to active loaded fragment model
+          let resolvedModelId = task.modelId;
+          if (!resolvedModelId || !fragments.list.has(resolvedModelId)) {
+            const found = activeModels.find(([mId, model]: [string, any]) => {
+              const name = (model.modelId || model.name || mId).toLowerCase();
+              const target = (task.modelId || "").toLowerCase();
+              return target && (name === target || name.includes(target) || target.includes(name));
+            });
+            if (found) {
+              resolvedModelId = found[0];
+            } else if (singleActiveModel) {
+              resolvedModelId = singleActiveModel[0];
+            } else {
+              resolvedModelId = task.modelId || "default-model";
+            }
+          }
+          task.modelId = resolvedModelId;
+
           for (const expressId of task.elementIds) {
-            const mId = task.modelId || "default-model";
-            const dbKey = `${mId}-${expressId}`;
+            let dbKey = `${resolvedModelId}-${expressId}`;
+            if (!twinDatabase[dbKey]) {
+              const matchKey = Object.keys(twinDatabase).find(k => k.endsWith(`-${expressId}`));
+              if (matchKey) {
+                dbKey = matchKey;
+              }
+            }
+
             const existing = twinDatabase[dbKey] || {
-              modelId: mId,
+              modelId: resolvedModelId,
               expressId,
               quantity: 1,
               calculatedCost: 0,

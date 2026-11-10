@@ -101,6 +101,53 @@ task-custom,"Steel Framing",IFCBEAM,2026-05-01,2026-05-10,Planned,model-2,"701;7
     expect(task?.elementIds.size).toBe(2);
   });
 
+  it("should normalize mixed international date formats (DD-MMM-YY, DD-MM-YY, DD/MM/YYYY) to ISO", () => {
+    const sm = new ScheduleManager();
+    expect(sm.normalizeDateString("09-Dec-26")).toBe("2026-12-09");
+    expect(sm.normalizeDateString("26-12-26")).toBe("2026-12-26");
+    expect(sm.normalizeDateString("07-01-27")).toBe("2027-01-07");
+    expect(sm.normalizeDateString("15/11/2026")).toBe("2026-11-15");
+    expect(sm.normalizeDateString("2026-05-20")).toBe("2026-05-20");
+
+    const userStyleCsv = `TaskID,TaskName,Category,StartDate,EndDate,Status,ModelID,ElementCount,UnitCost,TotalCost,ExpressIDs
+msp-1,COL_EPit,IFCELEMENT,09-Dec-26,11-Dec-26,Completed,model-1,0,8750,8750,
+msp-2,COL_LL1_35_Low,IFCELEMENT,26-12-26,28-12-26,Planned,model-1,5,8750,15000,3923;3955;4164;4375;24794
+msp-5,COL_LL3,IFCELEMENT,20-01-27,31-01-27,Planned,model-1,2,8750,17500,23219;23251`;
+
+    const imported = sm.importScheduleFromCSV(userStyleCsv);
+    expect(imported).toBe(3);
+    expect(sm.tasks.get("msp-1")?.startDate).toBe("2026-12-09");
+    expect(sm.tasks.get("msp-1")?.endDate).toBe("2026-12-11");
+    expect(sm.tasks.get("msp-2")?.startDate).toBe("2026-12-26");
+    expect(sm.tasks.get("msp-2")?.endDate).toBe("2026-12-28");
+    expect(sm.tasks.get("msp-5")?.startDate).toBe("2027-01-20");
+    expect(sm.tasks.get("msp-5")?.endDate).toBe("2027-01-31");
+  });
+
+  it("should cleanly import realistic construction schedule CSV with 1,300+ element bindings and currency totals", () => {
+    const sm = new ScheduleManager();
+    const csvContent = `TaskID,TaskName,Category,StartDate,EndDate,ActualStartDate,ActualEndDate,Status,ModelID,ElementCount,UnitCost,TotalCost,DelayDays,CostImpact,ExpressIDs
+msp-1,COL_EPit,IFCELEMENT,09-Dec-26,11-Dec-26,,,Completed,,0,1,8750,0,0,
+msp-2,COL_LL1_35_Low,IFCELEMENT,26-12-26,28-12-26,,,Planned,Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc,5,8750,15000,0,0,3923;3955;4164;4375;24794
+,COL_LL2,,07-01-27,17-01-27,,,,,,,45000,,,
+msp-35,FRA_LTOS_LL5,IFCELEMENT,13-02-27,15-02-27,,,Planned,Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc,5,8750,43750,0,0,4634;4722;6822;6893;6937
+,,,,,,,,,,,,,,
+msp-49,Unassigned,IFCELEMENT,11-03-27,11-03-27,,,Planned,,0,8750,8750,0,0,`;
+
+    const count = sm.importScheduleFromCSV(csvContent);
+    expect(count).toBe(5); // skips empty row 5 cleanly
+    expect(sm.tasks.get("msp-2")?.elementIds.size).toBe(5);
+    expect(sm.tasks.get("msp-35")?.elementIds.size).toBe(5);
+    expect(sm.tasks.get("csv-task-3")?.totalCost).toBe(45000); // anonymous row assigned id
+    expect(sm.tasks.get("csv-task-3")?.startDate).toBe("2027-01-07");
+    expect(sm.tasks.get("csv-task-3")?.endDate).toBe("2027-01-17");
+
+    const range = sm.getProjectDateRange();
+    expect(range).not.toBeNull();
+    expect(range?.min.toISOString().split("T")[0]).toBe("2026-12-09");
+    expect(range?.max.toISOString().split("T")[0]).toBe("2027-03-11");
+  });
+
   it("should resolve status colors properly", () => {
     expect(ScheduleManager.getStatusColor("Planned")).toBe("#6B7280");
     expect(ScheduleManager.getStatusColor("In Progress")).toBe("#F59E0B");

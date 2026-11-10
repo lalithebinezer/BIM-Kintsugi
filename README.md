@@ -6,7 +6,7 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.4.3-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-165%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-167%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
@@ -231,19 +231,19 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 165-test Vitest suite across all 22 core and enterprise modules:
+Run strict TypeScript type-checking and the 167-test Vitest suite across all 22 core and enterprise modules:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 22 unit test suites (165 tests)
+# Run all 22 unit test suites (167 tests)
 npm test -- --run
 ```
 
 The automated testing harness also executes a headless Chrome (Playwright) visual audit:
 - **0 runtime page errors**, **0 duplicate DOM IDs**.
-- **165/165 unit tests passing** across 22 test suites (100% green).
+- **167/167 unit tests passing** across 22 test suites (100% green).
 - **100% WCAG 2.2 AA Compliance** across 199 interactive buttons and 78 form inputs.
 - **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), tablet (`768px–1080px`), and mobile viewports (`360px–640px`).
 
