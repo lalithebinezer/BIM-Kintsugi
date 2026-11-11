@@ -55,16 +55,18 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   function closeAllEnterpriseDrawers() {
     document.querySelectorAll(".enterprise-drawer").forEach((drawer) => {
       drawer.classList.add("hidden");
+      (drawer as HTMLElement).style.display = "none";
     });
   }
 
   function toggleEnterpriseDrawer(panelId: string) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
-    const isCurrentlyOpen = !panel.classList.contains("hidden");
+    const isCurrentlyOpen = !panel.classList.contains("hidden") && (panel as HTMLElement).style.display !== "none";
     closeAllEnterpriseDrawers();
     if (!isCurrentlyOpen) {
       panel.classList.remove("hidden");
+      (panel as HTMLElement).style.display = "";
       if (localStorage.getItem("bim-drawer-centralized") === "true") {
         panel.classList.add("centralized");
       } else {
@@ -213,14 +215,19 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     showToast(`Created BCF Issue: ${title}`, "success");
   });
 
-  // Drawer Close buttons
-  document.querySelectorAll(".drawer-close-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const target = (e.currentTarget as HTMLElement).dataset.target;
-      if (target) {
-        document.getElementById(target)?.classList.add("hidden");
+  // Drawer Close buttons (Delegated listener handles all SVGs, child elements, and dynamic drawers)
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement)?.closest(".drawer-close-btn") as HTMLElement | null;
+    if (btn) {
+      e.stopPropagation();
+      const targetId = btn.getAttribute("data-target");
+      const targetPanel = targetId ? document.getElementById(targetId) : btn.closest(".enterprise-drawer");
+      if (targetPanel) {
+        targetPanel.classList.add("hidden");
+        (targetPanel as HTMLElement).style.display = "none";
+        SoundManager.getInstance().playClick();
       }
-    });
+    }
   });
 
   // Measurement Tool Buttons

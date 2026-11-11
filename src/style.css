@@ -8265,10 +8265,6 @@ body.right-sidebar-collapsed .right-sidebar {
   animation: drawerSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.enterprise-drawer.hidden {
-  display: none !important;
-}
-
 .enterprise-drawer.centralized {
   top: calc(var(--header-bottom, 4.35rem) + (100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 1.5rem) / 2) !important;
   left: 50% !important;
@@ -8284,6 +8280,13 @@ body.right-sidebar-collapsed .right-sidebar {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+}
+
+.enterprise-drawer.hidden,
+.enterprise-drawer.centralized.hidden,
+.enterprise-drawer[style*="display: none"],
+.enterprise-drawer[hidden] {
+  display: none !important;
 }
 
 @keyframes drawerCenterZoom {
