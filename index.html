@@ -412,6 +412,16 @@
             <span class="dock-tooltip">5D Cost</span>
           </div>
 
+          <div class="dock-item" data-tooltip="Earned Value Management (EVM)">
+            <button class="btn-tool dock-icon" id="btn-dock-evm" aria-label="Earned Value Management (EVM)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                <polyline points="16 7 22 7 22 13" />
+              </svg>
+            </button>
+            <span class="dock-tooltip">EVM Control</span>
+          </div>
+
           <div class="dock-item" data-tooltip="GeoBIM GIS & 3D Basemap (G)">
             <button class="btn-tool dock-icon" id="btn-dock-gis" aria-label="GeoBIM GIS & 3D Basemap">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
@@ -898,6 +908,10 @@
                 <button type="button" id="btn-export-schedule-csv" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem;" title="Export Schedule with Itemized 5D Costs to CSV">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   <span>CSV (Cost)</span>
+                </button>
+                <button type="button" id="btn-open-evm-from-sidebar" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem; border-color: rgba(234, 179, 8, 0.45); color: #eab308;" title="Open Earned Value Management (EVM) Control Suite">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  <span>EVM</span>
                 </button>
               </div>
             </div>
@@ -2272,12 +2286,12 @@
           </div>
 
           <div class="gantt-bar-right">
-            <div class="gantt-evm-info">
+            <div class="gantt-evm-info" id="btn-timeline-open-evm" title="Open Earned Value Management (EVM) Control Suite" style="cursor: pointer;">
               <span class="evm-label">EVM BUDGET:</span>
               <span id="gantt-evm-cost" class="evm-val">$ 180,000</span>
             </div>
             <span id="gantt-progress-val" class="gantt-prog-badge">8% Complete</span>
-            <span id="gantt-spi-val" class="gantt-spi-badge" title="Schedule Performance Index (EV / PV)">SPI 1.00</span>
+            <span id="gantt-spi-val" class="gantt-spi-badge" title="Schedule Performance Index (EV / PV) - Click to Open EVM Suite" style="cursor: pointer;">SPI 1.00</span>
             <button id="btn-close-gantt-bar" class="btn-icon-sm btn-close-4d" title="Exit 4D Mode">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -2327,6 +2341,11 @@
             <button class="btn-timeline-csv" id="btn-timeline-cost-control" title="Open Unified 5D Project Cost Control Suite">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               <span>5D Cost Control</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-timeline-evm" title="Open Earned Value Management (EVM) Control Suite & S-Curve">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              <span>EVM Control</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
@@ -3205,6 +3224,12 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span>Executive Twin Report (Print / PDF)</span>
           </button>
+          <button type="button" class="btn-cost-action rates" id="drawer-btn-open-evm"
+            title="Open Dedicated Earned Value Management (EVM) Control Suite"
+            style="grid-column: span 2; background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.45); color: #eab308; font-weight: 700;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            <span>Earned Value Management (EVM) Suite</span>
+          </button>
         </div>
 
         <button type="button" class="btn-cost-action ids" id="drawer-btn-run-ids"
@@ -3225,6 +3250,160 @@
 
         <!-- 4D/5D Earned Value Management (EVM) S-Curve -->
         <div id="drawer-scurve-container" style="width: 100%; margin-top: 0.35rem;"></div>
+      </div>
+    </div>
+
+    <!-- 7b. Earned Value Management (EVM) Control Suite Drawer -->
+    <div id="evm-panel" class="enterprise-drawer hidden">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+            <polyline points="16 7 22 7 22 13" />
+          </svg>
+          <h3>Earned Value Management (EVM)</h3>
+        </div>
+        <div class="drawer-header-actions">
+          <span id="evm-status-badge" class="carbon-grade-badge grade-A" style="background: rgba(234, 179, 8, 0.18); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);">ON TRACK • SPI 1.00 | CPI 1.00</span>
+          <button class="btn-icon drawer-center-toggle-btn" data-target="evm-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="btn-icon drawer-close-btn" data-target="evm-panel" aria-label="Close EVM Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="drawer-body thin-scrollbar">
+        <!-- 1. Executive Performance Overview (BAC, PV, EV, AC, SV, CV) -->
+        <div class="drawer-section-card" style="border-left: 3px solid #eab308;">
+          <div style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+            <span>Project Baseline & Value (BAC)</span>
+            <span id="evm-val-progress" style="font-size: 0.58rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0%</span>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 900; color: #eab308; line-height: 1.2;" id="evm-val-bac">$0.00</div>
+
+          <!-- 4-Grid Core EVM Parameters -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.45rem;">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: #38bdf8; font-weight: 700; text-transform: uppercase;">Planned Value (PV)</div>
+              <div id="evm-val-pv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: #10b981; font-weight: 700; text-transform: uppercase;">Earned Value (EV)</div>
+              <div id="evm-val-ev" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: #f59e0b; font-weight: 700; text-transform: uppercase;">Actual Cost (AC)</div>
+              <div id="evm-val-ac" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Schedule Var (SV)</div>
+              <div id="evm-val-sv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #10b981;">$0.00</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem; font-size: 0.58rem; color: var(--text-muted);">
+            <span>Cost Variance (CV): <strong id="evm-val-cv" style="font-family: var(--font-mono); color: #10b981;">$0.00</strong></span>
+          </div>
+        </div>
+
+        <!-- 2. Performance Indices & Forecasting (SPI, CPI, EAC, VAC, TCPI) -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin-top: 0.45rem;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">SPI (Sched Index)</div>
+            <div id="evm-val-spi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #38bdf8;">1.00</div>
+            <div style="font-size: 0.5rem; color: var(--text-muted);">EV / PV</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">CPI (Cost Index)</div>
+            <div id="evm-val-cpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #10b981;">1.00</div>
+            <div style="font-size: 0.5rem; color: var(--text-muted);">EV / AC</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">TCPI (To-Complete)</div>
+            <div id="evm-val-tcpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #eab308;">1.00</div>
+            <div style="font-size: 0.5rem; color: var(--text-muted);">Target Efficiency</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.35rem;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Estimate At Completion (EAC)</div>
+            <div id="evm-val-eac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: #ffffff;">$0.00</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Variance At Completion (VAC)</div>
+            <div id="evm-val-vac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: #10b981;">$0.00</div>
+          </div>
+        </div>
+
+        <!-- 3. Interactive Multi-Line EVM S-Curve Visualization -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>PMBOK S-Curve Trajectory (PV vs EV vs AC)</span>
+        </div>
+        <div id="evm-scurve-chart-container" style="width: 100%; margin-top: 0.35rem;"></div>
+
+        <!-- 4. Delay & Liquidated Damages Financial Exposure -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Delay & Financial Claim Exposure</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.35rem;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Project Slippage</div>
+            <div id="evm-val-slippage" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ef4444;">0 Days</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Prolongation Overhead</div>
+            <div id="evm-val-prolongation" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Penalties (Liquidated)</div>
+            <div id="evm-val-penalties" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+          </div>
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
+            <div style="font-size: 0.55rem; color: #ef4444; font-weight: 700;">Total Delay Exposure</div>
+            <div id="evm-val-total-impact" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ef4444;">$0.00</div>
+          </div>
+        </div>
+
+        <!-- 5. What-If Delay Sensitivity Simulator -->
+        <div style="margin-top: 0.5rem; background: rgba(234, 179, 8, 0.05); border: 1px dashed rgba(234, 179, 8, 0.3); border-radius: 6px; padding: 0.45rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.62rem; font-weight: 700; color: #eab308; margin-bottom: 0.25rem;">
+            <span>What-If Delay Sensitivity Simulator</span>
+            <span id="evm-sim-delay-display" style="font-family: var(--font-mono); font-size: 0.62rem; color: #ffffff;">+0 days</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="range" id="input-evm-delay-sim" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: #eab308; cursor: pointer;" />
+            <button type="button" id="btn-evm-reset-sim" class="btn-gantt-drawer-action" style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">Reset</button>
+          </div>
+        </div>
+
+        <!-- 6. Critical Delayed Tasks Watchlist -->
+        <div class="drawer-section-header" style="margin-top: 0.75rem;">
+          <span>Critical Path Delayed Activities</span>
+        </div>
+        <div id="evm-delayed-tasks-container" style="width: 100%; margin-top: 0.35rem;"></div>
+
+        <!-- 7. EVM Action Toolbar -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.75rem;">
+          <button type="button" class="btn-cost-action boq" id="btn-export-evm-csv"
+            title="Export complete Earned Value Management (EVM) Audit Ledger to CSV">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export EVM Audit CSV</span>
+          </button>
+          <button type="button" class="btn-cost-action rates" id="btn-evm-open-5d-cost"
+            title="Open 5D Cost Control Drawer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            <span>5D Cost Drawer</span>
+          </button>
+          <button type="button" class="btn-cost-action report" id="btn-evm-exec-report"
+            title="Generate Executive 4D/5D Twin Report (Print & PDF)"
+            style="grid-column: span 2; background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(37, 99, 235, 0.15)); border: 1px solid rgba(234, 179, 8, 0.4); color: var(--text-primary); font-weight: 700;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Executive Twin Report (Print / PDF)</span>
+          </button>
+        </div>
       </div>
     </div>
 

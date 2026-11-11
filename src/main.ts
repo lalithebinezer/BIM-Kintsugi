@@ -110,6 +110,7 @@ import { CinematicTourManager } from "./modules/CinematicTourManager";
 import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 import { DelayImpactEngine } from "./modules/DelayImpactEngine";
+import { EvmDashboardModule } from "./modules/EvmDashboardModule";
 
 BUI.Manager.init();
 
@@ -332,9 +333,16 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).AppearanceProfileEngine = AppearanceProfileEngine;
 (window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
 (window as any).DelayImpactEngine = DelayImpactEngine;
+(window as any).EvmDashboardModule = EvmDashboardModule;
 
 // Setup Command Palette (Ctrl + K)
 const commandPalette = new CommandPalette([
+  { label: "Earned Value Management (EVM) Control Suite", action: () => {
+      if (typeof (window as any).toggleUnifiedEvmSuite === "function") {
+        (window as any).toggleUnifiedEvmSuite();
+      }
+    }
+  },
   { label: "Top 2D Orthographic View", action: () => {
       document.getElementById("btn-view-top")?.click();
     }
@@ -7749,6 +7757,45 @@ async function updateTimelineVisualState(force: boolean = false) {
     }
   }
 
+  // Update EVM telemetry on timeline header bar & open EVM suite
+  const tasksList = scheduleManager?.getTasksSorted() ?? [];
+  if (tasksList.length > 0) {
+    const delayEngine = DelayImpactEngine.getInstance();
+    const delayReport = delayEngine.computeProjectDelayReport(tasksList, dateMs);
+    const costBadge = document.getElementById("gantt-evm-cost");
+    if (costBadge) {
+      costBadge.innerText = `$${Math.round(delayReport.earnedValue).toLocaleString("en-US")} / $${Math.round(delayReport.totalPlannedCost).toLocaleString("en-US")}`;
+      costBadge.title =
+        `EVM Performance & Delay Exposure:\n` +
+        `Planned Value (PV): $${Math.round(delayReport.plannedValue).toLocaleString("en-US")}\n` +
+        `Earned Value (EV): $${Math.round(delayReport.earnedValue).toLocaleString("en-US")}\n` +
+        `Actual Cost (AC): $${Math.round(delayReport.totalActualCost).toLocaleString("en-US")}\n` +
+        `Schedule Variance (SV): ${delayReport.scheduleVariance >= 0 ? "+" : "−"}$${Math.round(Math.abs(delayReport.scheduleVariance)).toLocaleString("en-US")}\n` +
+        `SPI: ${delayReport.spi.toFixed(2)} | CPI: ${delayReport.cpi.toFixed(2)}\n` +
+        `Project Slippage: ${delayReport.projectSlippageDays > 0 ? "+" : ""}${delayReport.projectSlippageDays} Days\n` +
+        `Click to open Earned Value Management (EVM) Suite`;
+    }
+    const progBadge = document.getElementById("gantt-progress-val");
+    if (progBadge) {
+      const delayedTotal = delayReport.delayedCount + delayReport.criticalDelayCount;
+      progBadge.innerText = delayedTotal > 0
+        ? `${delayedTotal} Delayed (${delayReport.criticalDelayCount} Crit)`
+        : `All Tasks On Track`;
+      progBadge.style.color = delayedTotal > 0 ? "#F59E0B" : "#10B981";
+    }
+    const spiBadge = document.getElementById("gantt-spi-val");
+    if (spiBadge) {
+      spiBadge.innerText = `SPI ${delayReport.spi.toFixed(2)}`;
+      spiBadge.classList.toggle("behind", delayReport.spi < 0.95);
+      spiBadge.classList.toggle("ahead", delayReport.spi > 1.05);
+    }
+  }
+
+  const evmPanel = document.getElementById("evm-panel");
+  if (evmPanel && !evmPanel.classList.contains("hidden")) {
+    EvmDashboardModule.getInstance().render(dateMs);
+  }
+
   // Sync selected element inputs dynamically if properties panel is open for it
   if (activeModelId && activeExpressId !== null) {
     const selectedModel = fragments.list.get(activeModelId) as any;
@@ -7932,6 +7979,12 @@ function updateScheduleWidgetUI() {
     });
 
     container.appendChild(item);
+  }
+
+  const evmPanel = document.getElementById("evm-panel");
+  if (evmPanel && !evmPanel.classList.contains("hidden")) {
+    const simMs = currentTimelineDate ? currentTimelineDate.getTime() : undefined;
+    EvmDashboardModule.getInstance().render(simMs);
   }
 }
 

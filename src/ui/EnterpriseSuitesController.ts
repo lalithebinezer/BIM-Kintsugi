@@ -15,6 +15,7 @@ import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
 import { GisModule } from "../modules/GisModule";
+import { EvmDashboardModule } from "../modules/EvmDashboardModule";
 import { showToast } from "./ToastManager";
 import { escapeHtml } from "../utils/formatters";
 
@@ -394,6 +395,67 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("btn-dock-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-header-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-timeline-cost-control")?.addEventListener("click", toggleUnifiedCostControl);
+
+  // Earned Value Management (EVM) Unified Suite Trigger & Handlers
+  const evmModule = EvmDashboardModule.getInstance();
+  const toggleUnifiedEvmSuite = () => {
+    SoundManager.getInstance().playClick();
+    toggleEnterpriseDrawer("evm-panel");
+    const panel = document.getElementById("evm-panel");
+    if (panel && !panel.classList.contains("hidden")) {
+      const currentSimDateMs = (window as any).currentTimelineDate?.getTime();
+      evmModule.render(currentSimDateMs);
+      showToast("Earned Value Management (EVM): Analytics & S-Curve Active", "info");
+    }
+  };
+  (window as any).toggleUnifiedEvmSuite = toggleUnifiedEvmSuite;
+
+  document.getElementById("btn-dock-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
+  document.getElementById("btn-timeline-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
+  document.getElementById("btn-timeline-open-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
+  document.getElementById("gantt-spi-val")?.addEventListener("click", toggleUnifiedEvmSuite);
+  document.getElementById("drawer-btn-open-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
+  document.getElementById("btn-open-evm-from-sidebar")?.addEventListener("click", toggleUnifiedEvmSuite);
+
+  // EVM Drawer Actions & Simulator
+  document.getElementById("btn-export-evm-csv")?.addEventListener("click", () => {
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.exportEvmAuditCsv(simMs);
+  });
+
+  document.getElementById("btn-evm-open-5d-cost")?.addEventListener("click", () => {
+    if (typeof (window as any).toggleUnifiedCostControl === "function") {
+      (window as any).toggleUnifiedCostControl();
+    }
+  });
+
+  document.getElementById("btn-evm-exec-report")?.addEventListener("click", () => {
+    if (typeof (window as any).triggerExecutiveReport === "function") {
+      (window as any).triggerExecutiveReport();
+    } else {
+      document.getElementById("drawer-btn-exec-report")?.click();
+    }
+  });
+
+  const simSlider = document.getElementById("input-evm-delay-sim") as HTMLInputElement | null;
+  const simDisplay = document.getElementById("evm-sim-delay-display");
+  const simResetBtn = document.getElementById("btn-evm-reset-sim");
+
+  simSlider?.addEventListener("input", () => {
+    const days = Number(simSlider.value);
+    evmModule.setSimulatedDelayDays(days);
+    if (simDisplay) simDisplay.textContent = `+${days} days`;
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.render(simMs);
+  });
+
+  simResetBtn?.addEventListener("click", () => {
+    if (simSlider) simSlider.value = "0";
+    evmModule.setSimulatedDelayDays(0);
+    if (simDisplay) simDisplay.textContent = "+0 days";
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.render(simMs);
+  });
 
   // GeoBIM GIS & Site Georeference Suite Trigger
   const refreshGisUI = () => {
