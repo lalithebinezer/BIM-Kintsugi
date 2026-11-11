@@ -423,6 +423,66 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     evmModule.exportEvmAuditCsv(simMs);
   });
 
+  document.getElementById("btn-export-cpr1-csv")?.addEventListener("click", () => {
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.exportCprFormat1Csv(simMs);
+  });
+
+  const openCpr5Action = () => {
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.openCprFormat5Modal(simMs);
+  };
+  document.getElementById("btn-open-cpr5-modal")?.addEventListener("click", openCpr5Action);
+  document.getElementById("btn-evm-quick-var-modal")?.addEventListener("click", openCpr5Action);
+
+  // EAC Model Selection Handler
+  const selectEac = document.getElementById("select-evm-eac-model") as HTMLSelectElement | null;
+  selectEac?.addEventListener("change", () => {
+    const model = selectEac.value as any;
+    evmModule.setActiveEacModel(model);
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.render(simMs);
+    showToast(`EAC Forecasting Model: ${selectEac.options[selectEac.selectedIndex].text}`, "info");
+  });
+
+  // Chart View Mode Toggle (S-Curve vs APM Bulls-Eye)
+  const btnScurve = document.getElementById("btn-evm-view-scurve");
+  const btnBullseye = document.getElementById("btn-evm-view-bullseye");
+
+  const updateEvmChartToggleUi = (mode: "scurve" | "bullseye") => {
+    if (btnScurve && btnBullseye) {
+      if (mode === "scurve") {
+        btnScurve.style.background = "#2563eb";
+        btnScurve.style.color = "#ffffff";
+        btnBullseye.style.background = "transparent";
+        btnBullseye.style.color = "var(--text-muted)";
+      } else {
+        btnBullseye.style.background = "#2563eb";
+        btnBullseye.style.color = "#ffffff";
+        btnScurve.style.background = "transparent";
+        btnScurve.style.color = "var(--text-muted)";
+      }
+    }
+    const titleEl = document.getElementById("evm-chart-section-title");
+    if (titleEl) {
+      titleEl.textContent = mode === "scurve" ? "PMBOK S-Curve Cumulative Trajectory" : "APM Bulls-Eye Performance Matrix";
+    }
+  };
+
+  btnScurve?.addEventListener("click", () => {
+    evmModule.setChartViewMode("scurve");
+    updateEvmChartToggleUi("scurve");
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.render(simMs);
+  });
+
+  btnBullseye?.addEventListener("click", () => {
+    evmModule.setChartViewMode("bullseye");
+    updateEvmChartToggleUi("bullseye");
+    const simMs = (window as any).currentTimelineDate?.getTime();
+    evmModule.render(simMs);
+  });
+
   document.getElementById("btn-evm-open-5d-cost")?.addEventListener("click", () => {
     if (typeof (window as any).toggleUnifiedCostControl === "function") {
       (window as any).toggleUnifiedCostControl();
