@@ -111,6 +111,7 @@ import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 import { DelayImpactEngine } from "./modules/DelayImpactEngine";
 import { EvmDashboardModule } from "./modules/EvmDashboardModule";
+import { AccessControlManager, Permission, type UserRole } from "./modules/AccessControlManager";
 
 BUI.Manager.init();
 
@@ -334,6 +335,23 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
 (window as any).DelayImpactEngine = DelayImpactEngine;
 (window as any).EvmDashboardModule = EvmDashboardModule;
+(window as any).AccessControlManager = AccessControlManager;
+(window as any).Permission = Permission;
+
+// Wire Header Tenant & RBAC Role Switcher
+document.getElementById("header-tenant-rbac")?.addEventListener("click", () => {
+  const acm = AccessControlManager.getInstance();
+  const current = acm.getCurrentUser();
+  const roles: UserRole[] = ["BIMManager", "LeadCoordinator", "CostEstimator", "Subcontractor", "Viewer", "SuperAdmin"];
+  const nextRole = roles[(roles.indexOf(current.role) + 1) % roles.length];
+  acm.setRole(nextRole);
+  const roleBadge = document.getElementById("header-user-role");
+  if (roleBadge) {
+    roleBadge.textContent = nextRole;
+    roleBadge.style.color = nextRole === "SuperAdmin" ? "#a855f7" : (nextRole === "Viewer" ? "#94a3b8" : "#38bdf8");
+  }
+  showToast(`Access Control: Role switched to '${nextRole}' (${acm.getActiveTenant().name})`, "info");
+});
 
 // Setup Command Palette (Ctrl + K)
 const commandPalette = new CommandPalette([
@@ -341,6 +359,25 @@ const commandPalette = new CommandPalette([
       if (typeof (window as any).toggleUnifiedEvmSuite === "function") {
         (window as any).toggleUnifiedEvmSuite();
       }
+    }
+  },
+  { label: "Switch Active Tenant / Access Role (RBAC)", action: () => {
+      document.getElementById("header-tenant-rbac")?.click();
+    }
+  },
+  { label: "Export Security Compliance Audit Trail (CSV)", action: () => {
+      const acm = AccessControlManager.getInstance();
+      const csv = acm.exportAuditLedgerCsv();
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Security_Audit_Ledger_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("✓ Exported ISO 19650 / SOC2 Security Audit Trail", "success");
     }
   },
   { label: "Top 2D Orthographic View", action: () => {
