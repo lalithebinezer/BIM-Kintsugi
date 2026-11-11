@@ -949,8 +949,8 @@ export class EvmDashboardModule {
         </svg>
 
         <!-- Quadrant Description Footer -->
-        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: rgba(255,255,255,0.03); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${metrics.apmBullsEye.ringColor};">
-          <strong style="color: #ffffff;">${metrics.apmBullsEye.quadrantTitle}</strong>: ${metrics.apmBullsEye.quadrantDescription} (Offset distance: ${metrics.apmBullsEye.distanceFromTarget}).
+        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: var(--bg-hover, rgba(255,255,255,0.03)); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${metrics.apmBullsEye.ringColor};">
+          <strong style="color: var(--text-primary);">${metrics.apmBullsEye.quadrantTitle}</strong>: ${metrics.apmBullsEye.quadrantDescription} (Offset distance: ${metrics.apmBullsEye.distanceFromTarget}).
         </div>
       </div>
     `;

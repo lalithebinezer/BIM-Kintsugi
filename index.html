@@ -3131,11 +3131,11 @@
           <h3>BCF Issue Coordination</h3>
         </div>
         <div class="drawer-header-actions">
-          <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+          <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import
             <input type="file" id="btn-import-bcf-input" aria-label="Import BCF Package File" accept=".bcfzip,.bcf,.json" style="display: none;" />
           </label>
-          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: #FFFFFF; font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
+          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
           <button class="btn-icon drawer-center-toggle-btn" data-target="bcf-issues-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="bcf-issues-panel" aria-label="Close BCF Issues Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
@@ -3143,9 +3143,9 @@
       <div class="drawer-body thin-scrollbar">
         <div class="drawer-section-card">
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <input type="text" id="bcf-new-title" placeholder="Issue Title (e.g. Duct clash with W12 beam)" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.72rem;" />
+            <input type="text" id="bcf-new-title" placeholder="Issue Title (e.g. Duct clash with W12 beam)" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.72rem;" />
             <div style="display: flex; gap: 0.4rem;">
-              <select id="bcf-new-priority" aria-label="BCF Issue Priority" style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
+              <select id="bcf-new-priority" aria-label="BCF Issue Priority" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">
                 <option value="Critical">Critical Priority</option>
                 <option value="Major">Major Priority</option>
                 <option value="Normal" selected>Normal Priority</option>
@@ -3304,15 +3304,15 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.45rem;">
             <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
               <div style="font-size: 0.55rem; color: #38bdf8; font-weight: 700; text-transform: uppercase;">Planned Value (PV)</div>
-              <div id="evm-val-pv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+              <div id="evm-val-pv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
               <div style="font-size: 0.55rem; color: #10b981; font-weight: 700; text-transform: uppercase;">Earned Value (EV)</div>
-              <div id="evm-val-ev" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+              <div id="evm-val-ev" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
               <div style="font-size: 0.55rem; color: #f59e0b; font-weight: 700; text-transform: uppercase;">Actual Cost (AC)</div>
-              <div id="evm-val-ac" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+              <div id="evm-val-ac" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
               <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Schedule Var (SV)</div>
@@ -3350,7 +3350,7 @@
         <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.45rem; margin-top: 0.35rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
             <span style="font-size: 0.58rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">EAC Forecasting Formula</span>
-            <select id="select-evm-eac-model" aria-label="EAC Forecasting Model" title="EAC Forecasting Model" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #ffffff; font-size: 0.58rem; padding: 0.15rem 0.35rem; border-radius: 4px; outline: none; cursor: pointer;">
+            <select id="select-evm-eac-model" aria-label="EAC Forecasting Model" title="EAC Forecasting Model" style="background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-primary); font-size: 0.58rem; padding: 0.15rem 0.35rem; border-radius: 4px; outline: none; cursor: pointer;">
               <option value="composite">Composite (CPI × SPI)</option>
               <option value="typical">Typical (BAC / CPI)</option>
               <option value="atypical">Atypical (AC + BAC - EV)</option>
@@ -3360,7 +3360,7 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
             <div>
               <div style="font-size: 0.52rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Estimate At Completion (EAC)</div>
-              <div id="evm-val-eac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: #ffffff;">$0.00</div>
+              <div id="evm-val-eac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
             <div>
               <div style="font-size: 0.52rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Variance At Completion (VAC)</div>
@@ -3389,7 +3389,7 @@
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
             <div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700;">EAC(t) Days</div>
-            <div id="evm-val-es-eact" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: #ffffff;">0d</div>
+            <div id="evm-val-es-eact" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: var(--text-primary);">0d</div>
             <div style="font-size: 0.48rem; color: var(--text-muted);">PD / SPI(t)</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
@@ -3424,11 +3424,11 @@
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Prolongation Overhead</div>
-            <div id="evm-val-prolongation" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+            <div id="evm-val-prolongation" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Penalties (Liquidated)</div>
-            <div id="evm-val-penalties" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ffffff;">$0.00</div>
+            <div id="evm-val-penalties" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
             <div style="font-size: 0.55rem; color: #ef4444; font-weight: 700;">Total Delay Exposure</div>
@@ -3440,7 +3440,7 @@
         <div style="margin-top: 0.5rem; background: rgba(234, 179, 8, 0.05); border: 1px dashed rgba(234, 179, 8, 0.3); border-radius: 6px; padding: 0.45rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.62rem; font-weight: 700; color: #eab308; margin-bottom: 0.25rem;">
             <span>What-If Delay Sensitivity Simulator</span>
-            <span id="evm-sim-delay-display" style="font-family: var(--font-mono); font-size: 0.62rem; color: #ffffff;">+0 days</span>
+            <span id="evm-sim-delay-display" style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-primary);">+0 days</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <input type="range" id="input-evm-delay-sim" aria-label="Simulate Schedule Delay Days" title="Simulate Schedule Delay Days" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: #eab308; cursor: pointer;" />
