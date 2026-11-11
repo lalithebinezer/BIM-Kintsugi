@@ -982,8 +982,8 @@ END-ISO-10303-21;
         </svg>
 
         <!-- Quadrant Description Footer -->
-        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: rgba(255,255,255,0.03); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${t.apmBullsEye.ringColor};">
-          <strong style="color: #ffffff;">${t.apmBullsEye.quadrantTitle}</strong>: ${t.apmBullsEye.quadrantDescription} (Offset distance: ${t.apmBullsEye.distanceFromTarget}).
+        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: var(--bg-hover, rgba(255,255,255,0.03)); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${t.apmBullsEye.ringColor};">
+          <strong style="color: var(--text-primary);">${t.apmBullsEye.quadrantTitle}</strong>: ${t.apmBullsEye.quadrantDescription} (Offset distance: ${t.apmBullsEye.distanceFromTarget}).
         </div>
       </div>
     `}renderDelayedTasksTable(e,t){let n=document.getElementById(e);if(n){if(t.length===0){n.innerHTML=`
