@@ -136,6 +136,34 @@ export class EvmDashboardModule {
   }
 
   /**
+   * Get schedule tasks with simulated What-If schedule delay applied where applicable.
+   */
+  public getEffectiveTasks(tasks?: ScheduleTask[]): ScheduleTask[] {
+    const baseTasks = tasks ?? ScheduleManager.getInstance().getTasksSorted();
+    if (this.simulatedDelayDays <= 0) {
+      return baseTasks;
+    }
+
+    const hasExplicitCritical = baseTasks.some(
+      t => t.isCritical === true || (t.totalFloat !== undefined && t.totalFloat <= 0)
+    );
+
+    return baseTasks.map(t => {
+      const isCrit = t.isCritical === true || (t.totalFloat !== undefined && t.totalFloat <= 0);
+      // If critical path is identified, simulate delay on critical activities;
+      // otherwise, apply to active/planned activities (excluding finished ones).
+      if (t.status !== "Completed" && (hasExplicitCritical ? isCrit : true)) {
+        return {
+          ...t,
+          delayDays: (t.delayDays || 0) + this.simulatedDelayDays,
+          isCritical: t.isCritical ?? true,
+        };
+      }
+      return t;
+    });
+  }
+
+  /**
    * Set active EAC Forecasting Formula (Typical, Atypical, Composite, Weighted).
    */
   public setActiveEacModel(model: EacModelType): void {
@@ -217,17 +245,24 @@ export class EvmDashboardModule {
     }
 
     // Schedule Variance (Time): SV(t) = ES - AT
-    const scheduleVarianceTimeDays = Math.round((earnedScheduleDays - actualTimeDays) * 10) / 10;
+    let scheduleVarianceTimeDays = Math.round((earnedScheduleDays - actualTimeDays) * 10) / 10;
+    if (this.simulatedDelayDays > 0) {
+      scheduleVarianceTimeDays = Math.round((scheduleVarianceTimeDays - this.simulatedDelayDays) * 10) / 10;
+    }
 
     // Schedule Performance Index (Time): SPI(t) = ES / AT
     let schedulePerformanceIndexTime = 1.0;
     if (actualTimeDays > 0) {
-      schedulePerformanceIndexTime = Math.round((earnedScheduleDays / actualTimeDays) * 100) / 100;
+      const effectiveEs = Math.max(0, earnedScheduleDays - this.simulatedDelayDays);
+      schedulePerformanceIndexTime = Math.round((effectiveEs / actualTimeDays) * 100) / 100;
     }
 
     // Estimated Duration at Completion: EAC(t) = PD / SPI(t)
     const effectiveSpiT = Math.max(0.1, schedulePerformanceIndexTime);
-    const estimatedDurationAtCompletionDays = Math.round(plannedDurationDays / effectiveSpiT);
+    let estimatedDurationAtCompletionDays = Math.round(plannedDurationDays / effectiveSpiT);
+    if (this.simulatedDelayDays > 0) {
+      estimatedDurationAtCompletionDays += this.simulatedDelayDays;
+    }
 
     // Time Variance at Completion: VAC(t) = PD - EAC(t)
     const timeVarianceAtCompletionDays = plannedDurationDays - estimatedDurationAtCompletionDays;
@@ -487,18 +522,7 @@ export class EvmDashboardModule {
     }
 
     // Apply simulated delay if active
-    let effectiveTasks = tasks;
-    if (this.simulatedDelayDays > 0) {
-      effectiveTasks = tasks.map(t => {
-        if (t.isCritical || (t.totalFloat !== undefined && t.totalFloat <= 0)) {
-          return {
-            ...t,
-            delayDays: (t.delayDays || 0) + this.simulatedDelayDays
-          };
-        }
-        return t;
-      });
-    }
+    const effectiveTasks = this.getEffectiveTasks(tasks);
 
     const report: DelayImpactReport = this.delayEngine.computeProjectDelayReport(effectiveTasks, simMs);
 
@@ -576,14 +600,14 @@ export class EvmDashboardModule {
   /**
    * Generate time-series milestones for the multi-line S-Curve across project duration.
    */
-  public generateSCurveSeries(steps: number = 28, currentSimDateMs?: number): {
+  public generateSCurveSeries(steps: number = 28, currentSimDateMs?: number, customTasks?: ScheduleTask[]): {
     points: SCurvePoint[];
     maxCost: number;
     minDateMs: number;
     maxDateMs: number;
   } {
     const sm = ScheduleManager.getInstance();
-    const tasks = sm.getTasksSorted();
+    const tasks = customTasks ?? sm.getTasksSorted();
     const range = sm.getProjectDateRange();
 
     if (!range || tasks.length === 0) {
@@ -595,12 +619,14 @@ export class EvmDashboardModule {
     const durationMs = Math.max(1, maxDateMs - minDateMs);
     const stepMs = durationMs / Math.max(1, steps - 1);
 
+    const effectiveTasks = customTasks ? customTasks : this.getEffectiveTasks(tasks);
+
     const points: SCurvePoint[] = [];
     let maxCost = 0;
 
     for (let i = 0; i < steps; i++) {
       const pointMs = minDateMs + i * stepMs;
-      const report = this.delayEngine.computeProjectDelayReport(tasks, pointMs);
+      const report = this.delayEngine.computeProjectDelayReport(effectiveTasks, pointMs);
       const pv = report.plannedValue;
       const ev = pointMs <= (currentSimDateMs ?? maxDateMs) ? report.earnedValue : 0;
       const ac = pointMs <= (currentSimDateMs ?? maxDateMs) ? report.totalActualCost : 0;

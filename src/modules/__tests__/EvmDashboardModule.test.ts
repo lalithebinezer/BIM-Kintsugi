@@ -125,6 +125,72 @@ describe("EvmDashboardModule Unit Tests", () => {
     expect(evmModule.getSimulatedDelayDays()).toBe(0);
   });
 
+  it("should support What-If delay simulator on imported schedules lacking explicit CPM flags", () => {
+    // Mimic real imported schedule tasks (like CapeStone CSV) where isCritical & totalFloat are undefined
+    const taskA: ScheduleTask = {
+      id: "T-IMP-1",
+      name: "Substructure Columns",
+      startDate: "2026-06-01",
+      endDate: "2026-06-20",
+      status: "In Progress",
+      actualStartDate: "2026-06-01",
+      unitCost: 15000,
+      totalCost: 15000,
+      quantity: 1,
+      modelId: "m1",
+      category: "IFCCOLUMN",
+      elementIds: new Set([101]),
+    };
+    const taskB: ScheduleTask = {
+      id: "T-IMP-2",
+      name: "Superstructure Framing",
+      startDate: "2026-06-21",
+      endDate: "2026-07-15",
+      status: "Planned",
+      unitCost: 45000,
+      totalCost: 45000,
+      quantity: 1,
+      modelId: "m1",
+      category: "IFCBEAM",
+      elementIds: new Set([102]),
+    };
+
+    scheduleManager.tasks.set(taskA.id, taskA);
+    scheduleManager.tasks.set(taskB.id, taskB);
+
+    const simDate = new Date("2026-06-10").getTime();
+    const baseMetrics = evmModule.computeEvmMetrics(simDate);
+    expect(baseMetrics.projectSlippageDays).toBe(0);
+    expect(baseMetrics.prolongationCost).toBe(0);
+    expect(baseMetrics.penaltyCost).toBe(0);
+
+    // Apply +20 days simulated delay
+    evmModule.setSimulatedDelayDays(20);
+    const delayedMetrics = evmModule.computeEvmMetrics(simDate);
+
+    // Slippage should be at least 20 days
+    expect(delayedMetrics.projectSlippageDays).toBeGreaterThanOrEqual(20);
+    // Prolongation overhead and delay damages must be computed
+    expect(delayedMetrics.prolongationCost).toBeGreaterThan(0);
+    expect(delayedMetrics.penaltyCost).toBeGreaterThan(0);
+    expect(delayedMetrics.totalCostImpact).toBeGreaterThan(0);
+    expect(delayedMetrics.criticalTasksDelayed.length).toBeGreaterThan(0);
+
+    // Earned Schedule metrics must reflect the simulated delay
+    expect(delayedMetrics.earnedSchedule.scheduleVarianceTimeDays).toBeLessThan(baseMetrics.earnedSchedule.scheduleVarianceTimeDays);
+    expect(delayedMetrics.earnedSchedule.estimatedDurationAtCompletionDays).toBeGreaterThan(baseMetrics.earnedSchedule.estimatedDurationAtCompletionDays);
+
+    // S-Curve series should run with the effective delayed tasks
+    const scurve = evmModule.generateSCurveSeries(10, simDate);
+    expect(scurve.points).toHaveLength(10);
+
+    // Reset back to 0
+    evmModule.setSimulatedDelayDays(0);
+    const resetMetrics = evmModule.computeEvmMetrics(simDate);
+    expect(resetMetrics.projectSlippageDays).toBe(0);
+    expect(resetMetrics.prolongationCost).toBe(0);
+  });
+
   it("should generate multi-line S-Curve data points across project lifecycle", () => {
     const task1: ScheduleTask = {
       id: "T1",

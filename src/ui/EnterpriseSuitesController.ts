@@ -501,13 +501,16 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const simDisplay = document.getElementById("evm-sim-delay-display");
   const simResetBtn = document.getElementById("btn-evm-reset-sim");
 
-  simSlider?.addEventListener("input", () => {
-    const days = Number(simSlider.value);
+  const onSimDelayChange = () => {
+    const days = Math.max(0, Number(simSlider?.value || 0));
     evmModule.setSimulatedDelayDays(days);
     if (simDisplay) simDisplay.textContent = `+${days} days`;
     const simMs = (window as any).currentTimelineDate?.getTime();
     evmModule.render(simMs);
-  });
+  };
+
+  simSlider?.addEventListener("input", onSimDelayChange);
+  simSlider?.addEventListener("change", onSimDelayChange);
 
   simResetBtn?.addEventListener("click", () => {
     if (simSlider) simSlider.value = "0";

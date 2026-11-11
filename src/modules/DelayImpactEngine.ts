@@ -159,8 +159,11 @@ export class DelayImpactEngine {
       } else {
         delayDays = Math.max(0, startSlipped);
       }
-    } else if (task.delayDays !== undefined && task.delayDays !== 0) {
-      delayDays = task.delayDays;
+    }
+
+    // Incorporate any explicit or What-If simulated task delayDays offset
+    if (task.delayDays !== undefined && task.delayDays !== 0) {
+      delayDays += task.delayDays;
     }
 
     // Categorize status
@@ -279,7 +282,7 @@ export class DelayImpactEngine {
         earnedValue += impact.plannedCost;
       } else if (task.status === "In Progress") {
         const actualStart = this.parseDateMs(task.actualStartDate) ?? plannedStart;
-        const actualEnd = this.parseDateMs(task.actualEndDate) ?? plannedEnd;
+        const actualEnd = this.parseDateMs(task.actualEndDate) ?? (plannedEnd + (impact.delayDays > 0 ? impact.delayDays * DAY_MS : 0));
         const actualSpan = Math.max(1, actualEnd - actualStart);
         const earnedPct = Math.min(0.95, Math.max(0.05, (simMs - actualStart) / actualSpan));
         earnedValue += impact.plannedCost * earnedPct;
