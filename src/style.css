@@ -2448,11 +2448,11 @@ input[type="color"]::-moz-color-swatch {
   margin-top: 1px;
 }
 
-/* Floating Camera Speed Toast — Bottom-Left (50% Opacity) */
+/* Floating Camera Speed Toast — Top-Left Below Ribbon (50% Opacity) */
 .camera-speed-toast {
   position: fixed;
-  bottom: calc(var(--dock-h, 54px) + 0.85rem);
-  top: auto;
+  top: calc(var(--header-bottom, 4.35rem) + 4.25rem);
+  bottom: auto;
   left: var(--left-safe-offset, 0.85rem);
   transform: none;
   background: rgba(15, 23, 42, 0.92);
@@ -2472,7 +2472,7 @@ input[type="color"]::-moz-color-swatch {
   z-index: 100020;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), left var(--ease-normal), bottom var(--ease-normal);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), left var(--ease-normal), top var(--ease-normal);
 }
 
 body.left-sidebar-collapsed .camera-speed-toast {
@@ -2480,7 +2480,8 @@ body.left-sidebar-collapsed .camera-speed-toast {
 }
 
 body.mode-4d .camera-speed-toast {
-  bottom: calc(var(--timeline-deck-h, 92px) + 0.85rem);
+  top: calc(var(--header-bottom, 4.35rem) + 4.25rem);
+  bottom: auto;
 }
 
 .camera-speed-toast.visible {
@@ -5992,8 +5993,8 @@ body[data-theme="light"] {
 
   #bim-toast-container,
   .bim-toast-container {
-    bottom: 3.25rem !important;
-    top: auto !important;
+    top: calc(var(--header-bottom) + 3.8rem) !important;
+    bottom: auto !important;
     left: 0.5rem !important;
     transform: none !important;
   }
@@ -7001,24 +7002,24 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   color: #ffffff;
 }
 
-/* Toast Notifications — Floating Dynamic Island Pill (Zero Dock / UI Collision) */
+/* Toast Notifications — Floating Dynamic Island Pill (Top-Left Below Ribbon, 50% Opacity) */
 #bim-toast-container,
 .bim-toast-container {
   position: fixed !important;
-  bottom: calc(var(--dock-h, 54px) + 0.85rem) !important;
-  top: auto !important;
+  top: calc(var(--header-bottom, 4.35rem) + 4.25rem) !important;
+  bottom: auto !important;
   left: var(--left-safe-offset, 0.85rem) !important;
   right: auto !important;
   transform: none !important;
   z-index: 100010 !important;
   display: flex !important;
-  flex-direction: column-reverse !important;
+  flex-direction: column !important;
   align-items: flex-start !important;
   gap: 0.35rem !important;
   pointer-events: none !important;
   width: auto !important;
   max-width: min(90vw, 380px) !important;
-  transition: left var(--ease-normal), bottom var(--ease-normal);
+  transition: left var(--ease-normal), top var(--ease-normal);
 }
 
 body.left-sidebar-collapsed #bim-toast-container,
@@ -7028,7 +7029,8 @@ body.left-sidebar-collapsed .bim-toast-container {
 
 body.mode-4d #bim-toast-container,
 body.mode-4d .bim-toast-container {
-  bottom: calc(var(--timeline-deck-h, 92px) + 0.85rem) !important;
+  top: calc(var(--header-bottom, 4.35rem) + 4.25rem) !important;
+  bottom: auto !important;
 }
 
 .bim-toast-item,
