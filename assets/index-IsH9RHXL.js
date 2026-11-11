@@ -1592,7 +1592,7 @@ ${t}
             </button>
           </div>
         </div>
-      `;return}let r=0,i=0;e.forEach(e=>{r+=e.cost,i+=e.count});let a=r>0,o=a?r:i,s=[];e.forEach((e,t)=>{let n=a?e.cost:e.count,r=o>0?n/o*100:0;s.push({category:t.replace(/^IFC/,``),totalCost:e.cost,itemCount:e.count,percentage:r})}),s.sort((e,t)=>t.percentage-e.percentage);let c=[`#D4FF3F`,`#3b82f6`,`#10b981`,`#f59e0b`,`#a855f7`,`#06b6d4`,`#ef4444`];n.innerHTML=`
+      `;return}let r=0,i=0;e.forEach(e=>{r+=e.cost,i+=e.count});let a=r>0,o=a?r:i,s=[];e.forEach((e,t)=>{let n=a?e.cost:e.count,r=o>0?n/o*100:0;s.push({category:t.replace(/^IFC/,``),totalCost:e.cost,itemCount:e.count,percentage:r})}),s.sort((e,t)=>t.percentage-e.percentage);let c=[`var(--accent-500)`,`var(--color-info)`,`var(--color-success)`,`var(--color-warning)`,`var(--color-purple)`,`var(--color-cyan)`,`var(--color-danger)`];n.innerHTML=`
       <div style="display: flex; flex-direction: column; gap: 0.45rem; width: 100%;">
         ${s.map((e,t)=>{let n=c[t%c.length],r=a?`${lt(e.totalCost)} (${e.percentage.toFixed(1)}%)`:`${e.itemCount} items (${e.percentage.toFixed(1)}%)`;return`
             <div style="display: flex; flex-direction: column; gap: 0.15rem; background: var(--bg-card); padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-subtle);">
