@@ -215,7 +215,7 @@ export function initGeoEngineeringController(world: any, fragmentsCore?: any) {
       return;
     }
     if (r) {
-      r.innerHTML += `<br/>Pad ${pad.toFixed(2)} m · Cut <b style="color:#ef4444">${res.cut.toFixed(0)} m³</b> · Fill <b style="color:#10b981">${res.fill.toFixed(0)} m³</b> · Net ${res.net >= 0 ? "+" : ""}${res.net.toFixed(0)} m³ (${res.cells} cells)`;
+      r.innerHTML += `<br/>Pad ${pad.toFixed(2)} m · Cut <b style="color:var(--color-danger)">${res.cut.toFixed(0)} m³</b> · Fill <b style="color:var(--color-success)">${res.fill.toFixed(0)} m³</b> · Net ${res.net >= 0 ? "+" : ""}${res.net.toFixed(0)} m³ (${res.cells} cells)`;
     }
     click();
   });
@@ -284,7 +284,7 @@ export function initGeoEngineeringController(world: any, fragmentsCore?: any) {
     suite.showDiscrepancies(list);
     const s = summarizeDiscrepancies(list);
     const sum = $("geo-disc-summary");
-    if (sum) sum.innerHTML = `<span style="color:#10b981">${s.pass} pass</span> · <span style="color:#f59e0b">${s.warn} warn</span> · <span style="color:#ef4444">${s.fail} fail</span><br/>RMS ${s.rmsMm.toFixed(1)} mm · Max ${s.maxMm.toFixed(1)} mm`;
+    if (sum) sum.innerHTML = `<span style="color:var(--color-success)">${s.pass} pass</span> · <span style="color:var(--color-warning)">${s.warn} warn</span> · <span style="color:var(--color-danger)">${s.fail} fail</span><br/>RMS ${s.rmsMm.toFixed(1)} mm · Max ${s.maxMm.toFixed(1)} mm`;
     const badge = $("geo-disc-badge");
     if (badge) badge.textContent = `${s.count} pts`;
     const listEl = $("geo-disc-list");

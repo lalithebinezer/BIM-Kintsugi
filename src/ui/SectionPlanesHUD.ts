@@ -64,19 +64,19 @@ export class SectionPlanesHUD {
             </button>
             <div class="section-hud-add-menu hidden" id="section-hud-add-menu">
               <button type="button" class="section-hud-menu-item" data-axis="Y">
-                <span class="menu-axis-dot" style="background: #10b981;"></span>
+                <span class="menu-axis-dot" style="background: var(--color-success);"></span>
                 <span>Floor Plan (+Y)</span>
               </button>
               <button type="button" class="section-hud-menu-item" data-axis="NEG_Y">
-                <span class="menu-axis-dot" style="background: #10b981;"></span>
+                <span class="menu-axis-dot" style="background: var(--color-success);"></span>
                 <span>Ceiling Cut (-Y)</span>
               </button>
               <button type="button" class="section-hud-menu-item" data-axis="X">
-                <span class="menu-axis-dot" style="background: #ef4444;"></span>
+                <span class="menu-axis-dot" style="background: var(--color-danger);"></span>
                 <span>X Lateral Section</span>
               </button>
               <button type="button" class="section-hud-menu-item" data-axis="Z">
-                <span class="menu-axis-dot" style="background: #3b82f6;"></span>
+                <span class="menu-axis-dot" style="background: var(--color-info);"></span>
                 <span>Z Longitudinal Elevation</span>
               </button>
             </div>
@@ -398,10 +398,10 @@ export class SectionPlanesHUD {
 
     if (colorHex.startsWith("#")) {
       this.container.style.borderColor = `${colorHex}85`;
-      this.container.style.boxShadow = `var(--shadow-panel, 0 20px 40px rgba(0,0,0,0.5)), 0 0 0 1px ${colorHex}55, 0 0 20px ${colorHex}35`;
+      this.container.style.boxShadow = `var(--shadow-panel), 0 0 0 1px ${colorHex}55, 0 0 20px ${colorHex}35`;
     } else {
-      this.container.style.borderColor = "var(--border-color, rgba(255, 255, 255, 0.1))";
-      this.container.style.boxShadow = "var(--shadow-panel, 0 20px 40px rgba(0,0,0,0.5)), 0 0 0 1px var(--border-subtle), 0 0 16px var(--accent-glow2)";
+      this.container.style.borderColor = "var(--border-color)";
+      this.container.style.boxShadow = "var(--shadow-panel), 0 0 0 1px var(--border-subtle), 0 0 16px var(--accent-glow2)";
     }
 
     const dot = this.container.querySelector(".section-hud-dot") as HTMLElement | null;

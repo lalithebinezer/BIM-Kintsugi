@@ -359,12 +359,12 @@ export class ExecutiveReportModule {
             <div class="kpi-card cost">
               <div class="kpi-label">TOTAL BUDGET (BAC)</div>
               <div class="kpi-value">${formatCurrency(data.budgetAtCompletion)}</div>
-              <div class="kpi-foot">Cost Perf. Index (CPI): <strong style="color: #10B981;">${data.cpi.toFixed(2)}</strong> (Healthy)</div>
+              <div class="kpi-foot">Cost Perf. Index (CPI): <strong style="color: var(--color-success);">${data.cpi.toFixed(2)}</strong> (Healthy)</div>
             </div>
             <div class="kpi-card schedule">
               <div class="kpi-label">EARNED VALUE (EV)</div>
               <div class="kpi-value">${formatCurrency(data.earnedValue)}</div>
-              <div class="kpi-foot">Sched. Perf. Index (SPI): <strong style="color: #2563EB;">${data.spi.toFixed(2)}</strong> (On Track)</div>
+              <div class="kpi-foot">Sched. Perf. Index (SPI): <strong style="color: var(--color-info);">${data.spi.toFixed(2)}</strong> (On Track)</div>
             </div>
             <div class="kpi-card quality">
               <div class="kpi-label">3D CLASH RESOLUTION</div>
@@ -425,7 +425,7 @@ export class ExecutiveReportModule {
               <tfoot>
                 <tr>
                   <th colspan="4" style="text-align: right;">Total Cumulative Budget:</th>
-                  <th style="text-align: right; font-family: monospace; font-size: 0.85rem; color: #10B981;">${formatCurrency(data.budgetAtCompletion)}</th>
+                  <th style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--color-success);">${formatCurrency(data.budgetAtCompletion)}</th>
                   <th style="text-align: right;">100.0%</th>
                 </tr>
               </tfoot>

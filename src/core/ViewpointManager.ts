@@ -93,7 +93,7 @@ export class ViewpointManager {
           <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${vp.name}</span>
           <span style="font-size: 0.6rem; color: var(--text-muted); margin-left: auto;">${vp.timestamp}</span>
         </div>
-        <button onclick="window.viewpointManager.deleteViewpoint('${vp.id}')" style="background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.4rem;" title="Delete Bookmark">✕</button>
+        <button onclick="window.viewpointManager.deleteViewpoint('${vp.id}')" style="background: none; border: none; color: var(--color-danger); font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.4rem;" title="Delete Bookmark">✕</button>
       </div>
     `).join("");
 

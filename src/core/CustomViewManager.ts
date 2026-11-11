@@ -352,7 +352,7 @@ export class CustomViewManager {
           <div style="display: flex; flex-direction: column; overflow: hidden;">
             <div style="display: flex; align-items: center; gap: 0.3rem;">
               <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeName}</span>
-              ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
+              ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
             </div>
             ${safeDesc ? `<span style="font-size: 0.58rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeDesc}</span>` : ""}
           </div>
@@ -410,7 +410,7 @@ export class CustomViewManager {
           </button>
         </div>
       </div>
-      <div id="inline-save-view-bar" class="hidden" style="padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.4rem; background: rgba(212, 255, 63, 0.06);">
+      <div id="inline-save-view-bar" class="hidden" style="padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.4rem; background: var(--accent-glow2);">
         <input id="input-save-view-name" type="text" placeholder="Enter custom view name..." value="Custom View #${this.customViews.length + 1}" style="flex: 1; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.7rem; outline: none;" />
         <button id="btn-confirm-save-view" class="btn-save-ribbon" style="padding: 0.3rem 0.6rem;">Save</button>
       </div>
@@ -429,7 +429,7 @@ export class CustomViewManager {
             <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
               <div style="display: flex; align-items: center; gap: 0.35rem;">
                 <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary);">${safeName}</span>
-                ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
+                ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
               </div>
               <span style="font-size: 0.58rem; color: var(--text-muted);">${safeDesc}</span>
             </div>

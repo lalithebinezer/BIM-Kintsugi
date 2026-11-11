@@ -185,7 +185,7 @@ export class GlobalSearchOverlay {
               <span>Isolate All</span>
             </button>
             <button class="btn-search-batch" id="btn-batch-highlight-gold" title="Apply Theme Accent highlight to all matches">
-              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent-500, #D4FF3F);"></span>
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent-500);"></span>
               <span>Highlight</span>
             </button>
             <button class="btn-search-batch" id="btn-batch-export-csv" title="Export matching elements list to CSV spreadsheet">

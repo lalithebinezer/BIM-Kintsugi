@@ -298,21 +298,21 @@ export class AnnotationModule {
     `;
 
     pinEl.innerHTML = `
-      <span style="background: ${catColor}; color: #ffffff; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border-strong, #000); display: inline-flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 900; flex-shrink: 0;">${anno.number}</span>
+      <span style="background: ${catColor}; color: var(--accent-btn-text); width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 900; flex-shrink: 0;">${anno.number}</span>
       <span style="font-weight: 800; color: var(--text-primary); font-size: 0.65rem;">${anno.title}</span>
       ${anno.elementName ? `<span style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 2px; padding: 0.02rem 0.2rem; font-size: 0.55rem; color: var(--accent-500);">${anno.elementName}</span>` : ''}
-      <button class="btn-remove-pin" title="Delete pin" style="background: none; border: none; color: var(--color-danger, #ef4444); font-size: 0.8rem; font-weight: 900; cursor: pointer; padding: 0 0.1rem; margin-left: 0.1rem;">×</button>
+      <button class="btn-remove-pin" title="Delete pin" style="background: none; border: none; color: var(--color-danger); font-size: 0.8rem; font-weight: 900; cursor: pointer; padding: 0 0.1rem; margin-left: 0.1rem;">×</button>
     `;
 
     pinEl.addEventListener("mouseenter", () => {
       pinEl.style.transform = "translate(-50%, -108%) scale(1.04)";
-      pinEl.style.boxShadow = "var(--shadow-md, 3px 3px 0px #000000)";
+      pinEl.style.boxShadow = "var(--shadow-md)";
       this.showHoverPreview(anno, pinEl);
     });
 
     pinEl.addEventListener("mouseleave", () => {
       pinEl.style.transform = "translate(-50%, -100%) scale(1.0)";
-      pinEl.style.boxShadow = "var(--shadow-sm, 2px 2px 0px #000000)";
+      pinEl.style.boxShadow = "var(--shadow-sm)";
       this.hideHoverPreview();
     });
 
@@ -365,14 +365,14 @@ export class AnnotationModule {
       animation: popIn 0.12s ease-out;
     `;
 
-    const catColor = anno.color || "#3b82f6";
+    const catColor = anno.color || "var(--color-info)";
     tooltip.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.64rem; font-weight: 800;">
         <span style="display: flex; align-items: center; gap: 0.3rem;">
-          <span style="background: ${catColor}; color: #fff; width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.52rem;">${anno.number}</span>
+          <span style="background: ${catColor}; color: var(--accent-btn-text); width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.52rem;">${anno.number}</span>
           <span>${anno.title}</span>
         </span>
-        <span style="font-size: 0.52rem; background: ${catColor}; color: #fff; padding: 0.05rem 0.25rem; border-radius: 2px; text-transform: uppercase;">${anno.category}</span>
+        <span style="font-size: 0.52rem; background: ${catColor}; color: var(--accent-btn-text); padding: 0.05rem 0.25rem; border-radius: 2px; text-transform: uppercase;">${anno.category}</span>
       </div>
       ${anno.thumbnail ? `<div style="width: 100%; height: 60px; border-radius: 2px; overflow: hidden; border: 1px solid var(--border-subtle);"><img src="${anno.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" /></div>` : ''}
       <div style="font-size: 0.58rem; color: var(--text-muted); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${anno.comment}</div>
@@ -476,19 +476,19 @@ export class AnnotationModule {
 
     this.tourHudEl.innerHTML = `
       <div style="display: flex; align-items: center; gap: 0.45rem;">
-        <span style="background: var(--accent-500); color: var(--accent-btn-text, #000000); padding: 0.15rem 0.35rem; font-size: 0.6rem; font-weight: 900; border-radius: 2px; letter-spacing: 0.05em;">TOUR</span>
+        <span style="background: var(--accent-500); color: var(--accent-btn-text); padding: 0.15rem 0.35rem; font-size: 0.6rem; font-weight: 900; border-radius: 2px; letter-spacing: 0.05em;">TOUR</span>
         <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary);">Stop ${this.tourIndex + 1} of ${list.length}</span>
       </div>
 
       <div style="display: flex; align-items: center; gap: 0.35rem; border-left: 2px solid var(--border-strong); padding-left: 0.7rem;">
-        <span style="background: ${catColor}; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 900;">${current.number}</span>
+        <span style="background: ${catColor}; color: var(--accent-btn-text); width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 900;">${current.number}</span>
         <span style="font-size: 0.75rem; font-weight: 800; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${current.title}</span>
       </div>
 
       <div style="display: flex; align-items: center; gap: 0.3rem;">
         <button id="btn-tour-prev" style="background: var(--bg-card); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.5rem; font-size: 0.68rem; font-weight: 800; cursor: pointer;">◀ Prev</button>
-        <button id="btn-tour-next" style="background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.55rem; font-size: 0.68rem; font-weight: 900; cursor: pointer;">Next ▶</button>
-        <button id="btn-tour-exit" style="background: var(--bg-card); color: var(--color-danger, #ef4444); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.4rem; font-size: 0.68rem; font-weight: 800; cursor: pointer;">✕</button>
+        <button id="btn-tour-next" style="background: var(--accent-500); color: var(--accent-btn-text); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.55rem; font-size: 0.68rem; font-weight: 900; cursor: pointer;">Next ▶</button>
+        <button id="btn-tour-exit" style="background: var(--bg-card); color: var(--color-danger); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.25rem 0.4rem; font-size: 0.68rem; font-weight: 800; cursor: pointer;">✕</button>
       </div>
     `;
 
@@ -508,7 +508,7 @@ export class AnnotationModule {
       if (a.elementEl) {
         a.elementEl.style.outline = "none";
         a.elementEl.style.transform = "translate(-50%, -100%) scale(1.0)";
-        a.elementEl.style.boxShadow = "var(--shadow-sm, 2px 2px 0px #000000)";
+        a.elementEl.style.boxShadow = "var(--shadow-sm)";
       }
     }
 
@@ -522,9 +522,9 @@ export class AnnotationModule {
 
     // Highlight active pin badge
     if (anno.elementEl) {
-      anno.elementEl.style.outline = "2px solid var(--accent-500, #3b82f6)";
+      anno.elementEl.style.outline = "2px solid var(--accent-500)";
       anno.elementEl.style.transform = "translate(-50%, -105%) scale(1.08)";
-      anno.elementEl.style.boxShadow = "var(--shadow-md, 4px 4px 0px #000000)";
+      anno.elementEl.style.boxShadow = "var(--shadow-md)";
     }
 
     // Select and highlight tagged element in scene
@@ -686,34 +686,34 @@ export class AnnotationModule {
     `;
 
     popover.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-strong, #000000); padding-bottom: 0.4rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-strong); padding-bottom: 0.4rem;">
         <div style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.84rem;">
-          <span style="background: ${catColor}; color: #ffffff; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong, #000); display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 900;">${anno.number}</span>
+          <span style="background: ${catColor}; color: var(--accent-btn-text); width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 900;">${anno.number}</span>
           <span style="color: var(--text-primary); font-weight: 800;">${anno.title}</span>
         </div>
         <button id="btn-close-pin-popover" style="background: none; border: none; font-size: 1.25rem; font-weight: 900; cursor: pointer; color: var(--text-primary); line-height: 1;">×</button>
       </div>
 
       <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-        <span style="font-size: 0.62rem; font-weight: 800; text-transform: uppercase; background: ${catColor}; color: #ffffff; padding: 0.15rem 0.45rem; border: 1px solid var(--border-strong, #000); border-radius: 2px;">${anno.category}</span>
+        <span style="font-size: 0.62rem; font-weight: 800; text-transform: uppercase; background: ${catColor}; color: var(--accent-btn-text); padding: 0.15rem 0.45rem; border: 1px solid var(--border-strong); border-radius: 2px;">${anno.category}</span>
         ${anno.elementName ? `<span style="font-size: 0.62rem; font-weight: 800; background: var(--bg-card); color: var(--accent-500); padding: 0.15rem 0.45rem; border: 1px solid var(--border-subtle); border-radius: 2px; display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> ${anno.elementName}</span>` : ''}
         <span style="font-size: 0.62rem; font-family: var(--font-mono, monospace); color: var(--text-muted);">Logged: ${anno.timestamp}</span>
       </div>
 
       ${anno.thumbnail ? `
-        <div style="width: 100%; height: 110px; border: 1.5px solid var(--border-strong, #000); border-radius: 2px; overflow: hidden; background: #000;">
+        <div style="width: 100%; height: 110px; border: 1.5px solid var(--border-strong); border-radius: 2px; overflow: hidden; background: var(--bg-card);">
           <img src="${anno.thumbnail}" alt="Pin Snapshot" style="width: 100%; height: 100%; object-fit: cover;" />
         </div>
       ` : ''}
 
-      <div style="background: var(--bg-card); border: 1.5px solid var(--border-strong, #000); padding: 0.55rem; border-radius: 2px; font-size: 0.72rem; line-height: 1.45; color: var(--text-primary);">
+      <div style="background: var(--bg-card); border: 1.5px solid var(--border-strong); padding: 0.55rem; border-radius: 2px; font-size: 0.72rem; line-height: 1.45; color: var(--text-primary);">
         ${anno.comment}
       </div>
 
       <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem; flex-wrap: wrap;">
-        <button id="btn-focus-pin" style="flex: 1; min-width: 120px; background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 2px solid var(--border-strong, #000); padding: 0.4rem; font-size: 0.7rem; font-weight: 900; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm, 2px 2px 0px #000); display: flex; align-items: center; justify-content: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus Camera</button>
-        <button id="btn-xray-pin" style="background: var(--bg-card); color: var(--text-primary); border: 2px solid var(--border-strong, #000); padding: 0.4rem 0.6rem; font-size: 0.7rem; font-weight: 800; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm, 2px 2px 0px #000); display: flex; align-items: center; justify-content: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray</button>
-        <button id="btn-delete-pin" style="background: var(--bg-card); color: var(--color-danger, #ef4444); border: 2px solid var(--border-strong, #000); padding: 0.4rem 0.65rem; font-size: 0.7rem; font-weight: 800; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm, 2px 2px 0px #000); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        <button id="btn-focus-pin" style="flex: 1; min-width: 120px; background: var(--accent-500); color: var(--accent-btn-text); border: 2px solid var(--border-strong); padding: 0.4rem; font-size: 0.7rem; font-weight: 900; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus Camera</button>
+        <button id="btn-xray-pin" style="background: var(--bg-card); color: var(--text-primary); border: 2px solid var(--border-strong); padding: 0.4rem 0.6rem; font-size: 0.7rem; font-weight: 800; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray</button>
+        <button id="btn-delete-pin" style="background: var(--bg-card); color: var(--color-danger); border: 2px solid var(--border-strong); padding: 0.4rem 0.65rem; font-size: 0.7rem; font-weight: 800; border-radius: 2px; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </div>
     `;
 

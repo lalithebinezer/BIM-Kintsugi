@@ -46,8 +46,22 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-danger: #ef4444;
-  --color-info: #3b82f6;
+  --color-info: #38bdf8;
+  --color-cyan: #06b6d4;
   --color-purple: #a855f7;
+
+  --color-info-subtle: rgba(56, 189, 248, 0.15);
+  --color-info-border: rgba(56, 189, 248, 0.4);
+  --color-success-subtle: rgba(16, 185, 129, 0.15);
+  --color-success-border: rgba(16, 185, 129, 0.4);
+  --color-warning-subtle: rgba(245, 158, 11, 0.15);
+  --color-warning-border: rgba(245, 158, 11, 0.4);
+  --color-danger-subtle: rgba(239, 68, 68, 0.15);
+  --color-danger-border: rgba(239, 68, 68, 0.4);
+  --color-cyan-subtle: rgba(6, 182, 212, 0.15);
+  --color-cyan-border: rgba(6, 182, 212, 0.4);
+  --color-purple-subtle: rgba(168, 85, 247, 0.15);
+  --color-purple-border: rgba(168, 85, 247, 0.4);
 
   --text-primary: #ffffff;
   --text-main: #E4E4E7;
@@ -129,6 +143,7 @@
   --text-main: #E5E7EB;
   --text-muted: #9CA3AF;
   --text-dim: #6B7280;
+  --color-cyan: #06b6d4;
 }
 
 /* 2. Cyberpunk Neon (Electric Midnight & Cyan) */
@@ -163,6 +178,7 @@
   --text-main: #E0F2FE;
   --text-muted: #7DD3FC;
   --text-dim: #38BDF8;
+  --color-cyan: #00F0FF;
 }
 
 /* 3. Architect Blueprint (CAD Navy & Drafting Cyan) */
@@ -197,6 +213,7 @@
   --text-main: #CCD6F6;
   --text-muted: #8892B0;
   --text-dim: #495670;
+  --color-cyan: #64FFDA;
 }
 
 /* 4. Light Studio (Clean Architectural Daylight) */
@@ -233,6 +250,27 @@
   --text-muted: #64748B;
   --text-dim: #94A3B8;
   --text-dark: #FFFFFF;
+
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+  --color-cyan: #0891b2;
+  --color-purple: #9333ea;
+
+  --color-info-subtle: rgba(2, 132, 199, 0.12);
+  --color-info-border: rgba(2, 132, 199, 0.35);
+  --color-success-subtle: rgba(5, 150, 105, 0.12);
+  --color-success-border: rgba(5, 150, 105, 0.35);
+  --color-warning-subtle: rgba(217, 119, 6, 0.12);
+  --color-warning-border: rgba(217, 119, 6, 0.35);
+  --color-danger-subtle: rgba(220, 38, 38, 0.12);
+  --color-danger-border: rgba(220, 38, 38, 0.35);
+  --color-cyan-subtle: rgba(8, 145, 178, 0.12);
+  --color-cyan-border: rgba(8, 145, 178, 0.35);
+  --color-purple-subtle: rgba(147, 51, 234, 0.12);
+  --color-purple-border: rgba(147, 51, 234, 0.35);
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.08);

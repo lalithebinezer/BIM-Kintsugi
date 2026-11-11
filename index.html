@@ -53,11 +53,11 @@
           <nav class="nav-links">
             <a href="#" class="nav-link active" id="project-header-label">Projects</a>
           </nav>
-          <div class="tenant-rbac-pill" id="header-tenant-rbac" title="Tenant: Snowdon Towers Global • Role: BIM Manager (Click to Cycle RBAC Role)" style="display: flex; align-items: center; gap: 0.35rem; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); padding: 0.2rem 0.55rem; border-radius: 9999px; cursor: pointer; font-size: 0.62rem; font-weight: 700;">
-            <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%;"></span>
+          <div class="tenant-rbac-pill" id="header-tenant-rbac" title="Tenant: Snowdon Towers Global • Role: BIM Manager (Click to Cycle RBAC Role)" style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-input); border: 1px solid var(--border-subtle); padding: 0.2rem 0.55rem; border-radius: 9999px; cursor: pointer; font-size: 0.62rem; font-weight: 700;">
+            <span style="width: 7px; height: 7px; background: var(--color-success); border-radius: 50%;"></span>
             <span id="header-tenant-name" style="color: var(--text-primary);">Snowdon Global</span>
             <span style="color: var(--text-muted);">|</span>
-            <span id="header-user-role" style="color: #38bdf8;">BIM Manager</span>
+            <span id="header-user-role" style="color: var(--color-info);">BIM Manager</span>
           </div>
         </div>
 
@@ -81,7 +81,7 @@
             <button class="btn-shortcuts-toggle" id="btn-ribbon-saved-views" title="Custom Views & 3D Clustering Bookmarks (Autodesk Tandem Style)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
               <span>VIEWS</span>
-              <span id="saved-views-count-badge" style="font-size: 0.55rem; background: var(--accent-500); color: #000000; font-weight: 900; padding: 0.05rem 0.25rem; border-radius: 2px;">4</span>
+              <span id="saved-views-count-badge" style="font-size: 0.55rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 900; padding: 0.05rem 0.25rem; border-radius: 2px;">4</span>
             </button>
 
             <!-- Flyout Dropdown for Saved Custom Views -->
@@ -90,7 +90,7 @@
             </div>
           </div>
 
-          <button class="btn-shortcuts-toggle" id="btn-top-pwa-install" title="Install BIM Kintsugi PWA App for Offline Field Use" style="display: none; background: rgba(212,255,63,0.15); border: 1px solid rgba(212,255,63,0.4); color: var(--accent-primary);">
+          <button class="btn-shortcuts-toggle" id="btn-top-pwa-install" title="Install BIM Kintsugi PWA App for Offline Field Use" style="display: none; background: var(--accent-glow2); border: 1px solid var(--accent-glow); color: var(--accent-primary);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>INSTALL</span>
           </button>
@@ -264,7 +264,7 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               <span>Inspect</span>
             </button>
-            <button type="button" id="btn-selection-hud-link-4d" class="btn-hud-action" title="Assign Selected 3D Elements to Active Gantt Task (Synchro 4D Style)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;">
+            <button type="button" id="btn-selection-hud-link-4d" class="btn-hud-action" title="Assign Selected 3D Elements to Active Gantt Task (Synchro 4D Style)" style="background: var(--color-info-subtle); border: 1px solid var(--color-info-border); color: var(--color-info);">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               <span>Link 4D</span>
             </button>
@@ -891,7 +891,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span>Calculate 4D Sequence</span>
               </button>
-              <button type="button" id="btn-sync-synchro-simulation" class="btn-calculate-seq" style="margin-top: 0.35rem; background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(99, 102, 241, 0.25)); border: 1px solid rgba(56, 189, 248, 0.6); color: #38BDF8;" title="Synchronize 4D Sequence with Synchro Schedule XML & SIMULATION property">
+              <button type="button" id="btn-sync-synchro-simulation" class="btn-calculate-seq" style="margin-top: 0.35rem; background: linear-gradient(135deg, var(--color-info-subtle), var(--accent-glow2)); border: 1px solid var(--color-info-border); color: var(--color-info);" title="Synchronize 4D Sequence with Synchro Schedule XML & SIMULATION property">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                 <span>⚡ Sync Synchro 4D (SIMULATION)</span>
               </button>
@@ -910,7 +910,7 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   <span>CSV (Cost)</span>
                 </button>
-                <button type="button" id="btn-open-evm-from-sidebar" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem; border-color: rgba(234, 179, 8, 0.45); color: #eab308;" title="Open Earned Value Management (EVM) Control Suite">
+                <button type="button" id="btn-open-evm-from-sidebar" class="btn-gantt-drawer-action" style="flex: 1; font-size: 0.68rem; padding: 0.28rem 0.4rem; justify-content: center; display: flex; align-items: center; gap: 0.3rem; border-color: var(--color-warning-border); color: var(--color-warning);" title="Open Earned Value Management (EVM) Control Suite">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                   <span>EVM</span>
                 </button>
@@ -1090,11 +1090,11 @@
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                     <span>+ Keyframe</span>
                   </button>
-                  <button type="button" class="btn-primary" id="btn-tour-play-panel" style="flex: 1; padding: 0.25rem 0.35rem; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem; background: var(--accent-primary); color: #000; font-weight: 700;" title="Play smooth cinematic keyframe camera animation">
+                  <button type="button" class="btn-primary" id="btn-tour-play-panel" style="flex: 1; padding: 0.25rem 0.35rem; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem; background: var(--accent-primary); color: var(--accent-btn-text); font-weight: 700;" title="Play smooth cinematic keyframe camera animation">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <span>Play Tour</span>
                   </button>
-                  <button type="button" class="btn-secondary" id="btn-tour-stop-panel" style="display: none; padding: 0.25rem 0.35rem; font-size: 0.65rem; color: #ef4444; border-color: #ef4444;" title="Stop camera tour">
+                  <button type="button" class="btn-secondary" id="btn-tour-stop-panel" style="display: none; padding: 0.25rem 0.35rem; font-size: 0.65rem; color: var(--color-danger); border-color: var(--color-danger);" title="Stop camera tour">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
                   </button>
                 </div>
@@ -1174,19 +1174,19 @@
                   </div>
 
                   <!-- Graphic Accelerator & Hardware Performance Studio -->
-                  <div class="custom-highlight-studio-card" id="gpu-accelerator-studio-card" style="border-left: 3px solid #38bdf8; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                  <div class="custom-highlight-studio-card" id="gpu-accelerator-studio-card" style="border-left: 3px solid var(--color-info); margin-top: 0.5rem; margin-bottom: 0.5rem;">
                     <div class="custom-highlight-header">
-                      <div class="custom-highlight-title" style="color: #38bdf8;">
+                      <div class="custom-highlight-title" style="color: var(--color-info);">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
                         <span>Graphics Accelerator &amp; GPU</span>
                       </div>
-                      <span class="custom-highlight-badge" id="gpu-active-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Hardware On</span>
+                      <span class="custom-highlight-badge" id="gpu-active-badge" style="background: var(--color-info-subtle); color: var(--color-info); border-color: var(--color-info-border);">Hardware On</span>
                     </div>
 
-                    <div id="gpu-telemetry-box" style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.35rem; line-height: 1.35;">
+                    <div id="gpu-telemetry-box" style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.35rem; line-height: 1.35;">
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: var(--text-primary); font-weight: 700;">Active GPU:</span>
-                        <span id="gpu-device-name" style="color: #38bdf8; text-align: right; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Detecting...</span>
+                        <span id="gpu-device-name" style="color: var(--color-info); text-align: right; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Detecting...</span>
                       </div>
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>API Backend:</span>
@@ -1194,7 +1194,7 @@
                       </div>
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>Resolution Scale:</span>
-                        <span id="gpu-dpr-val" style="color: #d4ff3f;">2.0x (Ultra Sharp)</span>
+                        <span id="gpu-dpr-val" style="color: var(--accent-primary);">2.0x (Ultra Sharp)</span>
                       </div>
                     </div>
 
@@ -1243,7 +1243,7 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>
                         <span>Probe GPU Specs</span>
                       </button>
-                      <button type="button" class="btn-secondary" id="btn-gpu-guide" style="flex: 1; padding: 0.25rem 0.4rem; font-size: 0.64rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                      <button type="button" class="btn-secondary" id="btn-gpu-guide" style="flex: 1; padding: 0.25rem 0.4rem; font-size: 0.64rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem; color: var(--color-info); border-color: var(--color-info-border);">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         <span>OS Setup Guide</span>
                       </button>
@@ -1575,14 +1575,14 @@
                 <div id="multi-selection-batch-card" style="display: none; background: var(--bg-hover); border: 2px solid var(--accent-500); border-radius: 2px; padding: 0.55rem; flex-direction: column; gap: 0.4rem; box-shadow: var(--shadow-sm);">
                   <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-strong); padding-bottom: 0.25rem;">
                     <span style="font-size: 0.72rem; font-weight: 800; color: var(--accent-500); display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Multi-Element Batch (<span id="batch-selected-count">1</span>)</span>
-                    <button type="button" id="btn-batch-clear" style="background: none; border: none; font-size: 0.62rem; font-weight: 800; color: var(--color-danger, #ef4444); cursor: pointer;">Clear Selection</button>
+                    <button type="button" id="btn-batch-clear" style="background: none; border: none; font-size: 0.62rem; font-weight: 800; color: var(--color-danger); cursor: pointer;">Clear Selection</button>
                   </div>
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; font-size: 0.62rem; font-family: var(--font-mono); font-weight: 700;">
                     <div>Volume: <strong id="batch-total-volume">0.00 m³</strong></div>
-                    <div>Est. Cost: <strong id="batch-total-cost" style="color: #10b981;">$0.00</strong></div>
+                    <div>Est. Cost: <strong id="batch-total-cost" style="color: var(--color-success);">$0.00</strong></div>
                   </div>
                   <div style="display: flex; gap: 0.25rem;">
-                    <button type="button" id="btn-batch-isolate" style="flex: 1; background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 1px solid var(--border-strong); padding: 0.25rem; font-size: 0.62rem; font-weight: 800; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Isolate Batch</button>
+                    <button type="button" id="btn-batch-isolate" style="flex: 1; background: var(--accent-500); color: var(--accent-btn-text); border: 1px solid var(--border-strong); padding: 0.25rem; font-size: 0.62rem; font-weight: 800; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Isolate Batch</button>
                     <button type="button" id="btn-batch-xray" style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-strong); padding: 0.25rem 0.4rem; font-size: 0.62rem; font-weight: 800; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray</button>
                   </div>
                 </div>
@@ -1594,24 +1594,24 @@
                     style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
                     <span>Cumulative 5D Project Budget</span>
                     <span id="cost-project-elements-count"
-                      style="font-size: 0.58rem; background: var(--accent-500); color: var(--accent-btn-text, #000000); font-weight: 800; padding: 0.05rem 0.3rem; border-radius: 2px;">0 items</span>
+                      style="font-size: 0.58rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 0.05rem 0.3rem; border-radius: 2px;">0 items</span>
                   </div>
-                  <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 900; color: #10b981;"
+                  <div style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 900; color: var(--color-success);"
                     id="cost-project-grand-total">$0.00</div>
 
                   <!-- Visual Stacked Trade Budget Distribution Bar -->
                   <div style="display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.15rem;">
                     <div style="display: flex; height: 8px; border-radius: 2px; overflow: hidden; border: 1px solid var(--border-strong);">
-                      <div id="bar-trade-concrete" title="Structural Concrete: 42%" style="width: 42%; background: #3b82f6;"></div>
-                      <div id="bar-trade-steel" title="Structural Steel: 28%" style="width: 28%; background: #f59e0b;"></div>
-                      <div id="bar-trade-mep" title="MEP & Services: 18%" style="width: 18%; background: #10b981;"></div>
-                      <div id="bar-trade-finishes" title="Finishes & Facade: 12%" style="width: 12%; background: #a855f7;"></div>
+                      <div id="bar-trade-concrete" title="Structural Concrete: 42%" style="width: 42%; background: var(--color-info);"></div>
+                      <div id="bar-trade-steel" title="Structural Steel: 28%" style="width: 28%; background: var(--color-warning);"></div>
+                      <div id="bar-trade-mep" title="MEP & Services: 18%" style="width: 18%; background: var(--color-success);"></div>
+                      <div id="bar-trade-finishes" title="Finishes & Facade: 12%" style="width: 12%; background: var(--color-purple);"></div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.54rem; font-weight: 700; color: var(--text-muted); flex-wrap: wrap;">
-                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: #3b82f6; border-radius: 50%;"></span>Concrete</span>
-                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%;"></span>Steel</span>
-                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></span>MEP</span>
-                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: #a855f7; border-radius: 50%;"></span>Finishes</span>
+                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: var(--color-info); border-radius: 50%;"></span>Concrete</span>
+                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: var(--color-warning); border-radius: 50%;"></span>Steel</span>
+                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: var(--color-success); border-radius: 50%;"></span>MEP</span>
+                      <span style="display: flex; align-items: center; gap: 0.15rem;"><span style="width: 6px; height: 6px; background: var(--color-purple); border-radius: 50%;"></span>Finishes</span>
                     </div>
                   </div>
                 </div>
@@ -1634,7 +1634,7 @@
                   </button>
                   <button type="button" class="btn-cost-action report" id="btn-export-exec-report"
                     title="Generate Executive 4D/5D Twin Report (Print & PDF)"
-                    style="grid-column: span 2; background: linear-gradient(135deg, rgba(212,255,63,0.12), rgba(37,99,235,0.15)); border: 1px solid rgba(212,255,63,0.4); color: var(--text-primary); font-weight: 700;">
+                    style="grid-column: span 2; background: linear-gradient(135deg, var(--accent-glow2), var(--color-info-subtle)); border: 1px solid var(--accent-glow); color: var(--text-primary); font-weight: 700;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                     <span>Executive Twin Report (Print / PDF)</span>
                   </button>
@@ -1758,7 +1758,7 @@
 
               <!-- FPS Preset Options -->
               <div id="preset-options-fps" class="preset-options-subpanel"
-                style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
+                style="display: none; flex-direction: column; gap: 0.45rem; background: var(--bg-input); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Custom FOV</span>
                   <span class="value-badge" id="val-fps-fov">105</span>
@@ -1785,7 +1785,7 @@
 
               <!-- Sports Preset Options -->
               <div id="preset-options-sports" class="preset-options-subpanel"
-                style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
+                style="display: none; flex-direction: column; gap: 0.45rem; background: var(--bg-input); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Camera Height</span>
                   <span class="value-badge" id="val-sports-height">15.0</span>
@@ -1803,7 +1803,7 @@
 
               <!-- Racing Preset Options -->
               <div id="preset-options-racing" class="preset-options-subpanel"
-                style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
+                style="display: none; flex-direction: column; gap: 0.45rem; background: var(--bg-input); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Attachment Point</span>
                   <select id="settings-racing-attachment" aria-label="Racing Camera Rig Attachment" class="custom-select">
@@ -1822,7 +1822,7 @@
 
               <!-- Third-Person Preset Options -->
               <div id="preset-options-thirdperson" class="preset-options-subpanel"
-                style="display: none; flex-direction: column; gap: 0.45rem; background: rgba(255,255,255,0.02); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
+                style="display: none; flex-direction: column; gap: 0.45rem; background: var(--bg-input); padding: 0.5rem; border-radius: 6px; border: 1px dashed var(--border-subtle);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="font-size: 0.68rem; color: var(--text-muted);">Camera Distance</span>
                   <span class="value-badge" id="val-thirdperson-distance">8.0</span>
@@ -1991,16 +1991,16 @@
                 </div>
 
                 <!-- 3D PIN DROP CREATION FORM (Expands when toggle is ON) -->
-                <div id="pin-annotation-options" style="display: none; flex-direction: column; gap: 0.55rem; background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.65rem; box-shadow: var(--shadow-sm, 2px 2px 0px #000);">
+                <div id="pin-annotation-options" style="display: none; flex-direction: column; gap: 0.55rem; background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.65rem; box-shadow: var(--shadow-sm);">
                   <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: var(--text-primary); letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center;">
                     <span>📌 Drop New Pin</span>
-                    <span style="font-size: 0.6rem; background: var(--accent-500); color: var(--accent-btn-text, #000000); padding: 0.1rem 0.35rem; border-radius: 2px; font-weight: 800;">READY</span>
+                    <span style="font-size: 0.6rem; background: var(--accent-500); color: var(--accent-btn-text); padding: 0.1rem 0.35rem; border-radius: 2px; font-weight: 800;">READY</span>
                   </div>
 
                   <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                     <label style="font-size: 0.62rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Category</label>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem;" id="pin-category-pills">
-                      <button type="button" class="btn-pin-cat active" data-cat="Inspection" style="background: #3b82f6; color: #ffffff; border: 1.5px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.25rem 0.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.2rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspect</button>
+                      <button type="button" class="btn-pin-cat active" data-cat="Inspection" style="background: var(--color-info); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.25rem 0.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.2rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspect</button>
                       <button type="button" class="btn-pin-cat" data-cat="Defect" style="background: var(--bg-input); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.25rem 0.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.2rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Defect</button>
                       <button type="button" class="btn-pin-cat" data-cat="Safety" style="background: var(--bg-input); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.25rem 0.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.2rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Safety</button>
                       <button type="button" class="btn-pin-cat" data-cat="RFI" style="background: var(--bg-input); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.25rem 0.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.2rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> RFI</button>
@@ -2023,32 +2023,32 @@
                     <span><strong>How to place:</strong> Click anywhere on the 3D model surface, or use the button below.</span>
                   </div>
 
-                  <button type="button" id="btn-drop-pin-here" style="background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.4rem; font-size: 0.7rem; font-weight: 800; cursor: pointer; box-shadow: var(--shadow-sm, 2px 2px 0px #000); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                  <button type="button" id="btn-drop-pin-here" style="background: var(--accent-500); color: var(--accent-btn-text); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.4rem; font-size: 0.7rem; font-weight: 800; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
                     <span>Tag Pin to Selected Element</span>
                   </button>
                 </div>
 
                 <!-- ALWAYS VISIBLE: Selected Pin Details & Active Pins Manager -->
-                <div id="active-pins-sidebar-section" style="display: flex; flex-direction: column; gap: 0.45rem; background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.6rem; box-shadow: var(--shadow-sm, 2px 2px 0px #000);">
+                <div id="active-pins-sidebar-section" style="display: flex; flex-direction: column; gap: 0.45rem; background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 2px; padding: 0.6rem; box-shadow: var(--shadow-sm);">
                   <!-- Selected Pin Details Card in Sidebar -->
                   <div id="selected-pin-details-sidebar" style="display: none; flex-direction: column; gap: 0.45rem; background: var(--bg-hover); border: 2px solid var(--accent-500); border-radius: 2px; padding: 0.55rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-strong); padding-bottom: 0.3rem;">
                       <div style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800; font-size: 0.72rem;">
-                        <span id="sidebar-pin-number-badge" style="background: #3b82f6; color: #fff; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 900;">1</span>
+                        <span id="sidebar-pin-number-badge" style="background: var(--color-info); color: var(--text-primary); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 900;">1</span>
                         <span id="sidebar-pin-title-display" style="color: var(--text-primary);">Pin Details</span>
                       </div>
-                      <span id="sidebar-pin-category-tag" style="font-size: 0.58rem; font-weight: 800; text-transform: uppercase; background: #3b82f6; color: #fff; padding: 0.1rem 0.35rem; border-radius: 2px;">INSPECT</span>
+                      <span id="sidebar-pin-category-tag" style="font-size: 0.58rem; font-weight: 800; text-transform: uppercase; background: var(--color-info); color: var(--text-primary); padding: 0.1rem 0.35rem; border-radius: 2px;">INSPECT</span>
                     </div>
 
                     <!-- Snapshot Thumbnail -->
-                    <div id="sidebar-pin-thumbnail-container" style="display: none; width: 100%; height: 95px; border: 1.5px solid var(--border-strong); border-radius: 2px; overflow: hidden; background: #000;">
+                    <div id="sidebar-pin-thumbnail-container" style="display: none; width: 100%; height: 95px; border: 1.5px solid var(--border-strong); border-radius: 2px; overflow: hidden; background: var(--bg-card);">
                       <img id="sidebar-pin-thumbnail-img" src="" alt="Snapshot" style="width: 100%; height: 100%; object-fit: cover;" />
                     </div>
 
                     <div id="sidebar-pin-element-info" style="font-size: 0.65rem; font-weight: 700; color: var(--accent-500); background: var(--bg-input); padding: 0.25rem 0.4rem; border: 1px solid var(--border-subtle); border-radius: 2px; display: flex; justify-content: space-between; align-items: center;">
                       <span id="sidebar-pin-element-name" style="display: flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> IfcElement #186559</span>
-                      <button type="button" id="btn-sidebar-inspect-element" style="background: var(--accent-500); color: var(--accent-btn-text, #000000); border: none; border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer;">Inspect</button>
+                      <button type="button" id="btn-sidebar-inspect-element" style="background: var(--accent-500); color: var(--accent-btn-text); border: none; border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer;">Inspect</button>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 0.15rem;">
@@ -2057,10 +2057,10 @@
                     </div>
 
                     <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                      <button type="button" id="btn-sidebar-save-pin" style="flex: 1; background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save</button>
+                      <button type="button" id="btn-sidebar-save-pin" style="flex: 1; background: var(--accent-500); color: var(--accent-btn-text); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save</button>
                       <button type="button" id="btn-sidebar-focus-pin" style="background: var(--bg-card); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus</button>
                       <button type="button" id="btn-sidebar-xray-pin" style="background: var(--bg-card); color: var(--text-primary); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray</button>
-                      <button type="button" id="btn-sidebar-delete-pin" aria-label="Delete Bookmark Pin" title="Delete Bookmark Pin" style="background: var(--bg-card); color: var(--color-danger, #ef4444); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      <button type="button" id="btn-sidebar-delete-pin" aria-label="Delete Bookmark Pin" title="Delete Bookmark Pin" style="background: var(--bg-card); color: var(--color-danger); border: 1.5px solid var(--border-strong); border-radius: 2px; padding: 0.3rem 0.45rem; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                     </div>
                   </div>
 
@@ -2068,7 +2068,7 @@
                   <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                     <div style="font-size: 0.58rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Filter Pins by Category</div>
                     <div id="pin-filter-chips" style="display: flex; gap: 0.2rem; flex-wrap: wrap;">
-                      <button type="button" class="btn-filter-chip active" data-filter="All" style="background: var(--accent-500); color: var(--accent-btn-text, #000000); border: 1px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer;">All</button>
+                      <button type="button" class="btn-filter-chip active" data-filter="All" style="background: var(--accent-500); color: var(--accent-btn-text); border: 1px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer;">All</button>
                       <button type="button" class="btn-filter-chip" data-filter="Inspection" style="background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer; display: flex; align-items: center; gap: 0.2rem;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Inspect</button>
                       <button type="button" class="btn-filter-chip" data-filter="Defect" style="background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer; display: flex; align-items: center; gap: 0.2rem;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Defect</button>
                       <button type="button" class="btn-filter-chip" data-filter="Safety" style="background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 2px; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.35rem; cursor: pointer; display: flex; align-items: center; gap: 0.2rem;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Safety</button>
@@ -2095,7 +2095,7 @@
                     <button class="btn-secondary" id="btn-export-pins" style="flex: 1; min-width: 90px; border-color: var(--border-strong); color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.65rem; padding: 0.35rem; font-weight: 800;">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> BCF/JSON
                     </button>
-                    <button class="btn-secondary" id="btn-clear-annotations" style="border-color: var(--color-danger, #ef4444); color: var(--color-danger, #dc2626); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0.35rem 0.45rem; font-weight: 800;">
+                    <button class="btn-secondary" id="btn-clear-annotations" style="border-color: var(--color-danger); color: var(--color-danger); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0.35rem 0.45rem; font-weight: 800;">
                       Clear
                     </button>
                   </div>
@@ -2190,11 +2190,11 @@
                     Preset Highlight Overlays
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem;">
-                    <button type="button" class="btn-quick-highlight-preset" data-preset="Red" style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444; color: #ef4444; font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🔴 Red</button>
-                    <button type="button" class="btn-quick-highlight-preset" data-preset="Green" style="background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981; color: #10b981; font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟢 Green</button>
-                    <button type="button" class="btn-quick-highlight-preset" data-preset="Amber" style="background: rgba(245, 158, 11, 0.15); border: 1.5px solid #f59e0b; color: #f59e0b; font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟡 Amber</button>
-                    <button type="button" class="btn-quick-highlight-preset" data-preset="Purple" style="background: rgba(168, 85, 247, 0.15); border: 1.5px solid #a855f7; color: #a855f7; font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟣 Purple</button>
-                    <button type="button" class="btn-quick-highlight-preset" data-preset="Cyan" style="background: rgba(6, 182, 212, 0.15); border: 1.5px solid #06b6d4; color: #06b6d4; font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🔵 Cyan</button>
+                    <button type="button" class="btn-quick-highlight-preset" data-preset="Red" style="background: var(--color-danger-subtle); border: 1.5px solid var(--color-danger); color: var(--color-danger); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🔴 Red</button>
+                    <button type="button" class="btn-quick-highlight-preset" data-preset="Green" style="background: var(--color-success-subtle); border: 1.5px solid var(--color-success); color: var(--color-success); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟢 Green</button>
+                    <button type="button" class="btn-quick-highlight-preset" data-preset="Amber" style="background: var(--color-warning-subtle); border: 1.5px solid var(--color-warning); color: var(--color-warning); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟡 Amber</button>
+                    <button type="button" class="btn-quick-highlight-preset" data-preset="Purple" style="background: var(--color-purple-subtle); border: 1.5px solid var(--color-purple); color: var(--color-purple); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🟣 Purple</button>
+                    <button type="button" class="btn-quick-highlight-preset" data-preset="Cyan" style="background: var(--color-cyan-subtle); border: 1.5px solid var(--color-cyan); color: var(--color-cyan); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">🔵 Cyan</button>
                     <button type="button" id="btn-quick-highlight-clear" style="background: var(--bg-input); border: 1.5px solid var(--border-strong); color: var(--text-primary); font-size: 0.62rem; font-weight: 800; padding: 0.3rem 0.2rem; border-radius: 2px; cursor: pointer;">✖ Reset</button>
                   </div>
                 </div>
@@ -2851,7 +2851,7 @@
     </div>
 
     <!-- Command Palette Modal (Ctrl+K) -->
-    <div id="command-palette-modal" style="position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,0.65);  display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; animation: fadeIn 0.15s ease-out;">
+    <div id="command-palette-modal" style="position: fixed; inset: 0; z-index: 100000; background: var(--bg-overlay);  display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; animation: fadeIn 0.15s ease-out;">
       <div style="background: var(--bg-panel); border: 3px solid var(--border-strong); border-radius: 6px; width: 560px; max-width: 92vw; box-shadow: var(--shadow-brutal); display: flex; flex-direction: column; overflow: hidden; animation: popIn 0.15s ease-out;">
         <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border-strong); background: var(--bg-card);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -2908,7 +2908,7 @@
     <div id="bim-context-menu" style="position: fixed; display: none; z-index: 99999; background: var(--bg-panel); border: 2.5px solid var(--border-strong); border-radius: 4px; padding: 0.35rem; box-shadow: var(--shadow-md); min-width: 190px; flex-direction: column; gap: 0.2rem; font-family: var(--font-body);">
       <div id="ctx-element-title" style="font-size: 0.64rem; font-weight: 800; color: var(--accent-500); padding: 0.25rem 0.45rem; border-bottom: 1px solid var(--border-subtle); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Element #186559</div>
       <button class="ctx-item" data-action="drop-pin" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Drop 3D Pin Here</button>
-      <button class="ctx-item" data-action="create-bcf" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: #A855F7; text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg> Create BCF Issue Here</button>
+      <button class="ctx-item" data-action="create-bcf" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--color-purple); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg> Create BCF Issue Here</button>
       <button class="ctx-item" data-action="properties" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> View Properties</button>
       <button class="ctx-item" data-action="xray" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray Isolate</button>
       <button class="ctx-item" data-action="isolate" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Isolate Element</button>
@@ -3131,11 +3131,11 @@
           <h3>BCF Issue Coordination</h3>
         </div>
         <div class="drawer-header-actions">
-          <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+          <label id="btn-import-bcf-trigger" class="btn-drawer-action" title="Import BCF Package (.bcfzip / .bcf / .json)" style="background: var(--color-info-subtle); border: 1px solid var(--color-info); color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import
             <input type="file" id="btn-import-bcf-input" aria-label="Import BCF Package File" accept=".bcfzip,.bcf,.json" style="display: none;" />
           </label>
-          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #A855F7; color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
+          <button id="btn-export-bcf-json" class="btn-drawer-action" title="Export Standard BCF Package (.bcfzip / .json)" style="background: var(--color-purple-subtle); border: 1px solid var(--color-purple); color: var(--text-primary); font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export BCF</button>
           <button class="btn-icon drawer-center-toggle-btn" data-target="bcf-issues-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="bcf-issues-panel" aria-label="Close BCF Issues Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
@@ -3170,33 +3170,33 @@
           <h3>5D Project Cost Control</h3>
         </div>
         <div class="drawer-header-actions">
-          <span id="drawer-cost-currency-badge" class="carbon-grade-badge grade-A" style="background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">USD $</span>
+          <span id="drawer-cost-currency-badge" class="carbon-grade-badge grade-A" style="background: var(--color-success-subtle); color: var(--color-success); border: 1px solid var(--color-success-border);">USD $</span>
           <button class="btn-icon drawer-center-toggle-btn" data-target="cost-control-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="cost-control-panel" aria-label="Close Cost Control Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
         <!-- Budget & EVM KPI Highlights -->
-        <div class="drawer-section-card" style="border-left: 3px solid #10b981;">
+        <div class="drawer-section-card" style="border-left: 3px solid var(--color-success);">
           <div style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
             <span>Cumulative 5D Budget</span>
-            <span id="drawer-cost-elements-count" style="font-size: 0.58rem; background: var(--accent-500); color: var(--accent-btn-text, #000000); font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0 items</span>
+            <span id="drawer-cost-elements-count" style="font-size: 0.58rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0 items</span>
           </div>
-          <div style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 900; color: #10b981; line-height: 1.2;" id="drawer-cost-grand-total">$0.00</div>
+          <div style="font-family: var(--font-mono); font-size: 1.3rem; font-weight: 900; color: var(--color-success); line-height: 1.2;" id="drawer-cost-grand-total">$0.00</div>
 
           <!-- Visual Trade Distribution Bar -->
           <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.2rem;">
             <div style="display: flex; height: 8px; border-radius: 2px; overflow: hidden; border: 1px solid var(--border-strong);">
-              <div id="drawer-bar-trade-concrete" title="Structural Concrete" style="width: 0%; background: #3b82f6;"></div>
-              <div id="drawer-bar-trade-steel" title="Structural Steel" style="width: 0%; background: #f59e0b;"></div>
-              <div id="drawer-bar-trade-mep" title="MEP & Services" style="width: 0%; background: #10b981;"></div>
-              <div id="drawer-bar-trade-finishes" title="Finishes & Facade" style="width: 0%; background: #a855f7;"></div>
+              <div id="drawer-bar-trade-concrete" title="Structural Concrete" style="width: 0%; background: var(--color-info);"></div>
+              <div id="drawer-bar-trade-steel" title="Structural Steel" style="width: 0%; background: var(--color-warning);"></div>
+              <div id="drawer-bar-trade-mep" title="MEP & Services" style="width: 0%; background: var(--color-success);"></div>
+              <div id="drawer-bar-trade-finishes" title="Finishes & Facade" style="width: 0%; background: var(--color-purple);"></div>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.55rem; font-weight: 700; color: var(--text-muted); flex-wrap: wrap; gap: 0.2rem;">
-              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #3b82f6; border-radius: 50%;"></span>Concrete</span>
-              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%;"></span>Steel</span>
-              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></span>MEP</span>
-              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: #a855f7; border-radius: 50%;"></span>Finishes</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: var(--color-info); border-radius: 50%;"></span>Concrete</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: var(--color-warning); border-radius: 50%;"></span>Steel</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: var(--color-success); border-radius: 50%;"></span>MEP</span>
+              <span style="display: flex; align-items: center; gap: 0.2rem;"><span style="width: 6px; height: 6px; background: var(--color-purple); border-radius: 50%;"></span>Finishes</span>
             </div>
           </div>
         </div>
@@ -3230,13 +3230,13 @@
           </button>
           <button type="button" class="btn-cost-action report" id="drawer-btn-exec-report"
             title="Generate Executive 4D/5D Twin Report (Print & PDF)"
-            style="grid-column: span 2; background: linear-gradient(135deg, rgba(212,255,63,0.12), rgba(37,99,235,0.15)); border: 1px solid rgba(212,255,63,0.4); color: var(--text-primary); font-weight: 700;">
+            style="grid-column: span 2; background: linear-gradient(135deg, var(--accent-glow2), var(--color-info-subtle)); border: 1px solid var(--accent-glow); color: var(--text-primary); font-weight: 700;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span>Executive Twin Report (Print / PDF)</span>
           </button>
           <button type="button" class="btn-cost-action rates" id="drawer-btn-open-evm"
             title="Open Dedicated Earned Value Management (EVM) Control Suite"
-            style="grid-column: span 2; background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.45); color: #eab308; font-weight: 700;">
+            style="grid-column: span 2; background: var(--color-warning-subtle); border: 1px solid var(--color-warning-border); color: var(--color-warning); font-weight: 700;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             <span>Earned Value Management (EVM) Suite</span>
           </button>
@@ -3274,53 +3274,53 @@
           <h3>Earned Value Management (EVM)</h3>
         </div>
         <div class="drawer-header-actions">
-          <span id="evm-status-badge" class="carbon-grade-badge grade-A" style="background: rgba(234, 179, 8, 0.18); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);">ON TRACK • SPI 1.00 | CPI 1.00</span>
+          <span id="evm-status-badge" class="carbon-grade-badge grade-A" style="background: var(--color-warning-subtle); color: var(--color-warning); border: 1px solid var(--color-warning-border);">ON TRACK • SPI 1.00 | CPI 1.00</span>
           <button class="btn-icon drawer-center-toggle-btn" data-target="evm-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="evm-panel" aria-label="Close EVM Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
       <div class="drawer-body thin-scrollbar">
         <!-- ANSI 748-B VAR Alert Banner (Active when Tier 1 or Tier 2 threshold breached) -->
-        <div id="evm-var-alert-banner" class="hidden" style="margin-bottom: 0.5rem; padding: 0.45rem 0.6rem; border-radius: 6px; border: 1px solid #ef4444; background: rgba(239,68,68,0.15); display: none; align-items: flex-start; gap: 0.5rem;">
+        <div id="evm-var-alert-banner" class="hidden" style="margin-bottom: 0.5rem; padding: 0.45rem 0.6rem; border-radius: 6px; border: 1px solid var(--color-danger); background: var(--color-danger-subtle); display: none; align-items: flex-start; gap: 0.5rem;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" style="flex-shrink: 0; margin-top: 1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <div style="flex: 1; font-size: 0.62rem;">
-            <div id="evm-var-banner-title" style="font-weight: 800; color: #ef4444; text-transform: uppercase;">ANSI 748-B TIER 2 BREACH (VAR REQUIRED)</div>
+            <div id="evm-var-banner-title" style="font-weight: 800; color: var(--color-danger); text-transform: uppercase;">ANSI 748-B TIER 2 BREACH (VAR REQUIRED)</div>
             <div id="evm-var-banner-desc" style="color: var(--text-muted); margin-top: 0.15rem; line-height: 1.3;">Cost Variance breached ±10% / $25k threshold. Mandatory CPR Format 5 filing required.</div>
-            <button type="button" id="btn-evm-quick-var-modal" class="btn-gantt-drawer-action" style="margin-top: 0.35rem; font-size: 0.58rem; padding: 0.15rem 0.5rem; border-color: #ef4444; color: #ef4444;">
+            <button type="button" id="btn-evm-quick-var-modal" class="btn-gantt-drawer-action" style="margin-top: 0.35rem; font-size: 0.58rem; padding: 0.15rem 0.5rem; border-color: var(--color-danger); color: var(--color-danger);">
               Open CPR Format 5 Report (VAR)
             </button>
           </div>
         </div>
 
         <!-- 1. Executive Performance Overview (BAC, PV, EV, AC, SV, CV) -->
-        <div class="drawer-section-card" style="border-left: 3px solid #eab308;">
+        <div class="drawer-section-card" style="border-left: 3px solid var(--color-warning);">
           <div style="font-family: var(--font-mono); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
             <span>Project Baseline & Value (BAC)</span>
-            <span id="evm-val-progress" style="font-size: 0.58rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0%</span>
+            <span id="evm-val-progress" style="font-size: 0.58rem; background: var(--color-info-subtle); color: var(--color-info); font-weight: 800; padding: 0.05rem 0.35rem; border-radius: 2px;">0%</span>
           </div>
-          <div style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 900; color: #eab308; line-height: 1.2;" id="evm-val-bac">$0.00</div>
+          <div style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 900; color: var(--color-warning); line-height: 1.2;" id="evm-val-bac">$0.00</div>
 
           <!-- 4-Grid Core EVM Parameters -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.45rem;">
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
-              <div style="font-size: 0.55rem; color: #38bdf8; font-weight: 700; text-transform: uppercase;">Planned Value (PV)</div>
+            <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: var(--color-info); font-weight: 700; text-transform: uppercase;">Planned Value (PV)</div>
               <div id="evm-val-pv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
-              <div style="font-size: 0.55rem; color: #10b981; font-weight: 700; text-transform: uppercase;">Earned Value (EV)</div>
+            <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: var(--color-success); font-weight: 700; text-transform: uppercase;">Earned Value (EV)</div>
               <div id="evm-val-ev" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
-              <div style="font-size: 0.55rem; color: #f59e0b; font-weight: 700; text-transform: uppercase;">Actual Cost (AC)</div>
+            <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+              <div style="font-size: 0.55rem; color: var(--color-warning); font-weight: 700; text-transform: uppercase;">Actual Cost (AC)</div>
               <div id="evm-val-ac" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
+            <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.35rem 0.45rem;">
               <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Schedule Var (SV)</div>
-              <div id="evm-val-sv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #10b981;">$0.00</div>
+              <div id="evm-val-sv" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--color-success);">$0.00</div>
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem; font-size: 0.58rem; color: var(--text-muted);">
-            <span>Cost Variance (CV): <strong id="evm-val-cv" style="font-family: var(--font-mono); color: #10b981;">$0.00</strong></span>
+            <span>Cost Variance (CV): <strong id="evm-val-cv" style="font-family: var(--font-mono); color: var(--color-success);">$0.00</strong></span>
           </div>
         </div>
 
@@ -3328,20 +3328,20 @@
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin-top: 0.45rem;">
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">SPI (Sched Index)</div>
-            <div id="evm-val-spi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #38bdf8;">1.00</div>
+            <div id="evm-val-spi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: var(--color-info);">1.00</div>
             <div style="font-size: 0.5rem; color: var(--text-muted);">EV / PV</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">CPI (Cost Index)</div>
-            <div id="evm-val-cpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #10b981;">1.00</div>
+            <div id="evm-val-cpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: var(--color-success);">1.00</div>
             <div style="font-size: 0.5rem; color: var(--text-muted);">EV / AC</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem; text-align: center;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">TCPI (To-Complete)</div>
-            <div id="evm-val-tcpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: #eab308;">1.00</div>
+            <div id="evm-val-tcpi" style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 900; color: var(--color-warning);">1.00</div>
             <div style="font-size: 0.48rem; display: flex; flex-direction: column; gap: 1px; margin-top: 2px;">
-              <span id="evm-tcpi-bac-pill" style="color: #10b981;">BAC: 1.00</span>
-              <span id="evm-tcpi-eac-pill" style="color: #38bdf8;">EAC: 1.00</span>
+              <span id="evm-tcpi-bac-pill" style="color: var(--color-success);">BAC: 1.00</span>
+              <span id="evm-tcpi-eac-pill" style="color: var(--color-info);">EAC: 1.00</span>
             </div>
           </div>
         </div>
@@ -3364,10 +3364,10 @@
             </div>
             <div>
               <div style="font-size: 0.52rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Variance At Completion (VAC)</div>
-              <div id="evm-val-vac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: #10b981;">$0.00</div>
+              <div id="evm-val-vac" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 800; color: var(--color-success);">$0.00</div>
             </div>
           </div>
-          <div id="evm-eac-formula-desc" style="font-size: 0.52rem; color: var(--text-muted); margin-top: 0.3rem; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 0.25rem;">
+          <div id="evm-eac-formula-desc" style="font-size: 0.52rem; color: var(--text-muted); margin-top: 0.3rem; border-top: 1px dashed var(--border-subtle); padding-top: 0.25rem;">
             EAC = AC + (BAC - EV) / (CPI × SPI) • Accounts for compounding effect of schedule delay on project costs.
           </div>
         </div>
@@ -3379,12 +3379,12 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-top: 0.35rem;">
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
             <div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700;">SV(t) Days</div>
-            <div id="evm-val-es-svt" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: #10b981;">0.0d</div>
+            <div id="evm-val-es-svt" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: var(--color-success);">0.0d</div>
             <div style="font-size: 0.48rem; color: var(--text-muted);">ES − AT</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
             <div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700;">SPI(t)</div>
-            <div id="evm-val-es-spit" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: #38bdf8;">1.00</div>
+            <div id="evm-val-es-spit" style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 900; color: var(--color-info);">1.00</div>
             <div style="font-size: 0.48rem; color: var(--text-muted);">ES / AT</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
@@ -3394,7 +3394,7 @@
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.35rem; text-align: center;">
             <div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700;">Est Finish</div>
-            <div id="evm-val-es-target-finish" style="font-family: var(--font-mono); font-size: 0.65rem; font-weight: 800; color: #eab308; margin-top: 3px;">--</div>
+            <div id="evm-val-es-target-finish" style="font-family: var(--font-mono); font-size: 0.65rem; font-weight: 800; color: var(--color-warning); margin-top: 3px;">--</div>
             <div style="font-size: 0.48rem; color: var(--text-muted);">Projected</div>
           </div>
         </div>
@@ -3404,8 +3404,8 @@
           <div class="drawer-section-header" style="margin: 0;">
             <span id="evm-chart-section-title">EVM Visual Analytics</span>
           </div>
-          <div style="display: flex; gap: 0.2rem; background: rgba(255,255,255,0.05); padding: 2px; border-radius: 5px; border: 1px solid var(--border-subtle);">
-            <button type="button" id="btn-evm-view-scurve" class="btn-gantt-drawer-action" style="font-size: 0.58rem; padding: 0.15rem 0.45rem; border: none; background: #2563eb; color: #ffffff; border-radius: 3px; cursor: pointer;">S-Curve</button>
+          <div style="display: flex; gap: 0.2rem; background: var(--bg-input); padding: 2px; border-radius: 5px; border: 1px solid var(--border-subtle);">
+            <button type="button" id="btn-evm-view-scurve" class="btn-gantt-drawer-action" style="font-size: 0.58rem; padding: 0.15rem 0.45rem; border: none; background: var(--color-info); color: var(--text-primary); border-radius: 3px; cursor: pointer;">S-Curve</button>
             <button type="button" id="btn-evm-view-bullseye" class="btn-gantt-drawer-action" style="font-size: 0.58rem; padding: 0.15rem 0.45rem; border: none; background: transparent; color: var(--text-muted); border-radius: 3px; cursor: pointer;">APM Bulls-Eye</button>
           </div>
         </div>
@@ -3420,7 +3420,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-top: 0.35rem;">
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Project Slippage</div>
-            <div id="evm-val-slippage" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ef4444;">0 Days</div>
+            <div id="evm-val-slippage" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--color-danger);">0 Days</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
             <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700;">Prolongation Overhead</div>
@@ -3431,19 +3431,19 @@
             <div id="evm-val-penalties" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">$0.00</div>
           </div>
           <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.4rem;">
-            <div style="font-size: 0.55rem; color: #ef4444; font-weight: 700;">Total Delay Exposure</div>
-            <div id="evm-val-total-impact" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: #ef4444;">$0.00</div>
+            <div style="font-size: 0.55rem; color: var(--color-danger); font-weight: 700;">Total Delay Exposure</div>
+            <div id="evm-val-total-impact" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 800; color: var(--color-danger);">$0.00</div>
           </div>
         </div>
 
         <!-- 6. What-If Delay Sensitivity Simulator -->
-        <div style="margin-top: 0.5rem; background: rgba(234, 179, 8, 0.05); border: 1px dashed rgba(234, 179, 8, 0.3); border-radius: 6px; padding: 0.45rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.62rem; font-weight: 700; color: #eab308; margin-bottom: 0.25rem;">
+        <div style="margin-top: 0.5rem; background: var(--color-warning-subtle); border: 1px dashed var(--color-warning-border); border-radius: 6px; padding: 0.45rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.62rem; font-weight: 700; color: var(--color-warning); margin-bottom: 0.25rem;">
             <span>What-If Delay Sensitivity Simulator</span>
             <span id="evm-sim-delay-display" style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-primary);">+0 days</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <input type="range" id="input-evm-delay-sim" aria-label="Simulate Schedule Delay Days" title="Simulate Schedule Delay Days" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: #eab308; cursor: pointer;" />
+            <input type="range" id="input-evm-delay-sim" aria-label="Simulate Schedule Delay Days" title="Simulate Schedule Delay Days" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: var(--color-warning); cursor: pointer;" />
             <button type="button" id="btn-evm-reset-sim" class="btn-gantt-drawer-action" style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">Reset</button>
           </div>
         </div>
@@ -3488,7 +3488,7 @@
           </button>
           <button type="button" class="btn-cost-action report" id="btn-evm-exec-report"
             title="Generate Executive 4D/5D Twin Report (Print & PDF)"
-            style="grid-column: span 2; background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(37, 99, 235, 0.15)); border: 1px solid rgba(234, 179, 8, 0.4); color: var(--text-primary); font-weight: 700;">
+            style="grid-column: span 2; background: linear-gradient(135deg, var(--color-warning-subtle), var(--color-info-subtle)); border: 1px solid var(--color-warning-border); color: var(--text-primary); font-weight: 700;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span>Executive Twin Report (Print / PDF)</span>
           </button>
@@ -3504,7 +3504,7 @@
           <h3>GeoBIM & Site Georeference</h3>
         </div>
         <div class="drawer-header-actions">
-          <span id="gis-utm-badge" class="carbon-grade-badge grade-A" style="background: rgba(6, 182, 212, 0.18); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.4);">Zone 54S</span>
+          <span id="gis-utm-badge" class="carbon-grade-badge grade-A" style="background: var(--color-cyan-subtle); color: var(--color-cyan); border: 1px solid var(--color-cyan-border);">Zone 54S</span>
           <button class="btn-icon drawer-center-toggle-btn" data-target="gis-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="gis-panel" aria-label="Close GIS Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
@@ -3523,7 +3523,7 @@
             <div style="display: flex; gap: 0.4rem;">
               <div style="position: relative; flex: 1;">
                 <input type="text" id="gis-search-address" class="gis-input" placeholder="e.g. Eiffel Tower, Marina Bay Sands..." />
-                <div id="gis-search-suggestions" class="hidden" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; max-height: 180px; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.6);"></div>
+                <div id="gis-search-suggestions" class="hidden" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; max-height: 180px; overflow-y: auto; z-index: 1000; box-shadow: var(--shadow-panel);"></div>
               </div>
               <button type="button" id="gis-btn-search" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.65rem; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap;" title="Search OpenStreetMap Geocoder">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -3559,9 +3559,9 @@
                 </button>
               </div>
             </div>
-            <div style="position: relative; width: 100%; height: 140px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: #0b1320; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
+            <div style="position: relative; width: 100%; height: 140px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: var(--bg-card); box-shadow: inset 0 2px 8px var(--shadow-sm);">
               <canvas id="gis-minimap-canvas" width="320" height="140" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
-              <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.58rem; color: rgba(255,255,255,0.75); pointer-events: none; text-shadow: 0 1px 3px #000; font-family: var(--font-mono);">
+              <div style="position: absolute; bottom: 4px; left: 8px; font-size: 0.58rem; color: var(--text-secondary); pointer-events: none; text-shadow: 0 1px 3px var(--bg-app); font-family: var(--font-mono);">
                 Click map to relocate Site Datum
               </div>
             </div>
@@ -3591,21 +3591,21 @@
           <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.35rem; padding-top: 0.55rem; border-top: 1px dashed var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                <input type="checkbox" id="gis-toggle-compass" aria-label="3D True North Ground Compass" title="3D True North Ground Compass" style="accent-color: #06b6d4;" />
+                <input type="checkbox" id="gis-toggle-compass" aria-label="3D True North Ground Compass" title="3D True North Ground Compass" style="accent-color: var(--color-cyan);" />
                 <span>3D True North Ground Compass</span>
               </label>
               <span id="gis-north-badge" class="gis-telemetry-pill">0.0° TN</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.62rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
-              <input type="range" id="gis-slider-north" aria-label="True North Orientation Angle" title="True North Orientation Angle" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
+              <input type="range" id="gis-slider-north" aria-label="True North Orientation Angle" title="True North Orientation Angle" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: var(--color-cyan);" />
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem;">
               <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem;" title="Align Camera Orientation to True North">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
                 <span>Align North</span>
               </button>
-              <button type="button" id="gis-btn-focus-compass" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem; border-color: rgba(6, 182, 212, 0.4); color: #06b6d4;" title="Frame Camera Directly to True North Compass Rose">
+              <button type="button" id="gis-btn-focus-compass" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem; border-color: var(--color-cyan-border); color: var(--color-cyan);" title="Frame Camera Directly to True North Compass Rose">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                 <span>View Compass</span>
               </button>
@@ -3617,7 +3617,7 @@
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-top: 0.3rem;">
-            <button type="button" id="gis-btn-apply-coords" class="btn-cost-action rates" style="border-color: rgba(6, 182, 212, 0.4); color: #06b6d4; padding: 0.4rem 0.6rem;" title="Update Georeference Datum">
+            <button type="button" id="gis-btn-apply-coords" class="btn-cost-action rates" style="border-color: var(--color-cyan-border); color: var(--color-cyan); padding: 0.4rem 0.6rem;" title="Update Georeference Datum">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
               <span>Apply Datum</span>
             </button>
@@ -3636,10 +3636,10 @@
         <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-basemap" aria-label="Enable 3D Satellite / Map Surface" title="Enable 3D Satellite / Map Surface" style="accent-color: #06b6d4;" />
+              <input type="checkbox" id="gis-toggle-basemap" aria-label="Enable 3D Satellite / Map Surface" title="Enable 3D Satellite / Map Surface" style="accent-color: var(--color-cyan);" />
               <span>Enable 3D Satellite / Map Surface</span>
             </label>
-            <span class="gis-telemetry-pill" id="gis-basemap-status" style="color: var(--text-muted); background: rgba(255,255,255,0.05); border-color: var(--border-color);">Disabled</span>
+            <span class="gis-telemetry-pill" id="gis-basemap-status" style="color: var(--text-muted); background: var(--bg-input); border-color: var(--border-color);">Disabled</span>
           </div>
 
           <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -3672,7 +3672,7 @@
                 </button>
               </div>
             </div>
-            <input type="range" id="gis-slider-radius" aria-label="Basemap Extent Radius Slider" title="Basemap Extent Radius Slider" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-radius" aria-label="Basemap Extent Radius Slider" title="Basemap Extent Radius Slider" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: var(--color-cyan);" />
 
             <!-- Quick Radius Presets -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-top: 0.15rem;">
@@ -3688,7 +3688,7 @@
               <span class="gis-field-label" style="margin-bottom: 0;">Vertical Elevation Offset:</span>
               <span id="gis-elev-val" class="gis-telemetry-pill">-0.05 m</span>
             </div>
-            <input type="range" id="gis-slider-elev" aria-label="Vertical Elevation Offset Slider" title="Vertical Elevation Offset Slider" min="-25" max="25" step="0.25" value="-0.05" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-elev" aria-label="Vertical Elevation Offset Slider" title="Vertical Elevation Offset Slider" min="-25" max="25" step="0.25" value="-0.05" style="width: 100%; accent-color: var(--color-cyan);" />
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.25rem;">
@@ -3696,11 +3696,11 @@
               <span class="gis-field-label" style="margin-bottom: 0;">Surface Opacity:</span>
               <span id="gis-opacity-val" class="gis-telemetry-pill">95%</span>
             </div>
-            <input type="range" id="gis-slider-opacity" aria-label="Surface Opacity Slider" title="Surface Opacity Slider" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-opacity" aria-label="Surface Opacity Slider" title="Surface Opacity Slider" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: var(--color-cyan);" />
           </div>
 
           <!-- Cinematic Orbital Space Flight & Site Descent -->
-          <button type="button" id="gis-btn-space-flight" class="btn-cost-action rates" style="width: 100%; margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.45rem 0.75rem; font-size: 0.68rem; border-color: rgba(6, 182, 212, 0.5); color: #06b6d4;" title="Toggle Cinematic Space Orbit View and Site-Level Camera Descent">
+          <button type="button" id="gis-btn-space-flight" class="btn-cost-action rates" style="width: 100%; margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.45rem 0.75rem; font-size: 0.68rem; border-color: var(--color-cyan-border); color: var(--color-cyan);" title="Toggle Cinematic Space Orbit View and Site-Level Camera Descent">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
             <span id="gis-space-flight-text">Fly to Space Orbit</span>
           </button>
@@ -3719,7 +3719,7 @@
 
           <!-- Interactive Action Buttons -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;">
-            <button type="button" id="gis-btn-pick-model-loc" class="btn-cost-action rates" style="border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 0.65rem; padding: 0.4rem 0.5rem;" title="Click on 3D Ground Basemap or 2D Mini-Map to Move Model">
+            <button type="button" id="gis-btn-pick-model-loc" class="btn-cost-action rates" style="border-color: var(--color-info-border); color: var(--color-info); font-size: 0.65rem; padding: 0.4rem 0.5rem;" title="Click on 3D Ground Basemap or 2D Mini-Map to Move Model">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
               <span id="gis-text-pick-model">Click Map to Move</span>
             </button>
@@ -3741,7 +3741,7 @@
                   <button type="button" id="gis-btn-nudge-x-pos" class="gis-btn-nudge" title="Move 10m East">+10</button>
                 </div>
               </div>
-              <input type="range" id="gis-model-slider-x" aria-label="Easting Offset Slider" title="Easting Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              <input type="range" id="gis-model-slider-x" aria-label="Easting Offset Slider" title="Easting Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: var(--color-info);" />
             </div>
 
             <!-- Northing Z -->
@@ -3754,7 +3754,7 @@
                   <button type="button" id="gis-btn-nudge-z-neg" class="gis-btn-nudge" title="Move 10m South">−10</button>
                 </div>
               </div>
-              <input type="range" id="gis-model-slider-z" aria-label="Northing Offset Slider" title="Northing Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              <input type="range" id="gis-model-slider-z" aria-label="Northing Offset Slider" title="Northing Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: var(--color-info);" />
             </div>
 
             <!-- Elevation Y & Rotation Y -->
@@ -3764,23 +3764,23 @@
                   <span class="gis-field-label" style="margin-bottom: 0;">Elevation (ΔY):</span>
                   <span id="gis-model-val-y" class="gis-telemetry-pill sky">0.00 m</span>
                 </div>
-                <input type="range" id="gis-model-slider-y" aria-label="Elevation (ΔY) Slider" title="Elevation (ΔY) Slider" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: #38bdf8;" />
+                <input type="range" id="gis-model-slider-y" aria-label="Elevation (ΔY) Slider" title="Elevation (ΔY) Slider" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: var(--color-info);" />
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span class="gis-field-label" style="margin-bottom: 0;">Orientation (Yaw):</span>
                   <span id="gis-model-val-rot" class="gis-telemetry-pill sky">0.0°</span>
                 </div>
-                <input type="range" id="gis-model-slider-rot" aria-label="Orientation (Yaw) Slider" title="Orientation (Yaw) Slider" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: #38bdf8;" />
+                <input type="range" id="gis-model-slider-rot" aria-label="Orientation (Yaw) Slider" title="Orientation (Yaw) Slider" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: var(--color-info);" />
               </div>
             </div>
           </div>
 
           <!-- Live Model Geographic Coordinates -->
-          <div style="padding: 0.45rem 0.6rem; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; display: flex; flex-direction: column; gap: 0.25rem;">
+          <div style="padding: 0.45rem 0.6rem; background: var(--color-info-subtle); border: 1px solid var(--color-info-border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; display: flex; flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Model GPS (WGS84):</span>
-              <span id="gis-model-gps" style="color: #38bdf8; font-weight: 700;">35.676200°, 139.650300°</span>
+              <span id="gis-model-gps" style="color: var(--color-info); font-weight: 700;">35.676200°, 139.650300°</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Model Elevation AMSL:</span>
@@ -3811,7 +3811,7 @@
         <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-gcps" aria-label="Show 3D Survey Prisms & Laser Poles" title="Show 3D Survey Prisms & Laser Poles" style="accent-color: #06b6d4;" />
+              <input type="checkbox" id="gis-toggle-gcps" aria-label="Show 3D Survey Prisms & Laser Poles" title="Show 3D Survey Prisms & Laser Poles" style="accent-color: var(--color-cyan);" />
               <span>Show 3D Survey Prisms & Laser Poles</span>
             </label>
             <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Add Survey Control Point at Site Origin">
@@ -3826,8 +3826,8 @@
           </div>
 
           <!-- Geodesic Measurement Output (Between GCPs) -->
-          <div id="gis-geodesic-measurement" class="hidden" style="padding: 0.45rem 0.6rem; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-secondary);">
-            <div style="font-weight: 700; color: #06b6d4; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+          <div id="gis-geodesic-measurement" class="hidden" style="padding: 0.45rem 0.6rem; background: var(--color-cyan-subtle); border: 1px solid var(--color-cyan-border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-secondary);">
+            <div style="font-weight: 700; color: var(--color-cyan); margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
               <span>Geodesic Baseline Vector:</span>
             </div>
@@ -4042,7 +4042,7 @@
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-muted);">Cursor (GPS WGS84):</span>
-            <span id="gis-telemetry-gps" style="color: #06b6d4; font-weight: 700;">35.676200°, 139.650300°</span>
+            <span id="gis-telemetry-gps" style="color: var(--color-cyan); font-weight: 700;">35.676200°, 139.650300°</span>
           </div>
           <button type="button" id="gis-btn-export-geojson" class="btn-cost-action report" style="width: 100%; margin-top: 0.4rem; justify-content: center; padding: 0.45rem 0.65rem;" title="Export Site Coordinates & Georeference as GeoJSON">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

@@ -54,10 +54,10 @@ export class InteractiveGanttDrawer {
               <span id="gantt-current-date-badge" class="gantt-date-badge">YYYY-MM-DD</span>
             </div>
             <input type="text" id="gantt-search-filter" class="gantt-search-input" placeholder="Filter tasks by name or category..." />
-            <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+            <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: var(--color-success-border); color: var(--color-success);">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display: inline-block; vertical-align: middle; margin-right: 2px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 5D Cost Control
             </button>
-            <button id="btn-gantt-sync-synchro" class="btn-gantt-drawer-action" title="Synchronize 4D Sequence with Synchro Schedule XML and model SIMULATION property" style="border-color: rgba(56, 189, 248, 0.5); color: #38BDF8;">⚡ Sync Synchro (SIMULATION)</button>
+            <button id="btn-gantt-sync-synchro" class="btn-gantt-drawer-action" title="Synchronize 4D Sequence with Synchro Schedule XML and model SIMULATION property" style="border-color: var(--color-info-border); color: var(--color-info);">⚡ Sync Synchro (SIMULATION)</button>
             <button id="btn-gantt-export-mspdi" class="btn-gantt-drawer-action" title="Export schedule to Microsoft Project XML (MSPDI)">Export MSP XML</button>
             <button id="btn-gantt-export-p6" class="btn-gantt-drawer-action" title="Export schedule to Oracle Primavera P6 XER">Export P6 XER</button>
             <button id="btn-gantt-export-csv" class="btn-gantt-drawer-action" title="Export schedule to CSV with itemized 5D unit & total costs">Export CSV (Cost)</button>
@@ -321,11 +321,11 @@ export class InteractiveGanttDrawer {
       row.innerHTML = `
         <div class="col-task-name" title="${t.name}">
           <span class="task-drag-handle">≡</span>
-          ${t.wbsCode ? `<span class="gantt-wbs-badge" style="font-size: 0.65rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">${t.wbsCode}</span>` : ''}
+          ${t.wbsCode ? `<span class="gantt-wbs-badge" style="font-size: 0.65rem; font-weight: 700; background: var(--color-info-subtle); color: var(--color-info); padding: 1px 4px; border-radius: 2px; margin-right: 4px;">${t.wbsCode}</span>` : ''}
           <span class="task-text">${t.name}</span>
-          <span class="gantt-badge-elements" style="font-size: 0.6rem; font-weight: 700; background: rgba(212, 255, 63, 0.15); color: var(--accent-500); padding: 1px 4px; border-radius: 2px; margin-left: 4px;" title="${t.elementIds.size} 3D elements assigned to task">${t.elementIds.size} 3D</span>
-          <button type="button" class="btn-gantt-link-3d" data-task-id="${t.id}" style="font-size: 0.58rem; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 3px; padding: 1px 5px; cursor: pointer; margin-left: 6px;" title="Assign currently selected 3D elements in viewport to this task">🔗 Link 3D</button>
-          ${t.isCritical ? `<span class="gantt-cpm-badge" style="font-size: 0.62rem; font-weight: 800; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); padding: 1px 3px; border-radius: 2px; margin-left: 4px;" title="Critical Path Task (Float: ${t.totalFloat ?? 0}d)">CPM</span>` : ''}
+          <span class="gantt-badge-elements" style="font-size: 0.6rem; font-weight: 700; background: var(--accent-glow2); color: var(--accent-500); padding: 1px 4px; border-radius: 2px; margin-left: 4px;" title="${t.elementIds.size} 3D elements assigned to task">${t.elementIds.size} 3D</span>
+          <button type="button" class="btn-gantt-link-3d" data-task-id="${t.id}" style="font-size: 0.58rem; font-weight: 700; background: var(--color-info-subtle); color: var(--color-info); border: 1px solid var(--color-info-border); border-radius: 3px; padding: 1px 5px; cursor: pointer; margin-left: 6px;" title="Assign currently selected 3D elements in viewport to this task">🔗 Link 3D</button>
+          ${t.isCritical ? `<span class="gantt-cpm-badge" style="font-size: 0.62rem; font-weight: 800; background: var(--color-danger-subtle); color: var(--color-danger); border: 1px solid var(--color-danger-border); padding: 1px 3px; border-radius: 2px; margin-left: 4px;" title="Critical Path Task (Float: ${t.totalFloat ?? 0}d)">CPM</span>` : ''}
         </div>
         <div class="col-task-status">
           <span class="gantt-status-tag ${statusClass}">${t.status}</span>

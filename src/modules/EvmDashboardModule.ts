@@ -655,14 +655,14 @@ export class EvmDashboardModule {
     if (svEl) {
       const svSign = metrics.sv >= 0 ? "+" : "−";
       svEl.textContent = `${svSign}${formatCurrency(Math.abs(metrics.sv))}`;
-      svEl.style.color = metrics.sv >= 0 ? "#10b981" : "#ef4444";
+      svEl.style.color = metrics.sv >= 0 ? "var(--color-success)" : "var(--color-danger)";
     }
 
     const cvEl = document.getElementById("evm-val-cv");
     if (cvEl) {
       const cvSign = metrics.cv >= 0 ? "+" : "−";
       cvEl.textContent = `${cvSign}${formatCurrency(Math.abs(metrics.cv))}`;
-      cvEl.style.color = metrics.cv >= 0 ? "#10b981" : "#ef4444";
+      cvEl.style.color = metrics.cv >= 0 ? "var(--color-success)" : "var(--color-danger)";
     }
 
     // Indices & Forecasts
@@ -672,7 +672,7 @@ export class EvmDashboardModule {
     setElem("evm-val-vac", (metrics.vac >= 0 ? "+" : "−") + formatCurrency(Math.abs(metrics.vac)));
     const vacEl = document.getElementById("evm-val-vac");
     if (vacEl) {
-      vacEl.style.color = metrics.vac >= 0 ? "#10b981" : "#ef4444";
+      vacEl.style.color = metrics.vac >= 0 ? "var(--color-success)" : "var(--color-danger)";
     }
 
     // TCPI BAC & EAC
@@ -680,12 +680,12 @@ export class EvmDashboardModule {
     const tcpiBacPill = document.getElementById("evm-tcpi-bac-pill");
     if (tcpiBacPill) {
       tcpiBacPill.textContent = `BAC: ${metrics.tcpiBac > 9 ? "∞" : metrics.tcpiBac.toFixed(2)} (${metrics.tcpiBacFeasible ? "Feasible" : "High Risk"})`;
-      tcpiBacPill.style.color = metrics.tcpiBacFeasible ? "#10b981" : "#ef4444";
+      tcpiBacPill.style.color = metrics.tcpiBacFeasible ? "var(--color-success)" : "var(--color-danger)";
     }
     const tcpiEacPill = document.getElementById("evm-tcpi-eac-pill");
     if (tcpiEacPill) {
       tcpiEacPill.textContent = `EAC: ${metrics.tcpiEac > 9 ? "∞" : metrics.tcpiEac.toFixed(2)} (${metrics.tcpiEacFeasible ? "Feasible" : "High Risk"})`;
-      tcpiEacPill.style.color = metrics.tcpiEacFeasible ? "#10b981" : "#ef4444";
+      tcpiEacPill.style.color = metrics.tcpiEacFeasible ? "var(--color-success)" : "var(--color-danger)";
     }
 
     setElem("evm-val-progress", `${metrics.progressPercent}%`);
@@ -694,7 +694,7 @@ export class EvmDashboardModule {
     setElem("evm-val-es-svt", `${metrics.earnedSchedule.scheduleVarianceTimeDays >= 0 ? "+" : ""}${metrics.earnedSchedule.scheduleVarianceTimeDays}d`);
     const svtEl = document.getElementById("evm-val-es-svt");
     if (svtEl) {
-      svtEl.style.color = metrics.earnedSchedule.scheduleVarianceTimeDays >= 0 ? "#10b981" : "#ef4444";
+      svtEl.style.color = metrics.earnedSchedule.scheduleVarianceTimeDays >= 0 ? "var(--color-success)" : "var(--color-danger)";
     }
     setElem("evm-val-es-spit", metrics.earnedSchedule.schedulePerformanceIndexTime.toFixed(2));
     setElem("evm-val-es-eact", `${metrics.earnedSchedule.estimatedDurationAtCompletionDays}d`);
@@ -789,15 +789,15 @@ export class EvmDashboardModule {
     const scrubX = currentSimDateMs ? mapX(currentSimDateMs) : padL;
 
     container.innerHTML = `
-      <div style="background: var(--bg-card, #17171c); border: 1px solid var(--border-subtle, #27272a); border-radius: 8px; padding: 0.6rem; position: relative;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.6rem; position: relative;">
         <!-- Header Legend -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; font-size: 0.62rem; font-weight: 700;">
-          <span style="color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.5px;">EVM Cumulative S-Curve</span>
+          <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">EVM Cumulative S-Curve</span>
           <div style="display: flex; gap: 0.6rem; align-items: center;">
-            <span style="color: #38bdf8; display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: #38bdf8;"></span>PV</span>
-            <span style="color: #10b981; display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: #10b981;"></span>EV</span>
-            <span style="color: #f59e0b; display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: #f59e0b;"></span>AC</span>
-            <span style="color: #d4ff3f; display: flex; align-items: center; gap: 0.2rem;"><span style="width: 2px; height: 8px; background: #d4ff3f;"></span>Now</span>
+            <span style="color: var(--color-info); display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: var(--color-info);"></span>PV</span>
+            <span style="color: var(--color-success); display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: var(--color-success);"></span>EV</span>
+            <span style="color: var(--color-warning); display: flex; align-items: center; gap: 0.2rem;"><span style="width: 8px; height: 2px; background: var(--color-warning);"></span>AC</span>
+            <span style="color: var(--accent-primary); display: flex; align-items: center; gap: 0.2rem;"><span style="width: 2px; height: 8px; background: var(--accent-primary);"></span>Now</span>
           </div>
         </div>
 
@@ -877,12 +877,12 @@ export class EvmDashboardModule {
     const currentY = mapY(metrics.cpi);
 
     container.innerHTML = `
-      <div style="background: var(--bg-card, #17171c); border: 1px solid var(--border-subtle, #27272a); border-radius: 8px; padding: 0.6rem; position: relative;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.6rem; position: relative;">
         <!-- Header Legend -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; font-size: 0.62rem; font-weight: 700;">
-          <span style="color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.5px;">APM Bulls-Eye Quadrant Matrix</span>
+          <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">APM Bulls-Eye Quadrant Matrix</span>
           <div style="display: flex; gap: 0.45rem; align-items: center; font-size: 0.58rem;">
-            <span style="color: #10b981; font-weight: 800;">Target (1.0, 1.0)</span>
+            <span style="color: var(--color-success); font-weight: 800;">Target (1.0, 1.0)</span>
             <span style="color: ${metrics.apmBullsEye.ringColor}; font-weight: 800; background: ${metrics.apmBullsEye.ringColor}22; padding: 1px 5px; border-radius: 3px;">
               ${metrics.apmBullsEye.toleranceZone}
             </span>
@@ -949,7 +949,7 @@ export class EvmDashboardModule {
         </svg>
 
         <!-- Quadrant Description Footer -->
-        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: var(--bg-hover, rgba(255,255,255,0.03)); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${metrics.apmBullsEye.ringColor};">
+        <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.3; background: var(--bg-hover); padding: 0.3rem 0.45rem; border-radius: 4px; border-left: 2px solid ${metrics.apmBullsEye.ringColor};">
           <strong style="color: var(--text-primary);">${metrics.apmBullsEye.quadrantTitle}</strong>: ${metrics.apmBullsEye.quadrantDescription} (Offset distance: ${metrics.apmBullsEye.distanceFromTarget}).
         </div>
       </div>
@@ -965,7 +965,7 @@ export class EvmDashboardModule {
 
     if (criticalDelayed.length === 0) {
       container.innerHTML = `
-        <div style="font-size: 0.62rem; color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.5rem 0.6rem; border-radius: 6px; display: flex; align-items: center; gap: 0.35rem;">
+        <div style="font-size: 0.62rem; color: var(--color-success); background: var(--color-success-subtle); border: 1px solid var(--color-success-border); padding: 0.5rem 0.6rem; border-radius: 6px; display: flex; align-items: center; gap: 0.35rem;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>
           <span>All critical path construction activities are operating on schedule. Zero delay exposure detected.</span>
         </div>
@@ -977,14 +977,14 @@ export class EvmDashboardModule {
       <div style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%;">
         ${criticalDelayed.slice(0, 5).map(task => {
           return `
-            <div style="background: var(--bg-card, #18181b); border-left: 3px solid #ef4444; border: 1px solid var(--border-subtle, #27272a); border-left-width: 3px; border-left-color: #ef4444; border-radius: 4px; padding: 0.35rem 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: var(--bg-card); border-left: 3px solid var(--color-danger); border: 1px solid var(--border-subtle); border-left-width: 3px; border-left-color: var(--color-danger); border-radius: 4px; padding: 0.35rem 0.5rem; display: flex; justify-content: space-between; align-items: center;">
               <div style="display: flex; flex-direction: column; gap: 0.1rem; overflow: hidden; max-width: 65%;">
-                <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary, #ffffff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${task.taskName}</span>
-                <span style="font-size: 0.58rem; color: var(--text-muted, #94a3b8);">Target End: ${task.plannedEndDate} • CPM Critical</span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${task.taskName}</span>
+                <span style="font-size: 0.58rem; color: var(--text-muted);">Target End: ${task.plannedEndDate} • CPM Critical</span>
               </div>
               <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem;">
-                <span style="font-size: 0.62rem; font-weight: 800; color: #ef4444; background: rgba(239, 68, 68, 0.15); padding: 1px 4px; border-radius: 2px;">+${task.delayDays}d Delayed</span>
-                <span style="font-size: 0.58rem; color: var(--text-muted, #94a3b8); font-family: var(--font-mono);">${formatCurrency(task.totalCostImpact)} Exp</span>
+                <span style="font-size: 0.62rem; font-weight: 800; color: var(--color-danger); background: var(--color-danger-subtle); padding: 1px 4px; border-radius: 2px;">+${task.delayDays}d Delayed</span>
+                <span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono);">${formatCurrency(task.totalCostImpact)} Exp</span>
               </div>
             </div>
           `;
@@ -1252,7 +1252,7 @@ Approved by: Project Director _______________________   Date: ${m.simDateIso}
     overlay.id = "cpr-format5-modal";
     overlay.style.position = "fixed";
     overlay.style.inset = "0";
-    overlay.style.background = "rgba(0, 0, 0, 0.85)";
+    overlay.style.background = "var(--bg-overlay)";
     overlay.style.backdropFilter = "blur(8px)";
     overlay.style.zIndex = "99999";
     overlay.style.display = "flex";
@@ -1261,23 +1261,23 @@ Approved by: Project Director _______________________   Date: ${m.simDateIso}
     overlay.style.padding = "1.5rem";
 
     overlay.innerHTML = `
-      <div style="background: #0f0f13; border: 1px solid rgba(234, 179, 8, 0.5); border-radius: 10px; width: 880px; max-width: 95vw; height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+      <div style="background: var(--bg-panel); border: 1px solid var(--color-warning-border); border-radius: 10px; width: 880px; max-width: 95vw; height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-panel);">
         <!-- Modal Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.2rem; background: #181820; border-bottom: 1px solid #27272a;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.2rem; background: var(--bg-panel-header); border-bottom: 1px solid var(--border-color);">
           <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #ffffff;">CPR Format 5 — Variance Analysis Report (VAR)</h3>
-            <span style="font-size: 0.6rem; background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); padding: 2px 6px; border-radius: 3px; font-weight: 700;">ANSI/EIA 748-B</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">CPR Format 5 — Variance Analysis Report (VAR)</h3>
+            <span style="font-size: 0.6rem; background: var(--color-warning-subtle); color: var(--color-warning); border: 1px solid var(--color-warning-border); padding: 2px 6px; border-radius: 3px; font-weight: 700;">ANSI/EIA 748-B</span>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button id="btn-cpr5-download" style="background: #2563eb; color: #ffffff; border: none; padding: 0.35rem 0.75rem; border-radius: 5px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+            <button id="btn-cpr5-download" style="background: var(--accent-500); color: var(--accent-btn-text); border: none; padding: 0.35rem 0.75rem; border-radius: 5px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download Report (.txt)
             </button>
-            <button id="btn-cpr5-copy" style="background: rgba(255,255,255,0.08); color: #e2e8f0; border: 1px solid #3f3f46; padding: 0.35rem 0.75rem; border-radius: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer;">
+            <button id="btn-cpr5-copy" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.35rem 0.75rem; border-radius: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer;">
               Copy to Clipboard
             </button>
-            <button id="btn-cpr5-close" style="background: transparent; border: none; color: #a1a1aa; cursor: pointer; padding: 0.3rem;" aria-label="Close">
+            <button id="btn-cpr5-close" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.3rem;" aria-label="Close">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -1285,7 +1285,7 @@ Approved by: Project Director _______________________   Date: ${m.simDateIso}
 
         <!-- Modal Body Content -->
         <div style="flex: 1; padding: 1rem 1.2rem; overflow-y: auto;">
-          <pre style="margin: 0; font-family: monospace; font-size: 0.75rem; line-height: 1.45; color: #e2e8f0; background: #09090b; padding: 1rem; border-radius: 6px; border: 1px solid #27272a; white-space: pre-wrap; word-break: break-all;">${reportText}</pre>
+          <pre style="margin: 0; font-family: monospace; font-size: 0.75rem; line-height: 1.45; color: var(--text-main); background: var(--bg-app); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); white-space: pre-wrap; word-break: break-all;">${reportText}</pre>
         </div>
       </div>
     `;

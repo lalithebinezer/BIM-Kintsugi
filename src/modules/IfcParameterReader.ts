@@ -834,13 +834,13 @@ export class IfcParameterReader {
     if (this.cachedParameters.length === 0) {
       container.innerHTML = `
         <div class="empty-state" style="padding: 3rem 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-          <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; color: #38BDF8;">
+          <div style="width: 52px; height: 52px; border-radius: 14px; background: var(--color-info-subtle); border: 1px solid var(--color-info-border); display: flex; align-items: center; justify-content: center; color: var(--color-info);">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
             </svg>
           </div>
-          <div style="font-size: 1rem; font-weight: 800; color: #F8FAFC;">No IFC Model Currently Loaded</div>
+          <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary);">No IFC Model Currently Loaded</div>
           <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 440px; line-height: 1.4;">
             To read parameters, attributes, and property sets for 4D construction sequencing, load an <code>.ifc</code> / <code>.frag</code> model or load the Snowdon Towers sample model.
           </div>

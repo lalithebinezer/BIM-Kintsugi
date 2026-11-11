@@ -120,7 +120,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
           </div>
           <p class="bcf-card-desc">${safeDesc}</p>
           <div class="bcf-card-footer">
-            <span style="font-size: 0.6rem; color: rgba(255,255,255,0.5);">👤 ${safeAssigned}</span>
+            <span style="font-size: 0.6rem; color: var(--text-muted);">👤 ${safeAssigned}</span>
             <button class="btn-bcf-restore" data-guid="${safeGuid}">📍 Restore View</button>
           </div>
         </div>
@@ -452,13 +452,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const updateEvmChartToggleUi = (mode: "scurve" | "bullseye") => {
     if (btnScurve && btnBullseye) {
       if (mode === "scurve") {
-        btnScurve.style.background = "#2563eb";
-        btnScurve.style.color = "#ffffff";
+        btnScurve.style.background = "var(--color-info)";
+        btnScurve.style.color = "var(--accent-btn-text)";
         btnBullseye.style.background = "transparent";
         btnBullseye.style.color = "var(--text-muted)";
       } else {
-        btnBullseye.style.background = "#2563eb";
-        btnBullseye.style.color = "#ffffff";
+        btnBullseye.style.background = "var(--color-info)";
+        btnBullseye.style.color = "var(--accent-btn-text)";
         btnScurve.style.background = "transparent";
         btnScurve.style.color = "var(--text-muted)";
       }
@@ -573,7 +573,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (toggleBasemap) toggleBasemap.checked = cfg.enabled;
     if (statusBadge) {
       statusBadge.textContent = cfg.enabled ? "Active" : "Hidden";
-      statusBadge.style.color = cfg.enabled ? "#06b6d4" : "var(--text-muted)";
+      statusBadge.style.color = cfg.enabled ? "var(--color-cyan)" : "var(--text-muted)";
     }
     if (selectProvider) selectProvider.value = cfg.provider;
     const selectRes = document.getElementById("gis-select-resolution") as HTMLSelectElement | null;
@@ -627,7 +627,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       txtPickModel.textContent = gisModule.isModelPlacementActive() ? "Cancel Map Pick" : "Click Map to Move";
     }
     if (btnPickModel) {
-      btnPickModel.style.background = gisModule.isModelPlacementActive() ? "rgba(56, 189, 248, 0.25)" : "";
+      btnPickModel.style.background = gisModule.isModelPlacementActive() ? "var(--color-info-subtle)" : "";
     }
 
     // Synchronize True North controls & Compass Rose
@@ -704,7 +704,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
                 <div style="font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.25rem;">
                   <span>${p.code}</span>
                   <span style="color: var(--text-muted); font-size: 0.58rem; font-weight: normal;">${p.name}</span>
-                  <span style="color: #06b6d4; font-size: 0.54rem; font-family: var(--font-mono); background: rgba(6, 182, 212, 0.1); padding: 0.05rem 0.25rem; border-radius: 3px;">${p.type}</span>
+                  <span style="color: var(--color-cyan); font-size: 0.54rem; font-family: var(--font-mono); background: var(--color-cyan-subtle); padding: 0.05rem 0.25rem; border-radius: 3px;">${p.type}</span>
                 </div>
                 <div style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.56rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   X:${p.localX.toFixed(1)}m Y:${p.localY.toFixed(1)}m Z:${p.localZ.toFixed(1)}m · ${p.latitude.toFixed(4)}°, ${p.longitude.toFixed(4)}°
@@ -843,7 +843,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     const statusBadge = document.getElementById("gis-basemap-status");
     if (statusBadge) {
       statusBadge.textContent = checked ? "Active" : "Hidden";
-      statusBadge.style.color = checked ? "#06b6d4" : "var(--text-muted)";
+      statusBadge.style.color = checked ? "var(--color-cyan)" : "var(--text-muted)";
     }
     SoundManager.getInstance().playClick();
   });

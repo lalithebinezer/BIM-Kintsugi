@@ -250,7 +250,7 @@ export class CostRateManager {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <div>
-              <h2 id="cost-modal-title" style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #fff;">Custom Cost Rate Table & Multipliers</h2>
+              <h2 id="cost-modal-title" style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">Custom Cost Rate Table & Multipliers</h2>
               <span style="font-size: 0.65rem; color: var(--text-muted);">Set baseline unit rates, measurement basis (m³, m², m, ea), and project currency.</span>
             </div>
           </div>
@@ -264,7 +264,7 @@ export class CostRateManager {
           </div>
           <div style="display: flex; gap: 0.4rem;">
             <button id="btn-cost-rates-reset" class="btn-secondary" style="font-size: 0.68rem; padding: 0.25rem 0.6rem;">Reset Defaults</button>
-            <button id="btn-cost-rates-save" class="btn-action-primary" style="font-size: 0.68rem; padding: 0.25rem 0.8rem; background: var(--accent-500); color: #000; font-weight: 800;">Apply Rates</button>
+            <button id="btn-cost-rates-save" class="btn-action-primary" style="font-size: 0.68rem; padding: 0.25rem 0.8rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800;">Apply Rates</button>
           </div>
         </div>
 
@@ -326,7 +326,7 @@ export class CostRateManager {
         (r) => `
         <tr data-cat="${r.category}">
           <td>
-            <div style="font-weight: 700; color: #fff;">${r.displayName}</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${r.displayName}</div>
             <span style="font-family: monospace; font-size: 0.6rem; color: var(--text-muted);">${r.category}</span>
           </td>
           <td>

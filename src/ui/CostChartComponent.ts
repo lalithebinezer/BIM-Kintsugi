@@ -132,8 +132,8 @@ export class CostChartComponent {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
           <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">4D/5D EVM S-Curve</span>
           <div style="display: flex; gap: 0.5rem; font-size: 0.6rem;">
-            <span style="color: #60a5fa;">● Planned (PV)</span>
-            <span style="color: #34d399;">● Earned (EV)</span>
+            <span style="color: var(--color-info);">● Planned (PV)</span>
+            <span style="color: var(--color-success);">● Earned (EV)</span>
           </div>
         </div>
         <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible;">

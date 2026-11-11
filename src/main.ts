@@ -349,7 +349,7 @@ document.getElementById("header-tenant-rbac")?.addEventListener("click", () => {
   const roleBadge = document.getElementById("header-user-role");
   if (roleBadge) {
     roleBadge.textContent = nextRole;
-    roleBadge.style.color = nextRole === "SuperAdmin" ? "#a855f7" : (nextRole === "Viewer" ? "#94a3b8" : "#38bdf8");
+    roleBadge.style.color = nextRole === "SuperAdmin" ? "var(--color-purple)" : (nextRole === "Viewer" ? "var(--text-muted)" : "var(--color-info)");
   }
   showToast(`Access Control: Role switched to '${nextRole}' (${acm.getActiveTenant().name})`, "info");
 });
@@ -2141,7 +2141,7 @@ async function displayElementProperties(model: any, expressId: number) {
 
       const gisDivider = document.createElement("div");
       gisDivider.className = "prop-set-header";
-      gisDivider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: #06b6d4; margin: 0.8rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid rgba(6, 182, 212, 0.3); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
+      gisDivider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: var(--color-cyan); margin: 0.8rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid var(--color-cyan-border); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
       gisDivider.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> <span>GIS &amp; Georeference (WGS84)</span>`;
       tableEl.appendChild(gisDivider);
 
@@ -3203,19 +3203,19 @@ function updateVarianceLegendUI(varianceActive: boolean) {
     legendEl.setAttribute("data-mode", "variance");
     legendEl.innerHTML = `
       <span class="legend-item" title="Ahead of schedule (actual finish < planned finish)" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#38BDF8;box-shadow:0 0 6px rgba(56,189,248,0.5);"></span>
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-info);box-shadow:0 0 6px var(--color-info-border);"></span>
         <span>Ahead</span>
       </span>
       <span class="legend-item" title="On schedule (within buffer days)" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#64748B;"></span>
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--text-muted);"></span>
         <span>On Track</span>
       </span>
       <span class="legend-item" title="Delayed past planned completion date" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F59E0B;box-shadow:0 0 6px rgba(245,158,11,0.5);"></span>
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-warning);box-shadow:0 0 6px var(--color-warning-border);"></span>
         <span>Delayed</span>
       </span>
       <span class="legend-item" title="Critical path delay or > 7 days slippage" style="font-size:0.66rem;font-weight:700;display:flex;align-items:center;gap:0.35rem;cursor:default;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#EF4444;box-shadow:0 0 6px rgba(239,68,68,0.5);"></span>
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-danger);box-shadow:0 0 6px var(--color-danger-border);"></span>
         <span>Critical</span>
       </span>
     `;
@@ -6793,9 +6793,9 @@ if (pinCategoryPills) {
       });
       btn.classList.add("active");
       activePinCategory = btn.getAttribute("data-cat") || "Inspection";
-      const catColor = AnnotationModule.categoryColors[activePinCategory] || "#3b82f6";
+      const catColor = AnnotationModule.categoryColors[activePinCategory] || "var(--color-info)";
       (btn as HTMLElement).style.background = catColor;
-      (btn as HTMLElement).style.color = "#ffffff";
+      (btn as HTMLElement).style.color = "var(--accent-btn-text)";
 
       // Automatically sync input title with selected Category name
       if (pinTitleInput) {
@@ -6819,17 +6819,17 @@ function refreshPinsList(pins: any[]) {
   }
 
   pinListContainer.innerHTML = pins.map(p => {
-    const catColor = p.color || AnnotationModule.categoryColors[p.category] || "#3b82f6";
+    const catColor = p.color || AnnotationModule.categoryColors[p.category] || "var(--color-info)";
     return `
-      <div class="pin-list-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1.5px solid #000; padding: 0.25rem 0.4rem; border-radius: 2px; font-size: 0.65rem; cursor: pointer;">
+      <div class="pin-list-item" data-id="${p.id}" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.25rem 0.4rem; border-radius: 2px; font-size: 0.65rem; cursor: pointer;">
         <div style="display: flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          <span style="background: ${catColor}; color: #ffffff; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 900; flex-shrink: 0;">${p.number}</span>
+          <span style="background: ${catColor}; color: var(--accent-btn-text); width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-color); display: inline-flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 900; flex-shrink: 0;">${p.number}</span>
           <span style="font-weight: 800; color: var(--text-primary);">${p.title}</span>
           <span style="font-size: 0.58rem; color: var(--text-muted);">[${p.category}]</span>
         </div>
         <div style="display: flex; gap: 0.2rem; flex-shrink: 0;">
-          <button class="btn-goto-pin" data-id="${p.id}" title="Focus camera on pin" style="background: var(--accent-500); color: #ffffff; border: 1px solid #000; border-radius: 2px; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; cursor: pointer;">View</button>
-          <button class="btn-del-pin" data-id="${p.id}" title="Delete pin" style="background: #fee2e2; color: #dc2626; border: 1px solid #000; border-radius: 2px; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; cursor: pointer;">✕</button>
+          <button class="btn-goto-pin" data-id="${p.id}" title="Focus camera on pin" style="background: var(--accent-500); color: var(--accent-btn-text); border: 1px solid var(--border-color); border-radius: 2px; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; cursor: pointer;">View</button>
+          <button class="btn-del-pin" data-id="${p.id}" title="Delete pin" style="background: var(--color-danger-subtle); color: var(--color-danger); border: 1px solid var(--color-danger-border); border-radius: 2px; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; cursor: pointer;">✕</button>
         </div>
       </div>
     `;
@@ -6913,8 +6913,8 @@ AnnotationModule.getInstance().onPinSelected = (anno) => {
   // Update active highlight in pin list
   document.querySelectorAll("#pin-annotations-list .pin-list-item").forEach((item) => {
     const isSelected = item.getAttribute("data-id") === anno.id;
-    (item as HTMLElement).style.borderColor = isSelected ? "var(--accent-500, #3b82f6)" : "#000000";
-    (item as HTMLElement).style.background = isSelected ? "var(--bg-hover, #e0f2fe)" : "var(--bg-card)";
+    (item as HTMLElement).style.borderColor = isSelected ? "var(--accent-500)" : "var(--border-color)";
+    (item as HTMLElement).style.background = isSelected ? "var(--bg-hover)" : "var(--bg-card)";
     if (isSelected) {
       item.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
@@ -6945,7 +6945,7 @@ if (btnSidebarXRayPin) {
     }
     const isXRay = AnnotationModule.getInstance().isXRayActive;
     btnSidebarXRayPin.style.background = isXRay ? "var(--accent-500)" : "var(--bg-card)";
-    btnSidebarXRayPin.style.color = isXRay ? "#ffffff" : "var(--text-primary)";
+    btnSidebarXRayPin.style.color = isXRay ? "var(--accent-btn-text)" : "var(--text-primary)";
     updateViewportHint(isXRay ? "X-Ray Isolation Mode ON" : "X-Ray Isolation Mode OFF");
   });
 }
@@ -6981,7 +6981,7 @@ if (pinFilterChips) {
       const filter = chip.getAttribute("data-filter") || "All";
       const activeColor = filter === "All" ? "var(--accent-500)" : (AnnotationModule.categoryColors[filter] || "var(--accent-500)");
       (chip as HTMLElement).style.background = activeColor;
-      (chip as HTMLElement).style.color = "#ffffff";
+      (chip as HTMLElement).style.color = "var(--accent-btn-text)";
       AnnotationModule.getInstance().setFilterCategory(filter);
       updateViewportHint(`Filtered pins: ${filter}`);
     });
@@ -7779,7 +7779,7 @@ async function updateTimelineVisualState(force: boolean = false) {
         progBadge.innerText = delayedTotal > 0
           ? `${delayedTotal} Delayed (${delayReport.criticalDelayCount} Crit)`
           : `All Tasks On Track`;
-        progBadge.style.color = delayedTotal > 0 ? "#F59E0B" : "#10B981";
+        progBadge.style.color = delayedTotal > 0 ? "var(--color-warning)" : "var(--color-success)";
       }
       const spiBadge = document.getElementById("gantt-spi-val");
       if (spiBadge) {
@@ -7854,7 +7854,7 @@ async function updateTimelineVisualState(force: boolean = false) {
       progBadge.innerText = delayedTotal > 0
         ? `${delayedTotal} Delayed (${delayReport.criticalDelayCount} Crit)`
         : `All Tasks On Track`;
-      progBadge.style.color = delayedTotal > 0 ? "#F59E0B" : "#10B981";
+      progBadge.style.color = delayedTotal > 0 ? "var(--color-warning)" : "var(--color-success)";
     }
     const spiBadge = document.getElementById("gantt-spi-val");
     if (spiBadge) {
@@ -8251,7 +8251,7 @@ function initPropertySequenceEngineUI() {
     if (box) {
       box.scrollIntoView({ behavior: "smooth", block: "start" });
       box.style.borderColor = "var(--accent-500)";
-      box.style.boxShadow = "0 0 16px rgba(212, 255, 63, 0.4)";
+      box.style.boxShadow = "0 0 16px var(--accent-glow)";
       setTimeout(() => {
         box.style.borderColor = "";
         box.style.boxShadow = "";
@@ -9074,7 +9074,7 @@ const renderCommandResults = (query: string) => {
         <span style="font-size: 0.85rem; ${isSelected ? 'filter: brightness(0);' : ''}">${cmd.icon}</span>
         <span style="font-size: 0.72rem; font-weight: 700; color: ${selectedTextColor};">${cmd.title}</span>
       </div>
-      <span style="font-size: 0.56rem; font-weight: 800; text-transform: uppercase; background: ${selectedBadgeBg}; border: 1px solid ${isSelected ? 'rgba(0,0,0,0.2)' : 'var(--border-subtle)'}; padding: 0.1rem 0.35rem; border-radius: 2px; color: ${selectedMutedColor};">${cmd.category}</span>
+      <span style="font-size: 0.56rem; font-weight: 800; text-transform: uppercase; background: ${selectedBadgeBg}; border: 1px solid ${isSelected ? 'var(--border-strong)' : 'var(--border-subtle)'}; padding: 0.1rem 0.35rem; border-radius: 2px; color: ${selectedMutedColor};">${cmd.category}</span>
     `;
 
     itemEl.addEventListener("click", () => {
