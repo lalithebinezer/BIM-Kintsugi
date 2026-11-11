@@ -52,12 +52,75 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   ClashToleranceInspector.getInstance();
   GraphicsVFXManager.getInstance();
 
+  const DOCK_DRAWER_MAP: Record<string, string> = {
+    "measurement-panel": "btn-dock-measure",
+    "clash-panel": "btn-dock-clash",
+    "carbon-panel": "btn-dock-carbon",
+    "copilot-panel": "btn-dock-copilot",
+    "collab-panel": "btn-dock-collab",
+    "bcf-issues-panel": "btn-dock-bcf",
+    "cost-control-panel": "btn-dock-cost",
+    "evm-panel": "btn-dock-evm",
+    "gis-panel": "btn-dock-gis",
+  };
+
+  const HEADER_DRAWER_MAP: Record<string, string> = {
+    "measurement-panel": "btn-header-measure",
+    "clash-panel": "btn-header-clash",
+    "carbon-panel": "btn-header-carbon",
+    "copilot-panel": "btn-header-copilot",
+    "collab-panel": "btn-header-collab",
+    "bcf-issues-panel": "btn-header-bcf",
+    "cost-control-panel": "btn-header-cost",
+    "evm-panel": "btn-header-evm",
+    "gis-panel": "btn-header-gis",
+  };
+
+  function syncDockActiveStates() {
+    for (const [panelId, dockBtnId] of Object.entries(DOCK_DRAWER_MAP)) {
+      const panel = document.getElementById(panelId);
+      const btn = document.getElementById(dockBtnId);
+      const headerBtn = document.getElementById(HEADER_DRAWER_MAP[panelId]);
+      const isOpen = panel && !panel.classList.contains("hidden") && (panel as HTMLElement).style.display !== "none";
+      if (btn) btn.classList.toggle("active", !!isOpen);
+      if (headerBtn) headerBtn.classList.toggle("active", !!isOpen);
+    }
+
+    // IFC Parameter Reader Modal sync
+    const ifcModal = document.getElementById("ifc-parameter-reader-modal");
+    const ifcBtn = document.getElementById("btn-dock-ifc-params");
+    const isIfcOpen = ifcModal && !ifcModal.classList.contains("hidden") && (ifcModal as HTMLElement).style.display !== "none";
+    if (ifcBtn) ifcBtn.classList.toggle("active", !!isIfcOpen);
+
+    // 4D Mode / Timeline sync
+    const is4D = document.body.classList.contains("mode-4d");
+    const ganttBtn = document.getElementById("btn-dock-gantt");
+    const headerGanttBtn = document.getElementById("btn-header-gantt");
+    if (ganttBtn) ganttBtn.classList.toggle("active", is4D);
+    if (headerGanttBtn) headerGanttBtn.classList.toggle("active", is4D);
+  }
+  (window as any).syncDockActiveStates = syncDockActiveStates;
+
   function closeAllEnterpriseDrawers() {
     document.querySelectorAll(".enterprise-drawer").forEach((drawer) => {
       drawer.classList.add("hidden");
       (drawer as HTMLElement).style.display = "none";
     });
+
+    const ifcModal = document.getElementById("ifc-parameter-reader-modal");
+    if (ifcModal && !ifcModal.classList.contains("hidden")) {
+      ifcModal.classList.add("hidden");
+    }
+
+    try {
+      if (typeof (window as any).InteractiveGanttDrawer?.getInstance === "function") {
+        (window as any).InteractiveGanttDrawer.getInstance().hide();
+      }
+    } catch (e) {}
+
+    syncDockActiveStates();
   }
+  (window as any).closeAllEnterpriseDrawers = closeAllEnterpriseDrawers;
 
   function toggleEnterpriseDrawer(panelId: string) {
     const panel = document.getElementById(panelId);
@@ -80,6 +143,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       }
       SoundManager.getInstance().playClick();
     }
+    syncDockActiveStates();
   }
 
   // Delegated click listener for centralized workspace toggle button
@@ -225,6 +289,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       if (targetPanel) {
         targetPanel.classList.add("hidden");
         (targetPanel as HTMLElement).style.display = "none";
+        syncDockActiveStates();
         SoundManager.getInstance().playClick();
       }
     }
@@ -376,9 +441,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const phasingTimeline = PhasingTimelineModule.getInstance();
 
   const toggleUnified4DBar = () => {
+    const isCurrently4D = document.body.classList.contains("mode-4d");
+    closeAllEnterpriseDrawers();
     if (typeof (window as any).toggle4DMode === "function") {
-      (window as any).toggle4DMode();
+      (window as any).toggle4DMode(!isCurrently4D);
     }
+    syncDockActiveStates();
     SoundManager.getInstance().playClick();
   };
 
@@ -1419,6 +1487,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (typeof (window as any).toggle4DMode === "function") {
       (window as any).toggle4DMode(false);
     }
+    syncDockActiveStates();
     SoundManager.getInstance().playClick();
   });
 

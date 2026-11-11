@@ -50,7 +50,11 @@ export class KeyboardController {
         if (ctxMenu) ctxMenu.style.display = 'none';
         const cmdModal = document.getElementById('command-palette-modal');
         if (cmdModal) cmdModal.style.display = 'none';
-        document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+        if (typeof (window as any).closeAllEnterpriseDrawers === 'function') {
+          (window as any).closeAllEnterpriseDrawers();
+        } else {
+          document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+        }
         document.getElementById('timeline-options-modal')?.classList.add('hidden');
         document.getElementById('btn-timeline-options-hub')?.classList.remove('active');
         return;

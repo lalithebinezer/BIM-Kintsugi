@@ -2724,6 +2724,16 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   box-shadow: 0 0 20px var(--accent-500);
 }
 
+.dock-icon.btn-tool.active svg,
+.dock-icon.btn-tool.active svg path,
+.dock-icon.btn-tool.active svg polyline,
+.dock-icon.btn-tool.active svg line,
+.dock-icon.btn-tool.active svg polygon,
+.dock-icon.btn-tool.active svg circle,
+.dock-icon.btn-tool.active svg rect {
+  stroke: var(--accent-btn-text, #000000) !important;
+}
+
 .dock-icon.btn-tool-accent {
   color: var(--accent-400, #D4FF3F);
 }
@@ -4299,6 +4309,16 @@ body[data-theme="light"] {
   color: #4F46E5;
   border-color: #4F46E5;
   box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2), inset 0 0 0 1px rgba(79, 70, 229, 0.15);
+}
+
+[data-theme="light"] .dock-icon.btn-tool.active svg,
+[data-theme="light"] .dock-icon.btn-tool.active svg path,
+[data-theme="light"] .dock-icon.btn-tool.active svg polyline,
+[data-theme="light"] .dock-icon.btn-tool.active svg line,
+[data-theme="light"] .dock-icon.btn-tool.active svg polygon,
+[data-theme="light"] .dock-icon.btn-tool.active svg circle,
+[data-theme="light"] .dock-icon.btn-tool.active svg rect {
+  stroke: #4F46E5 !important;
 }
 
 /* Enterprise Suites Drawers (Clashes, Dimensions, 6D Carbon, AI Copilot, Collaboration) */
@@ -8291,9 +8311,10 @@ body.right-sidebar-collapsed .right-sidebar {
   position: fixed;
   top: var(--header-bottom);
   right: 0.75rem;
-  width: min(380px, calc(100vw - 1.5rem));
+  width: min(390px, calc(100vw - 1.5rem));
   max-width: calc(100vw - 1.5rem);
-  max-height: calc(100vh - var(--header-bottom) - 1.25rem);
+  height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 54px) - 1.5rem);
+  max-height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 54px) - 1.5rem);
   background: var(--bg-surface, #121216);
   border: 2px solid var(--border-strong, #2A2A35);
   border-radius: 16px;
@@ -8313,9 +8334,10 @@ body.right-sidebar-collapsed .right-sidebar {
   right: auto !important;
   bottom: auto !important;
   transform: translate(-50%, -50%) !important;
-  width: min(450px, calc(100vw - 1.5rem)) !important;
-  max-width: calc(100vw - 1.5rem) !important;
-  max-height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2rem) !important;
+  width: min(480px, calc(100vw - 2rem)) !important;
+  max-width: calc(100vw - 2rem) !important;
+  height: min(650px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2.5rem)) !important;
+  max-height: min(650px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2.5rem)) !important;
   border-radius: 18px !important;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
   animation: drawerCenterZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1) both !important;

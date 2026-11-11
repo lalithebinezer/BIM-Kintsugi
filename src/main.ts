@@ -8166,7 +8166,17 @@ function initPropertySequenceEngineUI() {
   });
 
   const openIfcParamReader = (targetKey?: string) => {
-    ifcParamReader.openModal(targetKey);
+    const modal = document.getElementById("ifc-parameter-reader-modal");
+    const isAlreadyOpen = modal && !modal.classList.contains("hidden") && (modal as HTMLElement).style.display !== "none";
+    if (typeof (window as any).closeAllEnterpriseDrawers === "function") {
+      (window as any).closeAllEnterpriseDrawers();
+    }
+    if (!isAlreadyOpen) {
+      ifcParamReader.openModal(targetKey);
+    }
+    if (typeof (window as any).syncDockActiveStates === "function") {
+      (window as any).syncDockActiveStates();
+    }
   };
 
   (window as any).openIfcParameterReader = openIfcParamReader;
@@ -8522,10 +8532,15 @@ function apply4dMode(active: boolean) {
 
   const btn4dMode = document.getElementById('btn-4d-mode');
   const btn4dLabel = document.getElementById('btn-4d-label');
+  const btnDockGantt = document.getElementById('btn-dock-gantt');
 
   if (active) {
+    if (typeof (window as any).closeAllEnterpriseDrawers === "function") {
+      (window as any).closeAllEnterpriseDrawers();
+    }
     document.body.classList.add('mode-4d');
     if (btn4dMode) btn4dMode.classList.add('active');
+    if (btnDockGantt) btnDockGantt.classList.add('active');
     if (btn4dLabel) btn4dLabel.textContent = 'Exit 4D';
     // Initialize timeline when 4D is activated
     calculateTimelineBounds();
@@ -8538,6 +8553,7 @@ function apply4dMode(active: boolean) {
   } else {
     document.body.classList.remove('mode-4d');
     if (btn4dMode) btn4dMode.classList.remove('active');
+    if (btnDockGantt) btnDockGantt.classList.remove('active');
     if (btn4dLabel) btn4dLabel.textContent = 'Activate 4D';
     // Clean up timeline options dropup and hub button state
     const optionsModal = document.getElementById("timeline-options-modal");
@@ -8562,6 +8578,9 @@ function apply4dMode(active: boolean) {
     highlighter.clear("timeline-variance-critical");
   }
   updateHeaderLabel();
+  if (typeof (window as any).syncDockActiveStates === "function") {
+    (window as any).syncDockActiveStates();
+  }
 }
 
 // Restore last 4D mode state on load
