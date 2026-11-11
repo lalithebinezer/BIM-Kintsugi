@@ -2448,35 +2448,48 @@ input[type="color"]::-moz-color-swatch {
   margin-top: 1px;
 }
 
-/* Floating Camera Speed Toast */
+/* Floating Camera Speed Toast — Bottom-Left (50% Opacity) */
 .camera-speed-toast {
   position: fixed;
-  top: calc(var(--header-bottom, 4.15rem) + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
+  bottom: calc(var(--dock-h, 54px) + 0.85rem);
+  top: auto;
+  left: var(--left-safe-offset, 0.85rem);
+  transform: none;
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid var(--accent-500, #38bdf8);
   color: #FFFFFF;
-  padding: 0.4rem 0.85rem;
+  padding: 0.38rem 0.85rem;
   border-radius: 20px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   z-index: 100020;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), left var(--ease-normal), bottom var(--ease-normal);
+}
+
+body.left-sidebar-collapsed .camera-speed-toast {
+  left: 0.85rem;
+}
+
+body.mode-4d .camera-speed-toast {
+  bottom: calc(var(--timeline-deck-h, 92px) + 0.85rem);
 }
 
 .camera-speed-toast.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  opacity: 0.5 !important;
+  transform: none !important;
+}
+
+.camera-speed-toast.visible:hover {
+  opacity: 0.95 !important;
 }
 
 .camera-speed-toast.hidden {
@@ -5979,7 +5992,10 @@ body[data-theme="light"] {
 
   #bim-toast-container,
   .bim-toast-container {
-    top: calc(var(--header-bottom) + 3.8rem) !important;
+    bottom: 3.25rem !important;
+    top: auto !important;
+    left: 0.5rem !important;
+    transform: none !important;
   }
 
   .hud-anchor-bottom-center {
@@ -6989,19 +7005,30 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 #bim-toast-container,
 .bim-toast-container {
   position: fixed !important;
-  top: calc(var(--header-bottom) + 4.2rem) !important;
-  bottom: auto !important;
-  left: 50% !important;
+  bottom: calc(var(--dock-h, 54px) + 0.85rem) !important;
+  top: auto !important;
+  left: var(--left-safe-offset, 0.85rem) !important;
   right: auto !important;
-  transform: translateX(-50%) !important;
+  transform: none !important;
   z-index: 100010 !important;
   display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 0.45rem !important;
+  flex-direction: column-reverse !important;
+  align-items: flex-start !important;
+  gap: 0.35rem !important;
   pointer-events: none !important;
   width: auto !important;
-  max-width: min(92vw, 380px) !important;
+  max-width: min(90vw, 380px) !important;
+  transition: left var(--ease-normal), bottom var(--ease-normal);
+}
+
+body.left-sidebar-collapsed #bim-toast-container,
+body.left-sidebar-collapsed .bim-toast-container {
+  left: 0.85rem !important;
+}
+
+body.mode-4d #bim-toast-container,
+body.mode-4d .bim-toast-container {
+  bottom: calc(var(--timeline-deck-h, 92px) + 0.85rem) !important;
 }
 
 .bim-toast-item,
@@ -7014,23 +7041,36 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
   -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(190%) !important;
   border: 1px solid var(--border-accent, rgba(255, 255, 255, 0.16)) !important;
   border-radius: 9999px !important;
-  padding: 0.42rem 0.95rem !important;
+  padding: 0.38rem 0.85rem !important;
   color: var(--text-primary, #ffffff) !important;
   font-family: var(--font-body) !important;
-  font-size: 0.72rem !important;
+  font-size: 0.7rem !important;
   font-weight: 700 !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   pointer-events: auto !important;
   user-select: none !important;
   max-width: min(90vw, 360px) !important;
+  opacity: 0.5 !important;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.bim-toast-item:hover,
+.bim-toast-msg:hover {
+  opacity: 0.95 !important;
 }
 
 [data-theme="light"] .bim-toast-item,
 [data-theme="light"] .bim-toast-msg {
-  background: rgba(255, 255, 255, 0.96) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
   color: #0f172a !important;
-  border: 1px solid rgba(0, 0, 0, 0.12) !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  opacity: 0.5 !important;
+}
+
+[data-theme="light"] .bim-toast-item:hover,
+[data-theme="light"] .bim-toast-msg:hover {
+  opacity: 0.95 !important;
 }
 
 @keyframes slideUpFade {

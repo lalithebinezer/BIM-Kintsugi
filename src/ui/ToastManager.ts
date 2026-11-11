@@ -34,9 +34,9 @@ export function showToast(
     color: var(--text-primary, #ffffff);
     border: 1px solid var(--border-color, rgba(255, 255, 255, 0.16));
     border-radius: 9999px;
-    padding: 0.42rem 0.95rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
-    font-size: 0.72rem;
+    padding: 0.38rem 0.85rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    font-size: 0.7rem;
     font-weight: 700;
     font-family: var(--font-body, sans-serif);
     display: inline-flex;
@@ -48,7 +48,16 @@ export function showToast(
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     user-select: none;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   `;
+
+  toast.addEventListener("mouseenter", () => {
+    toast.style.opacity = "0.95";
+  });
+  toast.addEventListener("mouseleave", () => {
+    toast.style.opacity = "0.5";
+  });
 
   toast.innerHTML = `
     <span style="display: inline-flex; align-items: center; flex-shrink: 0;">${resolvedIcon}</span>
