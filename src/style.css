@@ -943,17 +943,28 @@ body.mode-4d .hud-anchor-bottom-center {
 
 /* Non-colliding responsive alignment between 4D Timeline Deck & 2D Tactical Radar.
    In 4D mode, the bottom of the screen is dedicated to the full-width 4D timeline deck.
-   The 2D radar minimap and scale ruler float cleanly stacked ABOVE the timeline deck with zero overlap. */
+   The 2D radar minimap floats cleanly stacked ABOVE the timeline deck with zero overlap. */
+body.mode-4d .viewport-scale-bar {
+  display: none !important;
+}
+
 body.mode-4d .hud-anchor-bottom-right {
-  bottom: calc(var(--timeline-deck-h, 104px) + 1.45rem) !important;
+  bottom: calc(var(--timeline-deck-h, 92px) + 0.65rem) !important;
   right: var(--right-safe-offset) !important;
+  z-index: 105 !important;
   transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1), right 0.25s ease;
 }
 
+body.mode-4d .minimap-radar-widget {
+  width: 175px !important;
+  max-width: 175px !important;
+}
+
 body.mode-4d .timeline-panel {
-  left: 50% !important;
-  right: auto !important;
-  transform: translateX(-50%) !important;
+  left: var(--left-safe-offset, 0.75rem) !important;
+  right: var(--right-safe-offset, 0.75rem) !important;
+  transform: none !important;
+  margin: 0 auto !important;
 }
 
 body.mode-4d::after {
@@ -2839,21 +2850,19 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 /* Bottom-Right: Architectural Scale Ruler HUD & 2D Minimap Radar */
 .hud-anchor-bottom-right {
   position: absolute;
-  bottom: calc(var(--dock-h, 64px) + 1.25rem);
+  bottom: calc(var(--dock-h, 64px) + 0.85rem);
   right: var(--right-safe-offset);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.45rem;
-  z-index: 50;
+  gap: 0.35rem;
+  z-index: 95;
   pointer-events: auto;
   transition: right var(--ease-normal), bottom var(--ease-normal);
 }
 
-@media (min-width: 1550px) {
-  body.right-sidebar-collapsed .hud-anchor-bottom-right {
-    bottom: 0.85rem;
-  }
+body:not(.mode-4d).right-sidebar-collapsed .hud-anchor-bottom-right {
+  bottom: 0.85rem !important;
 }
 
 .viewport-scale-bar {
@@ -2945,31 +2954,89 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 .timeline-panel {
   position: absolute;
   bottom: 0.85rem;
-  left: 50% !important;
-  right: auto !important;
-  transform: translateX(-50%) !important;
-  width: min(calc(100vw - 2.5rem), 1140px) !important;
-  max-width: 1140px;
+  left: var(--left-safe-offset, 0.75rem) !important;
+  right: var(--right-safe-offset, 0.75rem) !important;
+  transform: none !important;
+  width: auto !important;
+  max-width: 1260px !important;
+  margin: 0 auto !important;
   box-sizing: border-box;
   background: var(--bg-surface, rgba(14, 16, 22, 0.94));
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.16));
   border-radius: 20px;
-  padding: 0.6rem 1rem;
+  padding: 0.55rem 0.9rem;
   box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
   z-index: 100;
   pointer-events: auto !important;
-  transition: transform var(--ease-normal), bottom var(--ease-normal), width var(--ease-normal), var(--theme-transition);
+  transition: left var(--ease-normal), right var(--ease-normal), bottom var(--ease-normal), width var(--ease-normal), var(--theme-transition);
   animation: slideTimelineUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes slideTimelineUp {
-  from { opacity: 0; transform: translate(-50%, 20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dedicated Top-Right Close Button for 4D Timeline / Gantt Deck */
+#btn-close-gantt-bar {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  z-index: 25;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.15));
+  color: var(--text-muted, #94A3B8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+#btn-close-gantt-bar:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+  transform: scale(1.1);
+}
+
+[data-theme="light"] #btn-close-gantt-bar {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #64748B;
+}
+
+[data-theme="light"] #btn-close-gantt-bar:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+/* Row 1: Unified 4D Top Row */
+.unified-4d-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  padding-right: 2.2rem;
+  box-sizing: border-box;
+}
+
+.unified-4d-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .timeline-slider-wrapper {
@@ -3003,19 +3070,26 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding-top: 0.4rem;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.timeline-controls-row::-webkit-scrollbar {
+  display: none;
 }
 
 .centralized-options-row {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
 }
 
 .timeline-cluster {
@@ -3040,12 +3114,12 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 label.btn-timeline-csv {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.32rem 0.65rem;
-  font-size: 0.68rem;
+  gap: 0.28rem;
+  padding: 0.26rem 0.52rem;
+  font-size: 0.66rem;
   font-weight: 700;
   font-family: var(--font-body);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -3053,6 +3127,7 @@ label.btn-timeline-csv {
   white-space: nowrap;
   transition: all var(--ease-fast);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .btn-timeline-csv:hover,
@@ -5535,10 +5610,12 @@ body[data-theme="light"] {
 
   .timeline-panel {
     bottom: 0.75rem;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-    width: min(calc(100vw - 1.5rem), 1140px) !important;
+    left: var(--left-safe-offset, 0.75rem) !important;
+    right: var(--right-safe-offset, 0.75rem) !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    width: auto !important;
+    max-width: 100% !important;
   }
 
   /* Mobile bottom nav stays completely hidden on tablets */

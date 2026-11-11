@@ -2257,7 +2257,12 @@
 
       <!-- Unified Compact 4D Construction Timeline & Gantt Bar (4D mode only) -->
       <div class="timeline-panel" id="timeline-panel" data-4d>
-        <!-- Row 1: Play 4D + Week/Date + Scrubber & Milestones + EVM Budget + Progress + Close -->
+        <!-- Dedicated Top-Right Close Button -->
+        <button id="btn-close-gantt-bar" class="btn-icon-sm btn-close-4d" title="Exit 4D Mode" aria-label="Exit 4D Construction Mode">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <!-- Row 1: Play 4D + Week/Date + Scrubber & Milestones + EVM Budget + Progress -->
         <div class="unified-4d-top-row">
           <div class="gantt-bar-left">
             <button class="btn-gantt-action" id="timeline-play-btn" title="Play / Pause 4D Simulation (Space)">
@@ -2293,9 +2298,6 @@
             </div>
             <span id="gantt-progress-val" class="gantt-prog-badge">8% Complete</span>
             <span id="gantt-spi-val" class="gantt-spi-badge" title="Schedule Performance Index (EV / PV) - Click to Open EVM Suite" style="cursor: pointer;">SPI 1.00</span>
-            <button id="btn-close-gantt-bar" class="btn-icon-sm btn-close-4d" title="Exit 4D Mode">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
           </div>
         </div>
 
