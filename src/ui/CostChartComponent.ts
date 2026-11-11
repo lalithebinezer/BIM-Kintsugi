@@ -67,7 +67,15 @@ export class CostChartComponent {
     // Sort highest metric first
     items.sort((a, b) => b.percentage - a.percentage);
 
-    const colors = ["#D4FF3F", "#3b82f6", "#10b981", "#f59e0b", "#a855f7", "#06b6d4", "#ef4444"];
+    const colors = [
+      "var(--accent-500)",
+      "var(--color-info)",
+      "var(--color-success)",
+      "var(--color-warning)",
+      "var(--color-purple)",
+      "var(--color-cyan)",
+      "var(--color-danger)"
+    ];
 
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 0.45rem; width: 100%;">

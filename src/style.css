@@ -65,9 +65,10 @@
 
   --text-primary: #ffffff;
   --text-main: #E4E4E7;
-  --text-muted: #71717A;
-  --text-dim: #52525b;
+  --text-muted: #94A3B8;
+  --text-dim: #71717A;
   --text-dark: #000000;
+  --accent-primary: var(--accent-500);
 
   --glass-bg: rgba(20, 20, 24, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
@@ -141,9 +142,10 @@
   --text-primary: #F3F4F6;
   --text-secondary: rgba(243, 244, 246, 0.75);
   --text-main: #E5E7EB;
-  --text-muted: #9CA3AF;
-  --text-dim: #6B7280;
+  --text-muted: #D1D5DB;
+  --text-dim: #9CA3AF;
   --color-cyan: #06b6d4;
+  --accent-primary: var(--accent-500);
 }
 
 /* 2. Cyberpunk Neon (Electric Midnight & Cyan) */
@@ -176,9 +178,10 @@
   --text-primary: #FFFFFF;
   --text-secondary: rgba(255, 255, 255, 0.75);
   --text-main: #E0F2FE;
-  --text-muted: #7DD3FC;
-  --text-dim: #38BDF8;
+  --text-muted: #93C5FD;
+  --text-dim: #60A5FA;
   --color-cyan: #00F0FF;
+  --accent-primary: var(--accent-500);
 }
 
 /* 3. Architect Blueprint (CAD Navy & Drafting Cyan) */
@@ -211,9 +214,10 @@
   --text-primary: #E6F1FF;
   --text-secondary: rgba(230, 241, 255, 0.75);
   --text-main: #CCD6F6;
-  --text-muted: #8892B0;
-  --text-dim: #495670;
+  --text-muted: #A8B2D1;
+  --text-dim: #8892B0;
   --color-cyan: #64FFDA;
+  --accent-primary: var(--accent-500);
 }
 
 /* 4. Light Studio (Clean Architectural Daylight) */
@@ -247,9 +251,10 @@
   --text-primary: #0F172A;
   --text-secondary: #334155;
   --text-main: #1E293B;
-  --text-muted: #64748B;
-  --text-dim: #94A3B8;
+  --text-muted: #475569;
+  --text-dim: #64748B;
   --text-dark: #FFFFFF;
+  --accent-primary: var(--accent-500);
 
   --color-success: #059669;
   --color-warning: #d97706;
@@ -500,6 +505,7 @@ header {
 .brand-badge {
   font-family: var(--font-mono);
   font-size: 0.54rem;
+  background-color: var(--accent-500);
   background: linear-gradient(135deg, var(--accent-500), var(--accent-400));
   color: var(--accent-btn-text, #000000);
   padding: 2px 6px;
@@ -1395,7 +1401,7 @@ body.mode-4d::after {
 .btn-icon {
   background: transparent;
   border: none;
-  color: var(--text-dim);
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1465,6 +1471,7 @@ body.mode-4d::after {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  background-color: var(--accent-500);
   background: linear-gradient(135deg, var(--accent-400), var(--accent-500));
   border: 1px solid var(--border-strong);
   color: var(--accent-btn-text, #0b1114);
@@ -8717,9 +8724,11 @@ body.right-sidebar-collapsed .right-sidebar {
   gap: 0.5rem;
 }
 
+.carbon-kpi-grid .kpi-card,
+#carbon-panel .kpi-card,
 .kpi-card {
-  background: var(--bg-card, #16161C);
-  border: 1px solid var(--border-subtle, #23232C);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 0.65rem;
   display: flex;
@@ -8727,17 +8736,21 @@ body.right-sidebar-collapsed .right-sidebar {
   gap: 0.2rem;
 }
 
+.carbon-kpi-grid .kpi-label,
+#carbon-panel .kpi-label,
 .kpi-label {
   font-size: 0.62rem;
-  color: var(--text-muted, #94A3B8);
+  color: var(--text-muted);
   font-weight: 700;
   text-transform: uppercase;
 }
 
+.carbon-kpi-grid .kpi-val,
+#carbon-panel .kpi-val,
 .kpi-val {
   font-size: 0.92rem;
   font-weight: 900;
-  color: var(--text-primary, #FFFFFF);
+  color: var(--text-primary);
   font-family: var(--font-mono, monospace);
 }
 
@@ -8750,33 +8763,38 @@ body.right-sidebar-collapsed .right-sidebar {
 }
 
 .carbon-grade-badge.grade-Aplus, .carbon-grade-badge.grade-A {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22C55E;
+  background: var(--color-success-subtle, rgba(34, 197, 94, 0.15));
+  color: var(--color-success, #22C55E);
+  border: 1px solid var(--color-success-border, rgba(34, 197, 94, 0.35));
 }
 
 .carbon-grade-badge.grade-B {
-  background: rgba(132, 204, 22, 0.2);
-  color: #84CC16;
+  background: rgba(132, 204, 22, 0.15);
+  color: var(--color-success, #65a30d);
+  border: 1px solid rgba(132, 204, 22, 0.35);
 }
 
 .carbon-grade-badge.grade-C {
-  background: rgba(234, 179, 8, 0.2);
-  color: #EAB308;
+  background: var(--color-warning-subtle, rgba(234, 179, 8, 0.15));
+  color: var(--color-warning, #d97706);
+  border: 1px solid var(--color-warning-border, rgba(234, 179, 8, 0.35));
 }
 
 .carbon-grade-badge.grade-D {
-  background: rgba(249, 115, 22, 0.2);
-  color: #F97316;
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--color-warning, #ea580c);
+  border: 1px solid rgba(249, 115, 22, 0.35);
 }
 
 .carbon-grade-badge.grade-E {
-  background: rgba(239, 68, 68, 0.2);
-  color: #EF4444;
+  background: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
+  color: var(--color-danger, #dc2626);
+  border: 1px solid var(--color-danger-border, rgba(239, 68, 68, 0.35));
 }
 
 .carbon-savings-card {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px dashed rgba(16, 185, 129, 0.4);
+  background: var(--color-success-subtle, rgba(16, 185, 129, 0.08));
+  border: 1px dashed var(--color-success-border, rgba(16, 185, 129, 0.4));
   border-radius: 6px;
   padding: 0.65rem 0.75rem;
   display: flex;
@@ -8787,7 +8805,7 @@ body.right-sidebar-collapsed .right-sidebar {
 .savings-title {
   font-size: 0.65rem;
   font-weight: 800;
-  color: #10B981;
+  color: var(--color-success, #10B981);
 }
 
 .savings-val {
@@ -10737,13 +10755,13 @@ body.resizing-radar * {
   justify-content: flex-end;
 }
 
-.kpi-grid {
+.exec-report-sheet .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.85rem;
 }
 
-.kpi-card {
+.exec-report-sheet .kpi-card {
   padding: 0.9rem;
   border-radius: 8px;
   background: #F9FAFB;
@@ -10753,21 +10771,21 @@ body.resizing-radar * {
   gap: 0.3rem;
 }
 
-.kpi-label {
+.exec-report-sheet .kpi-label {
   font-size: 0.65rem;
   font-weight: 800;
   color: #6B7280;
   letter-spacing: 0.04em;
 }
 
-.kpi-value {
+.exec-report-sheet .kpi-value {
   font-size: 1.25rem;
   font-weight: 900;
   color: #111827;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.kpi-foot {
+.exec-report-sheet .kpi-foot {
   font-size: 0.68rem;
   color: #4B5563;
   margin-top: 0.15rem;
@@ -12169,8 +12187,8 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 }
 
 .task-elem-count {
-  color: #D4FF3F;
-  font-weight: 600;
+  color: var(--accent-500, #D4FF3F);
+  font-weight: 700;
 }
 
 .seq-drawer-actions {
