@@ -6,10 +6,10 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.4.3-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-167%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-213%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
+**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
 
 🌐 **Live Demo**: [https://lalithebinezer.github.io/BIM-Kintsugi/](https://lalithebinezer.github.io/BIM-Kintsugi/)
 
@@ -104,14 +104,16 @@ BIM Kintsugi deeply integrates native `@thatopen/components` (`OBC`) and `@thato
 | **📋 3. BCF 2.1 / 3.0 Issue Tracker** | • Create, prioritize (`Critical`, `Major`, `Normal`), and restore coordination issues with live camera viewpoints<br>• Clustered 3D `OBF.Marker` viewport badges with click-to-fly camera restoration<br>• Native `.bcfzip` binary export via `OBC.BCFTopics` with JSON fallback |
 | **⏱️ 4. 4D Construction Phasing & Gantt** | • Automatic trade sequencing (`IFCSITE` → `IFCFOOTING` → `IFCSLAB` → `IFCWALL` → `IFCROOF` → `MEP`)<br>• Synchronized **3D Viewport Visibility**: hides unstarted tasks (`OBC.Hider`) and highlights active construction tasks in emerald (`Phase_InProgress`)<br>• Interactive bottom **4D Gantt & EVM Dock** (`CPI`, `SPI`, Critical Path toggle, and `1x`–`8x` playback) |
 | **💰 5. 5D Cost Estimation & BOQ** | • Automated `Qto_*` extraction (`NetVolume`, `NetArea`, `Length`, `Count`) and CSI MasterFormat trade pricing<br>• Interactive **3D Category Highlight & Isolation** directly from BOQ rows<br>• Visual trade budget bar, S-Curve cashflow chart, and `.csv` Bill of Quantities export |
-| **🌿 6. 6D Embodied Carbon & LCA** | • ICE Database v3.0 embodied carbon engine (`kgCO₂e/m³`) using real IFC `Qto_*NetVolume` properties and 3D bounding volumes<br>• **5-Band 3D Carbon Intensity Heatmap** (`Grade A` Emerald → `Grade E` Crimson) painted directly onto 3D model geometry via `OBF.Highlighter`<br>• Material optimization simulator (*Fly-Ash Concrete*, *Cross-Laminated Timber*, *EAF Recycled Steel*) and LEED / EN 15978 CSV report export |
-| **🤖 7. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Highlight high carbon elements"*, *"Cost summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
-| **🎨 8. VFX Studio & 4K Drawing Sheet** | • 6 `OBF.PostproductionAspect` render styles: **Shaded**, **Pen / Technical Drawing**, **Color + Pen**, **Shaded + Pen + AO**, **Clay / Ambient Occlusion**, and **Wireframe**<br>• Dynamic Solar Azimuth & Elevation shadow simulation<br>• **4K Technical Drawing Sheet Generator** (`3840×2160` PNG with ISO architectural border, project title block, scale bar, north arrow, and revision metadata) |
-| **🧭 9. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Interactive Navigation**: Click to teleport camera, drag avatar/cone to rotate gaze in real time, or toggle First-Person WASD Walk mode<br>• **Compass Rose & Face North**: True North indicator button with 1-click camera orientation snap<br>• **Storey Sync & Auto-Tracking**: Automatic IFC `IfcBuildingStorey` detection with live elevation auto-tracking and 1-click horizontal floor slicing<br>• **Clash & Selection Layer**: Live pulsing reticle for selected elements and interactive hazard pins for multi-discipline clashes on the active floor<br>• **Tactical Pan & Zoom**: Scroll wheel zoom, Shift/right-click pan, quick Zoom In/Out/Fit controls, live metric coordinate readout (`X/Z/Dist`), and expandable size preset (180px ↔ 290px) |
-| **📊 10. Executive Twin Report (Print & PDF)** | • 1-Click executive project report modal synthesizing 4D schedule progress, 5D EVM S-Curve (PV vs EV vs AC), category trade quantities, 3D clash resolution matrix, 6D embodied carbon rating, and BCF coordination status<br>• **Print-Optimized `@media print` Layout**: Boardroom-ready vector print formatting with zero background ink waste and instant PDF export via `window.print()`<br>• Complete JSON schema report download for enterprise BI ingestion |
-| **📱 11. PWA & Offline Jobsite Mode** | • Progressive Web App with WebAssembly and static asset pre-caching (`web-ifc.wasm`, `web-ifc-mt.wasm`) via custom Service Worker<br>• Standalone installation on iPads/tablets for high-speed offline 3D model navigation on active construction sites |
-| **🔊 12. Synthesized Web Audio Soundscape** | • Pure client-side Web Audio API synthesizer for UI clicks, measurement snaps, spatial beacon chimes, and camera shutter sounds<br>• Master volume slider (0%–100%) and instant mute toggle in Gaming & Controls Settings |
-| **🎬 13. Cinematic Keyframe Tour & Model Diff** | • Multi-keyframe camera tour interpolation with smooth bezier cubic transitions and custom waypoint capture<br>• 3D Revision Diff comparing federated IFC models with color-coded classification (Added in Green, Removed in Red, Modified in Amber) |
+| **📈 6. ANSI/EIA 748-B & APM Earned Value Management (EVM)** | • Full compliance with ANSI/EIA 748-B, PMI EVM Practice Standard, DOE Module 6, and APM EVM Handbook<br>• **Multi-Model EAC Forecasting**: Typical ($BAC/CPI$), Atypical ($AC+BAC-EV$), Composite ($CPI \times SPI$), and Weighted ($0.8CPI+0.2SPI$)<br>• **Earned Schedule (ES) Time-Based Metrics**: $SV(t)$ (days), $SPI(t)$, $EAC(t)$ duration forecast, and projected completion date<br>• **APM Bulls-Eye Quadrant Matrix**: Real-time CPI vs SPI scatter plot with centered axes (1.0, 1.0) and concentric $\pm 10\%$ / $\pm 20\%$ tolerance rings<br>• **ANSI 748-B Variance Threshold Audit**: Automatic Tier 1 ($\pm 30\%/\$10\text{k}$) and Tier 2 ($\pm 10\%/\$25\text{k}$) VAR alerts with direct **CPR Format 1 (WBS Ledger CSV)** and **CPR Format 5 (VAR Report)** generation |
+| **🌿 7. 6D Embodied Carbon & LCA** | • ICE Database v3.0 embodied carbon engine (`kgCO₂e/m³`) using real IFC `Qto_*NetVolume` properties and 3D bounding volumes<br>• **5-Band 3D Carbon Intensity Heatmap** (`Grade A` Emerald → `Grade E` Crimson) painted directly onto 3D model geometry via `OBF.Highlighter`<br>• Material optimization simulator (*Fly-Ash Concrete*, *Cross-Laminated Timber*, *EAF Recycled Steel*) and LEED / EN 15978 CSV report export |
+| **🤖 8. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Highlight high carbon elements"*, *"Cost summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
+| **🎨 9. VFX Studio & 4K Drawing Sheet** | • 6 `OBF.PostproductionAspect` render styles: **Shaded**, **Pen / Technical Drawing**, **Color + Pen**, **Shaded + Pen + AO**, **Clay / Ambient Occlusion**, and **Wireframe**<br>• Dynamic Solar Azimuth & Elevation shadow simulation<br>• **4K Technical Drawing Sheet Generator** (`3840×2160` PNG with ISO architectural border, project title block, scale bar, north arrow, and revision metadata) |
+| **🧭 10. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Interactive Navigation**: Click to teleport camera, drag avatar/cone to rotate gaze in real time, or toggle First-Person WASD Walk mode<br>• **Compass Rose & Face North**: True North indicator button with 1-click camera orientation snap<br>• **Storey Sync & Auto-Tracking**: Automatic IFC `IfcBuildingStorey` detection with live elevation auto-tracking and 1-click horizontal floor slicing<br>• **Clash & Selection Layer**: Live pulsing reticle for selected elements and interactive hazard pins for multi-discipline clashes on the active floor<br>• **Tactical Pan & Zoom**: Scroll wheel zoom, Shift/right-click pan, quick Zoom In/Out/Fit controls, live metric coordinate readout (`X/Z/Dist`), and expandable size preset (180px ↔ 290px) |
+| **📊 11. Executive Twin Report (Print & PDF)** | • 1-Click executive project report modal synthesizing 4D schedule progress, 5D EVM S-Curve (PV vs EV vs AC), category trade quantities, 3D clash resolution matrix, 6D embodied carbon rating, and BCF coordination status<br>• **Print-Optimized `@media print` Layout**: Boardroom-ready vector print formatting with zero background ink waste and instant PDF export via `window.print()`<br>• Complete JSON schema report download for enterprise BI ingestion |
+| **📱 12. PWA & Offline Jobsite Mode** | • Progressive Web App with WebAssembly and static asset pre-caching (`web-ifc.wasm`, `web-ifc-mt.wasm`) via custom Service Worker<br>• Standalone installation on iPads/tablets for high-speed offline 3D model navigation on active construction sites |
+| **🔊 13. Synthesized Web Audio Soundscape** | • Pure client-side Web Audio API synthesizer for UI clicks, measurement snaps, spatial beacon chimes, and camera shutter sounds<br>• Master volume slider (0%–100%) and instant mute toggle in Gaming & Controls Settings |
+| **🎬 14. Cinematic Keyframe Tour & Model Diff** | • Multi-keyframe camera tour interpolation with smooth bezier cubic transitions and custom waypoint capture<br>• 3D Revision Diff comparing federated IFC models with color-coded classification (Added in Green, Removed in Red, Modified in Amber) |
+| **🔐 15. Multi-Tenancy & Access Control (RBAC)** | • Role-Based Access Control enforcing `Viewer`, `Member`, `Manager`, and `Admin` permissions across 3D element editing, 4D schedule modifications, cost rate adjustments, and executive exports<br>• Session isolation with local persistence and security audit logging |
 
 ---
 
@@ -141,6 +143,10 @@ BIM-Kintsugi/
     │
     ├── modules/                                # Enterprise Domain Feature Suites
     │   ├── ExecutiveReportModule.ts            # Executive Construction Twin Report (Print, PDF & EVM S-Curve)
+    │   ├── EvmDashboardModule.ts               # ANSI/EIA 748-B EVM suite, multi-EAC forecasts, Earned Schedule & Bulls-Eye
+    │   ├── AccessControlManager.ts             # Multi-tenancy Role-Based Access Control (RBAC) security engine
+    │   ├── CostRateManager.ts                  # Multi-currency cost rates & dimensional unit multipliers
+    │   ├── DelayImpactEngine.ts                # Critical path delay calculations & financial penalties
     │   ├── MeasurementSuite.ts                 # 5-mode 3D measurements (Length, Delta, Angle, Area, Volume)
     │   ├── ClippingModule.ts                   # 6-DOF section box, custom planes & OBF.ClipStyler hatches
     │   ├── StoreyLevelSlicer.ts                # IFC storey elevation slicer & OBC.Views 2D floor plans
@@ -162,7 +168,7 @@ BIM-Kintsugi/
     │   ├── IdsChecker.ts & IdsModule.ts        # IDS specification audit engine
     │   ├── ExplosionModule.ts                  # Storey & category 3D explosion slider
     │   ├── FederationModule.ts                 # Multi-model coordinate alignment matrix
-    │   └── __tests__/                          # 6 comprehensive Vitest unit test suites
+    │   └── __tests__/                          # 25 comprehensive Vitest unit test suites (213 tests)
     │
     ├── ui/                                     # UI Controllers & HUD Components
     │   ├── EnterpriseSuitesController.ts       # Event wiring & reactive rendering for all 9 enterprise drawers
@@ -231,20 +237,22 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 167-test Vitest suite across all 22 core and enterprise modules:
+Run strict TypeScript type-checking and the 213-test Vitest suite across all 25 core and enterprise modules:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 22 unit test suites (167 tests)
+# Run all 25 unit test suites (213 tests)
 npm test -- --run
 ```
 
-The automated testing harness also executes a headless Chrome (Playwright) visual audit:
+The automated testing harness also executes a comprehensive 70+ point enterprise verification audit:
 - **0 runtime page errors**, **0 duplicate DOM IDs**.
-- **167/167 unit tests passing** across 22 test suites (100% green).
-- **100% WCAG 2.2 AA Compliance** across 199 interactive buttons and 78 form inputs.
+- **213/213 unit tests passing** across 25 test suites (100% green).
+- **7-Platform AI Verification Matrix**: Automated test plans for TestSprite, Octomind, Momentic, Reflect, Mabl, Katalon Studio, and Applitools Eyes.
+- **Security & RBAC Enforcement**: Role-based privilege separation across Viewer, Member, Manager, and Admin tiers with persistent policies.
+- **100% WCAG 2.2 AA Compliance** across interactive controls and form inputs.
 - **0 HUD/panel collisions** with fluid responsive bounds across desktop (`1920×1080`), laptop (`1366×768`), tablet (`768px–1080px`), and mobile viewports (`360px–640px`).
 
 ---
@@ -280,6 +288,17 @@ The automated testing harness also executes a headless Chrome (Playwright) visua
 
 ## 📝 Recent Changes & Enhancements
 
+- **ANSI/EIA 748-B, PMI & APM Earned Value Management (EVM) Control Suite** ([`EvmDashboardModule.ts`](src/modules/EvmDashboardModule.ts)):
+  - **Multi-Method EAC Forecasting Engine**: Selectable forecasting models: Typical ($BAC/CPI$), Atypical ($AC+BAC-EV$), Composite ($CPI \times SPI$), and Weighted ($0.80 CPI + 0.20 SPI$) with live recalculation of Variance at Completion ($VAC$).
+  - **Time-Based Earned Schedule (ES)**: Implements Lipke / PMI Standard Box 3-1 metrics eliminating late-project dollar variance decay: $SV(t) = ES - AT$ (in calendar days), $SPI(t) = ES / AT$, and $EAC(t) = PD / SPI(t)$ duration forecasting with projected completion dates.
+  - **To-Complete Performance Index (TCPI)**: Dual tracking of $TCPI_{BAC}$ (budget efficiency) and $TCPI_{EAC}$ (forecast efficiency) with automatic feasibility status tags.
+  - **ANSI 748-B Variance Threshold Audit**: Automatic detection of Tier 1 ($\pm 30\%$ & $\pm \$10\text{k}$) and Tier 2 ($\pm 10\%$ & $\pm \$25\text{k}$) variance breaches with prominent in-app alert banners.
+  - **APM Bulls-Eye Quadrant Performance Matrix (APM Handbook Fig 15)**: Interactive SVG scatter plot plotting $CPI$ vs $SPI$ with centered axes $(1.0, 1.0)$, concentric $\pm 10\%$ and $\pm 20\%$ tolerance rings, radar reticle, and 4-quadrant state classification.
+  - **Contract Performance Reporting (CPR)**: Direct exports of **CPR Format 1** (WBS Ledger CSV) and **CPR Format 5** (Variance Analysis Report VAR) with in-app modal, clipboard copy, and text download.
+- **Unified Single-Button Smart Visibility Toggle** (`#btn-toggle-visibility`):
+  - Consolidated separate "Show All" and "Hide All" controls into a single animated toggle button with dynamic eye-open / eye-slashed icon swapping and status tracking.
+- **Enterprise Multi-Tenancy & Access Control (RBAC)** ([`AccessControlManager.ts`](src/modules/AccessControlManager.ts)):
+  - Role-Based Access Control enforcing `Viewer`, `Member`, `Manager`, and `Admin` permissions across 3D element editing, 4D schedule modifications, cost rate adjustments, and executive exports with local persistence and audit logging.
 - **Synchro-Grade 4D Appearance Profiles & Growth Animation Engine** ([`AppearanceProfileEngine.ts`](src/modules/AppearanceProfileEngine.ts)):
   - **4 Standard Action Profiles**: Implements Bentley Synchro-grade action profiles: `Install` (planned appearance $\to$ active growth plane $\to$ end material), `Remove` (demolition highlighting $\to$ ghosting $\to$ removal), `Temporary` (erection $\to$ active use $\to$ teardown), and `Maintain` (in-situ preservation).
   - **Active Growth Cutting Plane**: Animated cutting plane growth interpolating along custom vectors (Z-axis bottom-up, top-down, lateral) during active task execution.
