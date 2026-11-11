@@ -304,8 +304,8 @@
             </button>
             <span class="dock-tooltip" id="dock-tooltip-visibility">Hide All</span>
             <!-- Hidden backward-compatibility hooks for shortcuts and scripts -->
-            <button id="btn-show-all" style="display: none;" aria-hidden="true"></button>
-            <button id="btn-hide-all" style="display: none;" aria-hidden="true"></button>
+            <button id="btn-show-all" style="display: none;" aria-hidden="true" aria-label="Show All Elements" title="Show All Elements"></button>
+            <button id="btn-hide-all" style="display: none;" aria-hidden="true" aria-label="Hide All Elements" title="Hide All Elements"></button>
           </div>
 
           <div class="dock-separator"></div>
@@ -629,13 +629,13 @@
 
           <!-- Hidden / Auxiliary buttons preserved for JS listener & test compatibility -->
           <div class="minimap-aux-controls" style="display: none;" aria-hidden="true">
-            <button id="btn-minimap-slice-toggle"></button>
-            <button id="btn-minimap-heading-mode"><span id="label-minimap-heading">N-UP</span></button>
-            <button id="btn-minimap-autolevel" class="active"></button>
-            <button id="btn-minimap-export"></button>
-            <button id="btn-minimap-expand"></button>
-            <button id="btn-minimap-walk-toggle"><span id="label-minimap-walk-mode">Orbit Mode</span></button>
-            <button id="btn-minimap-pins-toggle" class="active"></button>
+            <button id="btn-minimap-slice-toggle" aria-label="Toggle Floor Slice" title="Toggle Floor Slice"></button>
+            <button id="btn-minimap-heading-mode" aria-label="Toggle Compass Heading Mode" title="Toggle Compass Heading Mode"><span id="label-minimap-heading">N-UP</span></button>
+            <button id="btn-minimap-autolevel" class="active" aria-label="Auto Level Follow" title="Auto Level Follow"></button>
+            <button id="btn-minimap-export" aria-label="Export Minimap Floor Plan" title="Export Minimap"></button>
+            <button id="btn-minimap-expand" aria-label="Expand Minimap" title="Expand Minimap"></button>
+            <button id="btn-minimap-walk-toggle" aria-label="Toggle Walk Orbit Mode" title="Toggle Walk Orbit Mode"><span id="label-minimap-walk-mode">Orbit Mode</span></button>
+            <button id="btn-minimap-pins-toggle" class="active" aria-label="Toggle Minimap Pins" title="Toggle Minimap Pins"></button>
             <span id="minimap-level-name"></span>
           </div>
 
@@ -1201,7 +1201,7 @@
                     <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.45rem;">
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">Acceleration Preset</span>
-                        <select id="select-gpu-preset" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                        <select id="select-gpu-preset" aria-label="Acceleration Preset" title="GPU Performance Preset" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
                           <option value="ultra" selected>⚡ Ultra (Full Fidelity &amp; Shadows)</option>
                           <option value="balanced">⚖ Balanced (1.5x Scaling)</option>
                           <option value="eco">🌱 Eco / Battery Saver (1.0x, Low FX)</option>
@@ -1211,7 +1211,7 @@
 
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.68rem; color: var(--text-muted);">Render Scale / DPR</span>
-                        <select id="select-gpu-dpr" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                        <select id="select-gpu-dpr" aria-label="Render Scale / DPR" title="Device Pixel Ratio" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
                           <option value="2.0" selected>2.0x (HiDPI / Ultra)</option>
                           <option value="1.5">1.5x (Smooth High-Q)</option>
                           <option value="1.0">1.0x (Native Display)</option>
@@ -1221,7 +1221,7 @@
 
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.68rem; color: var(--text-muted);">Shadow Map Resolution</span>
-                        <select id="select-gpu-shadow-res" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
+                        <select id="select-gpu-shadow-res" aria-label="Shadow Map Resolution" title="Shadow Map Resolution" class="custom-select" style="font-size: 0.65rem; padding: 0.2rem 0.4rem; height: 24px;">
                           <option value="4096">4096² (Cinematic PCF)</option>
                           <option value="2048" selected>2048² (Crisp Standard)</option>
                           <option value="1024">1024² (Fast Performance)</option>
@@ -1232,7 +1232,7 @@
                       <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.68rem; color: var(--text-muted);">Post-FX Anti-Aliasing (FXAA)</span>
                         <label class="toggle-switch">
-                          <input type="checkbox" id="toggle-gpu-fxaa" checked />
+                          <input type="checkbox" id="toggle-gpu-fxaa" aria-label="Enable Post-FX Anti-Aliasing (FXAA)" title="Post-FX Anti-Aliasing (FXAA)" checked />
                           <span class="toggle-slider"></span>
                         </label>
                       </div>
@@ -2053,7 +2053,7 @@
 
                     <div style="display: flex; flex-direction: column; gap: 0.15rem;">
                       <label style="font-size: 0.58rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Edit Note</label>
-                      <textarea id="sidebar-pin-comment-edit" rows="2" style="background: var(--bg-input); border: 1.5px solid var(--border-strong); color: var(--text-primary); padding: 0.25rem 0.4rem; font-size: 0.65rem; border-radius: 2px; font-family: var(--font-body); font-weight: 600; resize: vertical;"></textarea>
+                      <textarea id="sidebar-pin-comment-edit" rows="2" aria-label="Edit Pin Comment" placeholder="Edit pin comment..." style="background: var(--bg-input); border: 1.5px solid var(--border-strong); color: var(--text-primary); padding: 0.25rem 0.4rem; font-size: 0.65rem; border-radius: 2px; font-family: var(--font-body); font-weight: 600; resize: vertical;"></textarea>
                     </div>
 
                     <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
@@ -3350,7 +3350,7 @@
         <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.45rem; margin-top: 0.35rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
             <span style="font-size: 0.58rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">EAC Forecasting Formula</span>
-            <select id="select-evm-eac-model" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #ffffff; font-size: 0.58rem; padding: 0.15rem 0.35rem; border-radius: 4px; outline: none; cursor: pointer;">
+            <select id="select-evm-eac-model" aria-label="EAC Forecasting Model" title="EAC Forecasting Model" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #ffffff; font-size: 0.58rem; padding: 0.15rem 0.35rem; border-radius: 4px; outline: none; cursor: pointer;">
               <option value="composite">Composite (CPI × SPI)</option>
               <option value="typical">Typical (BAC / CPI)</option>
               <option value="atypical">Atypical (AC + BAC - EV)</option>
@@ -3443,7 +3443,7 @@
             <span id="evm-sim-delay-display" style="font-family: var(--font-mono); font-size: 0.62rem; color: #ffffff;">+0 days</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <input type="range" id="input-evm-delay-sim" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: #eab308; cursor: pointer;" />
+            <input type="range" id="input-evm-delay-sim" aria-label="Simulate Schedule Delay Days" title="Simulate Schedule Delay Days" min="0" max="60" step="5" value="0" style="flex: 1; accent-color: #eab308; cursor: pointer;" />
             <button type="button" id="btn-evm-reset-sim" class="btn-gantt-drawer-action" style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">Reset</button>
           </div>
         </div>
@@ -3591,14 +3591,14 @@
           <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.35rem; padding-top: 0.55rem; border-top: 1px dashed var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                <input type="checkbox" id="gis-toggle-compass" style="accent-color: #06b6d4;" />
+                <input type="checkbox" id="gis-toggle-compass" aria-label="3D True North Ground Compass" title="3D True North Ground Compass" style="accent-color: #06b6d4;" />
                 <span>3D True North Ground Compass</span>
               </label>
               <span id="gis-north-badge" class="gis-telemetry-pill">0.0° TN</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.62rem; color: var(--text-muted); white-space: nowrap;">Angle:</span>
-              <input type="range" id="gis-slider-north" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
+              <input type="range" id="gis-slider-north" aria-label="True North Orientation Angle" title="True North Orientation Angle" min="0" max="360" step="0.5" value="0" style="flex: 1; accent-color: #06b6d4;" />
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem;">
               <button type="button" id="gis-btn-align-true-north" class="btn-cost-action rates" style="font-size: 0.62rem; padding: 0.35rem 0.35rem;" title="Align Camera Orientation to True North">
@@ -3636,7 +3636,7 @@
         <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-basemap" style="accent-color: #06b6d4;" />
+              <input type="checkbox" id="gis-toggle-basemap" aria-label="Enable 3D Satellite / Map Surface" title="Enable 3D Satellite / Map Surface" style="accent-color: #06b6d4;" />
               <span>Enable 3D Satellite / Map Surface</span>
             </label>
             <span class="gis-telemetry-pill" id="gis-basemap-status" style="color: var(--text-muted); background: rgba(255,255,255,0.05); border-color: var(--border-color);">Disabled</span>
@@ -3672,7 +3672,7 @@
                 </button>
               </div>
             </div>
-            <input type="range" id="gis-slider-radius" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-radius" aria-label="Basemap Extent Radius Slider" title="Basemap Extent Radius Slider" min="50" max="3000" step="50" value="400" style="width: 100%; accent-color: #06b6d4;" />
 
             <!-- Quick Radius Presets -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-top: 0.15rem;">
@@ -3688,7 +3688,7 @@
               <span class="gis-field-label" style="margin-bottom: 0;">Vertical Elevation Offset:</span>
               <span id="gis-elev-val" class="gis-telemetry-pill">-0.05 m</span>
             </div>
-            <input type="range" id="gis-slider-elev" min="-25" max="25" step="0.25" value="-0.05" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-elev" aria-label="Vertical Elevation Offset Slider" title="Vertical Elevation Offset Slider" min="-25" max="25" step="0.25" value="-0.05" style="width: 100%; accent-color: #06b6d4;" />
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.25rem;">
@@ -3696,7 +3696,7 @@
               <span class="gis-field-label" style="margin-bottom: 0;">Surface Opacity:</span>
               <span id="gis-opacity-val" class="gis-telemetry-pill">95%</span>
             </div>
-            <input type="range" id="gis-slider-opacity" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: #06b6d4;" />
+            <input type="range" id="gis-slider-opacity" aria-label="Surface Opacity Slider" title="Surface Opacity Slider" min="0.1" max="1.0" step="0.05" value="0.95" style="width: 100%; accent-color: #06b6d4;" />
           </div>
 
           <!-- Cinematic Orbital Space Flight & Site Descent -->
@@ -3737,11 +3737,11 @@
                 <span class="gis-field-label" style="margin-bottom: 0;">Easting Offset (ΔX East):</span>
                 <div style="display: flex; gap: 0.3rem; align-items: center;">
                   <button type="button" id="gis-btn-nudge-x-neg" class="gis-btn-nudge" title="Move 10m West">−10</button>
-                  <input type="number" id="gis-model-input-x" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
+                  <input type="number" id="gis-model-input-x" aria-label="Easting Offset (ΔX East)" title="Easting Offset (ΔX East)" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
                   <button type="button" id="gis-btn-nudge-x-pos" class="gis-btn-nudge" title="Move 10m East">+10</button>
                 </div>
               </div>
-              <input type="range" id="gis-model-slider-x" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              <input type="range" id="gis-model-slider-x" aria-label="Easting Offset Slider" title="Easting Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
             </div>
 
             <!-- Northing Z -->
@@ -3750,11 +3750,11 @@
                 <span class="gis-field-label" style="margin-bottom: 0;">Northing Offset (ΔZ North):</span>
                 <div style="display: flex; gap: 0.3rem; align-items: center;">
                   <button type="button" id="gis-btn-nudge-z-pos" class="gis-btn-nudge" title="Move 10m North">+10</button>
-                  <input type="number" id="gis-model-input-z" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
+                  <input type="number" id="gis-model-input-z" aria-label="Northing Offset (ΔZ North)" title="Northing Offset (ΔZ North)" class="gis-input mono" step="0.5" value="0.0" style="width: 62px; padding: 0.2rem 0.35rem; text-align: right;" />
                   <button type="button" id="gis-btn-nudge-z-neg" class="gis-btn-nudge" title="Move 10m South">−10</button>
                 </div>
               </div>
-              <input type="range" id="gis-model-slider-z" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
+              <input type="range" id="gis-model-slider-z" aria-label="Northing Offset Slider" title="Northing Offset Slider" min="-500" max="500" step="1" value="0" style="width: 100%; accent-color: #38bdf8;" />
             </div>
 
             <!-- Elevation Y & Rotation Y -->
@@ -3764,14 +3764,14 @@
                   <span class="gis-field-label" style="margin-bottom: 0;">Elevation (ΔY):</span>
                   <span id="gis-model-val-y" class="gis-telemetry-pill sky">0.00 m</span>
                 </div>
-                <input type="range" id="gis-model-slider-y" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: #38bdf8;" />
+                <input type="range" id="gis-model-slider-y" aria-label="Elevation (ΔY) Slider" title="Elevation (ΔY) Slider" min="-30" max="30" step="0.25" value="0" style="width: 100%; accent-color: #38bdf8;" />
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span class="gis-field-label" style="margin-bottom: 0;">Orientation (Yaw):</span>
                   <span id="gis-model-val-rot" class="gis-telemetry-pill sky">0.0°</span>
                 </div>
-                <input type="range" id="gis-model-slider-rot" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: #38bdf8;" />
+                <input type="range" id="gis-model-slider-rot" aria-label="Orientation (Yaw) Slider" title="Orientation (Yaw) Slider" min="0" max="360" step="0.5" value="0" style="width: 100%; accent-color: #38bdf8;" />
               </div>
             </div>
           </div>
@@ -3811,7 +3811,7 @@
         <div class="drawer-section-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.68rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-              <input type="checkbox" id="gis-toggle-gcps" style="accent-color: #06b6d4;" />
+              <input type="checkbox" id="gis-toggle-gcps" aria-label="Show 3D Survey Prisms & Laser Poles" title="Show 3D Survey Prisms & Laser Poles" style="accent-color: #06b6d4;" />
               <span>Show 3D Survey Prisms & Laser Poles</span>
             </label>
             <button type="button" id="gis-btn-add-gcp" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.62rem; display: flex; align-items: center; gap: 0.25rem;" title="Add Survey Control Point at Site Origin">
@@ -3864,7 +3864,7 @@
             <button type="button" class="gis-btn-radius-preset geo-sun-preset" data-date="12-21">Winter Sol.</button>
           </div>
           <div id="geo-sun-readout" class="geo-readout">Azimuth -- · Elevation -- · Daylight --</div>
-          <label class="geo-check"><input type="checkbox" id="geo-sun-path-toggle" /> Show 3D sun-path arc</label>
+          <label class="geo-check"><input type="checkbox" id="geo-sun-path-toggle" aria-label="Show 3D sun-path arc" title="Show 3D sun-path arc" /> Show 3D sun-path arc</label>
           <div class="geo-grid-2">
             <button type="button" id="geo-sun-apply" class="btn-cost-action rates">Apply Sun</button>
             <button type="button" id="geo-sun-play" class="btn-cost-action boq">▶ Play Day Cycle</button>
@@ -3877,11 +3877,11 @@
           <span id="geo-box-badge" class="gis-telemetry-pill">Off</span>
         </div>
         <div class="drawer-section-card geo-suite-card">
-          <label class="geo-check"><input type="checkbox" id="geo-box-toggle" /> Enable section box clipping</label>
+          <label class="geo-check"><input type="checkbox" id="geo-box-toggle" aria-label="Enable section box clipping" title="Enable section box clipping" /> Enable section box clipping</label>
           <div id="geo-box-sliders" class="geo-box-sliders">
-            <div class="geo-box-axis"><span class="geo-axis x">X</span><input type="range" data-axis="x" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="x" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
-            <div class="geo-box-axis"><span class="geo-axis y">Y</span><input type="range" data-axis="y" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="y" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
-            <div class="geo-box-axis"><span class="geo-axis z">Z</span><input type="range" data-axis="z" data-side="min" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="z" data-side="max" min="0" max="1" step="0.005" value="1" /></div>
+            <div class="geo-box-axis"><span class="geo-axis x">X</span><input type="range" data-axis="x" data-side="min" aria-label="Section Box Min X" title="Section Box Min X" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="x" data-side="max" aria-label="Section Box Max X" title="Section Box Max X" min="0" max="1" step="0.005" value="1" /></div>
+            <div class="geo-box-axis"><span class="geo-axis y">Y</span><input type="range" data-axis="y" data-side="min" aria-label="Section Box Min Y" title="Section Box Min Y" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="y" data-side="max" aria-label="Section Box Max Y" title="Section Box Max Y" min="0" max="1" step="0.005" value="1" /></div>
+            <div class="geo-box-axis"><span class="geo-axis z">Z</span><input type="range" data-axis="z" data-side="min" aria-label="Section Box Min Z" title="Section Box Min Z" min="0" max="1" step="0.005" value="0" /><input type="range" data-axis="z" data-side="max" aria-label="Section Box Max Z" title="Section Box Max Z" min="0" max="1" step="0.005" value="1" /></div>
           </div>
           <div id="geo-box-readout" class="geo-readout">Box: --</div>
           <div class="geo-grid-2">
@@ -3979,7 +3979,7 @@
               <input type="number" id="geo-walk-eye" class="gis-input" min="0.5" max="3" step="0.05" value="1.65" />
             </div>
           </div>
-          <label class="geo-check"><input type="checkbox" id="geo-walk-collision" checked /> Floor follow &amp; wall collision</label>
+          <label class="geo-check"><input type="checkbox" id="geo-walk-collision" aria-label="Floor follow and wall collision" title="Floor follow and wall collision" checked /> Floor follow &amp; wall collision</label>
           <div class="geo-readout">WASD move · Shift run · Q/E fly · click to mouse-look · Esc exit</div>
           <button type="button" id="geo-walk-toggle" class="btn-cost-action rates geo-full">Start Walkthrough</button>
         </div>
@@ -3990,7 +3990,7 @@
           <span id="geo-cache-badge" class="gis-telemetry-pill">--</span>
         </div>
         <div class="drawer-section-card geo-suite-card">
-          <label class="geo-check"><input type="checkbox" id="geo-cache-toggle" checked /> Cache tiles in IndexedDB (offline jobsite mode)</label>
+          <label class="geo-check"><input type="checkbox" id="geo-cache-toggle" aria-label="Cache tiles in IndexedDB (offline jobsite mode)" title="Cache tiles in IndexedDB" checked /> Cache tiles in IndexedDB (offline jobsite mode)</label>
           <div id="geo-cache-readout" class="geo-readout">--</div>
           <div class="geo-grid-2">
             <button type="button" id="geo-cache-refresh" class="btn-cost-action rates">Refresh Stats</button>

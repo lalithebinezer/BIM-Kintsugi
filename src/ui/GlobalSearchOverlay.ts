@@ -127,7 +127,7 @@ export class GlobalSearchOverlay {
           <div class="bim-search-controls-row">
             <div class="bim-search-select-group">
               <span class="search-control-label">Search In:</span>
-              <select class="bim-search-select" id="bim-search-scope">
+              <select class="bim-search-select" id="bim-search-scope" aria-label="Search In Fields Scope" title="Search In Fields Scope">
                 <option value="all">All Fields (GUID, Name & Properties)</option>
                 <option value="guid">GUID / GlobalId Only</option>
                 <option value="name">Element Name & IFC Class</option>
@@ -137,7 +137,7 @@ export class GlobalSearchOverlay {
 
             <div class="bim-search-select-group">
               <span class="search-control-label">Model:</span>
-              <select class="bim-search-select" id="bim-search-model-select">
+              <select class="bim-search-select" id="bim-search-model-select" aria-label="Filter Model Scope" title="Filter Model Scope">
                 <option value="all">All Loaded IFC Models</option>
               </select>
             </div>

@@ -357,7 +357,7 @@ export class CarbonLcaManager {
             </span>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" class="chk-carbon-swap" data-cat="${key}" ${isSwapped ? "checked" : ""} />
+            <input type="checkbox" class="chk-carbon-swap" data-cat="${key}" ${isSwapped ? "checked" : ""} aria-label="Substitute ${profile.name} with low-carbon alternate" title="Low-carbon material substitution" />
             <span class="toggle-slider"></span>
           </label>
         `;
