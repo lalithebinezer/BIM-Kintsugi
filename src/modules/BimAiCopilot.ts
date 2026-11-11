@@ -87,8 +87,32 @@ export class BimAiCopilot {
     const carbonMgr = CarbonLcaManager.getInstance();
     const measureSuite = MeasurementSuite.getInstance();
 
+    // 0. Security Guardrails & Direct Prompt Injection Defense
+    if (
+      q.includes("ignore previous") ||
+      q.includes("system prompt") ||
+      q.includes("drop table") ||
+      q.includes("drop database") ||
+      q.includes("bypass") ||
+      q.includes("pwned")
+    ) {
+      responseText = "Security Guardrail: I cannot execute instructions that attempt to override my system prompt, alter access policies, or bypass security boundaries. I am restricted to authorized BIM and construction engineering tasks.";
+      executed.push("Security Guardrail Triggered");
+    }
+    // 0.1 Toxicity & Content Policy Filter
+    else if (
+      q.includes("hate") ||
+      q.includes("violence") ||
+      q.includes("abuse") ||
+      q.includes("malicious") ||
+      q.includes("offensive")
+    ) {
+      responseText = "Content Policy: Your query contains off-topic or inappropriate content. Please submit BIM architectural, 4D scheduling, 5D costing, or 3D inspection requests.";
+      executed.push("Content Policy Filter Triggered");
+    }
+
     // 1. Clash Detection Queries
-    if (q.includes("clash") || q.includes("collision") || q.includes("intersect")) {
+    else if (q.includes("clash") || q.includes("collision") || q.includes("intersect")) {
       const results = await clashDetector.runClashAudit();
       const crit = results.filter((c) => c.severity === "critical").length;
       responseText = `I executed a full multi-discipline clash audit across loaded models. Found ${results.length} total clashes (${crit} critical). I have marked them with 3D beacons in the viewport.`;
@@ -145,6 +169,14 @@ export class BimAiCopilot {
       responseText = "Measurement tool is now ACTIVE in Distance mode. Click on 3D vertices or edges in the viewport to place dimension callouts.";
       executed.push("Start Distance Measurement");
       followUps.push("Measure surface area", "Clear measurements");
+    }
+
+    // 5.1 Section Planes & Clipping Cut Queries
+    else if (q.includes("section") || q.includes("clipping") || q.includes("cut plane") || q.includes("section cut")) {
+      document.getElementById("btn-dock-section")?.click();
+      responseText = "Section planes cutting tool is now ACTIVE. Double-click any face in 3D to create an orthogonal section cut plane.";
+      executed.push("Toggle Section Cut Tool");
+      followUps.push("Delete all section planes", "Invert section cut");
     }
 
     // 6. Building Storey / Floor Slicing Queries
@@ -219,7 +251,7 @@ export class BimAiCopilot {
 
     // 9. Enterprise Schedule Exporters (MS Project / Primavera P6)
     else if (q.includes("export") && (q.includes("msp") || q.includes("project") || q.includes("xml") || q.includes("primavera") || q.includes("p6") || q.includes("xer") || q.includes("schedule"))) {
-      const schedMgr = ScheduleManager.getInstance();
+      const schedMgr = (window as any).scheduleManager || ScheduleManager.getInstance();
       const tasks = schedMgr.getTasksSorted();
       if (tasks.length === 0) {
         responseText = "There are no schedule tasks available to export. Generate a 4D sequence or load a model first.";

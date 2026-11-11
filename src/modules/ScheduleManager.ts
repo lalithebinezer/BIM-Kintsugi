@@ -625,9 +625,9 @@ export class ScheduleManager {
       const status = (getCol(statusIdx) as TaskStatus) || "Planned";
       const modelId = getCol(modelIdx) || "";
       const idsRaw = getCol(idsIdx);
-      const rawUnitCost = cleanNumber(getCol(unitCostIdx));
-      const rawTotalCost = cleanNumber(getCol(totalCostIdx));
-      const rawActualCost = cleanNumber(getCol(actualCostIdx));
+      const rawUnitCost = Math.max(0, cleanNumber(getCol(unitCostIdx)));
+      const rawTotalCost = Math.max(0, cleanNumber(getCol(totalCostIdx)));
+      const rawActualCost = Math.max(0, cleanNumber(getCol(actualCostIdx)));
       const rawDelayDays = cleanNumber(getCol(delayDaysIdx));
       const rawCostImpact = cleanNumber(getCol(costImpactIdx));
 

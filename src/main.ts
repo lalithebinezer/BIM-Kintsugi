@@ -286,7 +286,7 @@ document.getElementById("btn-add-viewpoint")?.addEventListener("click", () => {
 });
 
 // Initialize Managers
-const scheduleManager = new ScheduleManager();
+const scheduleManager = ScheduleManager.getInstance();
 (window as any).scheduleManager = scheduleManager;
 
 const schedule4DEngine = new Schedule4DEngine();
@@ -337,6 +337,7 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).EvmDashboardModule = EvmDashboardModule;
 (window as any).AccessControlManager = AccessControlManager;
 (window as any).Permission = Permission;
+(window as any).BimAiCopilot = BimAiCopilot;
 
 // Wire Header Tenant & RBAC Role Switcher
 document.getElementById("header-tenant-rbac")?.addEventListener("click", () => {
