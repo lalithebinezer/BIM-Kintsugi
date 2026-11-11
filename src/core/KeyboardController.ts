@@ -118,7 +118,7 @@ export class KeyboardController {
         e.preventDefault();
         (document.getElementById('btn-isolate') || document.getElementById('btn-dock-isolate'))?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'u') {
-        document.getElementById('btn-show-all')?.click();
+        (document.getElementById('btn-toggle-visibility') || document.getElementById('btn-show-all'))?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'x') {
         document.getElementById('btn-section-cut')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'm') {

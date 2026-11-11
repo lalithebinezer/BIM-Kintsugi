@@ -292,25 +292,20 @@
         <!-- MagicUI Apple Floating Dock with Horizontal Swipe Navigation -->
         <div class="bottom-toolbar magic-dock" id="bottom-toolbar" role="toolbar" aria-label="BIM Operations Dock">
           
-          <!-- Visibility Cluster -->
-          <div class="dock-item" data-tooltip="Show All Elements">
-            <button class="btn-tool dock-icon" id="btn-show-all" aria-label="Show All Elements">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
+          <!-- Visibility Cluster (Unified Toggle Button) -->
+          <div class="dock-item" id="dock-item-visibility" data-tooltip="Hide All Elements (U)">
+            <button class="btn-tool dock-icon" id="btn-toggle-visibility" data-state="visible" aria-label="Toggle All Elements Visibility">
+              <span id="visibility-icon-wrap" style="display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
             </button>
-            <span class="dock-tooltip">Show All</span>
-          </div>
-
-          <div class="dock-item" data-tooltip="Hide All Elements">
-            <button class="btn-tool dock-icon" id="btn-hide-all" aria-label="Hide All Elements">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                <line x1="1" y1="1" x2="23" y2="23" />
-              </svg>
-            </button>
-            <span class="dock-tooltip">Hide All</span>
+            <span class="dock-tooltip" id="dock-tooltip-visibility">Hide All</span>
+            <!-- Hidden backward-compatibility hooks for shortcuts and scripts -->
+            <button id="btn-show-all" style="display: none;" aria-hidden="true"></button>
+            <button id="btn-hide-all" style="display: none;" aria-hidden="true"></button>
           </div>
 
           <div class="dock-separator"></div>
