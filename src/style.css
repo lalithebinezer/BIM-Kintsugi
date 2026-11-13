@@ -370,10 +370,11 @@ html, body {
 
 body {
   --header-bottom: 4.35rem;
+  --dock-h: 64px;
   --left-panel-w: 310px;
   --right-panel-w: 360px;
   --radar-w: 210px;
-  --timeline-deck-h: 96px;
+  --timeline-deck-h: 118px;
   --left-safe-offset: calc(var(--left-panel-w) + 1.35rem);
   --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
 }
@@ -387,7 +388,7 @@ body.right-sidebar-collapsed {
 }
 
 body:has(.enterprise-drawer:not(.hidden):not(.centralized)) {
-  --right-safe-offset: calc(var(--right-panel-w) + 1.35rem);
+  --right-safe-offset: calc(390px + 1.5rem);
 }
 
 body:has(#minimap-container.hidden) {
@@ -949,7 +950,7 @@ body.mode-4d .viewport-scale-bar {
 }
 
 body.mode-4d .hud-anchor-bottom-right {
-  bottom: calc(var(--timeline-deck-h, 92px) + 0.65rem) !important;
+  bottom: calc(var(--timeline-deck-h, 118px) + 1.35rem) !important;
   right: var(--right-safe-offset) !important;
   z-index: 105 !important;
   transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1), right 0.25s ease;
@@ -2874,7 +2875,7 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 /* Bottom-Right: Architectural Scale Ruler HUD & 2D Minimap Radar */
 .hud-anchor-bottom-right {
   position: absolute;
-  bottom: calc(var(--dock-h, 64px) + 0.85rem);
+  bottom: calc(var(--dock-h, 64px) + 1.15rem);
   right: var(--right-safe-offset);
   display: flex;
   flex-direction: column;
@@ -2883,10 +2884,6 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
   z-index: 95;
   pointer-events: auto;
   transition: right var(--ease-normal), bottom var(--ease-normal);
-}
-
-body:not(.mode-4d).right-sidebar-collapsed .hud-anchor-bottom-right {
-  bottom: 0.85rem !important;
 }
 
 .viewport-scale-bar {
@@ -8329,15 +8326,15 @@ body.right-sidebar-collapsed .right-sidebar {
 }
 
 .enterprise-drawer.centralized {
-  top: calc(var(--header-bottom, 4.35rem) + (100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 1.5rem) / 2) !important;
+  top: calc(var(--header-bottom, 4.35rem) + (100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 3rem) / 2) !important;
   left: 50% !important;
   right: auto !important;
   bottom: auto !important;
   transform: translate(-50%, -50%) !important;
   width: min(480px, calc(100vw - 2rem)) !important;
   max-width: calc(100vw - 2rem) !important;
-  height: min(650px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2.5rem)) !important;
-  max-height: min(650px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2.5rem)) !important;
+  height: min(600px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 3.5rem)) !important;
+  max-height: min(600px, calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 3.5rem)) !important;
   border-radius: 18px !important;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
   animation: drawerCenterZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1) both !important;
@@ -11131,15 +11128,22 @@ body.resizing-radar * {
    ENTERPRISE RESPONSIVE & THEME SYNC ENHANCEMENTS
    ============================================================ */
 
-/* Guarantee 100% suppression of bottom stats HUD during 4D playback & selection HUD */
+/* Guarantee 100% suppression of bottom stats HUD & standard dock during 4D playback & selection HUD */
 body.mode-4d .hud-anchor-bottom-center,
+body.mode-4d .bottom-toolbar.magic-dock,
 body.mode-4d #model-stats-hud,
 body:has(#timeline-panel[style*="display: flex"]) .hud-anchor-bottom-center,
+body:has(#timeline-panel[style*="display: flex"]) .bottom-toolbar.magic-dock,
 body:has(#timeline-panel[style*="display: flex"]) #model-stats-hud,
 body:has(#timeline-panel:not([style*="display: none"])) #model-stats-hud,
 body.has-viewport-selection #model-stats-hud,
 body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud {
   display: none !important;
+}
+
+body.mode-4d .hud-anchor-bottom-right {
+  bottom: calc(var(--timeline-deck-h, 118px) + 1.35rem) !important;
+  right: var(--right-safe-offset, 0.75rem) !important;
 }
 
 /* Light Theme Sync for Model Stats HUD & Hover Tooltip */
@@ -11752,10 +11756,13 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 .ifc-param-reader-overlay {
   position: fixed;
   inset: 0;
+  padding-bottom: calc(var(--dock-h, 64px) + 1rem);
+  box-sizing: border-box;
+  pointer-events: auto;
   background: rgba(8, 11, 17, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  z-index: 10006;
+  z-index: 5000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11769,8 +11776,8 @@ body:has(#viewport-selection-bar:not([style*="display: none"])) #model-stats-hud
 .ifc-param-reader-container {
   width: 960px;
   max-width: 95vw;
-  height: 86vh;
-  max-height: 850px;
+  height: min(82vh, calc(100vh - var(--dock-h, 64px) - 3.5rem));
+  max-height: 820px;
   background: rgba(14, 18, 26, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;

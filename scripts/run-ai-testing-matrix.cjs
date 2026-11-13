@@ -55,16 +55,25 @@ function logHeader(title) {
     }
   });
 
+  await context.addInitScript(() => {
+    localStorage.setItem('bim-tutorial-dismissed', 'true');
+  });
+
   console.log(`Navigating to ${BASE_URL}...`);
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2000);
 
   // Dismiss any initial modal
   try {
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
-    const closeBtn = await page.$('#close-shortcuts-btn');
-    if (closeBtn) await closeBtn.click();
+    const closeBtn = await page.$('#btn-shortcuts-close, #close-shortcuts-btn');
+    if (closeBtn && await closeBtn.isVisible()) {
+      await closeBtn.click();
+      await page.waitForTimeout(200);
+    }
+    await page.evaluate(() => {
+      const modal = document.getElementById('shortcuts-modal');
+      if (modal) modal.classList.add('hidden');
+    });
   } catch (e) {}
 
   // =========================================================================

@@ -1819,8 +1819,10 @@ function initAppleDockMagnifier() {
 
     if (btn) {
       btn.addEventListener("focus", () => {
-        activeItem = item;
-        showGlobalTooltip(item);
+        if (btn.matches(":focus-visible")) {
+          activeItem = item;
+          showGlobalTooltip(item);
+        }
       });
       btn.addEventListener("blur", () => {
         if (activeItem === item) {
@@ -1832,6 +1834,7 @@ function initAppleDockMagnifier() {
 
     item.addEventListener("click", () => {
       SoundManager.getInstance().playClick();
+      hideGlobalTooltip();
     }, { passive: true });
   });
 
@@ -1839,5 +1842,19 @@ function initAppleDockMagnifier() {
   dock.addEventListener("mouseleave", () => {
     onMouseLeave();
   }, { passive: true });
+
+  // Dynamically sync --timeline-deck-h with actual #timeline-panel height so 2D radar never overlaps
+  const timelinePanel = document.getElementById("timeline-panel");
+  if (timelinePanel && typeof ResizeObserver !== "undefined") {
+    const syncTimelineHeight = () => {
+      const h = timelinePanel.offsetHeight;
+      if (h > 0) {
+        document.body.style.setProperty("--timeline-deck-h", `${h}px`);
+      }
+    };
+    const ro = new ResizeObserver(syncTimelineHeight);
+    ro.observe(timelinePanel);
+    syncTimelineHeight();
+  }
 }
 

@@ -511,7 +511,8 @@ export class IfcParameterReader {
     let modal = document.getElementById("ifc-parameter-reader-modal");
     if (!modal) {
       modal = this.createModalDOM();
-      document.body.appendChild(modal);
+      const uiLayer = document.querySelector(".ui-layer") || document.body;
+      uiLayer.appendChild(modal);
       this.bindModalEvents(modal);
     }
 
@@ -526,12 +527,18 @@ export class IfcParameterReader {
 
     modal.classList.remove("hidden");
     this.renderModalContent();
+    if (typeof (window as any).syncDockActiveStates === "function") {
+      (window as any).syncDockActiveStates();
+    }
   }
 
   public closeModal() {
     const modal = document.getElementById("ifc-parameter-reader-modal");
     if (modal) {
       modal.classList.add("hidden");
+    }
+    if (typeof (window as any).syncDockActiveStates === "function") {
+      (window as any).syncDockActiveStates();
     }
   }
 
