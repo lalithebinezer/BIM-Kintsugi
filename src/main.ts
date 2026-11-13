@@ -8546,8 +8546,8 @@ function apply4dMode(active: boolean) {
     calculateTimelineBounds();
     updateScheduleWidgetUI();
     updateTimelineVisualState();
-    // Auto-open 4D Schedule drawer panel on left sidebar for immediate access
-    if (typeof (window as any).switchSidebarTab === 'function') {
+    // Auto-open 4D Schedule drawer panel on left sidebar on desktop viewports
+    if (window.innerWidth > 1080 && typeof (window as any).switchSidebarTab === 'function') {
       (window as any).switchSidebarTab('left-tab-bar', 'schedule');
     }
   } else {

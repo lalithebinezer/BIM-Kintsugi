@@ -5634,19 +5634,70 @@ body[data-theme="light"] {
   }
 
   .enterprise-drawer {
-    width: min(340px, 92vw);
-    max-height: calc(100vh - var(--header-bottom) - 1.5rem);
     z-index: 10002;
   }
 
+  body:has(.enterprise-drawer:not(.hidden):not(.centralized)) {
+    --right-safe-offset: calc(390px + 1.35rem);
+  }
+
+  body:has(.enterprise-drawer.centralized:not(.hidden)) .hud-anchor-bottom-right {
+    display: none !important;
+  }
+
   .timeline-panel {
-    bottom: 0.75rem;
-    left: var(--left-safe-offset, 0.75rem) !important;
-    right: var(--right-safe-offset, 0.75rem) !important;
+    bottom: 0.75rem !important;
+    left: var(--left-safe-offset, 0.65rem) !important;
+    right: var(--right-safe-offset, 0.65rem) !important;
     transform: none !important;
     margin: 0 auto !important;
     width: auto !important;
     max-width: 100% !important;
+    padding: 0.5rem 0.65rem !important;
+  }
+
+  /* Compact 4D timeline top & bottom rows on tablets so all controls fit cleanly */
+  .timeline-bound-badge,
+  .gantt-evm-info .evm-label {
+    display: none !important;
+  }
+
+  .unified-4d-top-row {
+    gap: 0.45rem !important;
+    padding-right: 1.9rem !important;
+  }
+
+  .gantt-bar-left,
+  .gantt-bar-right {
+    gap: 0.3rem !important;
+    flex-shrink: 0;
+  }
+
+  .timeline-controls-row,
+  .centralized-options-row {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.25rem !important;
+  }
+
+  .timeline-cluster {
+    display: contents !important;
+  }
+
+  .timeline-cluster-divider {
+    display: none !important;
+  }
+
+  .btn-timeline-csv,
+  label.btn-timeline-csv {
+    padding: 0.2rem 0.36rem !important;
+    font-size: 0.58rem !important;
+    gap: 0.18rem !important;
+  }
+
+  .btn-speed-pill {
+    padding: 0.16rem 0.3rem !important;
+    font-size: 0.58rem !important;
   }
 
   /* Mobile bottom nav stays completely hidden on tablets */
@@ -5681,9 +5732,13 @@ body[data-theme="light"] {
     position: fixed !important;
     bottom: 4.6rem !important;
     top: auto !important;
-    right: 0.75rem !important;
+    right: var(--right-safe-offset, 0.75rem) !important;
     z-index: 9990 !important;
     --radar-w: 135px;
+  }
+
+  body.mode-4d .hud-anchor-bottom-right {
+    bottom: calc(var(--timeline-deck-h, 118px) + 1.35rem) !important;
   }
 
   .viewport-scale-bar {
@@ -5691,8 +5746,8 @@ body[data-theme="light"] {
   }
 
   .minimap-radar-widget {
-    width: 180px !important;
-    max-width: 180px !important;
+    width: 175px !important;
+    max-width: 175px !important;
   }
 }
 
@@ -7278,16 +7333,39 @@ body.right-sidebar-collapsed .right-sidebar {
   }
 
   .timeline-panel {
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-    width: calc(100vw - 1rem) !important;
-    bottom: 4.8rem !important;
-    padding: 0.5rem 0.65rem;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    transform: none !important;
+    width: auto !important;
+    bottom: 0.75rem !important;
+    padding: 0.45rem 0.6rem !important;
   }
 
   .timeline-legend {
     display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .timeline-panel {
+    left: 0.4rem !important;
+    right: 0.4rem !important;
+    bottom: 0.5rem !important;
+    width: auto !important;
+    transform: none !important;
+    padding: 0.45rem 0.55rem !important;
+  }
+
+  .unified-4d-top-row {
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+    padding-right: 1.75rem !important;
+  }
+
+  .gantt-bar-center {
+    order: 3;
+    width: 100% !important;
+    flex-basis: 100% !important;
   }
 }
 
@@ -8310,8 +8388,8 @@ body.right-sidebar-collapsed .right-sidebar {
   right: 0.75rem;
   width: min(390px, calc(100vw - 1.5rem));
   max-width: calc(100vw - 1.5rem);
-  height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 54px) - 1.5rem);
-  max-height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 54px) - 1.5rem);
+  height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2rem);
+  max-height: calc(100vh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2rem);
   background: var(--bg-surface, #121216);
   border: 2px solid var(--border-strong, #2A2A35);
   border-radius: 16px;

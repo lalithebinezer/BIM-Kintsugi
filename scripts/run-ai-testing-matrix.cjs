@@ -56,6 +56,7 @@ function logHeader(title) {
   });
 
   await context.addInitScript(() => {
+    localStorage.setItem('bim-help-dont-show', '1');
     localStorage.setItem('bim-tutorial-dismissed', 'true');
   });
 
