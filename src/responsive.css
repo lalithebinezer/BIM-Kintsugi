@@ -10,9 +10,11 @@
     flex-wrap: nowrap;
     width: calc(100vw - 24px) !important;
     max-width: calc(100vw - 24px) !important;
+    height: auto !important;
+    min-height: 74px !important;
     overflow: auto;
-    gap: 4px !important;
-    padding: 6px !important;
+    gap: 6px !important;
+    padding: 14px 12px !important;
     bottom: max(8px, env(safe-area-inset-bottom)) !important;
     box-sizing: border-box;
   }
@@ -77,7 +79,7 @@
     overflow: auto;
   }
   #minimap-container { max-width: 140px; max-height: 160px; overflow: hidden; }
-  .hud-anchor-bottom-right { bottom: 82px !important; }
+  .hud-anchor-bottom-right { bottom: 94px !important; }
   input, select, textarea { font-size: 16px; max-width: 100%; }
 }
 @media (max-height: 500px) and (max-width: 1080px) {
