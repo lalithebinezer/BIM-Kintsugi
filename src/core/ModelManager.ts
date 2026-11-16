@@ -26,6 +26,9 @@ export class ModelManager {
     ModelManager.instance = this;
     this.engine = BimEngine.getInstance();
     this.ifcLoader = this.engine.components.get(OBC.IfcLoader);
+    this.ifcLoader.onIfcImporterInitialized?.add((importer: FRAGS.IfcImporter) => {
+      importer.parseOnce = true;
+    });
     this.setupFragmentListeners();
   }
 
@@ -97,6 +100,7 @@ export class ModelManager {
     const model = await this.ifcLoader.load(fileBuffer, true, name, {
       processData: { virtualModelConfig: StreamingLoader.getInstance().getMultithreadingConfig() } as any,
       instanceCallback: (importer) => {
+        importer.parseOnce = true;
         // Keep fragment payload fast & lean; full STEP Psets stream lazily via MetadataSyncService
         importer.addAllRelations();
       },

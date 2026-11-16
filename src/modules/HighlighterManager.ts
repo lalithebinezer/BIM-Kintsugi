@@ -9,6 +9,7 @@ export interface CustomHighlightStyle {
   opacity: number;
   transparent: boolean;
   renderedFaces?: any;
+  priority?: number;
 }
 
 export class HighlighterManager {
@@ -53,6 +54,7 @@ export class HighlighterManager {
         opacity: style.opacity,
         transparent: style.transparent,
         renderedFaces: 0 as any,
+        priority: style.priority ?? 25,
       });
 
       // Hook events if available
@@ -181,5 +183,39 @@ export class HighlighterManager {
     this.activeCustomStyles.clear();
     await highlighter.clear("select");
     await highlighter.clear("hover");
+  }
+
+  /**
+   * Assigns deterministic render priority tiers (`priority` in `@thatopen/components-front >= 3.4.9`)
+   * so higher-precedence styles remain visually isolated while lower-priority overlays restore automatically.
+   */
+  public static applyStylePriorities(highlighter: any): void {
+    const styles = highlighter?.styles;
+    if (!styles || typeof styles.get !== "function") return;
+
+    const priorityMap: Record<string, number> = {
+      select: 100,
+      ClashElementA: 60,
+      ClashElementB: 60,
+      IDS_Fail: 45,
+      "audit-unassigned": 40,
+      IDS_Pass: 35,
+      "timeline-variance-critical": 35,
+      "timeline-planned": 30,
+      "timeline-inprogress": 30,
+      "timeline-completed": 30,
+      "timeline-variance-ahead": 30,
+      "timeline-variance-onschedule": 30,
+      "timeline-variance-delayed": 30,
+      hover: 10,
+      "audit-ghost": 5,
+    };
+
+    for (const [styleId, priority] of Object.entries(priorityMap)) {
+      const styleDef = styles.get(styleId);
+      if (styleDef && typeof styleDef === "object") {
+        styleDef.priority = priority;
+      }
+    }
   }
 }

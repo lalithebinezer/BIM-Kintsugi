@@ -15,7 +15,8 @@ import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
 import type { GisModule } from "../modules/GisModule";
-import { evmDashboard, gisFeature, geoTools } from "../modules/optionalFeatures";
+import { evmDashboard, gisFeature, geoTools, engineeringStudio } from "../modules/optionalFeatures";
+import { runFeature } from "../utils/lazyFeature";
 import type { EvmDashboardModule } from "../modules/EvmDashboardModule";
 import { showToast } from "./ToastManager";
 import { escapeHtml } from "../utils/formatters";
@@ -63,6 +64,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     "cost-control-panel": "btn-dock-cost",
     "evm-panel": "btn-dock-evm",
     "gis-panel": "btn-dock-gis",
+    "engineering-panel": "btn-dock-engineering",
   };
 
   const HEADER_DRAWER_MAP: Record<string, string> = {
@@ -317,6 +319,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   });
 
   // Clash Detection Actions
+  document.getElementById("toggle-clash-deep-bvh")?.addEventListener("change", (e) => {
+    const enabled = (e.target as HTMLInputElement).checked;
+    clashDetector.setDeepMeshVerification(enabled);
+    showToast(enabled ? "Deep Triangle BVH Clash Verification Enabled" : "Fast AABB Clash Mode Enabled", "info");
+  });
+
   document.getElementById("btn-run-clash-audit")?.addEventListener("click", async () => {
     showToast("Scanning multi-discipline models for clashes...", "info");
     const results = await clashDetector.runClashAudit();
@@ -885,6 +893,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   document.getElementById("btn-dock-gis")?.addEventListener("click", toggleGisSuite);
   document.getElementById("btn-header-gis")?.addEventListener("click", toggleGisSuite);
+
+  const toggleEngineeringStudio = async () => {
+    await runFeature(() => engineeringStudio.load());
+    toggleEnterpriseDrawer("engineering-panel");
+  };
+  document.getElementById("btn-dock-engineering")?.addEventListener("click", toggleEngineeringStudio);
 
   // Apply Georeference Datum
   document.getElementById("gis-btn-apply-coords")?.addEventListener("click", () => {

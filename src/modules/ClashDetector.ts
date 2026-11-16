@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import * as OBC from "@thatopen/components";
+import * as OBF from "@thatopen/components-front";
+import { MeshBVH } from "three-mesh-bvh";
 import { BimEngine } from "../core/BimEngine";
 import { BcfIssueManager, type BcfTopic } from "./BcfIssueManager";
 import { escapeHtml } from "../utils/formatters";
@@ -44,6 +47,8 @@ export class ClashDetector {
   private isScanning: boolean = false;
   private clashMarkerGroup: THREE.Group;
   private markerIds: string[] = [];
+  private deepMeshVerification: boolean = false;
+  private lastFalsePositivesFiltered: number = 0;
 
   private rules: ClashRuleConfig[] = [
     {
@@ -107,6 +112,18 @@ export class ClashDetector {
 
   public getClashes(): ClashResult[] {
     return this.clashResults;
+  }
+
+  public setDeepMeshVerification(enabled: boolean) {
+    this.deepMeshVerification = enabled;
+  }
+
+  public isDeepMeshVerification(): boolean {
+    return this.deepMeshVerification;
+  }
+
+  public getLastFalsePositivesFiltered(): number {
+    return this.lastFalsePositivesFiltered;
   }
 
   /**
@@ -190,9 +207,16 @@ export class ClashDetector {
       }
     }
 
+    // Optional Phase 5A: Deep triangle-level BVH verification using OBF.Mesher + three-mesh-bvh
+    this.lastFalsePositivesFiltered = 0;
+    const verifiedResults =
+      this.deepMeshVerification && results.length > 0
+        ? await this.filterCandidatesWithMesherBVH(results)
+        : results;
+
     // Default realistic mock clashes for standalone demonstration when models are empty
-    if (results.length === 0) {
-      results.push(
+    if (verifiedResults.length === 0 && results.length === 0) {
+      verifiedResults.push(
         {
           id: `clash_demo_1`,
           disciplineA: "MEP / HVAC",
@@ -262,11 +286,91 @@ export class ClashDetector {
       );
     }
 
-    this.clashResults = results;
+    this.clashResults = verifiedResults;
     this.renderClashBeacons();
     this.updateClashUI();
     this.isScanning = false;
-    return results;
+    return verifiedResults;
+  }
+
+  /**
+   * Refines AABB collision candidates with exact triangle-level BVH intersections
+   * powered by `@thatopen/components-front` `OBF.Mesher` + `three-mesh-bvh`.
+   */
+  private async filterCandidatesWithMesherBVH(candidates: ClashResult[]): Promise<ClashResult[]> {
+    const fragments = this.engine.fragments;
+    const candidateMap: OBC.ModelIdMap = {};
+    for (const c of candidates) {
+      if (fragments?.list?.has(c.elementA.modelId)) {
+        if (!candidateMap[c.elementA.modelId]) candidateMap[c.elementA.modelId] = new Set();
+        candidateMap[c.elementA.modelId].add(c.elementA.expressId);
+      }
+      if (fragments?.list?.has(c.elementB.modelId)) {
+        if (!candidateMap[c.elementB.modelId]) candidateMap[c.elementB.modelId] = new Set();
+        candidateMap[c.elementB.modelId].add(c.elementB.expressId);
+      }
+    }
+
+    if (Object.keys(candidateMap).length === 0) return candidates;
+
+    const mesher = this.engine.components.get(OBF.Mesher);
+    const meshMap = await mesher.get(candidateMap, { applyTransformation: true });
+    const bvhCache = new WeakMap<THREE.BufferGeometry, MeshBVH>();
+    const invA = new THREE.Matrix4();
+    const geomToBvh = new THREE.Matrix4();
+    const verified: ClashResult[] = [];
+
+    const getBvh = (geo: THREE.BufferGeometry): MeshBVH | null => {
+      if (!geo.getAttribute("position") || geo.getAttribute("position").count < 3) return null;
+      let bvh = bvhCache.get(geo);
+      if (!bvh) {
+        bvh = new MeshBVH(geo);
+        bvhCache.set(geo, bvh);
+      }
+      return bvh;
+    };
+
+    try {
+      for (const c of candidates) {
+        if (c.severity === "clearance") {
+          verified.push(c);
+          continue;
+        }
+        const meshesA = meshMap.get(c.elementA.modelId)?.get(c.elementA.expressId);
+        const meshesB = meshMap.get(c.elementB.modelId)?.get(c.elementB.expressId);
+        if (!meshesA?.length || !meshesB?.length) {
+          verified.push(c);
+          continue;
+        }
+
+        let hits = false;
+        for (const mA of meshesA) {
+          mA.updateMatrixWorld(true);
+          const bvhA = getBvh(mA.geometry);
+          if (!bvhA) continue;
+          invA.copy(mA.matrixWorld).invert();
+          for (const mB of meshesB) {
+            mB.updateMatrixWorld(true);
+            geomToBvh.copy(invA).multiply(mB.matrixWorld);
+            if (bvhA.intersectsGeometry(mB.geometry, geomToBvh)) {
+              hits = true;
+              break;
+            }
+          }
+          if (hits) break;
+        }
+
+        if (hits) {
+          verified.push(c);
+        } else {
+          this.lastFalsePositivesFiltered++;
+        }
+      }
+    } finally {
+      mesher.remove(Object.keys(candidateMap));
+    }
+
+    return verified;
   }
 
   private classifyDiscipline(category: string): string {
@@ -373,6 +477,7 @@ export class ClashDetector {
               opacity: 0.9,
               transparent: true,
               renderedFaces: 0 as any,
+              priority: 60,
             });
           }
           if (!highlighter.styles.has("ClashElementB")) {
@@ -381,6 +486,7 @@ export class ClashDetector {
               opacity: 0.9,
               transparent: true,
               renderedFaces: 0 as any,
+              priority: 60,
             });
           }
         }

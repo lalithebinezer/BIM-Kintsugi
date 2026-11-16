@@ -26,3 +26,15 @@ export const geoTools = lazyFeature("terrain and solar tools", async () => {
   initGeoEngineeringController(engine.world, engine.fragments.core);
   return (await import("./GeoEngineeringSuite")).GeoEngineeringSuite.getInstance();
 });
+export const technicalDrawingFeature = lazyFeature("vector 2D drawings & DXF", async () =>
+  (await import("./TechnicalDrawingModule")).TechnicalDrawingModule.getInstance());
+export const realityCaptureFeature = lazyFeature("point cloud & splat capture", async () =>
+  (await import("./RealityCaptureModule")).RealityCaptureModule.getInstance());
+export const ifcSplitterFeature = lazyFeature("client IFC splitter", async () =>
+  (await import("./IfcSplitterModule")).IfcSplitterModule.getInstance());
+export const civilAlignmentFeature = lazyFeature("IFC 4.3 civil alignments", async () =>
+  (await import("./CivilAlignmentModule")).CivilAlignmentModule.getInstance());
+export const engineeringStudio = lazyFeature("engineering studio UI", async () => {
+  const { initEngineeringStudioController } = await import("../ui/EngineeringStudioController");
+  return initEngineeringStudioController();
+});

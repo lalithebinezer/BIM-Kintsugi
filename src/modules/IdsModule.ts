@@ -25,12 +25,14 @@ export class IdsModule {
           renderedFaces: FRAGS.RenderedFaces.ONE,
           opacity: 0.95,
           transparent: false,
+          priority: 35,
         });
         highlighter.styles.set("IDS_Fail", {
           color: new THREE.Color("#EF4444"),
           renderedFaces: FRAGS.RenderedFaces.ONE,
           opacity: 0.95,
           transparent: false,
+          priority: 45,
         });
         this.stylesInitialized = true;
       }

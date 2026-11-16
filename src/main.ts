@@ -989,6 +989,8 @@ highlighter.styles.set("audit-ghost", {
   renderedFaces: true as any,
 });
 
+HighlighterManager.applyStylePriorities(highlighter);
+
 // --- ITEMS FINDER / SEMANTIC QUERIES ---
 const finder = components.get(OBC.ItemsFinder);
 
@@ -3800,6 +3802,7 @@ const initBim = async () => {
         if (sceneManager.bluePenPass) {
           sceneManager.bluePenPass.uniforms.enabled.value = isEnabled ? 1.0 : 0.0;
         }
+        GraphicsVFXManager.getInstance().applyPipelineMode(isEnabled);
         if (sceneManager.postproduction.customEffects) {
           try {
             sceneManager.postproduction.customEffects.setNeedsUpdate();
@@ -5140,11 +5143,30 @@ if (postProcToggle) {
     if (sceneManager.bluePenPass) {
       sceneManager.bluePenPass.uniforms.enabled.value = enabled ? 1.0 : 0.0;
     }
+    GraphicsVFXManager.getInstance().applyPipelineMode(enabled);
     fragments.core.update(true);
   });
 }
 
 const postProcThickness = document.getElementById("settings-postproc-thickness") as HTMLInputElement | null;
+const postProcPipelineSelect = document.getElementById("settings-postproc-pipeline") as HTMLSelectElement | null;
+if (postProcPipelineSelect) {
+  postProcPipelineSelect.value = GraphicsVFXManager.getInstance().getPipelineMode();
+  postProcPipelineSelect.addEventListener("change", () => {
+    const mode = postProcPipelineSelect.value === "composer" ? "composer" : "deferred";
+    GraphicsVFXManager.getInstance().setPipelineMode(mode);
+    fragments.core.update(true);
+    showToast(`Render Pipeline: ${mode === "deferred" ? "Deferred G-Buffer" : "Classic Composer"}`, "info");
+  });
+}
+const adaptiveFpsToggle = document.getElementById("settings-toggle-adaptive-fps") as HTMLInputElement | null;
+if (adaptiveFpsToggle) {
+  adaptiveFpsToggle.checked = GraphicsVFXManager.getInstance().isAdaptiveResolutionEnabled();
+  adaptiveFpsToggle.addEventListener("change", () => {
+    GraphicsVFXManager.getInstance().setAdaptiveResolution(adaptiveFpsToggle.checked);
+    showToast(`Adaptive FPS Resolution: ${adaptiveFpsToggle.checked ? "ON" : "OFF"}`, "info");
+  });
+}
 const postProcThicknessVal = document.getElementById("val-postproc-thickness");
 if (postProcThickness) {
   postProcThickness.addEventListener("input", () => {

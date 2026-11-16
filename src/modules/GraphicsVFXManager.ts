@@ -4,12 +4,15 @@ import { BimEngine } from "../core/BimEngine";
 
 export type GraphicsPreset = "performance" | "balanced" | "cinematic";
 export type RenderStyleMode = "color" | "pen" | "pen-shadows" | "color-pen-shadows" | "gloss";
+export type PipelineMode = "deferred" | "composer";
 
 export class GraphicsVFXManager {
   private static instance: GraphicsVFXManager | null = null;
   private engine: BimEngine;
   private preset: GraphicsPreset = "balanced";
   private renderStyle: RenderStyleMode = "color-pen-shadows";
+  private pipelineMode: PipelineMode = "deferred";
+  private adaptiveResolutionEnabled: boolean = true;
   private groundShadowMesh: THREE.Mesh | null = null;
 
   private constructor() {
@@ -22,8 +25,17 @@ export class GraphicsVFXManager {
     if (savedStyle && ["color", "pen", "pen-shadows", "color-pen-shadows", "gloss"].includes(savedStyle)) {
       this.renderStyle = savedStyle;
     }
+    const savedPipeline = typeof localStorage !== "undefined" ? (localStorage.getItem("bim_pipeline_mode") as PipelineMode) : null;
+    if (savedPipeline && ["deferred", "composer"].includes(savedPipeline)) {
+      this.pipelineMode = savedPipeline;
+    }
+    const savedAdaptive = typeof localStorage !== "undefined" ? localStorage.getItem("bim_adaptive_fps") : null;
+    if (savedAdaptive === "false") {
+      this.adaptiveResolutionEnabled = false;
+    }
     this.removeGroundShadow();
     this.applyPreset(this.preset);
+    this.applyPipelineMode();
   }
 
   public static getInstance(): GraphicsVFXManager {
@@ -88,6 +100,74 @@ export class GraphicsVFXManager {
         }
       }
     } catch (e) {}
+  }
+
+  public getPipelineMode(): PipelineMode {
+    return this.pipelineMode;
+  }
+
+  public isAdaptiveResolutionEnabled(): boolean {
+    return this.adaptiveResolutionEnabled;
+  }
+
+  /**
+   * Switches ThatOpen PostproductionRenderer between the single G-buffer
+   * `DEFERRED` pipeline (`@thatopen/components-front >= 3.5`) and classic `COMPOSER`.
+   * Falls back to `composer` automatically when custom ShaderPass (`BluePenShader`) is active.
+   */
+  public setPipelineMode(mode: PipelineMode) {
+    this.pipelineMode = mode;
+    try {
+      localStorage.setItem("bim_pipeline_mode", mode);
+    } catch (e) {}
+    this.applyPipelineMode();
+  }
+
+  public setAdaptiveResolution(enabled: boolean, targetFps: number = 55) {
+    this.adaptiveResolutionEnabled = enabled;
+    try {
+      localStorage.setItem("bim_adaptive_fps", enabled ? "true" : "false");
+    } catch (e) {}
+    const ppRenderer = this.engine.world?.renderer as OBF.PostproductionRenderer | undefined;
+    if (!ppRenderer) return;
+    try {
+      ppRenderer.adaptiveResolution = enabled;
+      if (typeof (ppRenderer as any).adaptiveTargetFps === "number") {
+        (ppRenderer as any).adaptiveTargetFps = targetFps;
+      }
+      if (typeof (ppRenderer as any).adaptiveMinScale === "number") {
+        (ppRenderer as any).adaptiveMinScale = 0.55;
+      }
+    } catch {}
+  }
+
+  public applyPipelineMode(forceComposer: boolean = false) {
+    const ppRenderer = this.engine.world?.renderer as OBF.PostproductionRenderer | undefined;
+    const post = ppRenderer?.postproduction;
+    if (!ppRenderer || !post) return;
+
+    this.setAdaptiveResolution(this.adaptiveResolutionEnabled);
+
+    // Avoid allocating WebGL deferred G-buffers in mocked headless contexts
+    const gl = typeof ppRenderer.three?.getContext === "function" ? ppRenderer.three.getContext() : null;
+    if (!gl) return;
+
+    try {
+      const targetMode =
+        forceComposer || this.pipelineMode === "composer"
+          ? OBF.PostproductionMode.COMPOSER
+          : OBF.PostproductionMode.DEFERRED;
+
+      if (targetMode === OBF.PostproductionMode.DEFERRED) {
+        // Touch `.deferred` first so G-buffer targets allocate before switching mode
+        void post.deferred;
+      }
+      post.mode = targetMode;
+      const outliner = this.engine.outliner;
+      if (outliner) {
+        outliner.enabled = true;
+      }
+    } catch {}
   }
 
   public setPreset(preset: GraphicsPreset) {

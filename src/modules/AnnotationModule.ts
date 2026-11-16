@@ -620,12 +620,40 @@ export class AnnotationModule {
     }
   }
 
+  /**
+   * Toggles X-Ray Ghost mode using native `@thatopen/fragments >= 3.6` worker-backed
+   * `setGhostItems(selectedIds, true)` when available (preserving solid focus on selected
+   * items while drawing the surrounding building as an AO-free veil), with a safe Three.js fallback.
+   */
   public toggleXRay(enable?: boolean) {
     this.isXRayActive = enable !== undefined ? enable : !this.isXRayActive;
     const fragments = this.engine.fragments || (window as any).viewer_fragments;
     if (!fragments) return;
 
-    for (const [, model] of fragments.list) {
+    const selectionMap = this.engine.highlighter?.selection?.select || {};
+    let usedNativeGhost = false;
+
+    try {
+      fragments.core?.setGhostOpacity?.(0.24);
+    } catch {}
+
+    for (const [modelId, model] of fragments.list) {
+      if (model && typeof (model as any).setGhostItems === "function") {
+        usedNativeGhost = true;
+        if (this.isXRayActive) {
+          const selectedSet = selectionMap?.[modelId];
+          const keepSolidIds = selectedSet ? Array.from(selectedSet as Iterable<number>) : [];
+          Promise.resolve((model as any).setGhostItems(keepSolidIds, true))
+            .then(() => fragments.core?.update?.(true))
+            .catch(() => {});
+        } else {
+          try {
+            (model as any).clearGhost?.();
+          } catch {}
+        }
+        continue;
+      }
+
       const modelObj = (model?.object || model) as THREE.Object3D;
       if (modelObj && typeof modelObj.traverse === "function") {
         modelObj.traverse((child: any) => {
@@ -648,6 +676,10 @@ export class AnnotationModule {
           }
         });
       }
+    }
+
+    if (usedNativeGhost) {
+      Promise.resolve(fragments.core?.update?.(true)).catch(() => {});
     }
   }
 

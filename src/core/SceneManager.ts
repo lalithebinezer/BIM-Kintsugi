@@ -1,4 +1,5 @@
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import * as OBF from "@thatopen/components-front";
 import { BluePenShader } from "../shaders/BluePenShader";
 
 export class SceneManager {
@@ -27,6 +28,9 @@ export class SceneManager {
       const isEnabled = postProcToggle ? postProcToggle.checked : false;
       if (isEnabled || (postproduction as any)._basePass) {
         try {
+          if (isEnabled) {
+            postproduction.mode = OBF.PostproductionMode.COMPOSER;
+          }
           postproduction.enabled = isEnabled;
         } catch {
           // Base pass initialized lazily by @thatopen/components-front

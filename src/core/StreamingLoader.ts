@@ -200,6 +200,9 @@ export class StreamingLoader {
         onProgress?.(30, "Converting IFC into spatial fragment tiles...", "full");
         const model = await ifcLoader.load(buffer, true, name, {
           processData: { virtualModelConfig: this.getMultithreadingConfig() } as any,
+          instanceCallback: (importer: FRAGS.IfcImporter) => {
+            importer.parseOnce = true;
+          },
         });
         await this.applyDefaultLodMode(model);
         this.persistFragmentsBackground(cacheKey, model);
@@ -215,6 +218,7 @@ export class StreamingLoader {
       onProgress?.(25, "Phase 1/2: Streaming building shell & structure...", "shell");
       const shellModel = await ifcLoader.load(buffer, true, name, {
         instanceCallback: (importer: FRAGS.IfcImporter) => {
+          importer.parseOnce = true;
           importer.classes.elements.clear();
           for (const clsId of SHELL_IFC_TYPE_IDS) {
             importer.classes.elements.add(clsId);
@@ -230,6 +234,7 @@ export class StreamingLoader {
         try {
           const internalsModel = await ifcLoader.load(buffer, true, `${name}::internals`, {
             instanceCallback: (importer: FRAGS.IfcImporter) => {
+              importer.parseOnce = true;
               importer.classes.elements.clear();
               for (const clsId of INTERNAL_MEP_IFC_TYPE_IDS) {
                 importer.classes.elements.add(clsId);
