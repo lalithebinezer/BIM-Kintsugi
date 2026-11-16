@@ -325,11 +325,28 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     showToast(enabled ? "Deep Triangle BVH Clash Verification Enabled" : "Fast AABB Clash Mode Enabled", "info");
   });
 
+  document.getElementById("clash-severity-filter")?.addEventListener("change", (e) => {
+    const val = ((e.target as HTMLSelectElement).value || "all") as any;
+    clashDetector.setSeverityFilter(val);
+  });
+
+  document.getElementById("btn-clear-clashes")?.addEventListener("click", () => {
+    clashDetector.clearClashes();
+    showToast("Cleared Clash Results & 3D Markers", "info");
+  });
+
   document.getElementById("btn-run-clash-audit")?.addEventListener("click", async () => {
     showToast("Scanning multi-discipline models for clashes...", "info");
     const results = await clashDetector.runClashAudit();
     const crit = results.filter((c) => c.severity === "critical").length;
-    showToast(`Clash Audit Complete: ${results.length} Clashes (${crit} Critical)`, crit > 0 ? "warning" : "success");
+    const summary = clashDetector.getLastScanSummary();
+    if (summary?.source === "demo") {
+      showToast(`Demo Preview: ${results.length} Sample Clashes (${crit} Critical) — Load IFC/FRAG for live scan`, "warning");
+    } else if (results.length === 0) {
+      showToast(`Clean Audit: 0 Clashes across ${summary?.scannedElements || 0} elements`, "success");
+    } else {
+      showToast(`Clash Audit Complete: ${results.length} Clashes (${crit} Critical)`, crit > 0 ? "warning" : "success");
+    }
   });
 
   document.getElementById("btn-export-clash-bcf")?.addEventListener("click", () => {
@@ -369,7 +386,29 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   });
 
   // Collaboration Actions
+  const handleLivePeersToggle = (enabled: boolean) => {
+    const active = collabManager.setLivePeersEnabled(enabled);
+    showToast(
+      active ? "Live Peers: ON (3D Avatars & Broadcast Sync Active)" : "Live Peers: OFF (Avatars Hidden)",
+      active ? "success" : "info"
+    );
+  };
+
+  document.getElementById("toggle-live-peers")?.addEventListener("change", (e) => {
+    handleLivePeersToggle((e.target as HTMLInputElement).checked);
+  });
+
+  document.getElementById("settings-toggle-live-peers")?.addEventListener("change", (e) => {
+    handleLivePeersToggle((e.target as HTMLInputElement).checked);
+  });
+
+  collabManager.updateCollabUI();
+
   document.getElementById("btn-follow-host")?.addEventListener("click", () => {
+    if (!collabManager.isLivePeersOn()) {
+      showToast("Turn Live Peers ON to follow a presenter", "warning");
+      return;
+    }
     const active = collabManager.toggleFollowHost();
     showToast(active ? "Camera Synced: Following Presenter" : "Independent Camera View", "info");
   });

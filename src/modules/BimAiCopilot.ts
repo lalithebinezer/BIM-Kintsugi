@@ -111,8 +111,26 @@ export class BimAiCopilot {
       executed.push("Content Policy Filter Triggered");
     }
 
-    // 1. Clash Detection Queries
-    else if (q.includes("clash") || q.includes("collision") || q.includes("intersect")) {
+    // 1. Clash Detection Queries (clear / focus / export before running a new audit)
+    else if (q.includes("clash") && (q.includes("clear") || q.includes("remove") || q.includes("reset"))) {
+      clashDetector.clearClashes();
+      responseText = "Cleared all clash results, 3D markers, and element clash highlights.";
+      executed.push("Clear Clash Results", "Remove 3D Clash Markers");
+      followUps.push("Run clash audit between MEP and Structure");
+    } else if (q.includes("clash") && (q.includes("zoom") || q.includes("focus") || q.includes("show #") || q.includes("inspect"))) {
+      const existing = clashDetector.getClashes().length > 0
+        ? clashDetector.getClashes()
+        : await clashDetector.runClashAudit();
+      const target = existing.find((c) => c.severity === "critical") || existing[0];
+      if (target) {
+        clashDetector.focusClash(target.id);
+        responseText = `Focused camera on ${target.severity} clash between ${target.elementA.name} and ${target.elementB.name} (${(target.overlapDistance * 1000).toFixed(0)}mm).`;
+        executed.push("Focus Critical Clash in 3D");
+        followUps.push("Clear clash markers", "Run clash audit between MEP and Structure");
+      } else {
+        responseText = "No active clashes are present to focus. Your model audit is clean.";
+      }
+    } else if (q.includes("clash") || q.includes("collision") || q.includes("intersect")) {
       const results = await clashDetector.runClashAudit();
       const crit = results.filter((c) => c.severity === "critical").length;
       responseText = `I executed a full multi-discipline clash audit across loaded models. Found ${results.length} total clashes (${crit} critical). I have marked them with 3D beacons in the viewport.`;

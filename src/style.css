@@ -8798,13 +8798,78 @@ body.right-sidebar-collapsed .right-sidebar {
   color: var(--text-muted, #64748B);
 }
 
-/* Clash Matrix Cards */
+/* Clash Rules, Scan Summary & Matrix Cards */
+#clash-panel .drawer-body {
+  gap: 0.55rem;
+}
+
+.clash-rules-container {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.clash-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--bg-card, #16161C);
+  border: 1px solid var(--border-subtle, #23232C);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary, #CBD5E1);
+  cursor: pointer;
+}
+
+.clash-rule-chip input {
+  accent-color: #f43f5e;
+  margin: 0;
+  cursor: pointer;
+}
+
+.clash-scan-summary {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  padding: 0.32rem 0.55rem;
+  background: var(--bg-card, #16161C);
+  border: 1px solid var(--border-subtle, #23232C);
+  border-radius: 6px;
+  font-size: 0.64rem;
+  font-family: var(--font-mono, monospace);
+}
+
+.clash-source-pill {
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.6rem;
+}
+
+.clash-source-pill.model {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10B981;
+}
+
+.clash-source-pill.demo {
+  background: rgba(245, 158, 11, 0.18);
+  color: #F59E0B;
+}
+
 .clash-matrix-wrap {
-  margin: 0.5rem 0;
+  flex-shrink: 0;
+  margin: 0.25rem 0;
   background: var(--bg-card, #16161C);
   border: 1px solid var(--border-subtle, #23232C);
   border-radius: 8px;
-  padding: 0.5rem;
+  padding: 0.45rem;
   overflow-x: auto;
 }
 
@@ -8818,20 +8883,20 @@ body.right-sidebar-collapsed .right-sidebar {
 
 .clash-matrix-table th {
   padding: 0.3rem 0.4rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted, rgba(255, 255, 255, 0.65));
   border-bottom: 1px solid var(--border-subtle, #23232C);
   font-weight: 700;
 }
 
 .clash-matrix-table td {
-  padding: 0.35rem 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.32rem 0.4rem;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
 }
 
 .clash-matrix-table .row-header {
   text-align: left;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary, rgba(255, 255, 255, 0.85));
 }
 
 .clash-matrix-table .cell-diag {
@@ -9920,6 +9985,60 @@ body.resizing-radar * {
 /* ═════════════════════════════════════════════════════════════════════
    LIVE WORKSTATION COLLABORATION PANEL STYLES
    ═════════════════════════════════════════════════════════════════════ */
+
+.collab-live-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  background: var(--bg-panel-header, #16161C);
+  border-bottom: 1px solid var(--border-color, #23232C);
+}
+
+.collab-live-toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-primary, #FFFFFF);
+}
+
+.collab-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.collab-live-dot.is-online {
+  background: #10B981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.collab-live-dot.is-offline {
+  background: #64748B;
+}
+
+.drawer-status-tag.tag-offline {
+  background: rgba(100, 116, 139, 0.22) !important;
+  color: var(--text-muted, #94A3B8) !important;
+  border-color: rgba(100, 116, 139, 0.35) !important;
+}
+
+.collab-offline-state {
+  background: var(--bg-card, #16161C);
+  border: 1px dashed var(--border-strong, #3E3E50);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.55rem;
+  text-align: center;
+}
+
+#btn-dock-collab.peers-off {
+  opacity: 0.55;
+}
 
 .collab-toolbar-ribbon {
   display: flex;

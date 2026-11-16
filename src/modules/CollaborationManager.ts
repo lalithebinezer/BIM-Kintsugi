@@ -29,12 +29,15 @@ export interface CollabChatMessage {
 
 export class CollaborationManager {
   private static instance: CollaborationManager;
+  private static readonly STORAGE_KEY = "bim_live_peers_enabled";
   private engine: BimEngine;
   private activeUsers: CollabUser[] = [];
   private currentUser: CollabUser;
   private chatMessages: CollabChatMessage[] = [];
+  private isLivePeersEnabled: boolean = true;
   private isFollowHostActive: boolean = false;
   private broadcastChannel: BroadcastChannel | null = null;
+  private pointerBound: boolean = false;
   private avatarGroup: THREE.Group;
   private beaconGroup: THREE.Group;
 
@@ -68,10 +71,28 @@ export class CollaborationManager {
       lastActive: "Just now",
     };
 
-    this.initBroadcastChannel();
+    this.isLivePeersEnabled = this.loadLivePeersPreference();
     this.seedDefaultCollabPeers();
     this.seedDefaultChat();
     this.bindPointerTracking();
+
+    if (this.isLivePeersEnabled) {
+      this.initBroadcastChannel();
+      this.renderPeerAvatars();
+    } else {
+      this.avatarGroup.visible = false;
+      this.beaconGroup.visible = false;
+      this.clearPeerAvatars();
+    }
+  }
+
+  private loadLivePeersPreference(): boolean {
+    try {
+      if (typeof localStorage !== "undefined") {
+        return localStorage.getItem(CollaborationManager.STORAGE_KEY) !== "false";
+      }
+    } catch {}
+    return true;
   }
 
   public static getInstance(): CollaborationManager {
@@ -85,7 +106,47 @@ export class CollaborationManager {
     return this.currentUser;
   }
 
+  public isLivePeersOn(): boolean {
+    return this.isLivePeersEnabled;
+  }
+
+  public setLivePeersEnabled(enabled: boolean): boolean {
+    this.isLivePeersEnabled = enabled;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(CollaborationManager.STORAGE_KEY, enabled ? "true" : "false");
+      }
+    } catch {}
+
+    if (enabled) {
+      this.avatarGroup.visible = true;
+      this.beaconGroup.visible = true;
+      this.initBroadcastChannel();
+      this.renderPeerAvatars();
+    } else {
+      this.isFollowHostActive = false;
+      this.currentUser.isMuted = true;
+      this.currentUser.isSpeaking = false;
+      this.closeBroadcastChannel();
+      this.avatarGroup.visible = false;
+      this.beaconGroup.visible = false;
+      this.clearPeerAvatars();
+      this.clearBeacons();
+    }
+
+    this.updateCollabUI();
+    return this.isLivePeersEnabled;
+  }
+
+  public toggleLivePeers(enabled?: boolean): boolean {
+    const next = enabled !== undefined ? enabled : !this.isLivePeersEnabled;
+    return this.setLivePeersEnabled(next);
+  }
+
   public getActiveUsers(): CollabUser[] {
+    if (!this.isLivePeersEnabled) {
+      return [this.currentUser];
+    }
     return [this.currentUser, ...this.activeUsers];
   }
 
@@ -94,6 +155,11 @@ export class CollaborationManager {
   }
 
   public toggleFollowHost(active?: boolean): boolean {
+    if (!this.isLivePeersEnabled) {
+      this.isFollowHostActive = false;
+      this.updateCollabUI();
+      return false;
+    }
     this.isFollowHostActive = active !== undefined ? active : !this.isFollowHostActive;
     if (this.isFollowHostActive) {
       const host = this.activeUsers.find((u) => u.isHost) || this.activeUsers[0];
@@ -110,6 +176,12 @@ export class CollaborationManager {
   }
 
   public toggleMic(): boolean {
+    if (!this.isLivePeersEnabled) {
+      this.currentUser.isMuted = true;
+      this.currentUser.isSpeaking = false;
+      this.updateCollabUI();
+      return false;
+    }
     this.currentUser.isMuted = !this.currentUser.isMuted;
     this.currentUser.isSpeaking = !this.currentUser.isMuted;
     this.broadcastMyPresence();
@@ -133,6 +205,11 @@ export class CollaborationManager {
       ];
     }
 
+    if (!this.isLivePeersEnabled) {
+      this.updateCollabUI();
+      return pinPos;
+    }
+
     this.spawnBeacon(pinPos, this.currentUser.color, `${this.currentUser.name} Pinged Location`);
     
     // Broadcast ping
@@ -151,7 +228,7 @@ export class CollaborationManager {
   }
 
   public spawnBeacon(pos: [number, number, number], colorHex: string, _label?: string) {
-    if (!this.engine.world?.scene?.three) return;
+    if (!this.isLivePeersEnabled || !this.engine.world?.scene?.three) return;
 
     const beaconMesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.35, 16, 16),
@@ -173,6 +250,10 @@ export class CollaborationManager {
     setTimeout(() => {
       this.beaconGroup.remove(beaconMesh);
       this.beaconGroup.remove(pulseRing);
+      beaconMesh.geometry.dispose();
+      (beaconMesh.material as THREE.Material).dispose();
+      pulseRing.geometry.dispose();
+      (pulseRing.material as THREE.Material).dispose();
     }, 8000);
   }
 
@@ -190,7 +271,7 @@ export class CollaborationManager {
 
     this.chatMessages.push(msg);
 
-    if (this.broadcastChannel) {
+    if (this.isLivePeersEnabled && this.broadcastChannel) {
       this.broadcastChannel.postMessage({
         type: "chat_message",
         data: msg,
@@ -201,14 +282,32 @@ export class CollaborationManager {
     return msg;
   }
 
+  private closeBroadcastChannel() {
+    if (!this.broadcastChannel) return;
+    try {
+      this.broadcastChannel.postMessage({
+        type: "user_leave",
+        data: { id: this.currentUser.id },
+      });
+      this.broadcastChannel.close();
+    } catch {}
+    this.broadcastChannel = null;
+  }
+
   private initBroadcastChannel() {
+    if (!this.isLivePeersEnabled || this.broadcastChannel) return;
     if (typeof BroadcastChannel !== "undefined") {
       try {
         this.broadcastChannel = new BroadcastChannel("bim_kintsugi_collab_v2");
         this.broadcastChannel.onmessage = (event) => {
+          if (!this.isLivePeersEnabled) return;
           const { type, data } = event.data;
           if (type === "user_presence" && data.id !== this.currentUser.id) {
             this.handlePeerPresence(data);
+          } else if (type === "user_leave" && data?.id && data.id !== this.currentUser.id) {
+            this.activeUsers = this.activeUsers.filter((u) => u.id !== data.id);
+            this.renderPeerAvatars();
+            this.updateCollabUI();
           } else if (type === "chat_message") {
             this.chatMessages.push(data);
             this.updateCollabUI();
@@ -265,8 +364,6 @@ export class CollaborationManager {
         lastActive: "Active now",
       },
     ];
-
-    this.renderPeerAvatars();
   }
 
   private seedDefaultChat() {
@@ -295,10 +392,11 @@ export class CollaborationManager {
   }
 
   private bindPointerTracking() {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || this.pointerBound) return;
+    this.pointerBound = true;
 
     window.addEventListener("pointermove", () => {
-      if (Math.random() > 0.3) return;
+      if (!this.isLivePeersEnabled || Math.random() > 0.3) return;
       try {
         const cam = this.engine.world?.camera;
         if (cam && cam.three) {
@@ -314,7 +412,7 @@ export class CollaborationManager {
   }
 
   private broadcastMyPresence() {
-    if (this.broadcastChannel) {
+    if (this.isLivePeersEnabled && this.broadcastChannel) {
       this.broadcastChannel.postMessage({
         type: "user_presence",
         data: this.currentUser,
@@ -371,11 +469,27 @@ export class CollaborationManager {
     } catch (e) {}
   }
 
-  private renderPeerAvatars() {
+  private clearPeerAvatars() {
     while (this.avatarGroup.children.length > 0) {
-      const child = this.avatarGroup.children[0];
+      const child = this.avatarGroup.children[0] as THREE.Mesh;
       this.avatarGroup.remove(child);
+      child.geometry?.dispose?.();
+      (child.material as THREE.Material)?.dispose?.();
     }
+  }
+
+  private clearBeacons() {
+    while (this.beaconGroup.children.length > 0) {
+      const child = this.beaconGroup.children[0] as THREE.Mesh;
+      this.beaconGroup.remove(child);
+      child.geometry?.dispose?.();
+      (child.material as THREE.Material)?.dispose?.();
+    }
+  }
+
+  private renderPeerAvatars() {
+    this.clearPeerAvatars();
+    if (!this.isLivePeersEnabled) return;
 
     for (const user of this.activeUsers) {
       const p = user.cursorPosition;
@@ -398,27 +512,79 @@ export class CollaborationManager {
 
     const listEl = document.getElementById("collab-users-list");
     const countBadge = document.getElementById("collab-user-count-badge");
-    const followBtn = document.getElementById("btn-follow-host");
-    const micBtn = document.getElementById("btn-collab-mic-toggle");
+    const followBtn = document.getElementById("btn-follow-host") as HTMLButtonElement | null;
+    const pingBtn = document.getElementById("btn-collab-ping-loc") as HTMLButtonElement | null;
+    const micBtn = document.getElementById("btn-collab-mic-toggle") as HTMLButtonElement | null;
+    const inviteBtn = document.getElementById("btn-collab-copy-invite") as HTMLButtonElement | null;
+    const chatInput = document.getElementById("collab-chat-input") as HTMLInputElement | null;
+    const chatSendBtn = document.getElementById("btn-collab-chat-send") as HTMLButtonElement | null;
     const chatContainer = document.getElementById("collab-chat-messages");
+    const liveToggle = document.getElementById("toggle-live-peers") as HTMLInputElement | null;
+    const settingsToggle = document.getElementById("settings-toggle-live-peers") as HTMLInputElement | null;
+    const statusTextEl = document.getElementById("collab-live-status-text");
+    const statusDotEl = document.getElementById("collab-live-status-dot");
+    const dockBtn = document.getElementById("btn-dock-collab");
+    const headerBtn = document.getElementById("btn-header-collab");
+
+    const enabled = this.isLivePeersEnabled;
+    if (liveToggle) liveToggle.checked = enabled;
+    if (settingsToggle) settingsToggle.checked = enabled;
+    if (statusTextEl) {
+      statusTextEl.textContent = enabled
+        ? "Live Peers: ON · Syncing Avatars"
+        : "Live Peers: OFF · Avatars Hidden";
+    }
+    if (statusDotEl) {
+      statusDotEl.classList.toggle("is-online", enabled);
+      statusDotEl.classList.toggle("is-offline", !enabled);
+    }
+    dockBtn?.classList.toggle("peers-off", !enabled);
+    headerBtn?.classList.toggle("peers-off", !enabled);
 
     const allUsers = this.getActiveUsers();
-    if (countBadge) countBadge.innerText = `${allUsers.length} Online`;
-
-    if (followBtn) {
-      followBtn.classList.toggle("active", this.isFollowHostActive);
-      followBtn.innerText = this.isFollowHostActive ? "Following Presenter" : "Follow Presenter";
+    if (countBadge) {
+      countBadge.innerText = enabled ? `${allUsers.length} Online` : "OFF";
+      countBadge.classList.toggle("tag-offline", !enabled);
     }
 
+    if (followBtn) {
+      followBtn.disabled = !enabled;
+      followBtn.classList.toggle("active", enabled && this.isFollowHostActive);
+      followBtn.innerText = enabled && this.isFollowHostActive ? "Following Presenter" : "Follow Presenter";
+    }
+
+    if (pingBtn) pingBtn.disabled = !enabled;
+    if (inviteBtn) inviteBtn.disabled = !enabled;
+    if (chatInput) {
+      chatInput.disabled = !enabled;
+      chatInput.placeholder = enabled ? "Type a message to peers..." : "Turn Live Peers ON to chat with peers...";
+    }
+    if (chatSendBtn) chatSendBtn.disabled = !enabled;
+
     if (micBtn) {
-      micBtn.classList.toggle("active", !this.currentUser.isMuted);
-      micBtn.innerHTML = this.currentUser.isMuted
+      micBtn.disabled = !enabled;
+      micBtn.classList.toggle("active", enabled && !this.currentUser.isMuted);
+      micBtn.innerHTML = !enabled || this.currentUser.isMuted
         ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> <span>Unmute</span>`
         : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg> <span>Mute</span>`;
     }
 
     if (listEl) {
       listEl.innerHTML = "";
+      if (!enabled) {
+        const offlineNotice = document.createElement("div");
+        offlineNotice.className = "collab-offline-state";
+        offlineNotice.innerHTML = `
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">Live Workstation Peers is OFF</div>
+          <div style="font-size: 0.64rem; color: var(--text-muted); margin-bottom: 0.55rem; line-height: 1.4;">Remote peer avatars, 3D location beacons, and BroadcastChannel presence updates are paused.</div>
+          <button type="button" id="btn-collab-turn-on" class="btn-xs btn-accent">Turn Live Peers ON</button>
+        `;
+        offlineNotice.querySelector("#btn-collab-turn-on")?.addEventListener("click", () => {
+          this.setLivePeersEnabled(true);
+        });
+        listEl.appendChild(offlineNotice);
+      }
+
       allUsers.forEach((u) => {
         const item = document.createElement("div");
         item.className = `collab-user-item ${u.isHost ? "is-host" : ""}`;

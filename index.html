@@ -1682,12 +1682,23 @@
                     <input type="color" id="settings-select-color" value="#00d2ff" title="Set Default Selection Color" />
                   </div>
 
-                  <div class="scene-control-item" style="grid-column: span 2;">
+                  <div class="scene-control-item">
                     <div class="scene-control-label">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8" /></svg>
                       <span>Hover Color</span>
                     </div>
                     <input type="color" id="settings-hover-color" value="#00f5a0" title="Set Pointer Hover Color" />
+                  </div>
+
+                  <div class="scene-control-item">
+                    <div class="scene-control-label">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                      <span>Live Peers</span>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="settings-toggle-live-peers" aria-label="Toggle Live Peers On or Off" checked />
+                      <span class="toggle-slider"></span>
+                    </label>
                   </div>
 
                   <!-- Graphic Accelerator & Hardware Performance Studio -->
@@ -3534,6 +3545,9 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <span>Run Clash Audit</span>
           </button>
+          <button id="btn-clear-clashes" class="btn-md btn-outline" title="Clear Clash Results and 3D Markers">
+            <span>Clear</span>
+          </button>
           <button id="btn-export-clash-bcf" class="btn-md btn-outline" title="Export to BCF 3.0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>BCF</span>
@@ -3543,9 +3557,17 @@
           <input type="checkbox" id="toggle-clash-deep-bvh" style="accent-color: #f43f5e;" />
           <span>Deep Triangle BVH Verification (<code style="font-size:0.62rem;">OBF.Mesher</code>)</span>
         </label>
+        <div id="clash-rules-container" class="clash-rules-container"></div>
+        <div id="clash-scan-summary" class="clash-scan-summary"></div>
         <div id="clash-matrix-container" class="clash-matrix-wrap"></div>
-        <div class="drawer-section-header">
+        <div class="drawer-section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
           <span>Clash Results (<span id="clash-total-badge">0 Total</span>)</span>
+          <select id="clash-severity-filter" aria-label="Filter Clashes by Severity" class="clash-status-select">
+            <option value="all">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="major">Major</option>
+            <option value="clearance">Clearance</option>
+          </select>
         </div>
         <div id="clash-results-list" class="clash-results-container thin-scrollbar"></div>
       </div>
@@ -3633,6 +3655,18 @@
           <button class="btn-icon drawer-center-toggle-btn" data-target="collab-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="collab-panel" aria-label="Close Collaboration Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
+      </div>
+
+      <!-- Live Peers On/Off Control Bar -->
+      <div class="collab-live-toggle-bar">
+        <div class="collab-live-toggle-info">
+          <span id="collab-live-status-dot" class="collab-live-dot is-online"></span>
+          <span id="collab-live-status-text">Live Peers: ON · Syncing Avatars</span>
+        </div>
+        <label class="toggle-switch" title="Turn Live Peers On or Off">
+          <input type="checkbox" id="toggle-live-peers" aria-label="Toggle Live Peers On or Off" checked />
+          <span class="toggle-slider"></span>
+        </label>
       </div>
 
       <!-- Quick Action Ribbon -->
