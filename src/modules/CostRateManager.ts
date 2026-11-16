@@ -62,6 +62,7 @@ export class CostRateManager {
   private rates: Map<string, CategoryRate> = new Map();
   private activeCurrencyCode: string = 'USD';
   private modalEl: HTMLElement | null = null;
+  private escapeBound: boolean = false;
 
   private constructor() {
     this.loadState();
@@ -291,6 +292,20 @@ export class CostRateManager {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) this.closeCostRateModal();
     });
+
+    if (!this.escapeBound && typeof window !== 'undefined') {
+      this.escapeBound = true;
+      window.addEventListener(
+        'keydown',
+        (e: KeyboardEvent) => {
+          if (e.key === 'Escape' && this.modalEl && !this.modalEl.classList.contains('hidden')) {
+            e.stopImmediatePropagation();
+            this.closeCostRateModal();
+          }
+        },
+        true
+      );
+    }
   }
 
   private renderModalContent(onSave?: () => void): void {

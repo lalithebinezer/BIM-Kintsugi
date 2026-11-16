@@ -35,6 +35,11 @@ export class KeyboardController {
         if (activeEl && (activeEl as HTMLElement).blur) {
           (activeEl as HTMLElement).blur();
         }
+        const costRateModal = document.getElementById('cost-rate-table-modal');
+        if (costRateModal && !costRateModal.classList.contains('hidden')) {
+          costRateModal.classList.add('hidden');
+          return;
+        }
         const helpModal = document.getElementById('shortcuts-modal') || document.getElementById('help-modal');
         if (helpModal && !helpModal.classList.contains('hidden')) {
           helpModal.classList.add('hidden');

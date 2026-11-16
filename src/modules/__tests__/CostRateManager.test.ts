@@ -85,6 +85,11 @@ describe("CostRateManager & Multi-Currency Engine", () => {
     expect(modal).not.toBeNull();
     expect(modal?.classList.contains("hidden")).toBe(false);
 
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(modal?.classList.contains("hidden")).toBe(true);
+
+    manager.openCostRateModal();
+    expect(modal?.classList.contains("hidden")).toBe(false);
     manager.closeCostRateModal();
     expect(modal?.classList.contains("hidden")).toBe(true);
   });
