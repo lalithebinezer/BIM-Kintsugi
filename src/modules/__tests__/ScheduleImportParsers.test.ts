@@ -144,7 +144,7 @@ describe("ScheduleImportParsers", () => {
     expect(res.tasks[2].category).toBe("IFCFLOWSEGMENT");
   });
 
-  it("should parse single-sheet Excel workbooks (.xlsx) with serial dates and element IDs", () => {
+  it("should parse single-sheet Excel workbooks (.xlsx) with serial dates and element IDs", async () => {
     const wb = XLSX.utils.book_new();
     const wsData = [
       ["TaskID", "TaskName", "StartDate", "EndDate", "Category", "TotalCost", "ExpressIDs"],
@@ -155,7 +155,7 @@ describe("ScheduleImportParsers", () => {
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
 
-    const res = ScheduleImportParsers.parseExcel(buffer, "Project_Schedule.xlsx");
+    const res = await ScheduleImportParsers.parseExcel(buffer, "Project_Schedule.xlsx");
     expect(res.format).toBe("EXCEL_WORKBOOK");
     expect(res.projectName).toBe("Project_Schedule");
     expect(res.tasks.length).toBe(2);
@@ -171,7 +171,7 @@ describe("ScheduleImportParsers", () => {
     expect(res.tasks[0].elementIds.size).toBe(3);
   });
 
-  it("should parse multi-sheet Synchro 4D Pro export workbooks (Tasks, ResourceAssignments, DirectCosts)", () => {
+  it("should parse multi-sheet Synchro 4D Pro export workbooks (Tasks, ResourceAssignments, DirectCosts)", async () => {
     const wb = XLSX.utils.book_new();
     const tasksData = [
       ["TaskID(*)", "TaskName", "Duration", "Start", "Finish", "3DResources(*)"],
@@ -198,7 +198,7 @@ describe("ScheduleImportParsers", () => {
     XLSX.utils.book_append_sheet(wb, wsCost, "DirectCosts");
 
     const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    const res = ScheduleImportParsers.parseExcel(buffer, "Project_DIE.xls");
+    const res = await ScheduleImportParsers.parseExcel(buffer, "Project_DIE.xls");
 
     expect(res.format).toBe("EXCEL_WORKBOOK");
     expect(res.projectName).toBe("Project_DIE");

@@ -2,6 +2,15 @@ import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
 import CameraControls from "camera-controls";
+import { GraphicsPipeline } from "./GraphicsPipeline";
+import { ResourceLifecycleManager } from "./ResourceLifecycleManager";
+import { PrecisionOriginController } from "./PrecisionOriginController";
+import { InstancedBatchManager } from "./InstancedBatchManager";
+import { LodAndCullingManager } from "./LodAndCullingManager";
+import { BvhAccelerationService } from "./BvhAccelerationService";
+import { PointerInputArbiter } from "./PointerInputArbiter";
+import { MetadataSyncService } from "./MetadataSyncService";
+import { StreamingLoader } from "./StreamingLoader";
 
 export class BimEngine {
   private static instance: BimEngine;
@@ -98,6 +107,7 @@ export class BimEngine {
     this.hider = this.components.get(OBC.Hider);
 
     this.initThatOpenExtensions();
+    this.initOptimizationSubsystems();
     this.setupListeners();
   }
 
@@ -113,9 +123,33 @@ export class BimEngine {
       BimEngine.instance.finder = components.get(OBC.ItemsFinder);
       BimEngine.instance.hider = components.get(OBC.Hider);
       BimEngine.instance.initThatOpenExtensions();
+      BimEngine.instance.initOptimizationSubsystems();
       BimEngine.instance.setupListeners();
     }
     return BimEngine.instance;
+  }
+
+  private initOptimizationSubsystems() {
+    try {
+      const renderer = this.world?.renderer?.three;
+      const lifecycle = ResourceLifecycleManager.getInstance();
+      lifecycle.setRenderer(renderer);
+
+      const pipeline = GraphicsPipeline.getInstance();
+      pipeline.attachRenderer(renderer);
+      pipeline.probeHardware().catch(() => {});
+
+      const scene = this.world?.scene?.three;
+      if (scene) {
+        InstancedBatchManager.getInstance().attachToScene(scene);
+      }
+
+      BvhAccelerationService.getInstance().patchThreePrototypes();
+      if (typeof document !== "undefined" && this.container instanceof HTMLElement) {
+        PointerInputArbiter.getInstance().attach(this.container);
+      }
+      MetadataSyncService.getInstance().init().catch(() => {});
+    } catch {}
   }
 
   private initThatOpenExtensions() {
@@ -207,12 +241,16 @@ export class BimEngine {
   public syncOutlinerTheme(selectColorHex: string, hoverColorHex?: string) {
     try {
       if (this.hoverer && hoverColorHex) {
+        const prevMat = this.hoverer.material;
         this.hoverer.material = new THREE.MeshBasicMaterial({
           color: new THREE.Color(hoverColorHex),
           transparent: true,
           opacity: 0.32,
           depthTest: false,
         });
+        if (prevMat && prevMat !== this.hoverer.material) {
+          ResourceLifecycleManager.getInstance().disposeSingleResource(prevMat);
+        }
       }
       if (!this.outliner) return;
       const selectColor = new THREE.Color(selectColorHex);
@@ -301,5 +339,44 @@ export class BimEngine {
         }
       });
     }
+
+    try {
+      const controls = this.world?.camera?.controls as any;
+      const cam = this.world?.camera?.three;
+      if (controls && typeof controls.addEventListener === "function") {
+        const targetVec = new THREE.Vector3();
+        controls.addEventListener("update", () => {
+          if (!cam) return;
+          const precision = PrecisionOriginController.getInstance();
+          precision.recenterIfNeeded(cam, controls);
+          if (typeof controls.getTarget === "function") {
+            controls.getTarget(targetVec);
+            precision.updateDepthPrecision(cam, cam.position.distanceTo(targetVec));
+          }
+          LodAndCullingManager.getInstance().evaluateCulling(cam);
+        });
+
+        controls.addEventListener("rest", () => {
+          GraphicsPipeline.getInstance().requestShadowRefresh();
+          ResourceLifecycleManager.getInstance().reclaimExpiredHidden().catch(() => {});
+        });
+      }
+    } catch {
+      // Safe fallback in headless unit test environments without WebGL controls
+    }
+  }
+
+  public getPerformanceTelemetry() {
+    const cam = this.world?.camera?.three;
+    return {
+      pipeline: GraphicsPipeline.getInstance().getCapabilitiesReport(),
+      memory: ResourceLifecycleManager.getInstance().getMemorySnapshot(),
+      instancing: InstancedBatchManager.getInstance().getStats(),
+      culling: LodAndCullingManager.getInstance().getStats(),
+      precision: PrecisionOriginController.getInstance().getTelemetry(cam),
+      bvh: BvhAccelerationService.getInstance().getStats(),
+      metadata: MetadataSyncService.getInstance().getStats(),
+      activeStreams: StreamingLoader.getInstance().getActiveStreamCount(),
+    };
   }
 }

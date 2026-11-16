@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bim-booting" data-theme="obsidian">
 
 <head>
   <meta charset="UTF-8" />
@@ -12,12 +12,522 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="BIM Kintsugi" />
+
+  <!-- Synchronous Theme Sync & Anti-FOUC Boot Guard -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('bim_theme_preset') || localStorage.getItem('bim_theme') || 'obsidian';
+        var validThemes = {
+          obsidian: 'obsidian',
+          dark: 'obsidian',
+          zen: 'zen',
+          cozy: 'zen',
+          cyberpunk: 'cyberpunk',
+          blueprint: 'blueprint',
+          light: 'light',
+          'light-studio': 'light'
+        };
+        document.documentElement.setAttribute('data-theme', validThemes[saved] || 'obsidian');
+      } catch (e) {}
+      window.__BIM_BOOT_START__ = window.performance && performance.now ? performance.now() : Date.now();
+    })();
+  </script>
+
+  <!-- Inline Critical Pre-Paint Styles & Dynamic Startup Preloader Animation (Prevents Unstyled HTML Flash) -->
+  <style id="bim-critical-boot-css">
+    :root,
+    [data-theme="obsidian"],
+    [data-theme="dark"] {
+      --boot-bg: #0A0A0C;
+      --boot-surface: rgba(20, 20, 24, 0.86);
+      --boot-accent: #D4FF3F;
+      --boot-secondary: #38BDF8;
+      --boot-text: #F8FAFC;
+      --boot-muted: #94A3B8;
+      --boot-border: rgba(255, 255, 255, 0.1);
+      --boot-grid: rgba(212, 255, 63, 0.045);
+      --boot-glow: rgba(212, 255, 63, 0.22);
+      --boot-shadow: 0 28px 64px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    }
+
+    [data-theme="zen"],
+    [data-theme="cozy"] {
+      --boot-bg: #121316;
+      --boot-surface: rgba(24, 25, 30, 0.9);
+      --boot-accent: #F59E0B;
+      --boot-secondary: #3B82F6;
+      --boot-text: #F3F4F6;
+      --boot-muted: #9CA3AF;
+      --boot-border: rgba(245, 158, 11, 0.22);
+      --boot-grid: rgba(245, 158, 11, 0.045);
+      --boot-glow: rgba(245, 158, 11, 0.22);
+    }
+
+    [data-theme="cyberpunk"] {
+      --boot-bg: #070913;
+      --boot-surface: rgba(12, 16, 32, 0.92);
+      --boot-accent: #00F0FF;
+      --boot-secondary: #EC4899;
+      --boot-text: #F8FAFC;
+      --boot-muted: #94A3B8;
+      --boot-border: rgba(0, 240, 255, 0.24);
+      --boot-grid: rgba(0, 240, 255, 0.055);
+      --boot-glow: rgba(0, 240, 255, 0.25);
+    }
+
+    [data-theme="blueprint"] {
+      --boot-bg: #0A192F;
+      --boot-surface: rgba(17, 34, 64, 0.92);
+      --boot-accent: #64FFDA;
+      --boot-secondary: #38BDF8;
+      --boot-text: #E6F1FF;
+      --boot-muted: #8892B0;
+      --boot-border: rgba(100, 255, 218, 0.22);
+      --boot-grid: rgba(100, 255, 218, 0.055);
+      --boot-glow: rgba(100, 255, 218, 0.22);
+    }
+
+    [data-theme="light"],
+    [data-theme="light-studio"] {
+      --boot-bg: #F8FAFC;
+      --boot-surface: rgba(255, 255, 255, 0.94);
+      --boot-accent: #4F46E5;
+      --boot-secondary: #0284C7;
+      --boot-text: #0F172A;
+      --boot-muted: #475569;
+      --boot-border: rgba(15, 23, 42, 0.12);
+      --boot-grid: rgba(79, 70, 229, 0.05);
+      --boot-glow: rgba(79, 70, 229, 0.14);
+      --boot-shadow: 0 20px 48px rgba(15, 23, 42, 0.11), 0 0 0 1px rgba(15, 23, 42, 0.04) inset;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--boot-bg);
+      color: var(--boot-text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Completely suppress unstyled HTML flash until stylesheets & BIM core finish hydrating */
+    html.bim-booting body > *:not(#bim-boot-screen) {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #bim-boot-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 45%, var(--boot-glow) 0%, transparent 65%),
+        var(--boot-bg);
+      overflow: hidden;
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1), transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    #bim-boot-screen::before {
+      content: '';
+      position: absolute;
+      inset: -48px;
+      background-image:
+        linear-gradient(to right, var(--boot-grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--boot-grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.9) 18%, transparent 74%);
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.9) 18%, transparent 74%);
+      animation: bimBootGridDrift 14s linear infinite;
+      pointer-events: none;
+    }
+
+    #bim-boot-screen.is-ready {
+      opacity: 0;
+      transform: scale(1.022);
+      pointer-events: none !important;
+    }
+
+    .bim-boot-card {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.35rem;
+      width: min(360px, 90vw);
+      padding: 2rem 1.75rem 1.75rem;
+      border-radius: 20px;
+      background: var(--boot-surface);
+      border: 1px solid var(--boot-border);
+      box-shadow: var(--boot-shadow, 0 28px 64px rgba(0, 0, 0, 0.45));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .bim-boot-corner {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: var(--boot-accent);
+      border-style: solid;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .bim-boot-corner.tl { top: 10px; left: 10px; border-width: 1.5px 0 0 1.5px; border-radius: 3px 0 0 0; }
+    .bim-boot-corner.tr { top: 10px; right: 10px; border-width: 1.5px 1.5px 0 0; border-radius: 0 3px 0 0; }
+    .bim-boot-corner.bl { bottom: 10px; left: 10px; border-width: 0 0 1.5px 1.5px; border-radius: 0 0 0 3px; }
+    .bim-boot-corner.br { bottom: 10px; right: 10px; border-width: 0 1.5px 1.5px 0; border-radius: 0 0 3px 0; }
+
+    .bim-boot-emblem {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bim-boot-aura {
+      position: absolute;
+      inset: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--boot-glow) 0%, transparent 72%);
+      animation: bimBootAuraPulse 2.4s ease-in-out infinite;
+    }
+
+    .bim-boot-svg {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      overflow: visible;
+    }
+
+    .bim-boot-orbit-cw {
+      transform-origin: 60px 60px;
+      animation: bimBootOrbitCW 14s linear infinite;
+    }
+
+    .bim-boot-orbit-ccw {
+      transform-origin: 60px 60px;
+      animation: bimBootOrbitCCW 7.5s linear infinite;
+    }
+
+    .bim-boot-cube-seam {
+      stroke-dasharray: 38 130;
+      animation: bimBootSeamFlow 2.1s linear infinite;
+    }
+
+    .bim-boot-cube-join {
+      stroke-dasharray: 84;
+      stroke-dashoffset: 84;
+      animation: bimBootJoinTrace 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    }
+
+    .bim-boot-node {
+      animation: bimBootNodePulse 1.8s ease-in-out infinite;
+    }
+    .bim-boot-node-2 { animation-delay: 0.45s; }
+    .bim-boot-node-3 { animation-delay: 0.9s; }
+    .bim-boot-node-4 { animation-delay: 1.35s; }
+
+    .bim-boot-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      text-align: center;
+    }
+
+    .bim-boot-title-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: 0.12em;
+      color: var(--boot-text);
+    }
+
+    .bim-boot-badge {
+      padding: 0.15rem 0.42rem;
+      border-radius: 5px;
+      font-size: 0.56rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--boot-accent);
+      border: 1px solid var(--boot-border);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bim-boot-progress-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .bim-boot-track {
+      position: relative;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      overflow: hidden;
+    }
+
+    .bim-boot-fill {
+      position: relative;
+      height: 100%;
+      width: 6%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--boot-secondary), var(--boot-accent));
+      box-shadow: 0 0 14px var(--boot-glow);
+      transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .bim-boot-fill::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+      transform: translateX(-100%);
+      animation: bimBootShimmer 1.35s ease-in-out infinite;
+    }
+
+    .bim-boot-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.72rem;
+      color: var(--boot-muted);
+    }
+
+    .bim-boot-stage {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bim-boot-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--boot-accent);
+      flex-shrink: 0;
+      animation: bimBootNodePulse 1.1s ease-in-out infinite;
+    }
+
+    .bim-boot-pct {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--boot-accent);
+      flex-shrink: 0;
+    }
+
+    @keyframes bimBootOrbitCW {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes bimBootOrbitCCW {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    @keyframes bimBootSeamFlow {
+      from { stroke-dashoffset: 168; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes bimBootJoinTrace {
+      0% { stroke-dashoffset: 84; opacity: 0.45; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+
+    @keyframes bimBootNodePulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.92); }
+      50% { opacity: 1; transform: scale(1.18); }
+    }
+
+    @keyframes bimBootAuraPulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.94); }
+      50% { opacity: 0.9; transform: scale(1.08); }
+    }
+
+    @keyframes bimBootShimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+
+    @keyframes bimBootGridDrift {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(40px, 40px, 0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #bim-boot-screen::before,
+      .bim-boot-orbit-cw,
+      .bim-boot-orbit-ccw,
+      .bim-boot-cube-seam,
+      .bim-boot-cube-join,
+      .bim-boot-node,
+      .bim-boot-aura,
+      .bim-boot-fill::after {
+        animation: none !important;
+      }
+      .bim-boot-cube-join { stroke-dashoffset: 0; opacity: 1; }
+    }
+  </style>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body class="left-sidebar-collapsed right-sidebar-collapsed">
+  <!-- Zero-FOUC Dynamic Startup Splash Animation (Rendered at frame 0 before unstyled HTML or external CSS) -->
+  <div id="bim-boot-screen" role="status" aria-live="polite" aria-label="Loading BIM Kintsugi 3D Environment">
+    <div class="bim-boot-card">
+      <span class="bim-boot-corner tl" aria-hidden="true"></span>
+      <span class="bim-boot-corner tr" aria-hidden="true"></span>
+      <span class="bim-boot-corner bl" aria-hidden="true"></span>
+      <span class="bim-boot-corner br" aria-hidden="true"></span>
+
+      <div class="bim-boot-emblem" aria-hidden="true">
+        <div class="bim-boot-aura"></div>
+        <svg class="bim-boot-svg" viewBox="0 0 120 120" fill="none">
+          <!-- Outer rotating CAD HUD reticle ring -->
+          <circle class="bim-boot-orbit-cw" cx="60" cy="60" r="52" stroke="var(--boot-border)" stroke-width="1.2" stroke-dasharray="3 6" />
+          <!-- Inner counter-rotating accent scanner arc -->
+          <circle class="bim-boot-orbit-ccw" cx="60" cy="60" r="43" stroke="var(--boot-secondary)" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="42 26 14 28" stroke-opacity="0.72" />
+
+          <!-- Isometric 3D Structural Cube Faces -->
+          <polygon points="60,32 84.25,46 60,60 35.75,46" fill="var(--boot-accent)" fill-opacity="0.09" />
+          <polygon points="35.75,46 60,60 60,88 35.75,74" fill="var(--boot-secondary)" fill-opacity="0.07" />
+          <polygon points="60,60 84.25,46 84.25,74 60,88" fill="var(--boot-accent)" fill-opacity="0.04" />
+
+          <!-- Static Base Structural Cube Frame -->
+          <polygon points="60,32 84.25,46 84.25,74 60,88 35.75,74 35.75,46" stroke="var(--boot-muted)" stroke-opacity="0.35" stroke-width="1.2" stroke-linejoin="round" />
+
+          <!-- Animated Continuous Kintsugi Perimeter Beam -->
+          <polygon class="bim-boot-cube-seam" points="60,32 84.25,46 84.25,74 60,88 35.75,74 35.75,46" stroke="var(--boot-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Animated Internal Isometric Kintsugi Structural Axis Joinery -->
+          <path class="bim-boot-cube-join" d="M35.75 46 L60 60 L84.25 46 M60 60 L60 88" stroke="var(--boot-accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Pulsing Spatial Anchor Nodes -->
+          <circle class="bim-boot-node" cx="60" cy="32" r="2.4" fill="var(--boot-accent)" style="transform-origin: 60px 32px;" />
+          <circle class="bim-boot-node bim-boot-node-2" cx="84.25" cy="46" r="2.4" fill="var(--boot-secondary)" style="transform-origin: 84.25px 46px;" />
+          <circle class="bim-boot-node bim-boot-node-3" cx="60" cy="88" r="2.4" fill="var(--boot-accent)" style="transform-origin: 60px 88px;" />
+          <circle class="bim-boot-node bim-boot-node-4" cx="35.75" cy="46" r="2.4" fill="var(--boot-secondary)" style="transform-origin: 35.75px 46px;" />
+        </svg>
+      </div>
+
+      <div class="bim-boot-brand">
+        <div class="bim-boot-title-row">
+          <span>BIM KINTSUGI</span>
+          <span class="bim-boot-badge">PRO CLOUD</span>
+        </div>
+      </div>
+
+      <div class="bim-boot-progress-wrap">
+        <div class="bim-boot-track">
+          <div class="bim-boot-fill" id="bim-boot-fill"></div>
+        </div>
+        <div class="bim-boot-meta">
+          <span class="bim-boot-stage">
+            <span class="bim-boot-dot" aria-hidden="true"></span>
+            <span id="bim-boot-stage-text">Compiling Design System &amp; Shaders...</span>
+          </span>
+          <span class="bim-boot-pct" id="bim-boot-pct">8%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pre-bundle Dynamic Progress Driver -->
+  <script>
+    (function () {
+      var fill = document.getElementById('bim-boot-fill');
+      var pctEl = document.getElementById('bim-boot-pct');
+      var stageEl = document.getElementById('bim-boot-stage-text');
+      var screen = document.getElementById('bim-boot-screen');
+      var currentPct = 8;
+      var completed = false;
+
+      function applyProgress(nextPct, label) {
+        if (nextPct > currentPct) currentPct = Math.min(100, nextPct);
+        var rounded = Math.round(currentPct);
+        if (fill) fill.style.width = rounded + '%';
+        if (pctEl) pctEl.textContent = rounded + '%';
+        if (label && stageEl) stageEl.textContent = label;
+      }
+
+      var timer = setInterval(function () {
+        if (completed) {
+          clearInterval(timer);
+          return;
+        }
+        if (currentPct < 82) {
+          var step = currentPct < 35 ? 5.5 : (currentPct < 65 ? 3.2 : 1.4);
+          var label = currentPct < 28
+            ? 'Compiling Design System & Shaders...'
+            : (currentPct < 58 ? 'Loading 3D Geometry & WebGL2 Engine...' : 'Hydrating Fragments & WASM Core...');
+          applyProgress(Math.min(82, currentPct + step), label);
+        }
+      }, 90);
+
+      window.__bimBoot = {
+        setProgress: function (pct, label) {
+          if (completed) return;
+          applyProgress(pct, label);
+        },
+        complete: function (failed) {
+          if (completed) return;
+          completed = true;
+          clearInterval(timer);
+          applyProgress(100, failed ? 'Initialization Error' : 'Twin Environment Ready');
+          var reveal = function () {
+            document.documentElement.classList.remove('bim-booting');
+            if (screen) {
+              screen.classList.add('is-ready');
+              var cleanup = function () {
+                if (screen && screen.parentNode) screen.parentNode.removeChild(screen);
+              };
+              screen.addEventListener('transitionend', cleanup, { once: true });
+              setTimeout(cleanup, 360);
+            }
+          };
+          requestAnimationFrame(reveal);
+        }
+      };
+
+      // Safety fallback if main module fails to respond within 15s
+      setTimeout(function () {
+        if (!completed && window.__bimBoot) {
+          window.__bimBoot.complete(true);
+        }
+      }, 15000);
+    })();
+  </script>
   <div id="app">
     <!-- 3D Canvas Viewport -->
     <div id="container"></div>
@@ -2509,8 +3019,8 @@
         <bim-view-cube id="view-cube"></bim-view-cube>
       </div>
 
-      <!-- Loading Overlay -->
-      <div class="loading-overlay" id="loading-overlay">
+      <!-- Loading Overlay (Model Upload / IFC Processing) -->
+      <div class="loading-overlay hidden" id="loading-overlay">
         <div class="spinner-wrapper">
           <div class="spinner-ring"></div>
           <div class="spinner-glow"></div>

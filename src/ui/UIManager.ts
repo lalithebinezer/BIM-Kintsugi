@@ -113,6 +113,7 @@ export class UIManager {
       }
 
       if (isMobile) {
+        document.querySelector(isLeft ? '.right-sidebar' : '.left-sidebar')?.classList.remove('open');
         sidebar.classList.add('open');
         document.getElementById('sidebar-backdrop')?.classList.add('active');
       }
@@ -190,6 +191,10 @@ export class UIManager {
     });
 
     document.getElementById('sidebar-backdrop')?.addEventListener('click', closeAllSidebars);
+    matchMedia('(max-width: 1080px)').addEventListener('change', () => {
+      document.querySelectorAll('.left-sidebar, .right-sidebar').forEach((panel) => panel.classList.remove('open'));
+      document.getElementById('sidebar-backdrop')?.classList.remove('active');
+    });
   }
 
   public setupHelpModalController() {

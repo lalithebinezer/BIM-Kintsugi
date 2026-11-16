@@ -1,4 +1,6 @@
-import * as XLSX from "xlsx";
+import type * as XLSX from "xlsx";
+import { lazyFeature } from "../utils/lazyFeature";
+const excelLibrary = lazyFeature("Excel import", () => import("xlsx"));
 import type { ScheduleTask, TaskStatus } from "./ScheduleManager";
 
 /**
@@ -589,7 +591,8 @@ ${assignmentsXml}
   /**
    * Parse Bentley SYNCHRO 4D Pro Multi-Sheet Workbooks or Standard Excel Spreadsheets (.xlsx / .xls).
    */
-  public static parseExcel(buffer: ArrayBuffer | Uint8Array, fileName: string = "Excel Project Schedule"): ParsedScheduleResult {
+  public static async parseExcel(buffer: ArrayBuffer | Uint8Array, fileName: string = "Excel Project Schedule"): Promise<ParsedScheduleResult> {
+    const XLSX = await excelLibrary.load();
     let wb: XLSX.WorkBook;
     try {
       wb = XLSX.read(buffer, { type: "array" });

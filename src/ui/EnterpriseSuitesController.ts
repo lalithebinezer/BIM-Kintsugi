@@ -14,8 +14,9 @@ import { StoreyLevelSlicer } from "../modules/StoreyLevelSlicer";
 import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
-import { GisModule } from "../modules/GisModule";
-import { EvmDashboardModule } from "../modules/EvmDashboardModule";
+import type { GisModule } from "../modules/GisModule";
+import { evmDashboard, gisFeature, geoTools } from "../modules/optionalFeatures";
+import type { EvmDashboardModule } from "../modules/EvmDashboardModule";
 import { showToast } from "./ToastManager";
 import { escapeHtml } from "../utils/formatters";
 
@@ -48,7 +49,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const storeySlicer = StoreyLevelSlicer.getInstance();
   const bcfIssueManager = BcfIssueManager.getInstance();
   const tourManager = CinematicTourManager.getInstance();
-  const gisModule = GisModule.getInstance();
+  let gisModule: GisModule;
   ClashToleranceInspector.getInstance();
   GraphicsVFXManager.getInstance();
 
@@ -472,8 +473,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("btn-timeline-cost-control")?.addEventListener("click", toggleUnifiedCostControl);
 
   // Earned Value Management (EVM) Unified Suite Trigger & Handlers
-  const evmModule = EvmDashboardModule.getInstance();
-  const toggleUnifiedEvmSuite = () => {
+  let evmModule: EvmDashboardModule;
+  let evmOpening = false;
+  const toggleUnifiedEvmSuite = async () => {
+    if (evmOpening) return;
+    evmOpening = true;
+    try { evmModule = await evmDashboard.load(); } catch { return; }
+    finally { evmOpening = false; }
     SoundManager.getInstance().playClick();
     toggleEnterpriseDrawer("evm-panel");
     const panel = document.getElementById("evm-panel");
@@ -597,6 +603,8 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   // GeoBIM GIS & Site Georeference Suite Trigger
   const refreshGisUI = () => {
+    gisModule = gisFeature.peek() as GisModule;
+    if (!gisModule) return;
     const geo = gisModule.getGeoreference();
     const cfg = gisModule.getBasemapConfig();
 
@@ -859,7 +867,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   };
   (window as any).refreshGisUI = refreshGisUI;
 
-  const toggleGisSuite = () => {
+  let gisOpening = false;
+  const toggleGisSuite = async () => {
+    if (gisOpening) return;
+    gisOpening = true;
+    try { gisModule = await gisFeature.load(); await geoTools.load(); } catch { return; }
+    finally { gisOpening = false; }
     SoundManager.getInstance().playClick();
     toggleEnterpriseDrawer("gis-panel");
     const panel = document.getElementById("gis-panel");

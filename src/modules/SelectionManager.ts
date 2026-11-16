@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { PointerInputArbiter } from "../core/PointerInputArbiter";
+import { BvhAccelerationService } from "../core/BvhAccelerationService";
 
 function showToast(msg: string, icon?: string) {
   if (typeof (window as any).showToast === "function") {
@@ -90,73 +92,76 @@ export class SelectionManager {
     const container = this.engine.container;
     if (!container) return;
 
-    container.addEventListener("pointerdown", (e: PointerEvent) => {
-      // Trigger box selection if mode is enabled OR user holds Alt key
-      if ((this.boxSelectActive || e.altKey) && e.button === 0) {
-        this.isDraggingBox = true;
-        this.startPoint = { x: e.clientX, y: e.clientY };
+    const arbiter = PointerInputArbiter.getInstance();
+    arbiter.attach(container);
+    arbiter.registerHandler({
+      id: "marquee-selection",
+      priority: "marquee",
+      isActive: () => true,
+      onPointerDown: (e: PointerEvent) => {
+        if ((this.boxSelectActive || e.altKey) && e.button === 0) {
+          this.isDraggingBox = true;
+          this.startPoint = { x: e.clientX, y: e.clientY };
+
+          if (this.marqueeEl) {
+            this.marqueeEl.style.left = `${e.clientX}px`;
+            this.marqueeEl.style.top = `${e.clientY}px`;
+            this.marqueeEl.style.width = "0px";
+            this.marqueeEl.style.height = "0px";
+            this.marqueeEl.className = "selection-marquee-box marquee-window";
+            this.marqueeEl.style.display = "block";
+          }
+
+          const controls = this.engine.world.camera?.controls as any;
+          if (controls) controls.enabled = false;
+          return true;
+        }
+        return false;
+      },
+      onPointerMove: (e: PointerEvent) => {
+        if (!this.isDraggingBox || !this.marqueeEl) return;
+
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        const isCrossing = currentX < this.startPoint.x;
+        this.marqueeEl.className = isCrossing
+          ? "selection-marquee-box marquee-crossing"
+          : "selection-marquee-box marquee-window";
+
+        const minX = Math.min(this.startPoint.x, currentX);
+        const minY = Math.min(this.startPoint.y, currentY);
+        const width = Math.abs(currentX - this.startPoint.x);
+        const height = Math.abs(currentY - this.startPoint.y);
+
+        this.marqueeEl.style.left = `${minX}px`;
+        this.marqueeEl.style.top = `${minY}px`;
+        this.marqueeEl.style.width = `${width}px`;
+        this.marqueeEl.style.height = `${height}px`;
+      },
+      onPointerUp: async (e: PointerEvent) => {
+        if (!this.isDraggingBox) return;
+        this.isDraggingBox = false;
+
+        const controls = this.engine.world.camera?.controls as any;
+        if (controls) controls.enabled = true;
 
         if (this.marqueeEl) {
-          this.marqueeEl.style.left = `${e.clientX}px`;
-          this.marqueeEl.style.top = `${e.clientY}px`;
-          this.marqueeEl.style.width = "0px";
-          this.marqueeEl.style.height = "0px";
-          this.marqueeEl.className = "selection-marquee-box marquee-window";
-          this.marqueeEl.style.display = "block";
+          this.marqueeEl.style.display = "none";
         }
 
-        // Disable camera controls during marquee drag
-        const controls = this.engine.world.camera?.controls as any;
-        if (controls) controls.enabled = false;
-      }
-    });
+        const width = Math.abs(e.clientX - this.startPoint.x);
+        const height = Math.abs(e.clientY - this.startPoint.y);
 
-    window.addEventListener("pointermove", (e: PointerEvent) => {
-      if (!this.isDraggingBox || !this.marqueeEl) return;
+        if (width > 8 && height > 8) {
+          const minX = Math.min(this.startPoint.x, e.clientX);
+          const maxX = Math.max(this.startPoint.x, e.clientX);
+          const minY = Math.min(this.startPoint.y, e.clientY);
+          const maxY = Math.max(this.startPoint.y, e.clientY);
+          const isCrossing = e.clientX < this.startPoint.x;
 
-      const currentX = e.clientX;
-      const currentY = e.clientY;
-
-      const isCrossing = currentX < this.startPoint.x; // Right-to-left = Crossing selection
-      this.marqueeEl.className = isCrossing
-        ? "selection-marquee-box marquee-crossing"
-        : "selection-marquee-box marquee-window";
-
-      const minX = Math.min(this.startPoint.x, currentX);
-      const minY = Math.min(this.startPoint.y, currentY);
-      const width = Math.abs(currentX - this.startPoint.x);
-      const height = Math.abs(currentY - this.startPoint.y);
-
-      this.marqueeEl.style.left = `${minX}px`;
-      this.marqueeEl.style.top = `${minY}px`;
-      this.marqueeEl.style.width = `${width}px`;
-      this.marqueeEl.style.height = `${height}px`;
-    });
-
-    window.addEventListener("pointerup", async (e: PointerEvent) => {
-      if (!this.isDraggingBox) return;
-      this.isDraggingBox = false;
-
-      // Re-enable camera controls
-      const controls = this.engine.world.camera?.controls as any;
-      if (controls) controls.enabled = true;
-
-      if (this.marqueeEl) {
-        this.marqueeEl.style.display = "none";
-      }
-
-      const width = Math.abs(e.clientX - this.startPoint.x);
-      const height = Math.abs(e.clientY - this.startPoint.y);
-
-      if (width > 8 && height > 8) {
-        const minX = Math.min(this.startPoint.x, e.clientX);
-        const maxX = Math.max(this.startPoint.x, e.clientX);
-        const minY = Math.min(this.startPoint.y, e.clientY);
-        const maxY = Math.max(this.startPoint.y, e.clientY);
-        const isCrossing = e.clientX < this.startPoint.x;
-
-        await this.performBoxSelection(minX, minY, maxX, maxY, e.shiftKey, isCrossing);
-      }
+          await this.performBoxSelection(minX, minY, maxX, maxY, e.shiftKey, isCrossing);
+        }
+      },
     });
   }
 
@@ -218,12 +223,33 @@ export class SelectionManager {
     const matchedMap: Record<string, Set<number>> = isAdditive ? { ...this.selectedElements } : {};
     const rect = this.engine.container.getBoundingClientRect();
     const tempVec = new THREE.Vector3();
+    const domEl = this.engine.world.renderer?.three?.domElement;
 
     for (const [modelId, model] of this.engine.fragments.list) {
       const anyModel = model as any;
       if (!matchedMap[modelId]) matchedMap[modelId] = new Set();
 
-      if (anyModel.items) {
+      // Prefer native worker/BVH rectangleRaycast when FragmentsModel exposes it
+      if (domEl && typeof anyModel.rectangleRaycast === "function") {
+        try {
+          const topLeft = new THREE.Vector2(minX - rect.left, minY - rect.top);
+          const bottomRight = new THREE.Vector2(maxX - rect.left, maxY - rect.top);
+          const rectRes = await anyModel.rectangleRaycast({
+            camera,
+            dom: domEl,
+            topLeft,
+            bottomRight,
+            fullyIncluded: !_isCrossing,
+          });
+          if (rectRes?.localIds?.length) {
+            for (const lid of rectRes.localIds) {
+              matchedMap[modelId].add(lid);
+            }
+          }
+        } catch {}
+      }
+
+      if (matchedMap[modelId].size === 0 && anyModel.items) {
         for (const expressIdStr in anyModel.items) {
           const expressId = Number(expressIdStr);
           const item = anyModel.items[expressId];
@@ -248,9 +274,10 @@ export class SelectionManager {
         }
       }
 
-      // If no items map, search properties
+      // If no items map, search properties with BVH-accelerated bounding check
       if (matchedMap[modelId].size === 0 && anyModel.properties) {
         if (anyModel.object) {
+          BvhAccelerationService.getInstance().patchThreePrototypes();
           anyModel.object.traverse((child: any) => {
             if (child.isMesh && child.geometry) {
               if (!child.geometry.boundingSphere) child.geometry.computeBoundingSphere();

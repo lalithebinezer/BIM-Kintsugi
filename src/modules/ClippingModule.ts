@@ -4,6 +4,7 @@ import * as OBF from "@thatopen/components-front";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { BimEngine } from "../core/BimEngine";
 import { SectionPlaneGizmo } from "./SectionPlaneGizmo";
+import { ResourceLifecycleManager } from "../core/ResourceLifecycleManager";
 
 export class ClippingModule {
   private static instance: ClippingModule;
@@ -215,13 +216,10 @@ export class ClippingModule {
   private handlePlaneDeleted(plane: any) {
     const border = this.planeGlowBorders.get(plane);
     if (border) {
-      border.removeFromParent();
-      if (border.geometry) border.geometry.dispose();
-      if (Array.isArray(border.material)) {
-        border.material.forEach((m) => m.dispose());
-      } else if (border.material) {
-        border.material.dispose();
-      }
+      ResourceLifecycleManager.getInstance().disposeObjectTree(border, {
+        disposeMaterials: true,
+        removeFromParent: true,
+      });
       this.planeGlowBorders.delete(plane);
     }
 
@@ -807,14 +805,13 @@ export class ClippingModule {
   }
 
   public deleteAllPlanes() {
-    // Clean up glow borders
+    // Clean up glow borders cleanly via centralized GPU lifecycle manager
+    const lifecycle = ResourceLifecycleManager.getInstance();
     for (const [, border] of this.planeGlowBorders) {
-      border.removeFromParent();
-      if (border.geometry) border.geometry.dispose();
-      if (border.material) {
-        if (Array.isArray(border.material)) border.material.forEach(m => m.dispose());
-        else border.material.dispose();
-      }
+      lifecycle.disposeObjectTree(border, {
+        disposeMaterials: true,
+        removeFromParent: true,
+      });
     }
     this.planeGlowBorders.clear();
     this.activePlane = null;

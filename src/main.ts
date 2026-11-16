@@ -1,6 +1,10 @@
 import './style.css';
+import './responsive.css';
+import './theme.css';
+import { initResponsiveToolbar } from "./ui/ResponsiveToolbar";
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
+import fragmentsWorkerUrl from "@thatopen/fragments/worker?url";
 import * as WEBIFC from "web-ifc";
 
 function isRelatedObject(relatedObjects: any, idToMatch: number): boolean {
@@ -38,7 +42,7 @@ import { BcfIssueManager } from "./modules/BcfIssueManager";
 import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
-import { GisModule } from "./modules/GisModule";
+
 import { CameraSpeedController } from "./core/CameraSpeedController";
 function getCategoryColor(_theme: string, category: string): string {
   const categoryColorMap: Record<string, string> = {
@@ -75,7 +79,8 @@ import { CostRateManager } from "./modules/CostRateManager";
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
 import { BimEngine } from "./core/BimEngine";
-import { initGeoEngineeringController } from "./ui/GeoEngineeringController";
+import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature } from "./modules/optionalFeatures";
+import { runFeature } from "./utils/lazyFeature";
 import { ModelManager } from "./core/ModelManager";
 import { ViewportController } from "./core/ViewportController";
 import { ClippingModule } from "./modules/ClippingModule";
@@ -99,21 +104,26 @@ import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
 import { SelectionManager } from "./modules/SelectionManager";
 import { formatCurrency, formatItemCount } from "./utils/formatters";
-import { TimelapseRecorderModule } from "./modules/TimelapseRecorderModule";
+
 import { InteractiveGanttDrawer } from "./ui/InteractiveGanttDrawer";
 import { ScheduleImportParsers } from "./modules/ScheduleImportParsers";
-import { CobieExportModule } from "./modules/CobieExportModule";
+
 import { ModelDiffModule } from "./modules/ModelDiffModule";
 import { PlanOverlayModule } from "./modules/PlanOverlayModule";
 import { SoundManager } from "./core/SoundManager";
 import { CinematicTourManager } from "./modules/CinematicTourManager";
-import { ExecutiveReportModule } from "./modules/ExecutiveReportModule";
+
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 import { DelayImpactEngine } from "./modules/DelayImpactEngine";
-import { EvmDashboardModule } from "./modules/EvmDashboardModule";
+
 import { AccessControlManager, Permission, type UserRole } from "./modules/AccessControlManager";
+import { MetadataSyncService } from "./core/MetadataSyncService";
+import { MetadataApiAdapter } from "./core/MetadataApiAdapter";
+import { StreamingLoader } from "./core/StreamingLoader";
+import { PrecisionOriginController } from "./core/PrecisionOriginController";
 
 BUI.Manager.init();
+initResponsiveToolbar();
 
 // --- INITIALIZE ENTERPRISE BIM ENGINE ---
 const components = new OBC.Components();
@@ -220,9 +230,7 @@ const customViewManager = CustomViewManager.getInstance();
 customViewManager.init(world);
 (window as any).customViewManager = customViewManager;
 
-const gisModule = GisModule.getInstance();
-gisModule.init(world);
-(window as any).gisModule = gisModule;
+
 
 const cameraSpeedController = CameraSpeedController.getInstance();
 cameraSpeedController.init(world);
@@ -301,8 +309,8 @@ const idsChecker = new IDSChecker(components);
 
 // Initialize FragmentsManager early
 const fragments = components.get(OBC.FragmentsManager);
-const worker = await OBC.FragmentsManager.getWorker();
-fragments.init(worker);
+fragments.init(fragmentsWorkerUrl);
+(window as any).__bimBoot?.setProgress?.(88, "Mounting Spatial Viewports & Suites...");
 
 const modelManager = new ModelManager();
 const viewportController = new ViewportController();
@@ -334,7 +342,7 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).AppearanceProfileEngine = AppearanceProfileEngine;
 (window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
 (window as any).DelayImpactEngine = DelayImpactEngine;
-(window as any).EvmDashboardModule = EvmDashboardModule;
+
 (window as any).AccessControlManager = AccessControlManager;
 (window as any).Permission = Permission;
 (window as any).BimAiCopilot = BimAiCopilot;
@@ -499,40 +507,47 @@ world.onCameraChanged.add((camera) => {
 // Dynamic Metric Scale Ruler HUD calculation (Architectural ISO Steps & Elevation)
 const lastScaleCamPos = new THREE.Vector3(NaN, NaN, NaN);
 const lastScaleCamTarget = new THREE.Vector3(NaN, NaN, NaN);
+const scaleCamTarget = new THREE.Vector3();
+let lastScaleFov = NaN;
+let lastScaleViewportHeight = 0;
+const scaleSteps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 
 function updateMetricScaleBar() {
-  const scaleMaxEl = document.getElementById("scale-bar-label");
-  const scaleMidEl = document.getElementById("scale-bar-mid-label");
-  const elvBadgeEl = document.getElementById("scale-elevation-label");
   const cam = world.camera?.three;
-  if (!scaleMaxEl || !cam) return;
+  if (!cam) return;
 
   try {
-    const target = new THREE.Vector3();
-    world.camera.controls.getTarget(target);
+    world.camera.controls.getTarget(scaleCamTarget);
+    const fov = (cam as THREE.PerspectiveCamera).fov ?? 45;
+    const viewportHeight = Math.max(1, window.innerHeight);
     if (
       cam.position.distanceToSquared(lastScaleCamPos) < 0.0004 &&
-      target.distanceToSquared(lastScaleCamTarget) < 0.0004
+      scaleCamTarget.distanceToSquared(lastScaleCamTarget) < 0.0004 &&
+      fov === lastScaleFov &&
+      viewportHeight === lastScaleViewportHeight
     ) {
       return;
     }
+    const scaleMaxEl = document.getElementById("scale-bar-label");
+    if (!scaleMaxEl) return;
+    const scaleMidEl = document.getElementById("scale-bar-mid-label");
+    const elvBadgeEl = document.getElementById("scale-elevation-label");
     lastScaleCamPos.copy(cam.position);
-    lastScaleCamTarget.copy(target);
+    lastScaleCamTarget.copy(scaleCamTarget);
+    lastScaleFov = fov;
+    lastScaleViewportHeight = viewportHeight;
 
-    const dist = cam.position.distanceTo(target);
-    const fov = (cam as THREE.PerspectiveCamera).fov ?? 45;
+    const dist = cam.position.distanceTo(scaleCamTarget);
     const fovRad = (fov * Math.PI) / 180;
     const visibleHeight = 2 * Math.tan(fovRad / 2) * Math.max(1, dist);
-    const visibleWidth = visibleHeight * (window.innerWidth / Math.max(1, window.innerHeight));
-    const metersPerPixel = visibleWidth / Math.max(1, window.innerWidth);
+    const metersPerPixel = visibleHeight / viewportHeight;
     
     // Scale bar track is 100px wide
     const rawMeters = Math.max(0.1, metersPerPixel * 100);
     
     // Choose clean architectural interval
-    const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
-    let chosen = steps[0];
-    for (const step of steps) {
+    let chosen = scaleSteps[0];
+    for (const step of scaleSteps) {
       if (rawMeters >= step * 0.65) {
         chosen = step;
       }
@@ -1110,11 +1125,13 @@ function loadDatabase() {
 
 function saveDatabase() {
   try {
-    // Only serialize customized elements to prevent LocalStorage quota limits (5MB)
+    // Mirror customized elements to unlimited IndexedDB store while preserving small localStorage backup
     const customizedDb: Record<string, TwinData> = {};
+    const metaSync = MetadataSyncService.getInstance();
     for (const key in twinDatabase) {
       if (twinDatabase[key].isCustomized) {
         customizedDb[key] = twinDatabase[key];
+        metaSync.saveTwinEdit(key, twinDatabase[key]).catch(() => {});
       }
     }
     localStorage.setItem("bim_twin_db_v1", JSON.stringify(customizedDb));
@@ -1150,6 +1167,8 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function getCachedFragment(key: string): Promise<Uint8Array | null> {
+  const unified = await MetadataSyncService.getInstance().getFragmentBuffer(key);
+  if (unified) return unified;
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -1170,6 +1189,7 @@ async function getCachedFragment(key: string): Promise<Uint8Array | null> {
 }
 
 async function setCachedFragment(key: string, buffer: Uint8Array): Promise<void> {
+  await MetadataSyncService.getInstance().saveFragmentBuffer(key, buffer);
   try {
     const db = await openDB();
     return new Promise<void>((resolve, reject) => {
@@ -1716,18 +1736,25 @@ async function displayElementProperties(model: any, expressId: number) {
     (window as any).switchSidebarTab("right-tab-bar", "inspector");
   }
 
-  // 2. Fetch properties map from model
+  // 2. Fetch properties lazily: check in-memory LRU -> IndexedDB -> Remote API before heavy fallbacks
   let properties = model.properties || (model as any).getLocalProperties?.() || {};
-  if (typeof (model as any).getAllProperties === "function" && Object.keys(properties).length === 0) {
+  let elementProps: any = properties[expressId];
+
+  if (!elementProps && activeModelId) {
+    elementProps = await MetadataSyncService.getInstance().getElementMetadata(activeModelId, expressId);
+    if (!elementProps && model.name && model.name !== activeModelId) {
+      elementProps = await MetadataSyncService.getInstance().getElementMetadata(model.name, expressId);
+    }
+  }
+
+  if (!elementProps && typeof (model as any).getAllProperties === "function" && Object.keys(properties).length === 0) {
     try {
       properties = (await (model as any).getAllProperties()) || {};
+      elementProps = properties[expressId];
     } catch (e) {
       // ignore
     }
   }
-
-  // 3. Resolve element specific attributes from all available sources
-  let elementProps: any = properties[expressId];
 
   // Try direct model.getItemsData for Fragments models
   if (!elementProps && typeof model.getItemsData === "function") {
@@ -2129,7 +2156,7 @@ async function displayElementProperties(model: any, expressId: number) {
 
     // Georeference & Site Coordinates Section
     try {
-      const gis = GisModule.getInstance();
+      const gis = await gisFeature.load();
       const loc = gis.getLocation();
       const center = new THREE.Vector3();
       if (elemHasGeom && !elemBbox.isEmpty()) {
@@ -2408,8 +2435,8 @@ if (container && hoverBadgeEl) {
             localTelemetry.textContent = `X: ${intersection.x.toFixed(2)}m, Z: ${intersection.z.toFixed(2)}m`;
           }
           if (gpsTelemetry) {
-            const wgs = GisModule.getInstance().localToGeodetic(intersection.x, intersection.z);
-            gpsTelemetry.textContent = `${wgs.lat.toFixed(6)}°, ${wgs.lon.toFixed(6)}°`;
+            const wgs = gisFeature.peek()?.localToGeodetic(intersection.x, intersection.z);
+            if (wgs) gpsTelemetry.textContent = `${wgs.lat.toFixed(6)}°, ${wgs.lon.toFixed(6)}°`;
           }
         }
       }
@@ -2672,7 +2699,7 @@ document.getElementById("drawer-btn-export-boq")?.addEventListener("click", trig
 // Wire Executive Construction Twin Report
 const triggerExecutiveReport = () => {
   SoundManager.getInstance().playClick();
-  ExecutiveReportModule.getInstance().openReportModal();
+  void runFeature(async () => (await executiveReport.load()).openReportModal());
 };
 document.getElementById("btn-export-exec-report")?.addEventListener("click", triggerExecutiveReport);
 document.getElementById("drawer-btn-exec-report")?.addEventListener("click", triggerExecutiveReport);
@@ -2836,7 +2863,7 @@ async function handleScheduleFile(file: File) {
     let count = 0;
     if (isExcel) {
       const buffer = await file.arrayBuffer();
-      count = scheduleManager.importScheduleFromExcel(buffer, file.name);
+      count = await scheduleManager.importScheduleFromExcel(buffer, file.name);
     } else {
       const text = await file.text();
       count = scheduleManager.importScheduleFromCSV(text);
@@ -2977,8 +3004,9 @@ export async function toggleUnassignedAudit(forceState?: boolean): Promise<boole
 }
 (window as any).toggleUnassignedAudit = toggleUnassignedAudit;
 
-export function recordFull4DSimulation(): void {
-  const rec = TimelapseRecorderModule.getInstance();
+export async function recordFull4DSimulation(): Promise<void> {
+  let rec;
+  try { rec = await recorder.load(); } catch { return; }
   if (rec.isRecording()) {
     rec.stopRecording();
     stopTimelinePlayback();
@@ -3159,8 +3187,8 @@ selectAppearanceProfile?.addEventListener("change", () => {
 });
 
 document.getElementById("btn-export-cobie-csv")?.addEventListener("click", () => {
-  CobieExportModule.getInstance().exportCobieCSV();
-  showToast("Exported 7D Asset Management Lifecycle Package (COBie.csv)", "success");
+  runFeature(async () => (await cobieExport.load()).exportCobieCSV());
+
 });
 
 // Interactive Milestone Pills Click-to-Seek Listener
@@ -3186,7 +3214,7 @@ milestonesRow?.addEventListener("click", async (e) => {
 // 4D Video Recording
 const btn4dRecord = document.getElementById("btn-4d-record");
 btn4dRecord?.addEventListener("click", () => {
-  TimelapseRecorderModule.getInstance().toggleRecording();
+  runFeature(async () => (await recorder.load()).toggleRecording());
 });
 
 // Interactive Gantt Chart Drawer
@@ -3444,8 +3472,8 @@ document.getElementById("btn-sync-synchro-simulation")?.addEventListener("click"
 // 7D COBie Facility Management Export
 const btnExportCobie = document.getElementById("btn-export-cobie-csv");
 btnExportCobie?.addEventListener("click", () => {
-  CobieExportModule.getInstance().exportCobieCSV();
-  showToast("Exported 7D Asset Management Lifecycle Package (COBie.csv)", "success");
+  runFeature(async () => (await cobieExport.load()).exportCobieCSV());
+
 });
 
 // ============================================================
@@ -3713,14 +3741,11 @@ saveBtn.addEventListener("click", () => {
 });
 
 // --- BIM ASYNC INITIALIZATION ENGINE ---
-let isIfcLoaderSetup = false;
+
 
 const initBim = async () => {
   try {
-    // 1. Initialize fragments list and workers asynchronously from local URL
-    // Done synchronously above to allow early Classifier instantiation
-
-    // 3. Register camera and list event listeners
+    // Register camera and list event listeners
     world.camera.controls.addEventListener("update", () => {
       fragments.core.update();
     });
@@ -3872,27 +3897,44 @@ const initBim = async () => {
       document.body.classList.add('right-sidebar-collapsed');
     });
 
-    // Hide initial loader overlay once initialized
+    // Hide model loader overlay once initialized
     const loadingOverlay = document.getElementById("loading-overlay");
     if (loadingOverlay) {
       loadingOverlay.classList.add("hidden");
     }
 
-    // Force renderer to resize and update layout
-    if (world.renderer) {
-      world.renderer.resize();
+    // Reveal styled workspace and smoothly dismiss zero-FOUC boot splash once CSS tokens are committed
+    const revealStyledApp = () => {
+      (window as any).__bimBoot?.complete?.(false);
+      requestAnimationFrame(() => {
+        if (world.renderer) {
+          world.renderer.resize();
+        }
+        window.dispatchEvent(new Event('resize'));
+      });
+    };
+
+    const cssReady = getComputedStyle(document.documentElement).getPropertyValue('--bg-app').trim().length > 0;
+    if (cssReady) {
+      revealStyledApp();
+    } else {
+      requestAnimationFrame(revealStyledApp);
     }
-    window.dispatchEvent(new Event('resize'));
 
     // Initialize empty file list
     refreshFileList();
 
   } catch (err) {
     console.error("Failed to initialize BIM components:", err);
-    const text = document.getElementById("loading-text")!;
-    text.innerText = "Initialization Error";
-    const subtitle = document.getElementById("loading-subtitle")!;
-    subtitle.innerText = "Could not initialize WebAssembly or rendering environment.";
+    const loadingOverlay = document.getElementById("loading-overlay");
+    if (loadingOverlay) {
+      loadingOverlay.classList.remove("hidden");
+    }
+    const text = document.getElementById("loading-text");
+    if (text) text.innerText = "Initialization Error";
+    const subtitle = document.getElementById("loading-subtitle");
+    if (subtitle) subtitle.innerText = "Could not initialize WebAssembly or rendering environment.";
+    (window as any).__bimBoot?.complete?.(true);
   }
 };
 
@@ -4057,34 +4099,30 @@ async function loadModelData(name: string, buffer: Uint8Array) {
   try {
     let model: any = null;
     let parsedProperties: Record<number, any> | null = null;
+    const metadataService = MetadataSyncService.getInstance();
+    let ingestedStoreys: Record<string, string> = {};
+    let ingestedCount = 0;
 
     if (name.endsWith(".ifc") || (buffer && buffer.length > 50 && buffer[0] === 0x49 && buffer[1] === 0x53 && buffer[2] === 0x4F)) {
       try {
-        console.log(`[IfcParameterReader] Fast-parsing IFC STEP properties for ${name}...`);
+        console.log(`[MetadataSyncService] Offloading IFC STEP metadata indexing for ${name}...`);
         const dec = new TextDecoder("utf-8", { fatal: false });
         const ifcText = dec.decode(buffer);
-        parsedProperties = IfcParameterReader.getInstance().parseIfcText(ifcText, name);
-        console.log(`[IfcParameterReader] Extracted ${Object.keys(parsedProperties).length} elements with Psets from ${name}.`);
+        const ingested = await metadataService.ingestStepMetadata(name, ifcText);
+        ingestedCount = ingested.elementCount;
+        ingestedStoreys = ingested.storeysMap;
+        if (ingestedCount <= 3500) {
+          parsedProperties = IfcParameterReader.getInstance().parseIfcText(ifcText, name);
+        }
+        console.log(`[MetadataSyncService] Indexed ${ingestedCount} elements to IndexedDB (LRU + lazy click fetch).`);
       } catch (parseErr) {
-        console.warn("[IfcParameterReader] Error during STEP parsing:", parseErr);
+        console.warn("[MetadataSyncService] Error during STEP metadata ingestion:", parseErr);
       }
     }
 
     if (name.endsWith(".ifc")) {
-      if (!isIfcLoaderSetup) {
-        text.innerText = "Initializing local WASM engine...";
-        await ifcLoader.setup({
-          autoSetWasm: false,
-          wasm: {
-            path: import.meta.env.BASE_URL || "./",
-            absolute: false
-          }
-        });
-        isIfcLoaderSetup = true;
-      }
       const cacheKey = `${name}-${buffer.length}`;
       text.innerText = "Checking offline cache...";
-      
       let cachedBuffer: Uint8Array | null = null;
       try {
         cachedBuffer = await getCachedFragment(cacheKey);
@@ -4093,62 +4131,82 @@ async function loadModelData(name: string, buffer: Uint8Array) {
       }
 
       if (cachedBuffer) {
-        console.log(`Cache hit for ${name}. Loading pre-converted fragments.`);
-        text.innerText = "Loading cached fragments...";
-        subtitle.innerText = "Cache hit: Loading pre-converted fragment from IndexedDB (instant).";
-        
+        console.log(`Cache hit for ${name}. Streaming spatial fragment tiles.`);
+        text.innerText = "Streaming cached spatial tiles...";
+        subtitle.innerText = "Cache hit: Streaming spatial fragment tiles with automatic LOD.";
         clearInterval(interval);
         progress.innerText = "100%";
-        
         const fragData = cachedBuffer instanceof Uint8Array ? cachedBuffer : new Uint8Array(cachedBuffer as any);
-        model = await fragments.core.load(fragData, { modelId: name } as any);
+        model = await modelManager.loadFragment(fragData, name);
       } else {
-        console.log(`Cache miss for ${name}. Converting IFC via WASM loader with complete attributes & relations...`);
-        text.innerText = "Converting IFC to Fragments (All Attributes & Relations)...";
-        model = await ifcLoader.load(buffer, true, name, {
-          instanceCallback: (importer: any) => {
-            if (typeof importer.addAllAttributes === "function") {
-              importer.addAllAttributes();
+        await modelManager.ensureIfcLoaderReady();
+        const streamRes = await StreamingLoader.getInstance().streamIfc(ifcLoader, {
+          modelId: name,
+          name,
+          buffer,
+          onProgress: (pctVal, stageMsg) => {
+            clearInterval(interval);
+            progress.innerText = `${pctVal}%`;
+            text.innerText = stageMsg;
+          },
+          onPhaseModelReady: async (_phaseModel, phase) => {
+            if (phase === "internals") {
+              refreshFileList();
+              await updateClassificationUI().catch(() => {});
             }
-            if (typeof importer.addAllRelations === "function") {
-              importer.addAllRelations();
-            }
-          }
+          },
         });
-        
-        // Cache the parsed model in background once loaded successfully
-        if (model) {
+        model = streamRes.primaryModel;
+        if (streamRes.secondaryPromise) {
+          showToast("Building shell interactive — internal MEP & fitout streaming in background...", "info");
+        }
+        if (model && streamRes.strategy !== "shell-then-internals") {
           setTimeout(async () => {
             try {
-              console.log(`Caching converted fragment for ${name} to IndexedDB...`);
               const fragBuffer = await model.getBuffer(false);
               await setCachedFragment(cacheKey, fragBuffer);
-              console.log(`Successfully cached converted fragment for ${name}.`);
-            } catch (cacheErr) {
-              console.warn("Failed to cache model after load:", cacheErr);
-            }
+            } catch {} 
           }, 1000);
         }
       }
     } else {
       const fragData = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer as any);
-      model = await fragments.core.load(fragData, { modelId: name } as any);
+      model = await modelManager.loadFragment(fragData, name);
     }
 
     clearInterval(interval);
     progress.innerText = "100%";
-    text.innerText = "Building Semantic Model database...";
+    text.innerText = "Synchronizing Spatial Coordinates & Semantic Index...";
 
     if (model) {
+      const resolvedModelId = String(model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || name);
+      if (Object.keys(ingestedStoreys).length > 0) {
+        for (const [k, storeyVal] of Object.entries(ingestedStoreys)) {
+          const eid = k.slice(name.length + 1);
+          globalElementStoreysMap[`${resolvedModelId}-${eid}`] = storeyVal;
+        }
+      }
       if (parsedProperties && Object.keys(parsedProperties).length > 0) {
         model.properties = parsedProperties;
-        const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || name;
         for (const [idStr, el] of Object.entries(parsedProperties)) {
           if ((el as any).Storey) {
-            globalElementStoreysMap[`${modelId}-${idStr}`] = (el as any).Storey;
+            globalElementStoreysMap[`${resolvedModelId}-${idStr}`] = (el as any).Storey;
           }
         }
       }
+      // Sync CRS/world origin with PrecisionOriginController to avoid Float32 jitter
+      try {
+        if (typeof model.getCRS === "function") {
+          const crs = await model.getCRS();
+          if (crs?.mapConversion) {
+            PrecisionOriginController.getInstance().setWorldOrigin(
+              Number(crs.mapConversion.eastings) || 0,
+              Number(crs.mapConversion.orthogonalHeight) || 0,
+              Number(crs.mapConversion.northings) || 0
+            );
+          }
+        }
+      } catch {}
       (window as any).viewer_model = model;
       federationModule.registerModel(model, name);
       // Enable shadows if checked
@@ -4201,13 +4259,13 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
       // Parse IfcSite georeference coordinates if present
       try {
-        let siteFound = await GisModule.getInstance().parseIfcSiteMetadata(model);
+        let siteFound = await (await gisFeature.load()).parseIfcSiteMetadata(model);
         if (!siteFound && buffer && buffer.byteLength > 0 && buffer.byteLength < 50 * 1024 * 1024) {
           try {
             const dec = new TextDecoder("utf-8", { fatal: false });
             const ifcText = dec.decode(buffer.subarray(0, Math.min(buffer.length, 2 * 1024 * 1024)));
             if (ifcText.includes("IFCSITE") || ifcText.includes("IFCMAPCONVERSION")) {
-              GisModule.getInstance().parseIfcSiteMetadata(ifcText);
+              (await gisFeature.load()).parseIfcSiteMetadata(ifcText);
               siteFound = true;
             }
           } catch {}
@@ -4290,13 +4348,13 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
     // Dismiss loading overlay immediately so the 3D viewport is instantly interactive
     overlay.classList.add("hidden");
-    (overlay as HTMLElement).style.display = "none";
 
     // Update dynamic file list and build search index non-blockingly
     refreshFileList();
     setTimeout(() => {
       GlobalSearchOverlay.getInstance().buildIndex().catch((e) => console.warn("Search index build error:", e));
     }, 50);
+    return Boolean(model);
 
   } catch (err) {
     clearInterval(interval);
@@ -4310,6 +4368,7 @@ async function loadModelData(name: string, buffer: Uint8Array) {
     setTimeout(() => {
       overlay.classList.add("hidden");
     }, 6000);
+    return false;
   }
 }
 
@@ -4326,11 +4385,11 @@ fileInput.addEventListener("change", async () => {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const res = GisModule.getInstance().loadGeoJSON(parsed);
+      const res = (await gisFeature.load()).loadGeoJSON(parsed);
       if (typeof (window as any).refreshGisUI === "function") {
         (window as any).refreshGisUI();
       }
-      GisModule.getInstance().fitToCadastre();
+      (await gisFeature.load()).fitToCadastre();
       showToast(`GeoJSON Imported: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
       const gisPanel = document.getElementById("gis-panel");
       if (gisPanel && gisPanel.classList.contains("hidden")) {
@@ -4370,11 +4429,11 @@ window.addEventListener("drop", async (e) => {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const res = GisModule.getInstance().loadGeoJSON(parsed);
+      const res = (await gisFeature.load()).loadGeoJSON(parsed);
       if (typeof (window as any).refreshGisUI === "function") {
         (window as any).refreshGisUI();
       }
-      GisModule.getInstance().fitToCadastre();
+      (await gisFeature.load()).fitToCadastre();
       showToast(`GeoJSON Imported: ${res.featureCount} Features (${res.layerNames.join(", ")})`, "success");
       const gisPanel = document.getElementById("gis-panel");
       if (gisPanel && gisPanel.classList.contains("hidden")) {
@@ -4470,8 +4529,9 @@ async function loadSampleModel(sampleType: string = "snowdon") {
     }
 
     const uint8Array = new Uint8Array(finalBuffer);
-    await loadModelData(fileName, uint8Array);
-    showToast(`Successfully loaded ${fileName} (${(finalBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)`, "success");
+    if (await loadModelData(fileName, uint8Array)) {
+      showToast(`Successfully loaded ${fileName} (${(finalBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)`, "success");
+    }
   } catch (err) {
     console.error("Failed to fetch sample file:", err);
     showToast(`Failed to load sample: ${err instanceof Error ? err.message : err}`, "error");
@@ -7866,7 +7926,7 @@ async function updateTimelineVisualState(force: boolean = false) {
 
   const evmPanel = document.getElementById("evm-panel");
   if (evmPanel && !evmPanel.classList.contains("hidden")) {
-    EvmDashboardModule.getInstance().render(dateMs);
+    evmDashboard.peek()?.render(dateMs);
   }
 
   // Sync selected element inputs dynamically if properties panel is open for it
@@ -8057,7 +8117,7 @@ function updateScheduleWidgetUI() {
   const evmPanel = document.getElementById("evm-panel");
   if (evmPanel && !evmPanel.classList.contains("hidden")) {
     const simMs = currentTimelineDate ? currentTimelineDate.getTime() : undefined;
-    EvmDashboardModule.getInstance().render(simMs);
+    evmDashboard.peek()?.render(simMs);
   }
 }
 
@@ -8415,8 +8475,8 @@ function stopTimelinePlayback() {
     cancelAnimationFrame(timelineTimer);
     timelineTimer = null;
   }
-  if (TimelapseRecorderModule.getInstance().isRecording()) {
-    TimelapseRecorderModule.getInstance().stopRecording();
+  if (recorder.peek()?.isRecording()) {
+    recorder.peek()?.stopRecording();
   }
   const btn = document.getElementById("timeline-play-btn");
   if (btn) {
@@ -8972,10 +9032,10 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
     { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: () => PresentationSheetModule.getInstance().export4KBoard() },
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => document.getElementById("btn-4d-mode")?.click() },
-    { id: "tool-4d-record", title: "Record 4D Simulation Video (WebM)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`, action: () => TimelapseRecorderModule.getInstance().toggleRecording() },
+    { id: "tool-4d-record", title: "Record 4D Simulation Video (WebM)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`, action: () => runFeature(async () => (await recorder.load()).toggleRecording()) },
     { id: "tool-4d-gantt", title: "Toggle Interactive 4D Construction Gantt Chart", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`, action: () => InteractiveGanttDrawer.getInstance().toggle() },
     { id: "tool-4d-variance", title: "Toggle Planned vs. Actual Variance Mode", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>`, action: () => document.getElementById("btn-4d-variance-toggle")?.click() },
-    { id: "tool-export-cobie", title: "Export 7D COBie Facility Management Handover Data (CSV)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>`, action: () => CobieExportModule.getInstance().exportCobieCSV() },
+    { id: "tool-export-cobie", title: "Export 7D COBie Facility Management Handover Data (CSV)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>`, action: () => runFeature(async () => (await cobieExport.load()).exportCobieCSV()) },
     { id: "tool-model-diff", title: "Run 3D Visual Model Revision Diff (Added / Removed / Modified)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/></svg>`, action: async () => {
       if (fragments.list.size < 2) {
         showToast("Please load at least 2 IFC models to run 3D Revision Diff.", "warning");
@@ -9293,39 +9353,33 @@ if (ctxMenu) {
 // --- HUD Statistics Updater ---
 let hudLastTime = performance.now();
 let hudFrames = 0;
-let hudFps = 0;
-let currentEntities = 0;
-let currentPolygons = 0;
+const hudEntityCounts = new WeakMap<object, number>();
+let hudEntityUpdatePending = false;
 
-async function updateHUDData() {
-  const renderer = world.renderer?.three;
-  if (renderer && renderer.info) {
-    currentPolygons = renderer.info.render.triangles;
-  }
-  
-  let totalEntities = 0;
-  if (fragments && fragments.list) {
-    for (const [_, model] of fragments.list) {
-      if (model.getItemsIdsWithGeometry) {
-         try {
-           const ids = await model.getItemsIdsWithGeometry();
-           totalEntities += ids.length;
-         } catch (e) {
-           // ignore errors if they occur
-         }
-      } else if ((model as any).object?.children) {
-         totalEntities += (model as any).object.children.length;
+async function updateHUDEntityCounts() {
+  if (hudEntityUpdatePending) return;
+  hudEntityUpdatePending = true;
+  try {
+    for (const model of fragments.list.values()) {
+      // Fragments registers new models before their worker completes setup.
+      if (model.frozen || hudEntityCounts.has(model)) continue;
+      try {
+        const ids = await model.getItemsIdsWithGeometry();
+        hudEntityCounts.set(model, ids.length);
+      } catch {
+        // A model can be disposed while an update is in flight.
       }
     }
+  } finally {
+    hudEntityUpdatePending = false;
   }
-  currentEntities = totalEntities;
 }
 
 function renderHUD() {
   const now = performance.now();
   hudFrames++;
   if (now >= hudLastTime + 1000) {
-    hudFps = Math.round((hudFrames * 1000) / (now - hudLastTime));
+    const hudFps = Math.round((hudFrames * 1000) / (now - hudLastTime));
     hudFrames = 0;
     hudLastTime = now;
     
@@ -9333,13 +9387,17 @@ function renderHUD() {
     if (fpsEl) fpsEl.innerText = hudFps.toString();
     
     const polyEl = document.getElementById("hud-polygons");
-    if (polyEl) polyEl.innerText = currentPolygons.toLocaleString();
+    if (polyEl) polyEl.innerText = (world.renderer?.three.info.render.triangles ?? 0).toLocaleString();
     
     const entEl = document.getElementById("hud-entities");
-    if (entEl) entEl.innerText = currentEntities.toLocaleString();
-    
-    // Trigger async data update for next tick so it doesn't block rendering
-    updateHUDData();
+    if (entEl) {
+      let totalEntities = 0;
+      for (const model of fragments.list.values()) {
+        totalEntities += hudEntityCounts.get(model) ?? 0;
+      }
+      entEl.innerText = totalEntities.toLocaleString();
+      void updateHUDEntityCounts();
+    }
   }
   
   requestAnimationFrame(renderHUD);
@@ -9351,7 +9409,9 @@ requestAnimationFrame(renderHUD);
 // ═════════════════════════════════════════════════════════════════════
 initEnterpriseSuitesController(world, highlighter);
   initPropertySequenceEngineUI();
-initGeoEngineeringController(world, (BimEngine.getInstance() as any).fragments?.core);
+(window as any).getEngineTelemetry = () => bimEngine.getPerformanceTelemetry();
+(window as any).MetadataApiAdapter = MetadataApiAdapter;
+// Geo tools initialize when the GIS suite opens.
 
 // ═════════════════════════════════════════════════════════════════════
 // ─── PWA OFFLINE JOBSITE MODE & INSTALL PROMPT ───────────────────────

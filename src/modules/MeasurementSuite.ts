@@ -3,6 +3,9 @@ import * as OBF from "@thatopen/components-front";
 import * as FRAGS from "@thatopen/fragments";
 import { BimEngine } from "../core/BimEngine";
 import { SoundManager } from "../core/SoundManager";
+import { BvhAccelerationService } from "../core/BvhAccelerationService";
+import { PointerInputArbiter } from "../core/PointerInputArbiter";
+import { ResourceLifecycleManager } from "../core/ResourceLifecycleManager";
 
 export interface MeasurementPoint {
   position: THREE.Vector3;
@@ -246,19 +249,27 @@ export class MeasurementSuite {
   private bindPointerEvents() {
     if (typeof window === "undefined") return;
 
-    window.addEventListener("pointermove", (e) => {
-      if (!this.isMeasuring) return;
-      this.handlePointerMove(e);
-    });
+    const arbiter = PointerInputArbiter.getInstance();
+    const container = document.getElementById("container") || this.engine.container;
+    if (container instanceof HTMLElement) {
+      arbiter.attach(container);
+    }
 
-    window.addEventListener("pointerdown", (e) => {
-      if (!this.isMeasuring || e.button !== 0) return;
-      // If clicking on UI controls, ignore
-      const target = e.target as HTMLElement;
-      if (target.closest(".bim-toolbar, .bim-modal, .sidebar-panel, #viewport-selection-bar, #measurement-panel")) {
-        return;
-      }
-      this.handlePointerClick(e);
+    arbiter.registerHandler({
+      id: "measurement-suite",
+      priority: "measurement",
+      isActive: () => this.isMeasuring,
+      onPointerMove: (e) => {
+        this.handlePointerMove(e);
+      },
+      onPointerUp: (e, isClickWithinDeadzone) => {
+        if (!isClickWithinDeadzone || e.button !== 0) return;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest?.(".bim-toolbar, .bim-modal, .sidebar-panel, #viewport-selection-bar, #measurement-panel")) {
+          return;
+        }
+        this.handlePointerClick(e);
+      },
     });
 
     window.addEventListener("dblclick", (e) => {
@@ -333,9 +344,11 @@ export class MeasurementSuite {
   }
 
   public clearAllMeasurements() {
+    const lifecycle = ResourceLifecycleManager.getInstance();
     for (const item of this.measurements) {
       if (item.lineGroup) {
         this.overlayGroup.remove(item.lineGroup);
+        lifecycle.disposeObjectTree(item.lineGroup, { disposeMaterials: true, removeFromParent: false });
       }
       if (item.labelElement && item.labelElement.parentElement) {
         item.labelElement.parentElement.removeChild(item.labelElement);
@@ -357,6 +370,10 @@ export class MeasurementSuite {
       const item = this.measurements[idx];
       if (item.lineGroup) {
         this.overlayGroup.remove(item.lineGroup);
+        ResourceLifecycleManager.getInstance().disposeObjectTree(item.lineGroup, {
+          disposeMaterials: true,
+          removeFromParent: false,
+        });
       }
       if (item.labelElement && item.labelElement.parentElement) {
         item.labelElement.parentElement.removeChild(item.labelElement);
@@ -366,8 +383,26 @@ export class MeasurementSuite {
     }
   }
 
+  private getCandidateMeshes(): THREE.Mesh[] {
+    const scene = this.engine.world?.scene?.three;
+    if (!scene) return [];
+    const candidateMeshes: THREE.Mesh[] = [];
+    scene.traverse((obj) => {
+      if (
+        obj instanceof THREE.Mesh &&
+        obj.visible &&
+        obj !== this.snapMarker &&
+        !this.overlayGroup.children.includes(obj) &&
+        obj.name !== "BIM_GroundContactShadow"
+      ) {
+        candidateMeshes.push(obj);
+      }
+    });
+    return candidateMeshes;
+  }
+
   /**
-   * Snaps a world position to the closest element vertex/edge if within tolerance.
+   * Snaps a world position to the closest BVH vertex/edge or measurement endpoint if within tolerance.
    */
   public snapPosition(rawPos: THREE.Vector3): { position: THREE.Vector3; snapType: "vertex" | "edge" | "face" | "free" } {
     if (!this.snapEnabled) {
@@ -379,7 +414,7 @@ export class MeasurementSuite {
       return { position: rawPos.clone(), snapType: "free" };
     }
 
-    // If close to an existing measurement point, snap to it
+    // 1. Snap to existing measurement vertices first
     for (const m of this.measurements) {
       if (m.start.position.distanceTo(rawPos) <= this.snapTolerance) {
         return { position: m.start.position.clone(), snapType: "vertex" };
@@ -389,7 +424,17 @@ export class MeasurementSuite {
       }
     }
 
-    // Grid snapping alignment (0.1m precision)
+    // 2. BVH shapecast vertex/edge snapping across nearby scene geometry
+    const bvhSnap = BvhAccelerationService.getInstance().findNearestSnapPoint(
+      rawPos,
+      this.snapTolerance,
+      this.getCandidateMeshes()
+    );
+    if (bvhSnap) {
+      return { position: bvhSnap.point, snapType: bvhSnap.snapType };
+    }
+
+    // 3. Fallback 0.1m architectural grid snap
     const snapped = rawPos.clone();
     snapped.x = Math.round(snapped.x * 10) / 10;
     snapped.y = Math.round(snapped.y * 10) / 10;
@@ -657,37 +702,25 @@ export class MeasurementSuite {
     const camera = this.engine.world?.camera?.three;
     if (!camera) return new THREE.Vector3(x * 10, 0, -y * 10);
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-
-    // Raycast against loaded 3D scene meshes first
-    const scene = this.engine.world?.scene?.three;
-    if (scene) {
-      const candidateMeshes: THREE.Object3D[] = [];
-      scene.traverse((obj) => {
-        if (
-          obj instanceof THREE.Mesh &&
-          obj.visible &&
-          obj !== this.snapMarker &&
-          !this.overlayGroup.children.includes(obj) &&
-          obj.name !== "BIM_GroundContactShadow"
-        ) {
-          candidateMeshes.push(obj);
-        }
-      });
-      if (candidateMeshes.length > 0) {
-        try {
-          const hits = raycaster.intersectObjects(candidateMeshes, false);
-          if (hits.length > 0) {
-            return hits[0].point.clone();
-          }
-        } catch (err) {}
+    const ndc = new THREE.Vector2(x, y);
+    const candidateMeshes = this.getCandidateMeshes();
+    if (candidateMeshes.length > 0) {
+      const hits = BvhAccelerationService.getInstance().raycastMeshes(
+        candidateMeshes,
+        ndc,
+        camera,
+        { firstHitOnly: true, ownerTag: "bvh:measurement" }
+      );
+      if (hits.length > 0) {
+        return hits[0].point.clone();
       }
     }
 
+    const fallbackRay = new THREE.Raycaster();
+    fallbackRay.setFromCamera(ndc, camera);
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const target = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, target);
+    fallbackRay.ray.intersectPlane(plane, target);
     return target;
   }
 

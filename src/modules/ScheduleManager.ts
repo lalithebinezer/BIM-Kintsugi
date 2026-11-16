@@ -707,8 +707,8 @@ export class ScheduleManager {
   /**
    * Import schedule from Excel workbook (.xlsx / .xls) including Bentley Synchro multi-sheet workbooks.
    */
-  importScheduleFromExcel(buffer: ArrayBuffer | Uint8Array, fileName?: string): number {
-    const res = ScheduleImportParsers.parseExcel(buffer, fileName);
+  async importScheduleFromExcel(buffer: ArrayBuffer | Uint8Array, fileName?: string): Promise<number> {
+    const res = await ScheduleImportParsers.parseExcel(buffer, fileName);
     if (!res || res.tasks.length === 0) return 0;
 
     let importedCount = 0;

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { BvhAccelerationService } from "../core/BvhAccelerationService";
 
 /**
  * GeoEngineeringSuite
@@ -560,7 +561,6 @@ export class GeoEngineeringSuite {
   private walkPitch = 0;
   private walkAnimId: number | null = null;
   private walkColliders: THREE.Object3D[] = [];
-  private walkRaycaster = new THREE.Raycaster();
   private walkLastT = 0;
   public walkConfig = { speed: 3.2, eyeHeight: 1.65, collision: true };
   private walkHandlers: { [k: string]: (e: any) => void } = {};
@@ -1132,24 +1132,33 @@ export class GeoEngineeringSuite {
     if (k.has("e")) cam.position.y += dt * 2;
     if (k.has("q")) cam.position.y -= dt * 2;
 
+    const bvh = BvhAccelerationService.getInstance();
     if (move.lengthSq() > 0) {
       move.normalize();
       let dist = this.walkConfig.speed * run * dt;
       if (this.walkConfig.collision && this.walkColliders.length) {
         const origin = cam.position.clone();
         origin.y -= this.walkConfig.eyeHeight * 0.5; // chest height
-        this.walkRaycaster.set(origin, move);
-        this.walkRaycaster.far = dist + 1;
-        const hit = this.walkRaycaster.intersectObjects(this.walkColliders, false)[0];
+        const hit = bvh.raycastMeshes(
+          this.walkColliders,
+          { origin, direction: move },
+          undefined,
+          { firstHitOnly: true, maxDistance: dist + 1, ownerTag: "bvh:walkthrough" }
+        )[0];
         dist = resolveWalkStep(dist, hit ? hit.distance : null);
       }
       cam.position.addScaledVector(move, dist);
     }
 
     if (this.walkConfig.collision && this.walkColliders.length && !k.has("e") && !k.has("q")) {
-      this.walkRaycaster.set(cam.position.clone().add(new THREE.Vector3(0, 0.3, 0)), new THREE.Vector3(0, -1, 0));
-      this.walkRaycaster.far = 20;
-      const floor = this.walkRaycaster.intersectObjects(this.walkColliders, false)[0];
+      const origin = cam.position.clone().add(new THREE.Vector3(0, 0.3, 0));
+      const down = new THREE.Vector3(0, -1, 0);
+      const floor = bvh.raycastMeshes(
+        this.walkColliders,
+        { origin, direction: down },
+        undefined,
+        { firstHitOnly: true, maxDistance: 20, ownerTag: "bvh:walkthrough" }
+      )[0];
       cam.position.y = resolveEyeHeight(cam.position.y, floor ? floor.point.y : this.modelBounds.min.y, this.walkConfig.eyeHeight);
     }
 

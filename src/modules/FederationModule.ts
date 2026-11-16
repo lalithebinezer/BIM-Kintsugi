@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { PrecisionOriginController } from "../core/PrecisionOriginController";
+import { ResourceLifecycleManager } from "../core/ResourceLifecycleManager";
 
 export type DisciplineType = "ARQ" | "STR" | "MEP" | "GENERIC";
 
@@ -71,6 +73,16 @@ export class FederationModule {
       ? [modelObj.position.x, modelObj.position.y, modelObj.position.z]
       : [0, 0, 0];
 
+    const originCtrl = PrecisionOriginController.getInstance();
+    if (modelObj) {
+      const origin64 = originCtrl.render32ToWorld64({
+        x: basePos[0],
+        y: basePos[1],
+        z: basePos[2],
+      });
+      originCtrl.registerAnchoredObject(`fed:${modelId}`, modelObj, origin64);
+    }
+
     const entry: FederatedModelEntry = {
       modelId,
       name,
@@ -97,11 +109,18 @@ export class FederationModule {
 
     const modelObj = (entry.model.object || entry.model) as THREE.Object3D;
     if (modelObj && modelObj.position) {
-      modelObj.position.set(
-        entry.basePosition[0] + entry.transform.x,
-        entry.basePosition[1] + entry.transform.y,
-        entry.basePosition[2] + entry.transform.z
-      );
+      const targetWorld64 = {
+        x: entry.basePosition[0] + entry.transform.x,
+        y: entry.basePosition[1] + entry.transform.y,
+        z: entry.basePosition[2] + entry.transform.z,
+      };
+      const originCtrl = PrecisionOriginController.getInstance();
+      const activeOrigin = originCtrl.getActiveOrigin64();
+      originCtrl.updateAnchoredWorldPosition(`fed:${modelId}`, {
+        x: activeOrigin.x + targetWorld64.x,
+        y: activeOrigin.y + targetWorld64.y,
+        z: activeOrigin.z + targetWorld64.z,
+      });
       if (modelObj.rotation) {
         modelObj.rotation.y = THREE.MathUtils.degToRad(entry.transform.rotationY);
       }
@@ -119,6 +138,20 @@ export class FederationModule {
     entry.visible = visible;
     const modelObj = (entry.model.object || entry.model) as THREE.Object3D;
     if (modelObj) modelObj.visible = visible;
+    const lifecycle = ResourceLifecycleManager.getInstance();
+    if (!visible) {
+      lifecycle.markHidden(
+        `fed:${modelId}`,
+        () => {
+          lifecycle.releaseByTag(`bvh:${modelId}`);
+        },
+        () => {
+          if (modelObj) modelObj.visible = true;
+        }
+      );
+    } else {
+      lifecycle.markVisible(`fed:${modelId}`).catch(() => {});
+    }
     try {
       this.engine.fragments.core.update(true);
     } catch (e) {}

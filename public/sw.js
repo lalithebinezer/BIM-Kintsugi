@@ -5,7 +5,7 @@
  * and static assets to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v6";
+const CACHE_NAME = "bim-kintsugi-cache-v7";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -74,7 +74,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // 2. Cache-first for heavy WASM and worker scripts
-  if (url.pathname.endsWith(".wasm") || url.pathname.endsWith("worker.mjs")) {
+  if (url.pathname.endsWith(".wasm") || /\/worker(?:-[\w-]+)?\.mjs$/.test(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         return (

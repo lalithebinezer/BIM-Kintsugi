@@ -51,6 +51,7 @@ export class ViewportController {
   }
 
   public setGridVisible(visible: boolean) {
+    if (this.grid?.three) this.grid.three.visible = visible;
     if (this.grid && this.grid.config) {
       this.grid.config.visible = visible;
     }
@@ -71,7 +72,7 @@ export class ViewportController {
 
   public toggleGrid(): boolean {
     const gh = typeof window !== "undefined" ? (window as any).viewer_grid_helper : null;
-    const current = gh ? gh.visible : true;
+    const current = gh?.visible ?? this.grid?.config?.visible ?? this.grid?.three?.visible ?? false;
     const next = !current;
     this.setGridVisible(next);
     return next;

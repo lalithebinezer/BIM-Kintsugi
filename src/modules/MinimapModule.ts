@@ -3,7 +3,7 @@ import * as OBC from "@thatopen/components";
 import { BimEngine } from "../core/BimEngine";
 import { ClashDetector } from "./ClashDetector";
 import { StoreyLevelSlicer } from "./StoreyLevelSlicer";
-import { GeoEngineeringSuite } from "./GeoEngineeringSuite";
+import { geoTools } from "./optionalFeatures";
 
 export interface MinimapConfig {
   size: number;
@@ -978,8 +978,8 @@ export class MinimapModule {
 
     // 2. Draw Solar Sun Vector if Solar study active
     try {
-      const suite = GeoEngineeringSuite.getInstance();
-      const sun = suite.getSunNow();
+      const suite = geoTools.peek();
+      const sun = suite?.getSunNow();
       if (sun && sun.elevation > 0) {
         const sunRad = ((sun.azimuth - 90) * Math.PI) / 180;
         const sunDist = w * 0.43;

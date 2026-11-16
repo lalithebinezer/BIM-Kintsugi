@@ -1,0 +1,286 @@
+import * as THREE from "three";
+import {
+  MeshBVH,
+  acceleratedRaycast,
+  computeBoundsTree,
+  disposeBoundsTree,
+  estimateMemoryInBytes,
+  SAH,
+  INTERSECTED,
+  NOT_INTERSECTED,
+  type HitPointInfo,
+} from "three-mesh-bvh";
+import { ResourceLifecycleManager } from "./ResourceLifecycleManager";
+
+export interface BvhSnapResult {
+  point: THREE.Vector3;
+  snapType: "vertex" | "edge" | "face";
+  distance: number;
+  mesh: THREE.Mesh;
+}
+
+export interface BvhStats {
+  patched: boolean;
+  indexedMeshes: number;
+  estimatedMemoryKb: number;
+  lastRaycastMs: number;
+}
+
+/**
+ * Spatial BVH acceleration layer powered by `three-mesh-bvh`.
+ * Replaces slow triangle-soup raycasting and vertex scanning with O(log N) BVH traversal
+ * for object picking, measurement vertex/edge snapping, walkthrough collision, and box selection.
+ */
+export class BvhAccelerationService {
+  private static instance: BvhAccelerationService | null = null;
+  private patched: boolean = false;
+  private indexedGeometries: WeakSet<THREE.BufferGeometry> = new WeakSet();
+  private indexedCount: number = 0;
+  private trackedGeometries: Set<THREE.BufferGeometry> = new Set();
+  private lastRaycastMs: number = 0;
+  private reusableRaycaster: THREE.Raycaster = new THREE.Raycaster();
+  private lifecycle: ResourceLifecycleManager;
+
+  private constructor() {
+    this.lifecycle = ResourceLifecycleManager.getInstance();
+    this.reusableRaycaster.firstHitOnly = true;
+    this.patchThreePrototypes();
+  }
+
+  public static getInstance(): BvhAccelerationService {
+    if (!BvhAccelerationService.instance) {
+      BvhAccelerationService.instance = new BvhAccelerationService();
+    }
+    return BvhAccelerationService.instance;
+  }
+
+  /**
+   * Patches `THREE.BufferGeometry` and `THREE.Mesh.prototype.raycast` once idempotently
+   * so any geometry with `.boundsTree` automatically uses accelerated raycasting.
+   */
+  public patchThreePrototypes() {
+    if (this.patched) return;
+    try {
+      (THREE.BufferGeometry.prototype as any).computeBoundsTree = computeBoundsTree;
+      (THREE.BufferGeometry.prototype as any).disposeBoundsTree = disposeBoundsTree;
+      THREE.Mesh.prototype.raycast = acceleratedRaycast;
+      this.patched = true;
+    } catch {
+      this.patched = false;
+    }
+  }
+
+  /**
+   * Builds a `MeshBVH` for a geometry if missing and registers cleanup with `ResourceLifecycleManager`.
+   */
+  public ensureGeometryBvh(
+    geometry: THREE.BufferGeometry | null | undefined,
+    ownerTag: string = "bvh:scene"
+  ): MeshBVH | null {
+    if (!geometry || !geometry.attributes?.position) return null;
+    this.patchThreePrototypes();
+
+    const geomAny = geometry as any;
+    if (geomAny.boundsTree) {
+      return geomAny.boundsTree as MeshBVH;
+    }
+
+    try {
+      const bvh = new MeshBVH(geometry, {
+        strategy: SAH,
+        maxLeafSize: 10,
+        indirect: false,
+      });
+      geomAny.boundsTree = bvh;
+      if (!this.indexedGeometries.has(geometry)) {
+        this.indexedGeometries.add(geometry);
+        this.trackedGeometries.add(geometry);
+        this.indexedCount = this.trackedGeometries.size;
+      }
+      this.lifecycle.track(geometry, ownerTag, undefined, () => {
+        this.disposeGeometryBvh(geometry);
+      });
+      return bvh;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Indexes all visible meshes in an Object3D subtree incrementally.
+   */
+  public buildBoundsForObjectTree(root: THREE.Object3D | null | undefined, ownerTag: string = "bvh:model"): number {
+    if (!root || typeof root.traverse !== "function") return 0;
+    let built = 0;
+    root.traverse((obj: any) => {
+      if (obj?.isMesh && obj.geometry && obj.name !== "BIM_GroundContactShadow") {
+        if (this.ensureGeometryBvh(obj.geometry, ownerTag)) {
+          built++;
+        }
+      }
+    });
+    return built;
+  }
+
+  public disposeGeometryBvh(geometry: THREE.BufferGeometry | null | undefined) {
+    if (!geometry) return;
+    const geomAny = geometry as any;
+    if (geomAny.boundsTree) {
+      try {
+        if (typeof geomAny.disposeBoundsTree === "function") {
+          geomAny.disposeBoundsTree();
+        } else {
+          geomAny.boundsTree = undefined;
+        }
+      } catch {
+        geomAny.boundsTree = undefined;
+      }
+    }
+    this.trackedGeometries.delete(geometry);
+    this.indexedCount = this.trackedGeometries.size;
+  }
+
+  /**
+   * Executes a fast `firstHitOnly` BVH raycast from camera + NDC coordinates or preconfigured ray.
+   */
+  public raycastMeshes(
+    meshes: THREE.Object3D[],
+    originOrNdc: THREE.Vector2 | { origin: THREE.Vector3; direction: THREE.Vector3 },
+    camera?: THREE.Camera,
+    options: { firstHitOnly?: boolean; maxDistance?: number; ownerTag?: string } = {}
+  ): THREE.Intersection[] {
+    if (!meshes.length) return [];
+
+    const start = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.reusableRaycaster.firstHitOnly = options.firstHitOnly ?? true;
+    this.reusableRaycaster.far = options.maxDistance ?? Infinity;
+
+    if (originOrNdc instanceof THREE.Vector2 && camera) {
+      this.reusableRaycaster.setFromCamera(originOrNdc, camera);
+    } else if ("origin" in originOrNdc && "direction" in originOrNdc) {
+      this.reusableRaycaster.set(originOrNdc.origin, originOrNdc.direction);
+    } else {
+      return [];
+    }
+
+    for (const m of meshes) {
+      if ((m as any).isMesh && (m as any).geometry) {
+        this.ensureGeometryBvh((m as any).geometry, options.ownerTag || "bvh:raycast");
+      }
+    }
+
+    try {
+      const hits = this.reusableRaycaster.intersectObjects(meshes, false);
+      const end = typeof performance !== "undefined" ? performance.now() : Date.now();
+      this.lastRaycastMs = Math.round((end - start) * 100) / 100;
+      return hits;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Uses `MeshBVH.shapecast()` & `closestPointToPoint()` to snap to the nearest vertex or edge
+   * within `snapRadius` without scanning all vertices linearly.
+   */
+  public findNearestSnapPoint(
+    worldPoint: THREE.Vector3,
+    snapRadius: number,
+    meshes: THREE.Mesh[]
+  ): BvhSnapResult | null {
+    if (!meshes.length || snapRadius <= 0) return null;
+
+    let best: BvhSnapResult | null = null;
+    let bestDistSq = snapRadius * snapRadius;
+
+    const invMatrix = new THREE.Matrix4();
+    const localPoint = new THREE.Vector3();
+    const hitInfo: HitPointInfo = { point: new THREE.Vector3(), distance: Infinity, faceIndex: -1 };
+    const worldVertex = new THREE.Vector3();
+    const edgeMid = new THREE.Vector3();
+    const localSphere = new THREE.Sphere();
+
+    for (const mesh of meshes) {
+      if (!mesh.visible || !mesh.geometry) continue;
+      const bvh = this.ensureGeometryBvh(mesh.geometry, "bvh:snap");
+      if (!bvh) continue;
+
+      mesh.updateMatrixWorld();
+      invMatrix.copy(mesh.matrixWorld).invert();
+      localPoint.copy(worldPoint).applyMatrix4(invMatrix);
+
+      const scale = mesh.matrixWorld.getMaxScaleOnAxis() || 1;
+      const localRadius = snapRadius / Math.max(0.0001, scale);
+      localSphere.set(localPoint, localRadius);
+
+      // Coarse surface check first
+      const closest = bvh.closestPointToPoint(localPoint, hitInfo, 0, localRadius);
+      if (!closest) continue;
+
+      // Shapecast triangles inside the snap radius sphere to test exact vertices and edge midpoints
+      bvh.shapecast({
+        intersectsBounds: (box) => {
+          return box.intersectsSphere(localSphere) ? INTERSECTED : NOT_INTERSECTED;
+        },
+        intersectsTriangle: (tri) => {
+          const pts: Array<{ v: THREE.Vector3; type: "vertex" | "edge" }> = [
+            { v: tri.a, type: "vertex" },
+            { v: tri.b, type: "vertex" },
+            { v: tri.c, type: "vertex" },
+            { v: edgeMid.copy(tri.a).add(tri.b).multiplyScalar(0.5), type: "edge" },
+            { v: new THREE.Vector3().copy(tri.b).add(tri.c).multiplyScalar(0.5), type: "edge" },
+            { v: new THREE.Vector3().copy(tri.c).add(tri.a).multiplyScalar(0.5), type: "edge" },
+          ];
+          for (const candidate of pts) {
+            worldVertex.copy(candidate.v).applyMatrix4(mesh.matrixWorld);
+            const dSq = worldVertex.distanceToSquared(worldPoint);
+            if (dSq < bestDistSq) {
+              bestDistSq = dSq;
+              best = {
+                point: worldVertex.clone(),
+                snapType: candidate.type,
+                distance: Math.sqrt(dSq),
+                mesh,
+              };
+            }
+          }
+          return false;
+        },
+      });
+    }
+
+    return best;
+  }
+
+  /**
+   * Uses `MeshBVH.intersectsBox` to test whether a mesh intersects a world-space selection or section box.
+   */
+  public intersectsWorldBox(mesh: THREE.Mesh, worldBox: THREE.Box3): boolean {
+    if (!mesh.geometry) return false;
+    const bvh = this.ensureGeometryBvh(mesh.geometry, "bvh:query");
+    if (!bvh) return false;
+
+    const invMat = new THREE.Matrix4().copy(mesh.matrixWorld).invert();
+    const localBox = worldBox.clone().applyMatrix4(invMat);
+    const identity = new THREE.Matrix4();
+    return bvh.intersectsBox(localBox, identity);
+  }
+
+  public getStats(): BvhStats {
+    let bytes = 0;
+    for (const geom of this.trackedGeometries) {
+      const tree = (geom as any).boundsTree;
+      if (tree) {
+        try {
+          bytes += estimateMemoryInBytes(tree);
+        } catch {}
+      }
+    }
+    return {
+      patched: this.patched,
+      indexedMeshes: this.indexedCount,
+      estimatedMemoryKb: Math.round((bytes / 1024) * 10) / 10,
+      lastRaycastMs: this.lastRaycastMs,
+    };
+  }
+}

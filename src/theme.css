@@ -1,0 +1,61 @@
+/* Shared aliases must resolve against the selected preset on the theme root. */
+:root, [data-theme] {
+  color-scheme: dark;
+  --primary: var(--accent-500);
+  --secondary: var(--bg-card);
+  --accent-100: color-mix(in srgb, var(--accent-500), white 65%);
+  --accent-200: color-mix(in srgb, var(--accent-500), white 45%);
+  --accent-300: color-mix(in srgb, var(--accent-500), white 25%);
+  --accent-600: color-mix(in srgb, var(--accent-500), black 12%);
+  --border-accent-hi: var(--accent-300);
+  --shadow-glow: 0 0 12px var(--accent-glow);
+  --text-secondary: var(--text-muted);
+  --bim-ui_main-base: var(--bg-card);
+  --bim-ui_bg-base: var(--bg-app);
+  --bim-ui_bg-contrast-10: var(--bg-card);
+  --bim-ui_bg-contrast-20: var(--bg-surface);
+  --bim-ui_bg-contrast-40: var(--bg-hover);
+  --bim-ui_bg-contrast-60: var(--border-strong);
+  --bim-ui_bg-contrast-80: var(--text-muted);
+  --bim-ui_bg-contrast-100: var(--text-primary);
+  --bim-ui_accent-contrast: var(--accent-btn-text);
+}
+[data-theme="light"], [data-theme="light-studio"] { color-scheme: light; }
+body { color: var(--text-main); background-color: var(--bg-app); }
+button, input, select, textarea { font-family: var(--font-body); }
+input, select, textarea { accent-color: var(--accent-500); }
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+::selection { background: var(--accent-500); color: var(--accent-btn-text); }
+select option { background: var(--bg-card); color: var(--text-primary); }
+.left-sidebar, .right-sidebar, .enterprise-drawer,
+.interactive-gantt-drawer, .quick-view-toolbar, #bottom-toolbar {
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-panel);
+}
+#bottom-toolbar .responsive-more {
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-weight: 700;
+}
+#bottom-toolbar .responsive-more:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-accent);
+}
+#bottom-toolbar .responsive-more[aria-expanded="true"] {
+  background: var(--accent-500);
+  color: var(--accent-btn-text);
+  border-color: var(--accent-500);
+}
+#bottom-toolbar.tools-expanded .compact-secondary::after {
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 3px;
+}
