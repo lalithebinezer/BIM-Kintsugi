@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { FragmentIndexer } from "../core/FragmentIndexer";
 
 export interface MaterialCarbonProfile {
   name: string;
@@ -169,59 +170,76 @@ export class CarbonLcaManager {
     };
   }
 
+  public async refreshFromFragments(): Promise<ElementCarbonData[]> {
+    try {
+      await FragmentIndexer.getInstance().indexLoadedModels(this.engine, {
+        includeBoxes: true,
+        includePsets: true,
+      });
+    } catch {}
+    this.updateCarbonUI();
+    return this.getAnalyzedElements();
+  }
+
   public getAnalyzedElements(): ElementCarbonData[] {
     const list: ElementCarbonData[] = [];
+    const indexer = FragmentIndexer.getInstance();
+    const skipSpatial = new Set([
+      "IFCPROJECT",
+      "IFCSITE",
+      "IFCBUILDING",
+      "IFCBUILDINGSTOREY",
+    ]);
+
     try {
-      if (this.engine.fragments && (this.engine.fragments as any).list) {
-        const fragList = (this.engine.fragments as any).list;
-        for (const [modelId, model] of fragList) {
-          if (model && model.properties) {
-            for (const idStr in model.properties) {
-              const id = parseInt(idStr, 10);
-              const p = model.properties[id];
-              if (!p) continue;
-              const cat = p.type || p._category || p.typeStr || "IFCWALL";
-              const name = p.Name?.value || p.name || `Element #${id}`;
+      const models = indexer.getSafeModelsMap(this.engine.fragments);
+      for (const [modelId, model] of models) {
+        const indexed = indexer.getSyncModelData(modelId, model);
+        if (!indexed) continue;
 
-              const profile = this.findProfileForCategory(cat);
-              const isSubstituted = this.materialSubstitutions[cat] === "green";
-              const coeff = isSubstituted && profile.sustainableAlternative
-                ? profile.sustainableAlternative.embodiedCarbonPerM3
-                : profile.embodiedCarbonPerM3;
+        for (const el of indexed.elements) {
+          const catUpper = el.category.toUpperCase();
+          if (indexed.source === "fragments-v3" && skipSpatial.has(catUpper)) {
+            continue;
+          }
 
-              let vol = Number(p.NetVolume?.value ?? p.GrossVolume?.value ?? p.Volume?.value ?? 0);
-              if (!vol || isNaN(vol) || vol <= 0) {
-                if (p.boundingBox instanceof THREE.Box3 && !p.boundingBox.isEmpty()) {
-                  const sz = new THREE.Vector3();
-                  p.boundingBox.getSize(sz);
-                  vol = Math.max(0.05, sz.x * sz.y * sz.z * 0.45);
-                } else {
-                  vol = 0.65 + ((id % 7) * 0.25);
-                }
-              }
-              const kg = vol * coeff;
+          const profile = this.findProfileForCategory(el.category);
+          const isSubstituted = this.materialSubstitutions[el.category] === "green";
+          const coeff = isSubstituted && profile.sustainableAlternative
+            ? profile.sustainableAlternative.embodiedCarbonPerM3
+            : profile.embodiedCarbonPerM3;
 
-              let grade: "A" | "B" | "C" | "D" | "E" = "C";
-              let hex = "#eab308";
-              if (kg <= 50) { grade = "A"; hex = "#22c55e"; }
-              else if (kg <= 150) { grade = "B"; hex = "#84cc16"; }
-              else if (kg <= 300) { grade = "C"; hex = "#eab308"; }
-              else if (kg <= 600) { grade = "D"; hex = "#f97316"; }
-              else { grade = "E"; hex = "#ef4444"; }
-
-              list.push({
-                modelId,
-                expressId: id,
-                category: cat,
-                name,
-                volumeM3: vol,
-                material: isSubstituted && profile.sustainableAlternative ? profile.sustainableAlternative.name : profile.name,
-                embodiedCarbonKg: kg,
-                intensityRating: grade,
-                colorHex: hex,
-              });
+          let vol = Number(el.volumeM3 ?? 0);
+          if (!vol || isNaN(vol) || vol <= 0) {
+            if (el.box && indexer.isValidBox(el.box)) {
+              const sz = new THREE.Vector3();
+              el.box.getSize(sz);
+              vol = Math.max(0.05, sz.x * sz.y * sz.z * 0.45);
+            } else {
+              vol = 0.65 + ((el.expressId % 7) * 0.25);
             }
           }
+          const kg = vol * coeff;
+
+          let grade: "A" | "B" | "C" | "D" | "E" = "C";
+          let hex = "#eab308";
+          if (kg <= 50) { grade = "A"; hex = "#22c55e"; }
+          else if (kg <= 150) { grade = "B"; hex = "#84cc16"; }
+          else if (kg <= 300) { grade = "C"; hex = "#eab308"; }
+          else if (kg <= 600) { grade = "D"; hex = "#f97316"; }
+          else { grade = "E"; hex = "#ef4444"; }
+
+          list.push({
+            modelId,
+            expressId: el.expressId,
+            category: el.category,
+            name: el.name,
+            volumeM3: vol,
+            material: isSubstituted && profile.sustainableAlternative ? profile.sustainableAlternative.name : profile.name,
+            embodiedCarbonKg: kg,
+            intensityRating: grade,
+            colorHex: hex,
+          });
         }
       }
     } catch (e) {}

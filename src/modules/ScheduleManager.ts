@@ -9,6 +9,7 @@ import { CostRateManager } from "./CostRateManager";
 import { resolveCategoryUnitCost } from "./BoqGenerator";
 import { DelayImpactEngine } from "./DelayImpactEngine";
 import { ScheduleImportParsers } from "./ScheduleImportParsers";
+import { FragmentIndexer } from "../core/FragmentIndexer";
 
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
@@ -809,11 +810,16 @@ export class ScheduleManager {
       }
     };
 
-    // Scan loaded model properties
+    // Scan loaded model properties or cached FRAGS v3 index
+    const indexer = FragmentIndexer.getInstance();
     for (const model of models) {
       if (!model) continue;
-      const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
-      const properties = model.properties || (model as any).getLocalProperties?.() || {};
+      const modelId = indexer.resolveModelId(model);
+      let properties = model.properties || (model as any).getLocalProperties?.() || {};
+      if (Object.keys(properties).length === 0) {
+        const synced = indexer.getSyncModelData(modelId, model);
+        if (synced) properties = indexer.toLegacyPropertyMap(synced);
+      }
 
       for (const expressIdStr in properties) {
         const expressId = Number(expressIdStr);

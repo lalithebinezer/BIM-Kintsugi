@@ -13,6 +13,7 @@
  */
 
 import * as THREE from "three";
+import { FragmentIndexer } from "../core/FragmentIndexer";
 
 export type ProfileType = "INSTALL" | "REMOVE" | "MAINTAIN" | "TEMPORARY";
 
@@ -270,11 +271,11 @@ export class AppearanceProfileEngine {
       return this.bboxCache.get(key)!.clone();
     }
 
-    // Try extracting from model if provided
-    if (model && model.properties && model.properties[expressId]?.boundingBox instanceof THREE.Box3) {
-      const b = model.properties[expressId].boundingBox.clone();
-      this.bboxCache.set(key, b);
-      return b;
+    // Try extracting from shared FRAGS v3 indexer or model properties
+    const indexedBox = FragmentIndexer.getInstance().getElementBox(modelId, expressId, model);
+    if (indexedBox) {
+      this.bboxCache.set(key, indexedBox);
+      return indexedBox.clone();
     }
 
     // Deterministic geometric default box

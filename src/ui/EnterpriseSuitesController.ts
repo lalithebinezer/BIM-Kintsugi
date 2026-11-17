@@ -225,7 +225,10 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
 
   bindEnterpriseTrigger("btn-header-measure", "btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
   bindEnterpriseTrigger("btn-header-clash", "btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
-  bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => carbonManager.updateCarbonUI());
+  bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => {
+    carbonManager.updateCarbonUI();
+    void carbonManager.refreshFromFragments();
+  });
   bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
   bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
   bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", renderBcfIssues);
@@ -322,7 +325,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("toggle-clash-deep-bvh")?.addEventListener("change", (e) => {
     const enabled = (e.target as HTMLInputElement).checked;
     clashDetector.setDeepMeshVerification(enabled);
-    showToast(enabled ? "Deep Triangle BVH Clash Verification Enabled" : "Fast AABB Clash Mode Enabled", "info");
+    showToast(enabled ? "Deep Triangle BVH Clash Verification Enabled" : "Fast Sweep-and-Prune AABB Mode Enabled", "info");
+  });
+
+  document.getElementById("toggle-clash-isolate-context")?.addEventListener("change", (e) => {
+    const enabled = (e.target as HTMLInputElement).checked;
+    clashDetector.setIsolateContextOnFocus(enabled);
+    showToast(enabled ? "Clash Pair Isolation on Focus: ON" : "Full Model Context Restored", "info");
   });
 
   document.getElementById("clash-severity-filter")?.addEventListener("change", (e) => {
@@ -358,7 +367,16 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     a.download = `BIM_Kintsugi_Clashes_${Date.now()}.bcf.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("Exported BCF 3.0 Clash Report", "success");
+    showToast("Exported BCF 3.0 JSON Report", "success");
+  });
+
+  document.getElementById("btn-export-clash-bcfzip")?.addEventListener("click", async () => {
+    const count = await clashDetector.exportClashesToNativeBcfZip();
+    renderBcfIssues();
+    showToast(
+      count > 0 ? `Exported ${count} Clash Topic(s) to .bcfzip` : "No clashes to export — run audit first",
+      count > 0 ? "success" : "warning"
+    );
   });
 
   // 6D Carbon Heatmap Actions
@@ -423,12 +441,82 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     showToast(unmuted ? "Microphone Active (Broadcasting Voice)" : "Microphone Muted", unmuted ? "success" : "warning");
   });
 
+  document.getElementById("toggle-hide-demo-peers")?.addEventListener("change", (e) => {
+    const hide = (e.target as HTMLInputElement).checked;
+    collabManager.setHideDemoPeers(hide);
+    showToast(hide ? "Demo coworkers hidden (Real peers only)" : "Demo coworkers visible", "info");
+  });
+
+  const saveProfileInputs = () => {
+    const nameEl = document.getElementById("collab-profile-name") as HTMLInputElement | null;
+    const roleEl = document.getElementById("collab-profile-role") as HTMLInputElement | null;
+    if (nameEl && roleEl) {
+      collabManager.setUserProfile(nameEl.value, roleEl.value);
+    }
+  };
+  document.getElementById("collab-profile-name")?.addEventListener("change", saveProfileInputs);
+  document.getElementById("collab-profile-role")?.addEventListener("change", saveProfileInputs);
+
+  document.getElementById("collab-room-id")?.addEventListener("change", (e) => {
+    const nextRoom = collabManager.setRoomId((e.target as HTMLInputElement).value);
+    showToast(`Collaboration Room switched to ${nextRoom}`, "info");
+  });
+
+  document.getElementById("btn-collab-ws-connect")?.addEventListener("click", async () => {
+    if (collabManager.isWebSocketConnected()) {
+      collabManager.disconnectWebSocketRelay();
+      showToast("Disconnected WebSocket relay", "info");
+      return;
+    }
+    const urlInput = document.getElementById("collab-ws-url") as HTMLInputElement | null;
+    const url = urlInput?.value.trim() || "";
+    if (!/^wss?:\/\/\S+$/i.test(url)) {
+      showToast("Enter a valid ws:// or wss:// relay URL first", "warning");
+      return;
+    }
+    showToast("Connecting to collaboration relay...", "info");
+    const ok = await collabManager.connectWebSocketRelay(url);
+    showToast(ok ? "Cross-device WebSocket relay connected" : "Could not reach relay URL", ok ? "success" : "warning");
+  });
+
+  document.getElementById("btn-collab-rtc-p2p")?.addEventListener("click", async () => {
+    if (collabManager.isWebRtcConnected()) {
+      collabManager.disconnectWebRtc();
+      showToast("Closed WebRTC P2P connection", "info");
+      return;
+    }
+    try {
+      const incoming = window.prompt(
+        "Serverless WebRTC P2P:\n- Leave blank & press OK to CREATE an Invite Offer (copies to clipboard)\n- Or paste a peer's Offer / Answer JSON to join:"
+      );
+      if (incoming === null) return;
+      const trimmed = incoming.trim();
+      if (!trimmed) {
+        const offer = await collabManager.createWebRtcOffer();
+        await navigator.clipboard?.writeText?.(offer).catch(() => {});
+        showToast("WebRTC Offer copied! Share it with peer, then click P2P to paste their Answer.", "success");
+      } else {
+        const parsed = JSON.parse(trimmed);
+        if (parsed?.type === "offer") {
+          const answer = await collabManager.acceptWebRtcOfferAndCreateAnswer(trimmed);
+          await navigator.clipboard?.writeText?.(answer).catch(() => {});
+          showToast("WebRTC Answer created & copied! Send it back to the host.", "success");
+        } else if (parsed?.type === "answer") {
+          await collabManager.acceptWebRtcAnswer(trimmed);
+          showToast("WebRTC P2P DataChannel negotiating...", "success");
+        }
+      }
+    } catch (err: any) {
+      showToast(`P2P handshake error: ${err?.message || err}`, "warning");
+    }
+  });
+
   document.getElementById("btn-collab-copy-invite")?.addEventListener("click", () => {
-    const url = `${window.location.origin}/?room=KINTSUGI-PRO-8924`;
+    const url = collabManager.getInviteUrl();
     navigator.clipboard.writeText(url).then(() => {
-      showToast("Session Invite Link Copied to Clipboard!", "success");
+      showToast(`Invite Link Copied (Room: ${collabManager.getRoomId()})`, "success");
     }).catch(() => {
-      showToast("Room ID: KINTSUGI-PRO-8924", "info");
+      showToast(`Room ID: ${collabManager.getRoomId()}`, "info");
     });
   });
 

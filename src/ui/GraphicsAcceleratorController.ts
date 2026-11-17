@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GraphicsPipeline } from "../core/GraphicsPipeline";
 
 // ============================================================================
 // GRAPHICS ACCELERATOR & GPU PERFORMANCE CONTROLLER
@@ -74,8 +75,37 @@ export function initGraphicsAcceleratorController(world: any, dirLight?: THREE.D
   const dprSelect = document.getElementById("select-gpu-dpr") as HTMLSelectElement | null;
   const shadowResSelect = document.getElementById("select-gpu-shadow-res") as HTMLSelectElement | null;
   const fxaaToggle = document.getElementById("toggle-gpu-fxaa") as HTMLInputElement | null;
+  const webgpuToggle = document.getElementById("settings-toggle-webgpu") as HTMLInputElement | null;
   const benchBtn = document.getElementById("btn-gpu-bench");
   const guideBtn = document.getElementById("btn-gpu-guide");
+
+  const pipeline = GraphicsPipeline.getInstance();
+  const refreshBackendTelemetry = async (forceProbe = false) => {
+    const report = await pipeline.probeHardware({ force: forceProbe });
+    if (apiBackendEl) {
+      apiBackendEl.textContent = pipeline.getBackendDisplayLabel();
+      apiBackendEl.title = report.webgpuAdapterInfo || "WebGL 2.0 Rasterizer";
+    }
+    if (webgpuToggle) {
+      webgpuToggle.checked = pipeline.isExperimentalWebGpuEnabled();
+    }
+  };
+  void refreshBackendTelemetry(false);
+
+  webgpuToggle?.addEventListener("change", async () => {
+    const optedIn = pipeline.setExperimentalWebGpu(webgpuToggle.checked);
+    await refreshBackendTelemetry(true);
+    const rep = pipeline.getCapabilitiesReport();
+    if (typeof (window as any).showToast === "function") {
+      if (optedIn && rep.webgpuSupported) {
+        (window as any).showToast(`WebGPU Adapter Ready (${rep.webgpuAdapterInfo || "GPU"}) — opt-in recorded`, "success");
+      } else if (optedIn) {
+        (window as any).showToast("WebGPU adapter unavailable in this browser — WebGL 2.0 active", "warning");
+      } else {
+        (window as any).showToast("Graphics Backend locked to WebGL 2.0", "info");
+      }
+    }
+  });
 
   const probe = probeGPUCapabilities(world?.renderer?.three);
 
@@ -228,13 +258,16 @@ export function initGraphicsAcceleratorController(world: any, dirLight?: THREE.D
     }
   });
 
-  benchBtn?.addEventListener("click", () => {
+  benchBtn?.addEventListener("click", async () => {
     const info = probeGPUCapabilities(world?.renderer?.three);
+    await refreshBackendTelemetry(true);
+    const gpuReport = pipeline.getCapabilitiesReport();
     const modalContent = `
-<b>GPU Diagnostics & WebGL Hardware Info:</b><br/>
+<b>GPU Diagnostics & WebGL/WebGPU Info:</b><br/>
 • <b>Card:</b> ${info.unmaskedRenderer}<br/>
 • <b>Vendor:</b> ${info.unmaskedVendor}<br/>
 • <b>WebGL Version:</b> ${info.glVersion}<br/>
+• <b>WebGPU Status:</b> ${gpuReport.webgpuSupported ? (gpuReport.webgpuAdapterInfo || "Ready") : "Unavailable (WebGL 2.0 Fallback)"}<br/>
 • <b>GLSL Shader:</b> ${info.shadingLanguageVersion}<br/>
 • <b>Max Texture Size:</b> ${info.maxTextureSize}px<br/>
 • <b>Max Anisotropy:</b> ${info.maxAnisotropy}x<br/>

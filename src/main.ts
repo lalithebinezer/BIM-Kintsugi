@@ -30,7 +30,6 @@ import * as BUI from "@thatopen/ui";
 import CameraControls from "camera-controls";
 import { PropertyEditor, initPropertyEditorUI } from "./ui/PropertyEditor";
 import "./ui/BimViewCube";
-import { PresentationSheetModule } from "./modules/PresentationSheetModule";
 import { showToast } from "./ui/ToastManager";
 import { initEnterpriseSuitesController } from "./ui/EnterpriseSuitesController";
 import { GanttPhasingModule } from "./modules/GanttPhasingModule";
@@ -103,13 +102,11 @@ import { ModelInfoManager } from "./modules/ModelInfoManager";
 import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
 import { SelectionManager } from "./modules/SelectionManager";
-import { formatCurrency, formatItemCount } from "./utils/formatters";
+import { formatCurrency, formatItemCount, escapeHtml } from "./utils/formatters";
 
 import { InteractiveGanttDrawer } from "./ui/InteractiveGanttDrawer";
 import { ScheduleImportParsers } from "./modules/ScheduleImportParsers";
 
-import { ModelDiffModule } from "./modules/ModelDiffModule";
-import { PlanOverlayModule } from "./modules/PlanOverlayModule";
 import { SoundManager } from "./core/SoundManager";
 import { CinematicTourManager } from "./modules/CinematicTourManager";
 
@@ -121,6 +118,8 @@ import { MetadataSyncService } from "./core/MetadataSyncService";
 import { MetadataApiAdapter } from "./core/MetadataApiAdapter";
 import { StreamingLoader } from "./core/StreamingLoader";
 import { PrecisionOriginController } from "./core/PrecisionOriginController";
+import { FragmentIndexer } from "./core/FragmentIndexer";
+import { MetadataPanelController } from "./ui/MetadataPanelController";
 
 BUI.Manager.init();
 initResponsiveToolbar();
@@ -225,6 +224,7 @@ const bimEngine = BimEngine.getInstance(components, world);
 // Initialize Controllers & Managers
 KeyboardController.getInstance().init();
 UIManager.getInstance().init();
+MetadataPanelController.getInstance().init();
 
 const customViewManager = CustomViewManager.getInstance();
 customViewManager.init(world);
@@ -865,7 +865,12 @@ container.addEventListener("dblclick", async (e: MouseEvent) => {
   } else {
     try {
       const caster = components.get(OBC.Raycasters).get(world);
-      const result = (await caster.castRay()) as any;
+      const rect = container.getBoundingClientRect();
+      const dblPos = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      const result = (await caster.castRay({ position: dblPos })) as any;
       if (!result || !result.fragments) {
         if (!e.shiftKey) {
           await highlighter.clear("select");
@@ -1294,28 +1299,6 @@ function getOrGenerateTwinData(modelId: string, expressId: number, ifcType: stri
 // Pre-fill mock data for loaded elements based on their IFC type using standard construction sequencing
 async function initializeModelTwinData(model: any) {
   const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
-  let properties = model.properties || (model as any).getLocalProperties?.() || {};
-
-  const hasRealProperties = properties && Object.keys(properties).length > 0 &&
-    Object.values(properties).some((p: any) => p && p.type && p.type !== "IFCBUILDINGELEMENT");
-
-  if (!hasRealProperties && (!properties || Object.keys(properties).length === 0)) {
-    try {
-      const ids = await model.getItemsIds();
-      if (ids && ids.length > 0) {
-        properties = {};
-        for (const id of ids) {
-          properties[id] = {
-            type: "IFCBUILDINGELEMENT",
-            Name: { value: `Element #${id}` }
-          };
-        }
-        model.properties = properties;
-      }
-    } catch (e) {
-      console.warn("Failed to get element IDs:", e);
-    }
-  }
 
   // Pre-build a map of expressId -> storeyName from classifier Storeys classification
   const storeys = classifier.list.get("Storeys");
@@ -1328,6 +1311,41 @@ async function initializeModelTwinData(model: any) {
             globalElementStoreysMap[`${mId}-${id}`] = storeyName;
           }
         }
+      }
+    }
+  }
+
+  let properties = model.properties || (model as any).getLocalProperties?.() || {};
+
+  // Index via shared async FRAGS v3 FragmentIndexer (categories, names, real Box3 geometry)
+  const indexed = await FragmentIndexer.getInstance().indexModel(modelId, model, {
+    includeBoxes: true,
+    includePsets: false,
+    storeysMap: globalElementStoreysMap,
+  });
+
+  const hasRealProperties = properties && Object.keys(properties).length > 0 &&
+    Object.values(properties).some((p: any) => p && p.type && p.type !== "IFCBUILDINGELEMENT");
+
+  if (!hasRealProperties) {
+    if (indexed.elements.length > 0) {
+      properties = FragmentIndexer.getInstance().toLegacyPropertyMap(indexed);
+      model.properties = properties;
+    } else if (!properties || Object.keys(properties).length === 0) {
+      try {
+        const ids = await model.getItemsIds();
+        if (ids && ids.length > 0) {
+          properties = {};
+          for (const id of ids) {
+            properties[id] = {
+              type: "IFCBUILDINGELEMENT",
+              Name: { value: `Element #${id}` }
+            };
+          }
+          model.properties = properties;
+        }
+      } catch (e) {
+        console.warn("Failed to get element IDs:", e);
       }
     }
   }
@@ -1718,24 +1736,37 @@ if (propsContainer) {
   initPropertyEditorUI(propertyEditor, editorContainer);
 }
 
-// Display element properties in the panel
-async function displayElementProperties(model: any, expressId: number) {
+// Display element properties in the dedicated BIM Element Metadata panel + 4D/5D Inspector
+async function displayElementProperties(
+  model: any,
+  expressId: number,
+  options?: { targetTab?: "metadata" | "inspector" | null }
+) {
   if (!model || expressId === null || expressId === undefined) return;
 
   activeModelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
   activeExpressId = expressId;
+  const targetTab = options?.targetTab === undefined ? "metadata" : options.targetTab;
 
-  // 1. Immediately toggle inspector panel state to selected
+  // 1. Immediately toggle both Metadata and 4D/5D Inspector panels to selected state
   const emptyStateEl = document.getElementById("properties-empty-state");
   if (emptyStateEl) emptyStateEl.style.display = "none";
 
   const selectedStateEl = document.getElementById("properties-selected-state");
   if (selectedStateEl) selectedStateEl.style.display = "flex";
 
-  // Ensure Right Sidebar is visible and switched to the inspector tab
-  document.body.classList.remove('right-sidebar-collapsed');
-  if (typeof (window as any).switchSidebarTab === "function") {
-    (window as any).switchSidebarTab("right-tab-bar", "inspector");
+  const emptyMetaEl = document.getElementById("metadata-empty-state");
+  if (emptyMetaEl) emptyMetaEl.style.display = "none";
+
+  const selectedMetaEl = document.getElementById("metadata-selected-state");
+  if (selectedMetaEl) selectedMetaEl.style.display = "flex";
+
+  // Ensure Right Sidebar is visible and switched to requested tab (defaults to dedicated Metadata tab)
+  if (targetTab !== null) {
+    document.body.classList.remove('right-sidebar-collapsed');
+    if (typeof (window as any).switchSidebarTab === "function") {
+      (window as any).switchSidebarTab("right-tab-bar", targetTab);
+    }
   }
 
   // 2. Fetch properties lazily: check in-memory LRU -> IndexedDB -> Remote API before heavy fallbacks
@@ -2082,81 +2113,97 @@ async function displayElementProperties(model: any, expressId: number) {
   if (propNameEl) propNameEl.innerText = nameVal;
 
   const tableEl = document.getElementById("element-metadata-table") || document.querySelector(".properties-widget .property-table");
+  const metaCtrl = MetadataPanelController.getInstance();
   if (tableEl) {
     tableEl.innerHTML = "";
 
-    addPropertyRow(tableEl, "Express ID", String(expressId), "font-mono font-bold");
-    addPropertyRow(tableEl, "IFC Entity", entityName, "color-green font-bold");
-    addPropertyRow(tableEl, "Name", nameVal);
+    // Group 1: Core Identity & Attributes (always open by default)
+    const coreGroup = metaCtrl.createAccordionGroup("Core Identity & Attributes", "", true, "IFC");
+    addPropertyRow(coreGroup.content, "Express ID", String(expressId), "font-mono font-bold");
+    addPropertyRow(coreGroup.content, "IFC Entity", entityName, "color-green font-bold");
+    addPropertyRow(coreGroup.content, "Name", nameVal);
 
     if (guid) {
-      addPropertyRow(tableEl, "Global ID (GUID)", guid, "font-mono");
+      addPropertyRow(coreGroup.content, "Global ID (GUID)", guid, "font-mono");
     }
     if (storeyName) {
-      addPropertyRow(tableEl, "Storey / Level", storeyName, "color-cyan");
+      addPropertyRow(coreGroup.content, "Storey / Level", storeyName, "color-cyan");
     }
 
     for (const key in elementProps) {
-      if (key === "type" || key === "expressId" || key === "Name" || key === "localId" || key === "_localId" || key === "GlobalId" || key.startsWith("Pset_") || key.startsWith("Qto_")) continue;
-      
+      if (
+        key === "type" ||
+        key === "expressId" ||
+        key === "Name" ||
+        key === "localId" ||
+        key === "_localId" ||
+        key === "GlobalId" ||
+        key === "psets" ||
+        key === "boundingBox" ||
+        key === "Storey" ||
+        key.startsWith("Pset_") ||
+        key.startsWith("Qto_")
+      ) {
+        continue;
+      }
+
       const formattedLabel = key.replace(/([A-Z])/g, " $1").trim();
       const val = getPropValue(elementProps[key]);
       if (val !== undefined && val !== null && val !== "" && val !== "[]" && val !== "{}") {
-        addPropertyRow(tableEl, formattedLabel, String(val));
+        addPropertyRow(coreGroup.content, formattedLabel, String(val));
       }
     }
+    tableEl.appendChild(coreGroup.details);
 
-    // Render Property Sets
+    // Group 2: Property Sets (collapsible accordions)
     for (const psetName in psets) {
-      const divider = document.createElement("div");
-      divider.className = "prop-set-header";
-      divider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: var(--accent-300); margin: 0.5rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
-      divider.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> <span>${psetName}</span>`;
-      tableEl.appendChild(divider);
-
-      const psetProps = psets[psetName];
-      for (const propName in psetProps) {
-        addPropertyRow(tableEl, propName, String(psetProps[propName]), "", `${psetName}.${propName}`);
+      const psetProps = psets[psetName] || {};
+      const propKeys = Object.keys(psetProps);
+      if (propKeys.length === 0) continue;
+      const psetGroup = metaCtrl.createAccordionGroup(psetName, "", true, String(propKeys.length));
+      for (const propName of propKeys) {
+        addPropertyRow(psetGroup.content, propName, String(psetProps[propName]), "", `${psetName}.${propName}`);
       }
+      tableEl.appendChild(psetGroup.details);
     }
 
-    // If a type relation is found, append type details
+    // Group 3: Type relation details
     if (typeElementId !== null) {
       const typeProps = properties[typeElementId];
       if (typeProps) {
-        const typeDivider = document.createElement("div");
-        typeDivider.className = "prop-set-header";
-        typeDivider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: var(--color-purple); margin: 0.8rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
-        typeDivider.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> <span>Type: ${typeProps.Name?.value || typeProps.Name || "IFC Type"}</span>`;
-        tableEl.appendChild(typeDivider);
-
-        addPropertyRow(tableEl, "Type Express ID", String(typeElementId));
+        const typeTitle = `Type: ${typeProps.Name?.value || typeProps.Name || "IFC Type"}`;
+        const typeGroup = metaCtrl.createAccordionGroup(typeTitle, "", true, `#${typeElementId}`);
+        addPropertyRow(typeGroup.content, "Type Express ID", String(typeElementId));
         if (typeProps.type) {
           const typeEntityName = getIfcEntityName(typeProps.type);
-          addPropertyRow(tableEl, "Type Entity", typeEntityName, "color-green");
+          addPropertyRow(typeGroup.content, "Type Entity", typeEntityName, "color-green");
         }
-        
         for (const key in typeProps) {
           if (key === "type" || key === "expressId" || key === "Name") continue;
           const formattedLabel = key.replace(/([A-Z])/g, " $1").trim();
           const val = getPropValue(typeProps[key]);
           if (val !== undefined && val !== null && val !== "" && val !== "[]" && val !== "{}") {
-            addPropertyRow(tableEl, formattedLabel, String(val));
+            addPropertyRow(typeGroup.content, formattedLabel, String(val));
           }
         }
+        tableEl.appendChild(typeGroup.details);
       }
     }
 
-    // Extract real quantities and material numbers from standard Qto_* or custom property sets
+    // Group 4: Extracted Quantities & Material
     const qtoData = extractQuantityData(elementProps, psets);
-    if (qtoData.materialNumber) {
-      addPropertyRow(tableEl, "Material Number", qtoData.materialNumber, "color-purple font-bold");
-    }
-    if (qtoData.quantity > 0) {
-      addPropertyRow(tableEl, `IFC Quantity (${qtoData.quantityType})`, `${qtoData.quantity} ${qtoData.unit}`, "color-green");
+    if (qtoData.materialNumber || qtoData.quantity > 0) {
+      const qtoGroup = metaCtrl.createAccordionGroup("Quantities & Material", "", true, "Qto");
+      if (qtoData.materialNumber) {
+        addPropertyRow(qtoGroup.content, "Material Number", qtoData.materialNumber, "color-purple font-bold");
+      }
+      if (qtoData.quantity > 0) {
+        addPropertyRow(qtoGroup.content, `IFC Quantity (${qtoData.quantityType})`, `${qtoData.quantity} ${qtoData.unit}`, "color-green");
+      }
+      tableEl.appendChild(qtoGroup.details);
     }
 
-    // Georeference & Site Coordinates Section
+    // Group 5: Georeference & Site Coordinates (collapsed by default so primary metadata stays scannable)
     try {
       const gis = await gisFeature.load();
       const loc = gis.getLocation();
@@ -2168,21 +2215,33 @@ async function displayElementProperties(model: any, expressId: number) {
       const elevAmsl = Number((loc.elevationAMSL + center.y).toFixed(2));
       const utm = gis.toUtm(geoPos.lat, geoPos.lon);
 
-      const gisDivider = document.createElement("div");
-      gisDivider.className = "prop-set-header";
-      gisDivider.style.cssText = "font-size: 0.65rem; font-weight: 700; color: var(--color-cyan); margin: 0.8rem 0.25rem 0.2rem 0.25rem; text-transform: uppercase; border-bottom: 1px solid var(--color-cyan-border); padding-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;";
-      gisDivider.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> <span>GIS &amp; Georeference (WGS84)</span>`;
-      tableEl.appendChild(gisDivider);
-
-      addPropertyRow(tableEl, "WGS84 Latitude", `${geoPos.lat.toFixed(6)}° (${gis.toDms(geoPos.lat, true)})`, "color-cyan font-mono");
-      addPropertyRow(tableEl, "WGS84 Longitude", `${geoPos.lon.toFixed(6)}° (${gis.toDms(geoPos.lon, false)})`, "color-cyan font-mono");
-      addPropertyRow(tableEl, "Elevation (AMSL)", `${elevAmsl} m`, "color-green font-bold");
-      addPropertyRow(tableEl, "UTM Coordinate", `${utm.zone} E:${Math.round(utm.easting)}m N:${Math.round(utm.northing)}m`, "font-mono");
-      addPropertyRow(tableEl, "Project Site Datum", loc.address || "Default Site Datum", "text-muted");
+      const gisGroup = metaCtrl.createAccordionGroup("GIS & Georeference (WGS84)", "", false, "WGS84");
+      addPropertyRow(gisGroup.content, "WGS84 Latitude", `${geoPos.lat.toFixed(6)}° (${gis.toDms(geoPos.lat, true)})`, "color-cyan font-mono");
+      addPropertyRow(gisGroup.content, "WGS84 Longitude", `${geoPos.lon.toFixed(6)}° (${gis.toDms(geoPos.lon, false)})`, "color-cyan font-mono");
+      addPropertyRow(gisGroup.content, "Elevation (AMSL)", `${elevAmsl} m`, "color-green font-bold");
+      addPropertyRow(gisGroup.content, "UTM Coordinate", `${utm.zone} E:${Math.round(utm.easting)}m N:${Math.round(utm.northing)}m`, "font-mono");
+      addPropertyRow(gisGroup.content, "Project Site Datum", loc.address || "Default Site Datum", "text-muted");
+      tableEl.appendChild(gisGroup.details);
     } catch (gisPropErr) {
       console.warn("Inspector GIS Georeference display warning:", gisPropErr);
     }
   }
+
+  metaCtrl.setSelectedElementState({
+    modelId: activeModelId || "default-model",
+    expressId,
+    entityName,
+    nameVal,
+    guid: guid || undefined,
+    storeyName: storeyName || undefined,
+    dimensions: {
+      length: document.getElementById("prop-dim-length")?.innerText || "-",
+      width: document.getElementById("prop-dim-width")?.innerText || "-",
+      height: document.getElementById("prop-dim-height")?.innerText || "-",
+      volume: document.getElementById("prop-dim-volume")?.innerText || "-",
+    },
+    psets,
+  });
 
   // 13. Retrieve 4D/5D data from local twin database or generate mock
   const ifcType = String(elementProps.type ?? entityName ?? "").toUpperCase();
@@ -2281,6 +2340,7 @@ function resetPropertiesPanel() {
   if (viewportBar) viewportBar.style.display = "none";
   document.body.classList.remove("has-viewport-selection");
   MinimapModule.getInstance().setSelectedElement(null);
+  MetadataPanelController.getInstance().reset();
 
   if (propertyEditor) {
     propertyEditor.deselect();
@@ -2615,6 +2675,12 @@ if (container && hoverBadgeEl) {
         if (hoverPropStoreyEl) hoverPropStoreyEl.textContent = meta.storey;
         if (hoverPropDimensionsEl) hoverPropDimensionsEl.textContent = meta.dimensions;
         if (hoverPropVolumeEl) hoverPropVolumeEl.textContent = meta.volume;
+
+        const activeCtxMenu = document.getElementById("bim-context-menu");
+        if (activeCtxMenu && activeCtxMenu.style.display === "flex") {
+          hoverBadgeEl.style.display = "none";
+          return;
+        }
 
         hoverBadgeEl.style.display = "flex";
         // Recalculate position with actual rendered element dimensions
@@ -3812,26 +3878,7 @@ const initBim = async () => {
         }
       }
 
-      // Fit camera to model bounding box so loaded model is immediately visible and centered
-      try {
-        const boundingBoxer = components.get(OBC.BoundingBoxer);
-        if (boundingBoxer) {
-          boundingBoxer.list.clear();
-          boundingBoxer.addFromModels();
-          const box = boundingBoxer.get();
-          if (!box.isEmpty() && world.camera?.controls) {
-            await (world.camera.controls as any).fitToBox(box, true);
-          }
-          boundingBoxer.list.clear();
-        }
-      } catch (err) {
-        console.warn("Camera fitToBox fallback:", err);
-      }
-
-      if (typeof (window as any).syncQueryCategoryDropdown === "function") {
-        (window as any).syncQueryCategoryDropdown((model as any)?.modelId);
-      }
-
+      // Worker RPC calls (BoundingBoxer, getCategories, LodMode) run after load resolves in loadModelData()
       fragments.core.update(true);
     });
 
@@ -3870,14 +3917,14 @@ const initBim = async () => {
       SelectionManager.getInstance().syncFromSelectionMap(selection);
 
       if (firstExpressId !== null && selectedModel) {
-        await displayElementProperties(selectedModel, firstExpressId);
+        await displayElementProperties(selectedModel, firstExpressId, { targetTab: "metadata" });
         if (propertyEditor) {
           await propertyEditor.selectElement(selectedModel, firstExpressId);
         }
-        // Show properties panel automatically and switch to Inspector tab
+        // Show right sidebar automatically on the dedicated Metadata tab
         document.body.classList.remove('right-sidebar-collapsed');
         if (typeof (window as any).switchSidebarTab === "function") {
-          (window as any).switchSidebarTab("right-tab-bar", "inspector");
+          (window as any).switchSidebarTab("right-tab-bar", "metadata");
         }
         return;
       }
@@ -4152,10 +4199,11 @@ async function loadModelData(name: string, buffer: Uint8Array) {
             progress.innerText = `${pctVal}%`;
             text.innerText = stageMsg;
           },
-          onPhaseModelReady: async (_phaseModel, phase) => {
-            if (phase === "internals") {
+          onPhaseModelReady: async (phaseModel, phase) => {
+            if (phase === "internals" && phaseModel) {
               refreshFileList();
               await updateClassificationUI().catch(() => {});
+              await initializeModelTwinData(phaseModel).catch(() => {});
             }
           },
         });
@@ -4242,6 +4290,9 @@ async function loadModelData(name: string, buffer: Uint8Array) {
 
       // Apply category-based theme colors to three.js mesh materials
       await applyCategoryColors();
+      if (typeof (window as any).syncQueryCategoryDropdown === "function") {
+        void (window as any).syncQueryCategoryDropdown(resolvedModelId);
+      }
 
       // Synchronize OBC.Views 2D Floor Plan cuts & Minimap level selector with loaded IFC storeys
       try {
@@ -4772,7 +4823,7 @@ document.getElementById("btn-selection-hud-hide")?.addEventListener("click", () 
 document.getElementById("btn-selection-hud-inspect")?.addEventListener("click", () => {
   document.body.classList.remove('right-sidebar-collapsed');
   if (typeof (window as any).switchSidebarTab === "function") {
-    (window as any).switchSidebarTab("right-tab-bar", "inspector");
+    (window as any).switchSidebarTab("right-tab-bar", "metadata");
   }
 });
 
@@ -7124,13 +7175,26 @@ if (sectionBoxYMaxInput) {
   });
 }
 
-function resolveElementTag(expressId: number): string {
+function resolveElementTag(expressId: number, modelId?: string): string {
+  const indexer = FragmentIndexer.getInstance();
+  if (modelId) {
+    const el = indexer.getCachedElement(modelId, expressId);
+    if (el) return `${el.category} · ${el.name} (#${expressId})`;
+  } else {
+    for (const [mId] of indexer.getSafeModelsMap(fragments)) {
+      const el = indexer.getCachedElement(mId, expressId);
+      if (el) return `${el.category} · ${el.name} (#${expressId})`;
+    }
+  }
   try {
     const cats = classifier.list.get("Categories");
     if (cats) {
       for (const [catName, group] of cats) {
-        for (const [, idSet] of (group as any).map) {
-          if (idSet.has(expressId)) return `${catName} #${expressId}`;
+        const idMap = (group as any).map;
+        if (idMap) {
+          for (const [, idSet] of idMap) {
+            if (idSet?.has?.(expressId)) return `${catName} #${expressId}`;
+          }
         }
       }
     }
@@ -9044,7 +9108,8 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tab-finder", title: "Items Finder & Storey Filter", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`, action: () => (window as any).switchSidebarTab?.("left-tab-bar", "finder") },
     { id: "tab-4d", title: "4D Construction Schedule", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`, action: () => (window as any).switchSidebarTab?.("left-tab-bar", "schedule") },
     { id: "tab-scene", title: "Scene Tree & Post-Processing", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 12 5 12 5 22 19 22 19 12 22 12 12 2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "scene") },
-    { id: "tab-inspector", title: "Element Properties & 5D Inspector", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "inspector") },
+    { id: "tab-metadata", title: "BIM Element Metadata & Properties (Key 8)", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "metadata") },
+    { id: "tab-inspector", title: "4D/5D Cost & Schedule Inspector (Key 5)", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "inspector") },
     { id: "tab-tools", title: "Tools (Measure / Pins / Section / Explode)", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "tools") },
     { id: "tab-camera", title: "First Person Camera Controls", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "controls") },
     
@@ -9052,7 +9117,7 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "sample-snowdon", title: "Load Sample: Snowdon Towers (Structural IFC 13.9MB)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`, action: () => loadSampleModel("snowdon") },
     { id: "sample-school", title: "Load Sample: School Architecture (FRAG)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/></svg>`, action: () => loadSampleModel("school") },
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
-    { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: () => PresentationSheetModule.getInstance().export4KBoard() },
+    { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: async () => { (await import("./modules/PresentationSheetModule")).PresentationSheetModule.getInstance().export4KBoard(); } },
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => document.getElementById("btn-4d-mode")?.click() },
     { id: "tool-4d-record", title: "Record 4D Simulation Video (WebM)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`, action: () => runFeature(async () => (await recorder.load()).toggleRecording()) },
     { id: "tool-4d-gantt", title: "Toggle Interactive 4D Construction Gantt Chart", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`, action: () => InteractiveGanttDrawer.getInstance().toggle() },
@@ -9064,9 +9129,10 @@ const getCommandRegistry = (): CommandItem[] => {
         return;
       }
       const ids = Array.from(fragments.list.keys());
+      const { ModelDiffModule } = await import("./modules/ModelDiffModule");
       await ModelDiffModule.getInstance().compareModels(ids[0], ids[1]);
     }},
-    { id: "tool-2d-plan-overlay", title: "Toggle 2D Storey Drawing Sheet Overlay", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>`, action: () => PlanOverlayModule.getInstance().toggleVisibility() },
+    { id: "tool-2d-plan-overlay", title: "Toggle 2D Storey Drawing Sheet Overlay", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>`, action: async () => { (await import("./modules/PlanOverlayModule")).PlanOverlayModule.getInstance().toggleVisibility(); } },
     { id: "tool-pin-tour", title: "Play Guided 3D Issue Tour", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, action: () => AnnotationModule.getInstance().startTour() },
     { id: "tool-export-bcf", title: "Export Pins (BCF / JSON Report)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, action: () => AnnotationModule.getInstance().exportBCFJSON() },
     { id: "tool-xray-toggle", title: "Toggle X-Ray Isolation Mode", category: "Display", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`, action: () => AnnotationModule.getInstance().toggleXRay() },
@@ -9264,6 +9330,7 @@ let ctxElementName: string | undefined = undefined;
 container.addEventListener("contextmenu", async (e: MouseEvent) => {
   e.preventDefault();
   if (!ctxMenu) return;
+  if (hoverBadgeEl) hoverBadgeEl.style.display = "none";
 
   const rect = container.getBoundingClientRect();
   const mouse = new THREE.Vector2(
@@ -9276,17 +9343,18 @@ container.addEventListener("contextmenu", async (e: MouseEvent) => {
   ctxExpressId = undefined;
   ctxElementName = undefined;
 
-  // Raycast against IFC elements
+  // Raycast against IFC elements at the exact right-click cursor NDC coordinates
   try {
     const caster = components.get(OBC.Raycasters).get(world);
-    const result = (await caster.castRay()) as any;
+    const result = (await caster.castRay({ position: mouse })) as any;
     if (result && result.point) {
       ctxHitPoint = result.point.clone();
-      if (result.fragments?.modelId && result.localId !== undefined) {
-        ctxModelId = result.fragments.modelId;
+      const hitModelId = result.fragments?.modelId || result.object?.modelId;
+      if (hitModelId && result.localId !== undefined) {
+        ctxModelId = String(hitModelId);
         ctxExpressId = result.localId;
         if (typeof ctxExpressId === "number") {
-          ctxElementName = resolveElementTag(ctxExpressId);
+          ctxElementName = resolveElementTag(ctxExpressId, ctxModelId);
         }
       }
     }
@@ -9309,9 +9377,18 @@ container.addEventListener("contextmenu", async (e: MouseEvent) => {
   }
 
   if (ctxTitle) {
-    ctxTitle.innerHTML = ctxElementName 
-      ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> ${ctxElementName}</span>`
+    ctxTitle.innerHTML = ctxElementName
+      ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> ${escapeHtml(ctxElementName)}</span>`
       : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> 3D Point Coordinates</span>`;
+  }
+
+  const ctxPropsSpan = ctxMenu.querySelector('#ctx-action-properties span');
+  if (ctxPropsSpan) {
+    ctxPropsSpan.textContent = ctxModelId && ctxExpressId !== undefined
+      ? "Properties (Metadata)"
+      : activeModelId && activeExpressId !== null
+        ? "Properties (Current Selection)"
+        : "Properties (Metadata)";
   }
 
   ctxMenu.style.display = "flex";
@@ -9329,7 +9406,7 @@ document.addEventListener("pointerdown", (e: MouseEvent) => {
 // Context Menu Action Listeners
 if (ctxMenu) {
   ctxMenu.querySelectorAll(".ctx-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const action = btn.getAttribute("data-action");
       ctxMenu.style.display = "none";
 
@@ -9355,12 +9432,24 @@ if (ctxMenu) {
         topic.viewpoint.cameraTarget = { x: ctxHitPoint.x, y: ctxHitPoint.y, z: ctxHitPoint.z };
         bcfMgr.registerTopicMarker(topic);
         showToast(`Created BCF Issue & 3D Marker on ${ctxElementName || "Viewport"}`, "success");
-      } else if (action === "properties" && ctxModelId && ctxExpressId !== undefined) {
-        const fragments = components.get(OBC.FragmentsManager);
-        const model = fragments.list.get(ctxModelId);
-        if (model) {
-          displayElementProperties(model, ctxExpressId);
-          (window as any).switchSidebarTab?.("right-tab-bar", "inspector");
+      } else if (action === "properties") {
+        const targetModelId = ctxModelId || activeModelId || undefined;
+        const targetExpressId = ctxExpressId !== undefined ? ctxExpressId : (activeExpressId ?? undefined);
+        const fragmentsMgr = components.get(OBC.FragmentsManager);
+        const model = targetModelId ? fragmentsMgr.list.get(targetModelId) : null;
+        if (model && targetModelId && targetExpressId !== undefined && targetExpressId !== null) {
+          for (const k in multiSelectedElements) multiSelectedElements[k].clear();
+          multiSelectedElements[targetModelId] = new Set([targetExpressId]);
+          updateMultiSelectionBatchCard();
+          SelectionManager.getInstance().syncFromSelectionMap(multiSelectedElements);
+          try {
+            await highlighter.highlightByID("select", { [targetModelId]: new Set([targetExpressId]) }, true, false);
+          } catch {}
+          await displayElementProperties(model, targetExpressId, { targetTab: "metadata" });
+        } else {
+          document.body.classList.remove("right-sidebar-collapsed");
+          (window as any).switchSidebarTab?.("right-tab-bar", "metadata");
+          showToast("Right-click or select a 3D element to inspect BIM Metadata", "info");
         }
       } else if (action === "xray" && ctxModelId && ctxExpressId !== undefined) {
         AnnotationModule.getInstance().toggleXRay();
@@ -9581,6 +9670,7 @@ document.getElementById("btn-trigger-model-diff")?.addEventListener("click", asy
     return;
   }
   showToast(`Running 3D Revision Diff: ${ids[0]} vs ${ids[1]}...`, "info");
+  const { ModelDiffModule } = await import("./modules/ModelDiffModule");
   await ModelDiffModule.getInstance().compareModels(ids[0], ids[1]);
 });
 

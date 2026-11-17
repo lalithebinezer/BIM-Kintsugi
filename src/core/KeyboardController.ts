@@ -77,6 +77,7 @@ export class KeyboardController {
           case '5': switchTab('right-tab-bar', 'inspector'); break;
           case '6': switchTab('right-tab-bar', 'controls'); break;
           case '7': switchTab('right-tab-bar', 'tools'); break;
+          case '8': switchTab('right-tab-bar', 'metadata'); break;
         }
       }
 

@@ -68,10 +68,6 @@ export class ModelManager {
             );
           }
 
-          if (typeof model.setLodMode === "function") {
-            Promise.resolve(model.setLodMode(FRAGS.LodMode.DEFAULT)).catch(() => {});
-          }
-
           PrecisionOriginController.getInstance().registerAnchoredObject(
             String((model as any).modelId || "model"),
             modelObj

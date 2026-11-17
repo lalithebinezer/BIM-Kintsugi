@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
+import { escapeHtml } from "../utils/formatters";
 
 export interface CollabUser {
   id: string;
@@ -7,6 +8,7 @@ export interface CollabUser {
   role: string;
   color: string;
   isHost?: boolean;
+  isDemo?: boolean;
   isSpeaking?: boolean;
   isMuted?: boolean;
   currentSelection?: string;
@@ -30,13 +32,24 @@ export interface CollabChatMessage {
 export class CollaborationManager {
   private static instance: CollaborationManager;
   private static readonly STORAGE_KEY = "bim_live_peers_enabled";
+  private static readonly PROFILE_STORAGE_KEY = "bim_collab_profile";
+  private static readonly HIDE_DEMO_STORAGE_KEY = "bim_collab_hide_demo";
+  private static readonly RELAY_STORAGE_KEY = "bim_collab_relay_url";
   private engine: BimEngine;
+  private roomId: string = "KINTSUGI-PRO-8924";
   private activeUsers: CollabUser[] = [];
   private currentUser: CollabUser;
   private chatMessages: CollabChatMessage[] = [];
   private isLivePeersEnabled: boolean = true;
+  private hideDemoPeers: boolean = false;
   private isFollowHostActive: boolean = false;
   private broadcastChannel: BroadcastChannel | null = null;
+  private wsRelay: WebSocket | null = null;
+  private wsRelayUrl: string = "";
+  private wsConnected: boolean = false;
+  private rtcPeer: RTCPeerConnection | null = null;
+  private rtcChannel: RTCDataChannel | null = null;
+  private rtcConnected: boolean = false;
   private pointerBound: boolean = false;
   private avatarGroup: THREE.Group;
   private beaconGroup: THREE.Group;
@@ -55,11 +68,12 @@ export class CollaborationManager {
       this.engine.world.scene.three.add(this.beaconGroup);
     }
 
+    const savedProfile = this.loadProfilePreference();
     const randomColor = this.userColors[Math.floor(Math.random() * this.userColors.length)];
     this.currentUser = {
       id: `user_${Math.random().toString(36).substring(2, 8)}`,
-      name: "You (Reviewer)",
-      role: "Lead Coordinator",
+      name: savedProfile.name || "You (Reviewer)",
+      role: savedProfile.role || "Lead Coordinator",
       color: randomColor,
       isHost: false,
       isSpeaking: false,
@@ -71,19 +85,39 @@ export class CollaborationManager {
       lastActive: "Just now",
     };
 
+    this.roomId = this.resolveInitialRoomId();
     this.isLivePeersEnabled = this.loadLivePeersPreference();
+    this.hideDemoPeers = this.loadHideDemoPreference();
+    this.wsRelayUrl = this.loadRelayUrlPreference();
     this.seedDefaultCollabPeers();
     this.seedDefaultChat();
     this.bindPointerTracking();
 
     if (this.isLivePeersEnabled) {
       this.initBroadcastChannel();
+      if (this.wsRelayUrl) {
+        void this.connectWebSocketRelay(this.wsRelayUrl);
+      }
       this.renderPeerAvatars();
     } else {
       this.avatarGroup.visible = false;
       this.beaconGroup.visible = false;
       this.clearPeerAvatars();
     }
+  }
+
+  private resolveInitialRoomId(): string {
+    try {
+      if (typeof window !== "undefined" && window.location?.search) {
+        const params = new URLSearchParams(window.location.search);
+        const room = params.get("room");
+        if (room) {
+          const clean = room.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48);
+          if (clean) return clean;
+        }
+      }
+    } catch {}
+    return "KINTSUGI-PRO-8924";
   }
 
   private loadLivePeersPreference(): boolean {
@@ -93,6 +127,112 @@ export class CollaborationManager {
       }
     } catch {}
     return true;
+  }
+
+  private loadHideDemoPreference(): boolean {
+    try {
+      if (typeof localStorage !== "undefined") {
+        return localStorage.getItem(CollaborationManager.HIDE_DEMO_STORAGE_KEY) === "true";
+      }
+    } catch {}
+    return false;
+  }
+
+  private loadRelayUrlPreference(): string {
+    try {
+      if (typeof localStorage !== "undefined") {
+        return localStorage.getItem(CollaborationManager.RELAY_STORAGE_KEY) || "";
+      }
+    } catch {}
+    return "";
+  }
+
+  private loadProfilePreference(): { name?: string; role?: string } {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const raw = localStorage.getItem(CollaborationManager.PROFILE_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            name: typeof parsed?.name === "string" ? parsed.name.slice(0, 40) : undefined,
+            role: typeof parsed?.role === "string" ? parsed.role.slice(0, 40) : undefined,
+          };
+        }
+      }
+    } catch {}
+    return {};
+  }
+
+  public getRoomId(): string {
+    return this.roomId;
+  }
+
+  public setRoomId(nextRoom: string): string {
+    const clean = String(nextRoom || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48) || "KINTSUGI-PRO-8924";
+    if (clean === this.roomId) return this.roomId;
+    this.closeBroadcastChannel();
+    this.roomId = clean;
+    if (this.isLivePeersEnabled) {
+      this.initBroadcastChannel();
+      this.broadcastMyPresence();
+    }
+    this.updateCollabUI();
+    return this.roomId;
+  }
+
+  public getInviteUrl(): string {
+    if (typeof window === "undefined") {
+      return `/?room=${encodeURIComponent(this.roomId)}`;
+    }
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.set("room", this.roomId);
+      return u.toString();
+    } catch {
+      return `${window.location.origin}/?room=${encodeURIComponent(this.roomId)}`;
+    }
+  }
+
+  public setUserProfile(name: string, role: string): { name: string; role: string } {
+    const cleanName = String(name || "").trim().slice(0, 40) || "You (Reviewer)";
+    const cleanRole = String(role || "").trim().slice(0, 40) || "Lead Coordinator";
+    this.currentUser.name = cleanName;
+    this.currentUser.role = cleanRole;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(
+          CollaborationManager.PROFILE_STORAGE_KEY,
+          JSON.stringify({ name: cleanName, role: cleanRole })
+        );
+      }
+    } catch {}
+    this.broadcastMyPresence();
+    this.updateCollabUI();
+    return { name: cleanName, role: cleanRole };
+  }
+
+  public setHideDemoPeers(hide: boolean): boolean {
+    this.hideDemoPeers = Boolean(hide);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(CollaborationManager.HIDE_DEMO_STORAGE_KEY, this.hideDemoPeers ? "true" : "false");
+      }
+    } catch {}
+    this.renderPeerAvatars();
+    this.updateCollabUI();
+    return this.hideDemoPeers;
+  }
+
+  public isHidingDemoPeers(): boolean {
+    return this.hideDemoPeers;
+  }
+
+  public getTransportSummary(): string {
+    const parts: string[] = [];
+    if (this.rtcConnected) parts.push("WebRTC P2P");
+    if (this.wsConnected) parts.push("WebSocket Relay");
+    if (parts.length === 0 && this.broadcastChannel) parts.push("Same-Browser Tabs");
+    return parts.length > 0 ? parts.join(" + ") : "Offline";
   }
 
   public static getInstance(): CollaborationManager {
@@ -122,12 +262,17 @@ export class CollaborationManager {
       this.avatarGroup.visible = true;
       this.beaconGroup.visible = true;
       this.initBroadcastChannel();
+      if (this.wsRelayUrl && !this.wsConnected) {
+        void this.connectWebSocketRelay(this.wsRelayUrl);
+      }
       this.renderPeerAvatars();
     } else {
       this.isFollowHostActive = false;
       this.currentUser.isMuted = true;
       this.currentUser.isSpeaking = false;
       this.closeBroadcastChannel();
+      this.disconnectWebSocketRelay();
+      this.disconnectWebRtc();
       this.avatarGroup.visible = false;
       this.beaconGroup.visible = false;
       this.clearPeerAvatars();
@@ -147,7 +292,10 @@ export class CollaborationManager {
     if (!this.isLivePeersEnabled) {
       return [this.currentUser];
     }
-    return [this.currentUser, ...this.activeUsers];
+    const visiblePeers = this.hideDemoPeers
+      ? this.activeUsers.filter((u) => !u.isDemo)
+      : this.activeUsers;
+    return [this.currentUser, ...visiblePeers];
   }
 
   public getChatMessages(): CollabChatMessage[] {
@@ -212,16 +360,11 @@ export class CollaborationManager {
 
     this.spawnBeacon(pinPos, this.currentUser.color, `${this.currentUser.name} Pinged Location`);
     
-    // Broadcast ping
-    if (this.broadcastChannel) {
-      this.broadcastChannel.postMessage({
-        type: "ping_location",
-        data: {
-          pos: pinPos,
-          user: this.currentUser,
-        },
-      });
-    }
+    // Broadcast ping across active transports
+    this.publishTransportMessage("ping_location", {
+      pos: pinPos,
+      user: this.currentUser,
+    });
 
     this.sendChatMessage(`📍 Pinged 3D Coordinate [${pinPos[0].toFixed(1)}, ${pinPos[1].toFixed(1)}, ${pinPos[2].toFixed(1)}]`, pinPos);
     return pinPos;
@@ -271,15 +414,212 @@ export class CollaborationManager {
 
     this.chatMessages.push(msg);
 
-    if (this.isLivePeersEnabled && this.broadcastChannel) {
-      this.broadcastChannel.postMessage({
-        type: "chat_message",
-        data: msg,
-      });
+    if (this.isLivePeersEnabled) {
+      this.publishTransportMessage("chat_message", msg);
     }
 
     this.updateCollabUI();
     return msg;
+  }
+
+  private publishTransportMessage(type: string, data: any) {
+    if (!this.isLivePeersEnabled) return;
+    const envelope = { type, roomId: this.roomId, data };
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage(envelope);
+      } catch {}
+    }
+    const serialized = JSON.stringify(envelope);
+    if (this.wsRelay && this.wsRelay.readyState === 1) {
+      try {
+        this.wsRelay.send(serialized);
+      } catch {}
+    }
+    if (this.rtcChannel && this.rtcChannel.readyState === "open") {
+      try {
+        this.rtcChannel.send(serialized);
+      } catch {}
+    }
+  }
+
+  private handleTransportPayload(payload: any) {
+    if (!this.isLivePeersEnabled || !payload || typeof payload !== "object") return;
+    if (payload.roomId && payload.roomId !== this.roomId) return;
+    const { type, data } = payload;
+    if (type === "user_presence" && data?.id && data.id !== this.currentUser.id) {
+      this.handlePeerPresence(data);
+    } else if (type === "user_leave" && data?.id && data.id !== this.currentUser.id) {
+      this.activeUsers = this.activeUsers.filter((u) => u.id !== data.id);
+      this.renderPeerAvatars();
+      this.updateCollabUI();
+    } else if (type === "chat_message" && data?.id && data.userId !== this.currentUser.id) {
+      if (!this.chatMessages.some((m) => m.id === data.id)) {
+        this.chatMessages.push(data);
+        this.updateCollabUI();
+      }
+    } else if (type === "ping_location" && data?.pos && data?.user?.id !== this.currentUser.id) {
+      this.spawnBeacon(data.pos, data.user?.color || "#38BDF8", `${data.user?.name || "Peer"} Pinged Location`);
+    }
+  }
+
+  public async connectWebSocketRelay(url: string): Promise<boolean> {
+    const trimmed = String(url || "").trim();
+    if (!/^wss?:\/\/\S+$/i.test(trimmed)) return false;
+
+    this.disconnectWebSocketRelay();
+    this.wsRelayUrl = trimmed;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(CollaborationManager.RELAY_STORAGE_KEY, trimmed);
+      }
+    } catch {}
+
+    if (typeof WebSocket === "undefined") return false;
+
+    return new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(trimmed);
+        this.wsRelay = ws;
+        const timeout = setTimeout(() => {
+          if (!this.wsConnected) resolve(false);
+        }, 5000);
+
+        ws.addEventListener("open", () => {
+          clearTimeout(timeout);
+          this.wsConnected = true;
+          this.publishTransportMessage("user_presence", this.currentUser);
+          this.updateCollabUI();
+          resolve(true);
+        });
+        ws.addEventListener("message", (ev) => {
+          try {
+            const parsed = JSON.parse(String(ev.data || ""));
+            this.handleTransportPayload(parsed);
+          } catch {}
+        });
+        ws.addEventListener("close", () => {
+          this.wsConnected = false;
+          if (this.wsRelay === ws) this.wsRelay = null;
+          this.updateCollabUI();
+        });
+        ws.addEventListener("error", () => {
+          clearTimeout(timeout);
+          this.wsConnected = false;
+          this.updateCollabUI();
+          resolve(false);
+        });
+      } catch {
+        resolve(false);
+      }
+    });
+  }
+
+  public disconnectWebSocketRelay() {
+    this.wsConnected = false;
+    if (!this.wsRelay) return;
+    try {
+      if (this.wsRelay.readyState === 1) {
+        this.wsRelay.send(JSON.stringify({ type: "user_leave", roomId: this.roomId, data: { id: this.currentUser.id } }));
+      }
+      this.wsRelay.close();
+    } catch {}
+    this.wsRelay = null;
+    this.updateCollabUI();
+  }
+
+  public isWebSocketConnected(): boolean {
+    return this.wsConnected;
+  }
+
+  public isWebRtcConnected(): boolean {
+    return this.rtcConnected;
+  }
+
+  private bindRtcDataChannel(channel: RTCDataChannel) {
+    this.rtcChannel = channel;
+    channel.onopen = () => {
+      this.rtcConnected = true;
+      this.publishTransportMessage("user_presence", this.currentUser);
+      this.updateCollabUI();
+    };
+    channel.onclose = () => {
+      this.rtcConnected = false;
+      this.updateCollabUI();
+    };
+    channel.onmessage = (ev) => {
+      try {
+        const parsed = JSON.parse(String(ev.data || ""));
+        this.handleTransportPayload(parsed);
+      } catch {}
+    };
+  }
+
+  private async gatherIceComplete(pc: RTCPeerConnection, timeoutMs = 1500): Promise<void> {
+    if (pc.iceGatheringState === "complete") return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      const onChange = () => {
+        if (pc.iceGatheringState === "complete") {
+          clearTimeout(timer);
+          pc.removeEventListener("icegatheringstatechange", onChange);
+          resolve();
+        }
+      };
+      pc.addEventListener("icegatheringstatechange", onChange);
+    });
+  }
+
+  public async createWebRtcOffer(): Promise<string> {
+    if (typeof RTCPeerConnection === "undefined") {
+      throw new Error("WebRTC is unavailable in this runtime");
+    }
+    this.disconnectWebRtc();
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    this.rtcPeer = pc;
+    const ch = pc.createDataChannel("bim-collab");
+    this.bindRtcDataChannel(ch);
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await this.gatherIceComplete(pc);
+    return JSON.stringify(pc.localDescription);
+  }
+
+  public async acceptWebRtcOfferAndCreateAnswer(offerJson: string): Promise<string> {
+    if (typeof RTCPeerConnection === "undefined") {
+      throw new Error("WebRTC is unavailable in this runtime");
+    }
+    this.disconnectWebRtc();
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    this.rtcPeer = pc;
+    pc.ondatachannel = (ev) => this.bindRtcDataChannel(ev.channel);
+
+    const remoteDesc = JSON.parse(offerJson);
+    await pc.setRemoteDescription(remoteDesc);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await this.gatherIceComplete(pc);
+    return JSON.stringify(pc.localDescription);
+  }
+
+  public async acceptWebRtcAnswer(answerJson: string): Promise<boolean> {
+    if (!this.rtcPeer) return false;
+    const remoteDesc = JSON.parse(answerJson);
+    await this.rtcPeer.setRemoteDescription(remoteDesc);
+    return true;
+  }
+
+  public disconnectWebRtc() {
+    this.rtcConnected = false;
+    try {
+      this.rtcChannel?.close();
+    } catch {}
+    try {
+      this.rtcPeer?.close();
+    } catch {}
+    this.rtcChannel = null;
+    this.rtcPeer = null;
   }
 
   private closeBroadcastChannel() {
@@ -287,6 +627,7 @@ export class CollaborationManager {
     try {
       this.broadcastChannel.postMessage({
         type: "user_leave",
+        roomId: this.roomId,
         data: { id: this.currentUser.id },
       });
       this.broadcastChannel.close();
@@ -298,22 +639,9 @@ export class CollaborationManager {
     if (!this.isLivePeersEnabled || this.broadcastChannel) return;
     if (typeof BroadcastChannel !== "undefined") {
       try {
-        this.broadcastChannel = new BroadcastChannel("bim_kintsugi_collab_v2");
+        this.broadcastChannel = new BroadcastChannel(`bim_kintsugi_collab_v2_${this.roomId}`);
         this.broadcastChannel.onmessage = (event) => {
-          if (!this.isLivePeersEnabled) return;
-          const { type, data } = event.data;
-          if (type === "user_presence" && data.id !== this.currentUser.id) {
-            this.handlePeerPresence(data);
-          } else if (type === "user_leave" && data?.id && data.id !== this.currentUser.id) {
-            this.activeUsers = this.activeUsers.filter((u) => u.id !== data.id);
-            this.renderPeerAvatars();
-            this.updateCollabUI();
-          } else if (type === "chat_message") {
-            this.chatMessages.push(data);
-            this.updateCollabUI();
-          } else if (type === "ping_location") {
-            this.spawnBeacon(data.pos, data.user.color, `${data.user.name} Pinged Location`);
-          }
+          this.handleTransportPayload(event.data);
         };
 
         this.broadcastMyPresence();
@@ -329,6 +657,7 @@ export class CollaborationManager {
         role: "MEP Engineer",
         color: "#38BDF8",
         isHost: true,
+        isDemo: true,
         isSpeaking: true,
         isMuted: false,
         currentSelection: "IFCDUCTSEGMENT_4021",
@@ -342,6 +671,7 @@ export class CollaborationManager {
         name: "David Chen",
         role: "Structural Lead",
         color: "#F43F5E",
+        isDemo: true,
         isSpeaking: false,
         isMuted: true,
         currentSelection: "IFCBEAM_1109",
@@ -355,6 +685,7 @@ export class CollaborationManager {
         name: "Sarah Miller",
         role: "BIM Manager",
         color: "#A855F7",
+        isDemo: true,
         isSpeaking: false,
         isMuted: true,
         currentSelection: "IFCSLAB_002",
@@ -412,11 +743,8 @@ export class CollaborationManager {
   }
 
   private broadcastMyPresence() {
-    if (this.isLivePeersEnabled && this.broadcastChannel) {
-      this.broadcastChannel.postMessage({
-        type: "user_presence",
-        data: this.currentUser,
-      });
+    if (this.isLivePeersEnabled) {
+      this.publishTransportMessage("user_presence", this.currentUser);
     }
   }
 
@@ -491,7 +819,11 @@ export class CollaborationManager {
     this.clearPeerAvatars();
     if (!this.isLivePeersEnabled) return;
 
-    for (const user of this.activeUsers) {
+    const visiblePeers = this.hideDemoPeers
+      ? this.activeUsers.filter((u) => !u.isDemo)
+      : this.activeUsers;
+
+    for (const user of visiblePeers) {
       const p = user.cursorPosition;
       const colorHex = parseInt(user.color.replace("#", "0x"), 16);
 
@@ -521,6 +853,13 @@ export class CollaborationManager {
     const chatContainer = document.getElementById("collab-chat-messages");
     const liveToggle = document.getElementById("toggle-live-peers") as HTMLInputElement | null;
     const settingsToggle = document.getElementById("settings-toggle-live-peers") as HTMLInputElement | null;
+    const hideDemoToggle = document.getElementById("toggle-hide-demo-peers") as HTMLInputElement | null;
+    const profileNameInput = document.getElementById("collab-profile-name") as HTMLInputElement | null;
+    const profileRoleInput = document.getElementById("collab-profile-role") as HTMLInputElement | null;
+    const roomInput = document.getElementById("collab-room-id") as HTMLInputElement | null;
+    const wsUrlInput = document.getElementById("collab-ws-url") as HTMLInputElement | null;
+    const wsBtn = document.getElementById("btn-collab-ws-connect") as HTMLButtonElement | null;
+    const rtcBtn = document.getElementById("btn-collab-rtc-p2p") as HTMLButtonElement | null;
     const statusTextEl = document.getElementById("collab-live-status-text");
     const statusDotEl = document.getElementById("collab-live-status-dot");
     const dockBtn = document.getElementById("btn-dock-collab");
@@ -529,9 +868,32 @@ export class CollaborationManager {
     const enabled = this.isLivePeersEnabled;
     if (liveToggle) liveToggle.checked = enabled;
     if (settingsToggle) settingsToggle.checked = enabled;
+    if (hideDemoToggle) hideDemoToggle.checked = this.hideDemoPeers;
+    if (profileNameInput && document.activeElement !== profileNameInput) {
+      profileNameInput.value = this.currentUser.name;
+    }
+    if (profileRoleInput && document.activeElement !== profileRoleInput) {
+      profileRoleInput.value = this.currentUser.role;
+    }
+    if (roomInput && document.activeElement !== roomInput) {
+      roomInput.value = this.roomId;
+    }
+    if (wsUrlInput && document.activeElement !== wsUrlInput && !wsUrlInput.value && this.wsRelayUrl) {
+      wsUrlInput.value = this.wsRelayUrl;
+    }
+    if (wsBtn) {
+      wsBtn.disabled = !enabled;
+      wsBtn.classList.toggle("active", this.wsConnected);
+      wsBtn.textContent = this.wsConnected ? "Relay ✓" : "Relay";
+    }
+    if (rtcBtn) {
+      rtcBtn.disabled = !enabled;
+      rtcBtn.classList.toggle("active", this.rtcConnected);
+      rtcBtn.textContent = this.rtcConnected ? "P2P ✓" : "P2P";
+    }
     if (statusTextEl) {
       statusTextEl.textContent = enabled
-        ? "Live Peers: ON · Syncing Avatars"
+        ? `Live Peers: ON · ${this.getTransportSummary()}`
         : "Live Peers: OFF · Avatars Hidden";
     }
     if (statusDotEl) {
@@ -594,21 +956,21 @@ export class CollaborationManager {
           : "";
 
         const inspectedBadge = u.currentSelection
-          ? `<span class="user-selection-badge" title="Currently Inspecting">👁️ ${u.currentSelection}</span>`
+          ? `<span class="user-selection-badge" title="Currently Inspecting">👁️ ${escapeHtml(u.currentSelection)}</span>`
           : "";
 
         item.innerHTML = `
-          <div class="user-avatar-indicator" style="background-color: ${u.color};">
-            ${u.name.substring(0, 1)}
+          <div class="user-avatar-indicator" style="background-color: ${escapeHtml(u.color)};">
+            ${escapeHtml(u.name.substring(0, 1))}
             <span class="user-online-dot ${u.isSpeaking ? 'speaking' : ''}"></span>
           </div>
           <div class="user-meta">
             <div class="user-name-row">
-              <span class="user-name">${u.name} ${u.isHost ? "👑" : ""}</span>
+              <span class="user-name">${escapeHtml(u.name)} ${u.isHost ? "👑" : ""}</span>
               ${speakingWave}
             </div>
             <div class="user-sub-row">
-              <span class="user-role">${u.role}</span>
+              <span class="user-role">${escapeHtml(u.role)}</span>
               ${inspectedBadge}
             </div>
           </div>
@@ -639,10 +1001,10 @@ export class CollaborationManager {
 
         msgEl.innerHTML = `
           <div class="chat-meta">
-            <span class="chat-author" style="color: ${msg.userColor};">${msg.userName}</span>
-            <span class="chat-time">${msg.timestamp}</span>
+            <span class="chat-author" style="color: ${escapeHtml(msg.userColor)};">${escapeHtml(msg.userName)}</span>
+            <span class="chat-time">${escapeHtml(msg.timestamp)}</span>
           </div>
-          <div class="chat-body">${msg.text}</div>
+          <div class="chat-body">${escapeHtml(msg.text)}</div>
           ${pinBtn}
         `;
 

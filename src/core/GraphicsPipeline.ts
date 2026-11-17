@@ -7,6 +7,7 @@ export interface GpuCapabilitiesReport {
   activeBackend: RenderBackendType;
   webgpuSupported: boolean;
   webgpuAdapterInfo: string | null;
+  experimentalWebGpuOptIn: boolean;
   webgl2Supported: boolean;
   hardwareOcclusionSupported: boolean;
   maxTextureSize: number;
@@ -21,13 +22,46 @@ export interface GpuCapabilitiesReport {
  */
 export class GraphicsPipeline {
   private static instance: GraphicsPipeline | null = null;
+  private static readonly WEBGPU_STORAGE_KEY = "bim_experimental_webgpu";
   private qualityTier: GraphicsQualityTier = "balanced";
   private webgpuSupported: boolean = false;
   private webgpuAdapterInfo: string | null = null;
+  private experimentalWebGpuOptIn: boolean = false;
   private renderer: THREE.WebGLRenderer | null = null;
   private probed: boolean = false;
 
-  private constructor() {}
+  private constructor() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        this.experimentalWebGpuOptIn = localStorage.getItem(GraphicsPipeline.WEBGPU_STORAGE_KEY) === "true";
+      }
+    } catch {}
+  }
+
+  public setExperimentalWebGpu(enabled: boolean): boolean {
+    this.experimentalWebGpuOptIn = Boolean(enabled);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(GraphicsPipeline.WEBGPU_STORAGE_KEY, this.experimentalWebGpuOptIn ? "true" : "false");
+      }
+    } catch {}
+    return this.experimentalWebGpuOptIn;
+  }
+
+  public isExperimentalWebGpuEnabled(): boolean {
+    return this.experimentalWebGpuOptIn;
+  }
+
+  public getBackendDisplayLabel(): string {
+    const report = this.getCapabilitiesReport();
+    if (report.webgpuSupported && report.experimentalWebGpuOptIn) {
+      return `WebGPU Ready (${report.webgpuAdapterInfo || "Adapter"}) · WebGL2 Active`;
+    }
+    if (report.webgpuSupported) {
+      return report.webgl2Supported ? "WebGL 2.0 (WebGPU Capable)" : "WebGL 1.0 (WebGPU Capable)";
+    }
+    return report.webgl2Supported ? "WebGL 2.0 (Fallback)" : "WebGL 1.0";
+  }
 
   public static getInstance(): GraphicsPipeline {
     if (!GraphicsPipeline.instance) {
@@ -55,8 +89,8 @@ export class GraphicsPipeline {
   /**
    * Probes browser `navigator.gpu` WebGPU support without interrupting active WebGL2 fragment passes.
    */
-  public async probeHardware(): Promise<GpuCapabilitiesReport> {
-    if (!this.probed && typeof navigator !== "undefined" && "gpu" in navigator) {
+  public async probeHardware(options?: { force?: boolean }): Promise<GpuCapabilitiesReport> {
+    if ((!this.probed || options?.force) && typeof navigator !== "undefined" && "gpu" in navigator) {
       try {
         const adapter = await (navigator as any).gpu?.requestAdapter?.({
           powerPreference: "high-performance",
@@ -67,6 +101,8 @@ export class GraphicsPipeline {
           this.webgpuAdapterInfo = info
             ? [info.vendor, info.architecture, info.description].filter(Boolean).join(" • ") || "WebGPU Adapter Ready"
             : "WebGPU Adapter Ready";
+        } else {
+          this.webgpuSupported = false;
         }
       } catch {
         this.webgpuSupported = false;
@@ -130,6 +166,7 @@ export class GraphicsPipeline {
       activeBackend: this.webgpuSupported ? "webgpu-ready" : isWebGL2 ? "webgl2" : "webgl",
       webgpuSupported: this.webgpuSupported,
       webgpuAdapterInfo: this.webgpuAdapterInfo,
+      experimentalWebGpuOptIn: this.experimentalWebGpuOptIn,
       webgl2Supported: isWebGL2,
       hardwareOcclusionSupported: isWebGL2 && typeof (gl as any)?.createQuery === "function",
       maxTextureSize,

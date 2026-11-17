@@ -10,6 +10,7 @@
 import { PropertySequenceEngine, type SequenceCalculationOptions, type SequenceEngineResult } from "./PropertySequenceEngine";
 import { ScheduleManager } from "./ScheduleManager";
 import { parseIfcStepText } from "./IfcStepParser";
+import { FragmentIndexer } from "../core/FragmentIndexer";
 
 export interface IfcParameterMeta {
   key: string;              // Unique identifier, e.g. "Pset_WallCommon.Status", "Storey", "PredefinedType"
@@ -86,6 +87,25 @@ export class IfcParameterReader {
     return this.lastParsedProperties;
   }
 
+  public async scanModelParametersAsync(
+    models: any[],
+    globalStoreysMap?: Record<string, string>
+  ): Promise<IfcParameterMeta[]> {
+    const indexer = FragmentIndexer.getInstance();
+    for (const m of models || []) {
+      if (!m) continue;
+      const modelId = indexer.resolveModelId(m);
+      if (!m.properties && typeof m.getCategories === "function") {
+        await indexer.indexModel(modelId, m, {
+          includeBoxes: true,
+          includePsets: true,
+          storeysMap: globalStoreysMap,
+        });
+      }
+    }
+    return this.scanModelParameters(models, globalStoreysMap);
+  }
+
   public scanModelParameters(
     models: any[],
     globalStoreysMap?: Record<string, string>
@@ -149,11 +169,16 @@ export class IfcParameterReader {
       entry.valuesMap.set(val, curCount + 1);
     };
 
-    // Scan each model
+    // Scan each model (supporting both FRAGS v3 FragmentIndexer and legacy properties)
+    const indexer = FragmentIndexer.getInstance();
     for (const model of scanModels) {
       if (!model) continue;
-      const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
-      const properties = model.properties || (model as any).getLocalProperties?.() || {};
+      const modelId = indexer.resolveModelId(model);
+      let properties = model.properties || (model as any).getLocalProperties?.() || {};
+      if (Object.keys(properties).length === 0) {
+        const synced = indexer.getSyncModelData(modelId, model);
+        if (synced) properties = indexer.toLegacyPropertyMap(synced);
+      }
       const relMap = engine.buildRelDefinesMap(properties);
 
       for (const expressIdStr in properties) {

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { BimEngine } from "../core/BimEngine";
 import { PointerInputArbiter } from "../core/PointerInputArbiter";
 import { BvhAccelerationService } from "../core/BvhAccelerationService";
+import { FragmentIndexer } from "../core/FragmentIndexer";
 
 function showToast(msg: string, icon?: string) {
   if (typeof (window as any).showToast === "function") {
@@ -666,7 +667,14 @@ export class SelectionManager {
         }
 
         let cat = "IFC ELEMENT";
-        if (model && model.properties && model.properties[id]) {
+        const indexedEl = FragmentIndexer.getInstance().getCachedElement(mid, id);
+        if (indexedEl) {
+          cat = indexedEl.category || "IFC ELEMENT";
+          if (!primaryName) {
+            primaryName = indexedEl.name || `Element #${id}`;
+            primaryCategory = cat;
+          }
+        } else if (model && model.properties && model.properties[id]) {
           const p = model.properties[id];
           cat = p.type || p._category || p.typeStr || "IFC ELEMENT";
           if (!primaryName) {

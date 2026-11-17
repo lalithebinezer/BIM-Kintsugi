@@ -92,6 +92,71 @@ export function classifyStreamPriority(ifcType: string): "shell" | "internals" {
   return "internals";
 }
 
+const INTERNAL_MEP_NEEDLES = [
+  "=IFCFLOW",
+  "=IFCDISTRIBUTION",
+  "=IFCFURNISHING",
+  "=IFCREINFORCING",
+  "=IFCCOVERING",
+  "=IFCFASTENER",
+].map((s) => Array.from(s, (c) => c.charCodeAt(0)));
+
+const SHELL_NEEDLES = [
+  "=IFCWALL",
+  "=IFCSLAB",
+  "=IFCCOLUMN",
+  "=IFCBEAM",
+  "=IFCDOOR",
+  "=IFCWINDOW",
+  "=IFCROOF",
+  "=IFCSTAIR",
+].map((s) => Array.from(s, (c) => c.charCodeAt(0)));
+
+function countStepNeedles(buffer: Uint8Array, needles: number[][], stopAtCount: number): number {
+  if (!buffer || buffer.length < 16) return 0;
+  let hits = 0;
+  const len = buffer.length;
+  for (let i = 0; i < len - 12; i++) {
+    if (buffer[i] !== 61) continue; // '='
+    for (let n = 0; n < needles.length; n++) {
+      const pat = needles[n];
+      if (i + pat.length > len) continue;
+      let matched = true;
+      for (let j = 1; j < pat.length; j++) {
+        let b = buffer[i + j];
+        if (b >= 97 && b <= 122) b -= 32; // normalize ASCII lowercase to uppercase
+        if (b !== pat[j]) {
+          matched = false;
+          break;
+        }
+      }
+      if (matched) {
+        hits++;
+        if (hits >= stopAtCount) return hits;
+        i += pat.length - 1;
+        break;
+      }
+    }
+  }
+  return hits;
+}
+
+/**
+ * Fast zero-allocation IFC STEP scan to verify whether internal MEP/fitout entities
+ * exist before spawning a Phase 2 `::internals` parse pass (prevents empty worker errors
+ * on structural-only or core/shell IFC files).
+ */
+export function hasInternalMepEntities(buffer: Uint8Array, minMatches: number = 10): boolean {
+  return countStepNeedles(buffer, INTERNAL_MEP_NEEDLES, minMatches) >= minMatches;
+}
+
+/**
+ * Fast check verifying at least one primary architectural/structural shell entity exists.
+ */
+export function hasShellEntities(buffer: Uint8Array, minMatches: number = 1): boolean {
+  return countStepNeedles(buffer, SHELL_NEEDLES, minMatches) >= minMatches;
+}
+
 /**
  * Hierarchical 2-Phase Model Streamer.
  * Configures spatial tile streaming (`FragmentsModels` worker multithreading + `LodMode.DEFAULT`),
@@ -103,6 +168,7 @@ export class StreamingLoader {
   private engine: BimEngine;
   private metadataService: MetadataSyncService;
   private activeStreams: Set<string> = new Set();
+  private defaultElementClasses: number[] | null = null;
 
   private constructor() {
     this.engine = BimEngine.getInstance();
@@ -163,6 +229,18 @@ export class StreamingLoader {
    * - For large models (`>= threshold`), loads structural Shell classes first so the user can
    *   interact immediately while internal MEP/furnishings stream in the background.
    */
+  private captureOrRestoreDefaultClasses(importer: FRAGS.IfcImporter) {
+    if (!importer?.classes?.elements) return;
+    if (!this.defaultElementClasses) {
+      this.defaultElementClasses = Array.from(importer.classes.elements);
+    } else if (importer.classes.elements.size < this.defaultElementClasses.length) {
+      importer.classes.elements.clear();
+      for (const clsId of this.defaultElementClasses) {
+        importer.classes.elements.add(clsId);
+      }
+    }
+  }
+
   public async streamIfc(
     ifcLoader: any,
     options: StreamingLoadOptions
@@ -177,14 +255,20 @@ export class StreamingLoader {
     } = options;
 
     const cacheKey = `${name}-${buffer.length}`;
+    const shellCacheKey = `${cacheKey}::shell`;
+    const internalsCacheKey = `${cacheKey}::internals`;
     this.activeStreams.add(modelId);
 
     try {
       onProgress?.(8, "Checking local tile cache...", "shell");
-      const cached = await this.metadataService.getFragmentBuffer(cacheKey);
-      if (cached) {
+      const [cachedSingle, cachedShell] = await Promise.all([
+        this.metadataService.getFragmentBuffer(cacheKey),
+        this.metadataService.getFragmentBuffer(shellCacheKey),
+      ]);
+
+      if (cachedSingle) {
         onProgress?.(65, "Streaming cached spatial tiles...", "full");
-        const model = await this.loadFragmentStream(cached, modelId, (pct) => {
+        const model = await this.loadFragmentStream(cachedSingle, modelId, (pct) => {
           onProgress?.(Math.min(99, 65 + Math.round(pct * 0.35)), "Streaming spatial tiles...", "full");
         });
         onProgress?.(100, "Cached tiles ready", "full");
@@ -195,13 +279,52 @@ export class StreamingLoader {
         };
       }
 
-      const useTwoPhase = buffer.byteLength >= shellFirstThresholdBytes;
+      if (cachedShell) {
+        onProgress?.(60, "Streaming cached shell tiles...", "shell");
+        const shellModel = await this.loadFragmentStream(cachedShell, modelId, (pct) => {
+          onProgress?.(Math.min(92, 60 + Math.round(pct * 0.3)), "Streaming cached shell...", "shell");
+        });
+        await onPhaseModelReady?.(shellModel, "shell");
+
+        const cachedInternals = await this.metadataService.getFragmentBuffer(internalsCacheKey);
+        const secondaryPromise = cachedInternals
+          ? (async () => {
+              try {
+                const internalsModel = await this.loadFragmentStream(
+                  cachedInternals,
+                  `${modelId}::internals`
+                );
+                onProgress?.(100, "Cached internal MEP tiles ready", "internals");
+                await onPhaseModelReady?.(internalsModel, "internals");
+                return internalsModel;
+              } catch {
+                return null;
+              }
+            })()
+          : null;
+
+        if (!secondaryPromise) {
+          onProgress?.(100, "Cached shell tiles ready", "full");
+        }
+        return {
+          primaryModel: shellModel,
+          secondaryPromise,
+          strategy: "cached-tile-stream",
+        };
+      }
+
+      const useTwoPhase =
+        buffer.byteLength >= shellFirstThresholdBytes &&
+        hasShellEntities(buffer) &&
+        hasInternalMepEntities(buffer);
+
       if (!useTwoPhase) {
         onProgress?.(30, "Converting IFC into spatial fragment tiles...", "full");
         const model = await ifcLoader.load(buffer, true, name, {
           processData: { virtualModelConfig: this.getMultithreadingConfig() } as any,
           instanceCallback: (importer: FRAGS.IfcImporter) => {
             importer.parseOnce = true;
+            this.captureOrRestoreDefaultClasses(importer);
           },
         });
         await this.applyDefaultLodMode(model);
@@ -218,6 +341,7 @@ export class StreamingLoader {
       onProgress?.(25, "Phase 1/2: Streaming building shell & structure...", "shell");
       const shellModel = await ifcLoader.load(buffer, true, name, {
         instanceCallback: (importer: FRAGS.IfcImporter) => {
+          this.captureOrRestoreDefaultClasses(importer);
           importer.parseOnce = true;
           importer.classes.elements.clear();
           for (const clsId of SHELL_IFC_TYPE_IDS) {
@@ -226,6 +350,7 @@ export class StreamingLoader {
         },
       });
       await this.applyDefaultLodMode(shellModel);
+      this.persistFragmentsBackground(shellCacheKey, shellModel);
       onProgress?.(70, "Shell interactive — streaming internal systems...", "shell");
       await onPhaseModelReady?.(shellModel, "shell");
 
@@ -234,6 +359,7 @@ export class StreamingLoader {
         try {
           const internalsModel = await ifcLoader.load(buffer, true, `${name}::internals`, {
             instanceCallback: (importer: FRAGS.IfcImporter) => {
+              this.captureOrRestoreDefaultClasses(importer);
               importer.parseOnce = true;
               importer.classes.elements.clear();
               for (const clsId of INTERNAL_MEP_IFC_TYPE_IDS) {
@@ -241,7 +367,20 @@ export class StreamingLoader {
               }
             },
           });
+          let hasItems = true;
+          if (internalsModel && typeof internalsModel.getLocalIds === "function") {
+            const ids = await internalsModel.getLocalIds().catch(() => []);
+            hasItems = Array.isArray(ids) && ids.length > 0;
+          }
+          if (!internalsModel || !hasItems) {
+            try {
+              internalsModel?.dispose?.();
+            } catch {}
+            onProgress?.(100, "Shell model ready", "full");
+            return null;
+          }
           await this.applyDefaultLodMode(internalsModel);
+          this.persistFragmentsBackground(internalsCacheKey, internalsModel);
           onProgress?.(100, "All internal MEP & fitout tiles ready", "internals");
           await onPhaseModelReady?.(internalsModel, "internals");
           return internalsModel;

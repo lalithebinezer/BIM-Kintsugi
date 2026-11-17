@@ -26,11 +26,17 @@ export default defineConfig({
           if (norm.includes("node_modules/@thatopen/components") || norm.includes("node_modules/@thatopen/fragments")) {
             return "thatopen-core";
           }
+          if (norm.includes("node_modules/three-mesh-bvh")) {
+            return "bvh-vendor";
+          }
           if (norm.includes("node_modules/three") || norm.includes("node_modules/camera-controls")) {
             return "three-vendor";
           }
           if (norm.includes("node_modules/web-ifc")) {
             return "webifc-vendor";
+          }
+          if (norm.includes("node_modules/xlsx")) {
+            return "xlsx-vendor";
           }
         },
       },

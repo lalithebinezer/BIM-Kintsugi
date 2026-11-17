@@ -5,6 +5,12 @@ import { MeshBVH } from "three-mesh-bvh";
 import { BimEngine } from "../core/BimEngine";
 import { BcfIssueManager, type BcfTopic } from "./BcfIssueManager";
 import { escapeHtml } from "../utils/formatters";
+import { FragmentIndexer } from "../core/FragmentIndexer";
+import {
+  runSweepAndPrune,
+  type BroadPhaseClashHit,
+  type BroadPhaseRuleTask,
+} from "../core/clashBroadPhase";
 
 export type ClashSeverity = "critical" | "major" | "minor" | "clearance";
 export type ClashStatus = "new" | "active" | "reviewed" | "resolved";
@@ -46,6 +52,7 @@ export interface ClashScanSummary {
   candidatePairs: number;
   elapsedMs: number;
   filteredFalsePositives: number;
+  broadPhaseMode?: "worker-sap" | "sync-sap";
 }
 
 interface ModelScanElement {
@@ -58,17 +65,21 @@ interface ModelScanElement {
 
 export class ClashDetector {
   private static instance: ClashDetector;
-  private static readonly MAX_SCAN_ELEMENTS_PER_MODEL = 4000;
-  private static readonly MAX_CLASH_RESULTS = 200;
+  private static readonly MAX_SCAN_ELEMENTS_PER_MODEL = 12000;
+  private static readonly MAX_CLASH_RESULTS = 250;
   private engine: BimEngine;
   private clashResults: ClashResult[] = [];
   private isScanning: boolean = false;
   private clashMarkerGroup: THREE.Group;
   private markerIds: string[] = [];
   private deepMeshVerification: boolean = false;
+  private isolateContextOnFocus: boolean = true;
   private lastFalsePositivesFiltered: number = 0;
   private severityFilter: ClashSeverity | "all" = "all";
   private lastScanSummary: ClashScanSummary | null = null;
+  private promotedClashIds: Set<string> = new Set();
+  private sapWorker: Worker | null = null;
+  private workerJobSeq: number = 0;
 
   private rules: ClashRuleConfig[] = [
     {
@@ -138,6 +149,39 @@ export class ClashDetector {
     return rule.enabled;
   }
 
+  public updateRuleTolerances(
+    index: number,
+    hardClashToleranceMeters: number,
+    softClearanceMeters: number
+  ): boolean {
+    const rule = this.rules[index];
+    if (!rule) return false;
+    if (Number.isFinite(hardClashToleranceMeters) && hardClashToleranceMeters >= 0) {
+      rule.hardClashTolerance = Math.min(2, Number(hardClashToleranceMeters));
+    }
+    if (Number.isFinite(softClearanceMeters) && softClearanceMeters >= 0) {
+      rule.softClearanceBuffer = Math.min(5, Number(softClearanceMeters));
+    }
+    this.updateClashUI();
+    return true;
+  }
+
+  public setIsolateContextOnFocus(enabled: boolean) {
+    this.isolateContextOnFocus = enabled;
+    if (!enabled) {
+      try {
+        const fragsReady = Boolean((this.engine.fragments as any)?.initialized);
+        if (fragsReady) {
+          Promise.resolve(this.engine.hider?.set?.(true)).catch(() => {});
+        }
+      } catch {}
+    }
+  }
+
+  public isIsolateContextOnFocus(): boolean {
+    return this.isolateContextOnFocus;
+  }
+
   public getIsScanning(): boolean {
     return this.isScanning;
   }
@@ -179,6 +223,7 @@ export class ClashDetector {
     this.clashResults = [];
     this.lastFalsePositivesFiltered = 0;
     this.lastScanSummary = null;
+    this.promotedClashIds.clear();
     this.clearClashMarkers();
     try {
       const highlighter = this.engine.highlighter;
@@ -189,13 +234,64 @@ export class ClashDetector {
       }
       if (fragsReady) {
         this.engine.outliner?.clean?.();
+        Promise.resolve(this.engine.hider?.set?.(true)).catch(() => {});
       }
     } catch {}
     this.updateClashUI();
   }
 
+  private async runBroadPhaseSweep(
+    boxes: Float64Array,
+    tasks: BroadPhaseRuleTask[]
+  ): Promise<{ hits: BroadPhaseClashHit[]; candidatePairs: number; mode: "worker-sap" | "sync-sap" }> {
+    if (typeof Worker !== "undefined" && boxes.length >= 60) {
+      try {
+        if (!this.sapWorker) {
+          this.sapWorker = new Worker(new URL("../workers/clashWorker.ts", import.meta.url), {
+            type: "module",
+          });
+        }
+        const jobId = ++this.workerJobSeq;
+        const worker = this.sapWorker;
+        const res = await new Promise<{ hits: BroadPhaseClashHit[]; candidatePairs: number }>((resolve, reject) => {
+          const timer = setTimeout(() => {
+            cleanup();
+            reject(new Error("Clash worker timeout"));
+          }, 15000);
+          const onMsg = (ev: MessageEvent<any>) => {
+            if (ev.data?.jobId !== jobId) return;
+            cleanup();
+            resolve({ hits: ev.data.hits || [], candidatePairs: ev.data.candidatePairs || 0 });
+          };
+          const onErr = (err: any) => {
+            cleanup();
+            reject(err);
+          };
+          const cleanup = () => {
+            clearTimeout(timer);
+            worker.removeEventListener("message", onMsg);
+            worker.removeEventListener("error", onErr);
+          };
+          worker.addEventListener("message", onMsg);
+          worker.addEventListener("error", onErr);
+          worker.postMessage({ jobId, boxes, tasks, maxHits: ClashDetector.MAX_CLASH_RESULTS * 3 });
+        });
+        return { ...res, mode: "worker-sap" };
+      } catch {
+        try {
+          this.sapWorker?.terminate();
+        } catch {}
+        this.sapWorker = null;
+      }
+    }
+
+    const syncRes = runSweepAndPrune(boxes, tasks, ClashDetector.MAX_CLASH_RESULTS * 3);
+    return { ...syncRes, mode: "sync-sap" };
+  }
+
   /**
-   * Executes collision matrix scan across loaded BIM models and element geometries.
+   * Executes collision matrix scan across loaded BIM models using 1D Sweep-and-Prune
+   * offloaded to a Web Worker (with synchronous fallback) + optional BVH verification.
    */
   public async runClashAudit(): Promise<ClashResult[]> {
     const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -207,87 +303,76 @@ export class ClashDetector {
     try {
       const { hasLoadedModels, elements } = await this.collectModelElements();
       const rawResults: ClashResult[] = [];
-      const seenPairs = new Set<string>();
+      let broadPhaseMode: "worker-sap" | "sync-sap" = "sync-sap";
+      let candidatePairs = 0;
 
-      for (const rule of this.rules) {
-        if (!rule.enabled) continue;
+      if (elements.length > 0) {
+        const boxes = new Float64Array(elements.length * 6);
+        for (let i = 0; i < elements.length; i++) {
+          const b = elements[i].box;
+          const off = i * 6;
+          boxes[off] = b.min.x;
+          boxes[off + 1] = b.min.y;
+          boxes[off + 2] = b.min.z;
+          boxes[off + 3] = b.max.x;
+          boxes[off + 4] = b.max.y;
+          boxes[off + 5] = b.max.z;
+        }
 
-        const groupA = elements.filter((el) =>
-          rule.categoryA.some((cat) => el.category.toUpperCase().includes(cat))
-        );
-        const groupB = elements.filter((el) =>
-          rule.categoryB.some((cat) => el.category.toUpperCase().includes(cat))
-        );
-
-        const buf = rule.softClearanceBuffer;
-
-        for (let i = 0; i < groupA.length; i++) {
-          const elA = groupA[i];
-          const a = elA.box;
-          for (let j = 0; j < groupB.length; j++) {
-            const elB = groupB[j];
-            if (elA.modelId === elB.modelId && elA.expressId === elB.expressId) continue;
-
-            const keyA = `${elA.modelId}:${elA.expressId}`;
-            const keyB = `${elB.modelId}:${elB.expressId}`;
-            const pairKey = keyA < keyB ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
-            if (seenPairs.has(pairKey)) continue;
-
-            const b = elB.box;
-            if (
-              a.max.x + buf < b.min.x || b.max.x + buf < a.min.x ||
-              a.max.y + buf < b.min.y || b.max.y + buf < a.min.y ||
-              a.max.z + buf < b.min.z || b.max.z + buf < a.min.z
-            ) {
-              continue;
-            }
-
-            const penX = Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x);
-            const penY = Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y);
-            const penZ = Math.min(a.max.z, b.max.z) - Math.max(a.min.z, b.min.z);
-            const minPen = Math.min(penX, penY, penZ);
-
-            const isHard = minPen >= rule.hardClashTolerance;
-            const isClearance = !isHard && buf > 0 && minPen >= -buf;
-            if (!isHard && !isClearance) continue;
-
-            seenPairs.add(pairKey);
-
-            const overlap = isHard
-              ? Number(minPen.toFixed(3))
-              : Math.max(0.001, Number((minPen >= 0 ? minPen : buf + minPen).toFixed(3)));
-
-            const ix = (Math.max(a.min.x, b.min.x) + Math.min(a.max.x, b.max.x)) * 0.5;
-            const iy = (Math.max(a.min.y, b.min.y) + Math.min(a.max.y, b.max.y)) * 0.5;
-            const iz = (Math.max(a.min.z, b.min.z) + Math.min(a.max.z, b.max.z)) * 0.5;
-
-            const severity: ClashSeverity = isHard
-              ? (minPen >= 0.05 ? "critical" : "major")
-              : "clearance";
-
-            rawResults.push({
-              id: `clash_${Date.now()}_${rawResults.length + 1}`,
-              disciplineA: this.classifyDiscipline(elA.category),
-              disciplineB: this.classifyDiscipline(elB.category),
-              elementA: {
-                modelId: elA.modelId,
-                expressId: elA.expressId,
-                category: elA.category,
-                name: elA.name,
-              },
-              elementB: {
-                modelId: elB.modelId,
-                expressId: elB.expressId,
-                category: elB.category,
-                name: elB.name,
-              },
-              severity,
-              status: "new",
-              overlapDistance: overlap,
-              intersectionPoint: [ix, iy, iz],
-              foundAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        const tasks: BroadPhaseRuleTask[] = [];
+        this.rules.forEach((rule, ruleIdx) => {
+          if (!rule.enabled) return;
+          const groupA: number[] = [];
+          const groupB: number[] = [];
+          for (let idx = 0; idx < elements.length; idx++) {
+            const catUp = elements[idx].category.toUpperCase();
+            if (rule.categoryA.some((cat) => catUp.includes(cat))) groupA.push(idx);
+            if (rule.categoryB.some((cat) => catUp.includes(cat))) groupB.push(idx);
+          }
+          if (groupA.length > 0 && groupB.length > 0) {
+            tasks.push({
+              ruleIdx,
+              groupA,
+              groupB,
+              hardTolerance: rule.hardClashTolerance,
+              softBuffer: rule.softClearanceBuffer,
             });
           }
+        });
+
+        const sweepRes = await this.runBroadPhaseSweep(boxes, tasks);
+        broadPhaseMode = sweepRes.mode;
+        candidatePairs = sweepRes.candidatePairs;
+        const foundTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        for (let k = 0; k < sweepRes.hits.length; k++) {
+          const hit = sweepRes.hits[k];
+          const elA = elements[hit.idxA];
+          const elB = elements[hit.idxB];
+          if (!elA || !elB) continue;
+
+          rawResults.push({
+            id: `clash_${Date.now()}_${k + 1}`,
+            disciplineA: this.classifyDiscipline(elA.category),
+            disciplineB: this.classifyDiscipline(elB.category),
+            elementA: {
+              modelId: elA.modelId,
+              expressId: elA.expressId,
+              category: elA.category,
+              name: elA.name,
+            },
+            elementB: {
+              modelId: elB.modelId,
+              expressId: elB.expressId,
+              category: elB.category,
+              name: elB.name,
+            },
+            severity: hit.severity,
+            status: "new",
+            overlapDistance: hit.overlap,
+            intersectionPoint: [hit.ix, hit.iy, hit.iz],
+            foundAt: foundTime,
+          });
         }
       }
 
@@ -384,9 +469,10 @@ export class ClashDetector {
       this.lastScanSummary = {
         source: scanSource,
         scannedElements: elements.length,
-        candidatePairs: rawResults.length,
+        candidatePairs: rawResults.length || candidatePairs,
         elapsedMs,
         filteredFalsePositives: this.lastFalsePositivesFiltered,
+        broadPhaseMode,
       };
       this.clashResults = verifiedResults;
       this.renderClashBeacons();
@@ -530,10 +616,11 @@ export class ClashDetector {
       "IFCPROJECT", "IFCSITE", "IFCBUILDING", "IFCBUILDINGSTOREY", "IFCSPACE", "IFCOPENINGELEMENT", "IFCGRID"
     ]);
 
+    const indexer = FragmentIndexer.getInstance();
     for (const [modelId, model] of fragList) {
       let extractedViaFragments = false;
 
-      // Path A: Native @thatopen/fragments v3 async category + per-element bounding box API
+      // Path A: Shared async @thatopen/fragments v3 FragmentIndexer (cached categories + boxes + names)
       try {
         if (
           model &&
@@ -541,79 +628,32 @@ export class ClashDetector {
           typeof model.getItemsOfCategories === "function" &&
           typeof model.getBoxes === "function"
         ) {
-          const modelCategories: string[] = await model.getCategories();
-          const matchedCats = (modelCategories || []).filter((cat) => {
-            const up = String(cat).toUpperCase();
-            if (skipCategories.has(up)) return false;
-            for (const tok of activeTokens) {
-              if (up.includes(tok)) return true;
-            }
-            return false;
+          const indexed = await indexer.indexModel(modelId, model, {
+            includeBoxes: true,
+            maxElements: ClashDetector.MAX_SCAN_ELEMENTS_PER_MODEL,
           });
-
-          if (matchedCats.length > 0) {
-            const regexes = matchedCats.map(
-              (c) => new RegExp(`^${c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i")
-            );
-            const catItemsMap: Record<string, number[]> = await model.getItemsOfCategories(regexes);
-
-            const idSet = new Set<number>();
-            const idList: number[] = [];
-            const idCategory = new Map<number, string>();
-
-            for (const [catName, ids] of Object.entries(catItemsMap || {})) {
-              if (!Array.isArray(ids)) continue;
-              for (const localId of ids) {
-                if (typeof localId !== "number" || idSet.has(localId)) continue;
-                idSet.add(localId);
-                idList.push(localId);
-                idCategory.set(localId, catName);
-                if (idList.length >= ClashDetector.MAX_SCAN_ELEMENTS_PER_MODEL) break;
+          if (indexed.elements.length > 0 && indexed.elements.some((e) => e.box !== null)) {
+            for (const el of indexed.elements) {
+              if (!el.box || !this.isValidBox(el.box)) continue;
+              const up = el.category.toUpperCase();
+              if (skipCategories.has(up)) continue;
+              let matched = false;
+              for (const tok of activeTokens) {
+                if (up.includes(tok)) {
+                  matched = true;
+                  break;
+                }
               }
-              if (idList.length >= ClashDetector.MAX_SCAN_ELEMENTS_PER_MODEL) break;
+              if (!matched) continue;
+              list.push({
+                modelId,
+                expressId: el.expressId,
+                category: el.category,
+                name: el.name,
+                box: el.box.clone(),
+              });
             }
-
-            if (idList.length > 0) {
-              const boxes: THREE.Box3[] = await model.getBoxes(idList);
-              const nameMap = new Map<number, string>();
-
-              if (typeof model.getItemsData === "function") {
-                try {
-                  const CHUNK = 400;
-                  for (let start = 0; start < idList.length; start += CHUNK) {
-                    const chunkIds = idList.slice(start, start + CHUNK);
-                    const dataArr = await model.getItemsData(chunkIds, {
-                      attributesDefault: false,
-                      attributes: ["Name"],
-                    });
-                    for (let k = 0; k < chunkIds.length; k++) {
-                      const d = dataArr?.[k];
-                      const rawName = d?.Name && typeof d.Name === "object" && "value" in d.Name
-                        ? d.Name.value
-                        : d?.Name;
-                      if (rawName) {
-                        nameMap.set(chunkIds[k], String(rawName));
-                      }
-                    }
-                  }
-                } catch {}
-              }
-
-              for (let i = 0; i < idList.length; i++) {
-                const box = boxes?.[i];
-                if (!this.isValidBox(box)) continue;
-                const localId = idList[i];
-                const cat = idCategory.get(localId) || "IFCELEMENT";
-                list.push({
-                  modelId,
-                  expressId: localId,
-                  category: cat,
-                  name: nameMap.get(localId) || `${cat} #${localId}`,
-                  box: box.clone(),
-                });
-              }
-              extractedViaFragments = true;
-            }
+            extractedViaFragments = true;
           }
         }
       } catch {}
@@ -788,7 +828,30 @@ export class ClashDetector {
         this.engine.outliner.clean?.();
         this.engine.outliner.addItems(highlightMap)?.catch?.(() => {});
       }
+
+      if (fragsReady && this.isolateContextOnFocus && this.engine.hider?.isolate) {
+        Promise.resolve(this.engine.hider.isolate(highlightMap)).catch(() => {});
+      }
     } catch {}
+  }
+
+  public async exportClashesToNativeBcfZip(): Promise<number> {
+    const bcf = BcfIssueManager.getInstance();
+    let added = 0;
+    const targetList =
+      this.severityFilter === "all"
+        ? this.clashResults
+        : this.clashResults.filter((c) => c.severity === this.severityFilter);
+
+    for (const c of targetList.slice(0, 50)) {
+      if (!this.promotedClashIds.has(c.id)) {
+        bcf.createIssueFromClash(c);
+        this.promotedClashIds.add(c.id);
+        added++;
+      }
+    }
+    const ok = await bcf.exportNativeBcfZip();
+    return ok ? targetList.slice(0, 50).length : added;
   }
 
   public updateClashStatus(clashId: string, status: ClashStatus) {
@@ -976,29 +1039,48 @@ export class ClashDetector {
         const bvhNote = this.deepMeshVerification
           ? ` · BVH filtered ${s.filteredFalsePositives}`
           : "";
+        const sapNote = s.broadPhaseMode === "worker-sap" ? " · Worker SAP" : " · Sync SAP";
         summaryEl.className = "clash-scan-summary";
-        summaryEl.innerHTML = `${modeTag}<span style="color: var(--text-muted);">${s.elapsedMs}ms${escapeHtml(bvhNote)}</span>`;
+        summaryEl.innerHTML = `${modeTag}<span style="color: var(--text-muted);">${s.elapsedMs}ms${escapeHtml(sapNote + bvhNote)}</span>`;
       }
     }
 
     if (rulesContainer) {
       rulesContainer.innerHTML = "";
       this.rules.forEach((rule, idx) => {
-        const lbl = document.createElement("label");
-        lbl.className = "clash-rule-chip";
-        lbl.title = `${rule.name} (Hard >= ${(rule.hardClashTolerance * 1000).toFixed(0)}mm, Clearance ${(rule.softClearanceBuffer * 1000).toFixed(0)}mm)`;
-        lbl.innerHTML = `
-          <input type="checkbox" ${rule.enabled ? "checked" : ""} />
-          <span>${escapeHtml(rule.name)}</span>
+        const chip = document.createElement("div");
+        chip.className = "clash-rule-chip";
+        const hardMm = Math.round(rule.hardClashTolerance * 1000);
+        const clearMm = Math.round(rule.softClearanceBuffer * 1000);
+        chip.title = `${rule.name} (Hard >= ${hardMm}mm, Clearance ${clearMm}mm)`;
+        chip.innerHTML = `
+          <label class="clash-rule-head">
+            <input type="checkbox" class="chk-clash-rule" ${rule.enabled ? "checked" : ""} />
+            <span>${escapeHtml(rule.name)}</span>
+          </label>
+          <div class="clash-rule-tolerances">
+            <label title="Hard clash threshold (mm)">Hard <input type="number" class="clash-tol-input" data-tol="hard" min="0" max="500" step="5" value="${hardMm}" />mm</label>
+            <label title="Clearance envelope (mm)">Clr <input type="number" class="clash-tol-input" data-tol="clear" min="0" max="1000" step="5" value="${clearMm}" />mm</label>
+          </div>
         `;
-        lbl.querySelector("input")?.addEventListener("change", (e) => {
+        chip.querySelector(".chk-clash-rule")?.addEventListener("change", (e) => {
           rule.enabled = (e.target as HTMLInputElement).checked;
           if (!this.lastScanSummary && summaryEl) {
             this.updateClashUI();
           }
         });
-        lbl.dataset.ruleIndex = String(idx);
-        rulesContainer.appendChild(lbl);
+        const hardIn = chip.querySelector('input[data-tol="hard"]') as HTMLInputElement | null;
+        const clrIn = chip.querySelector('input[data-tol="clear"]') as HTMLInputElement | null;
+        const onTolChange = () => {
+          const hMm = Math.max(0, Number(hardIn?.value ?? hardMm) || 0);
+          const cMm = Math.max(0, Number(clrIn?.value ?? clearMm) || 0);
+          rule.hardClashTolerance = hMm / 1000;
+          rule.softClearanceBuffer = cMm / 1000;
+        };
+        hardIn?.addEventListener("change", onTolChange);
+        clrIn?.addEventListener("change", onTolChange);
+        chip.dataset.ruleIndex = String(idx);
+        rulesContainer.appendChild(chip);
       });
     }
 

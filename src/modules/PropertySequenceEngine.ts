@@ -1,3 +1,5 @@
+import { FragmentIndexer } from "../core/FragmentIndexer";
+
 /**
  * PropertySequenceEngine.ts
  *
@@ -389,10 +391,15 @@ export class PropertySequenceEngine {
     });
 
     // Scan models to discover actual values and custom Pset attributes
+    const indexer = FragmentIndexer.getInstance();
     for (const model of models) {
       if (!model) continue;
-      const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
-      const properties = model.properties || (model as any).getLocalProperties?.() || {};
+      const modelId = indexer.resolveModelId(model);
+      let properties = model.properties || (model as any).getLocalProperties?.() || {};
+      if (Object.keys(properties).length === 0) {
+        const synced = indexer.getSyncModelData(modelId, model);
+        if (synced) properties = indexer.toLegacyPropertyMap(synced);
+      }
       const relMap = this.buildRelDefinesMap(properties);
 
       for (const expressIdStr in properties) {
@@ -662,10 +669,15 @@ export class PropertySequenceEngine {
     const hierarchy = new Map<string, Map<string, NodeGroup>>();
     let totalElements = 0;
 
+    const indexer = FragmentIndexer.getInstance();
     for (const model of models) {
       if (!model) continue;
-      const modelId = model.modelId || model.uuid || model.id || (model.object && model.object.uuid) || "default-model";
-      const properties = model.properties || (model as any).getLocalProperties?.() || {};
+      const modelId = indexer.resolveModelId(model);
+      let properties = model.properties || (model as any).getLocalProperties?.() || {};
+      if (Object.keys(properties).length === 0) {
+        const synced = indexer.getSyncModelData(modelId, model);
+        if (synced) properties = indexer.toLegacyPropertyMap(synced);
+      }
       const relMap = this.buildRelDefinesMap(properties);
 
       for (const expressIdStr in properties) {

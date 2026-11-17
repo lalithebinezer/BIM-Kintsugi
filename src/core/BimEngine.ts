@@ -11,6 +11,7 @@ import { BvhAccelerationService } from "./BvhAccelerationService";
 import { PointerInputArbiter } from "./PointerInputArbiter";
 import { MetadataSyncService } from "./MetadataSyncService";
 import { StreamingLoader } from "./StreamingLoader";
+import { FragmentIndexer } from "./FragmentIndexer";
 
 export class BimEngine {
   private static instance: BimEngine;
@@ -138,6 +139,8 @@ export class BimEngine {
       const pipeline = GraphicsPipeline.getInstance();
       pipeline.attachRenderer(renderer);
       pipeline.probeHardware().catch(() => {});
+
+      FragmentIndexer.getInstance().attachFragmentsManager(this.fragments);
 
       const scene = this.world?.scene?.three;
       if (scene) {
