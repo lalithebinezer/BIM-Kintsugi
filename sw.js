@@ -1,11 +1,12 @@
 /**
  * Service Worker — Offline BIM Site Inspection Caching Engine.
  *
- * Caches WebAssembly loaders (web-ifc.wasm), background worker threads,
- * and static assets to enable offline 3D model navigation on construction sites.
+ * Caches WebAssembly loaders (web-ifc.wasm, web-ifc-mt.wasm, web-ifc-node.wasm),
+ * hashed JS/CSS chunks (`./assets/*`), background worker threads, and shell assets
+ * to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v7";
+const CACHE_NAME = "bim-kintsugi-cache-v8";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -14,31 +15,30 @@ const STATIC_ASSETS = [
   "./logo.jpg",
   "./web-ifc.wasm",
   "./web-ifc-mt.wasm",
-  "./manifest.json"
+  "./web-ifc-node.wasm",
+  "./manifest.json",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn("[PWA] Pre-cache warning:", err);
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset)))
+    )
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    caches.keys().then((keys) =>
+      Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
   self.clients.claim();
 });
@@ -46,12 +46,16 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle GET requests and http/https
-  if (event.request.method !== "GET" || !url.protocol.startsWith("http")) {
+  // Only handle same-origin GET requests over http/https
+  if (
+    event.request.method !== "GET" ||
+    !url.protocol.startsWith("http") ||
+    url.origin !== self.location.origin
+  ) {
     return;
   }
 
-  // 1. Navigation / HTML documents: Network-First so updates & new builds load immediately
+  // 1. Navigation / HTML documents: Network-First so new deployments activate promptly, with offline fallback
   if (
     event.request.mode === "navigate" ||
     event.request.destination === "document" ||
@@ -68,39 +72,47 @@ self.addEventListener("fetch", (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => caches.match(event.request).then((c) => c || caches.match("./index.html")))
     );
     return;
   }
 
-  // 2. Cache-first for heavy WASM and worker scripts
-  if (url.pathname.endsWith(".wasm") || /\/worker(?:-[\w-]+)?\.mjs$/.test(url.pathname)) {
+  // 2. Cache-first for content-hashed Vite bundles, WASM binaries, and worker scripts
+  const isImmutableAsset =
+    url.pathname.includes("/assets/") ||
+    url.pathname.endsWith(".wasm") ||
+    /\/worker(?:-[\w-]+)?\.mjs$/.test(url.pathname) ||
+    /clashWorker.*\.js$/i.test(url.pathname);
+
+  if (isImmutableAsset) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return (
-          cached ||
-          fetch(event.request).then((res) => {
-            if (res.ok) {
+        if (cached) return cached;
+        return fetch(event.request)
+          .then((res) => {
+            if (res && res.ok) {
               const resClone = res.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
             }
             return res;
-          }).catch(() => cached)
-        );
+          })
+          .catch(() => cached);
       })
     );
     return;
   }
 
-  // 3. Network-First with cache fallback for code bundles and assets
+  // 3. Network-First with cache fallback for remaining lightweight assets (skip huge sample IFC payloads)
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          !url.pathname.toLowerCase().endsWith(".ifc")
+        ) {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         }
         return networkResponse;
       })

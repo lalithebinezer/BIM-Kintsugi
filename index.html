@@ -400,15 +400,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-BIR1Yvqk.js"></script>
+  <script type="module" crossorigin src="./assets/index-DCwZ6V__.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
-  <link rel="modulepreload" crossorigin href="./assets/thatopen-core-DWDoQjd4.js">
-  <link rel="modulepreload" crossorigin href="./assets/thatopen-front-CaioJV7o.js">
+  <link rel="modulepreload" crossorigin href="./assets/bvh-vendor-CWHnnbWa.js">
+  <link rel="modulepreload" crossorigin href="./assets/thatopen-core-D3aHfhH4.js">
+  <link rel="modulepreload" crossorigin href="./assets/thatopen-front-umhMv6cH.js">
   <link rel="modulepreload" crossorigin href="./assets/thatopen-ui-sKhfsnaw.js">
-  <link rel="modulepreload" crossorigin href="./assets/three-vendor-DoSVA1_i.js">
   <link rel="modulepreload" crossorigin href="./assets/formatters-BEgOBoy1.js">
   <link rel="modulepreload" crossorigin href="./assets/ToastManager-C10ri2Vy.js">
-  <link rel="stylesheet" crossorigin href="./assets/index-BIsQzFYN.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-B6I6rq3q.css">
 </head>
 
 <body class="left-sidebar-collapsed right-sidebar-collapsed">
@@ -1459,7 +1459,12 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
             <span>SCENE</span>
           </button>
-          <button class="sidebar-tab-btn" data-tab="inspector" title="Properties & AI Prompt (Key 5)">
+          <button class="sidebar-tab-btn" data-tab="metadata" title="BIM Element Metadata & Properties (Key 8)">
+            <span class="tab-key-badge">8</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>META</span>
+          </button>
+          <button class="sidebar-tab-btn" data-tab="inspector" title="4D/5D Cost & Schedule Inspector (Key 5)">
             <span class="tab-key-badge">5</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <span>INSPECT</span>
@@ -1773,6 +1778,14 @@
                           <span class="toggle-slider"></span>
                         </label>
                       </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.68rem; color: var(--text-muted);" title="Probes hardware WebGPU adapter alongside active WebGL 2.0 fragment pipeline">Experimental WebGPU Backend</span>
+                        <label class="toggle-switch">
+                          <input type="checkbox" id="settings-toggle-webgpu" aria-label="Enable Experimental WebGPU Preference" title="Experimental WebGPU Adapter Opt-In" />
+                          <span class="toggle-slider"></span>
+                        </label>
+                      </div>
                     </div>
 
                     <div style="display: flex; gap: 0.35rem; margin-top: 0.45rem;">
@@ -2023,34 +2036,105 @@
           </div>
         </div>
 
-        <!-- Tab 2: Properties Widget -->
-        <div class="tab-content-panel" id="tab-right-inspector">
+        <!-- Tab 2: Dedicated BIM Element Metadata Panel -->
+        <div class="tab-content-panel" id="tab-right-metadata">
           <div class="panel widget-panel properties-widget">
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <div class="header-title-group">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
+              <div class="header-title-group" style="min-width: 0;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
-                <span>Element Properties</span>
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Metadata</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <button type="button" id="btn-inspector-param-reader" class="btn-inspector-param-reader" title="Open IFC Parameter Reader (Scan all parameters in model)">
-                  📖 Parameters
+              <div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">
+                <button type="button" id="btn-metadata-param-reader" class="btn-inspector-param-reader" style="white-space: nowrap;" title="Open IFC Parameter Reader (Scan all model parameters)">
+                  📖 Params
                 </button>
-                <button type="button" id="btn-panel-clear-selection" class="btn-esc-pill" title="Exit selection (Esc)" style="display: none;">
+                <button type="button" id="btn-meta-open-inspect" class="btn-meta-jump" style="white-space: nowrap;" title="Open 4D/5D Cost & Schedule Inspector (Key 5)">
+                  5D →
+                </button>
+                <button type="button" id="btn-metadata-clear-selection" class="btn-esc-pill" title="Exit selection (Esc)" style="display: none;">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  <span>Exit</span>
                   <kbd class="hud-kbd">Esc</kbd>
                 </button>
               </div>
             </div>
+
             <div class="panel-body thin-scrollbar">
-              <div id="properties-selected-state" style="display:none; flex-direction:column; gap:0.65rem; width:100%;">
-                <div class="section-subtitle">BIM Element Metadata</div>
-                <div class="property-table" id="element-metadata-table">
+              <div id="metadata-selected-state" style="display: none; flex-direction: column; gap: 0.6rem; width: 100%;">
+                <!-- Element Identity Hero Card -->
+                <div class="meta-hero-card" id="metadata-hero-card">
+                  <div class="meta-hero-badges">
+                    <span class="meta-entity-pill" id="meta-hero-entity">IFCELEMENT</span>
+                    <span class="meta-storey-pill" id="meta-hero-storey">All Storeys</span>
+                  </div>
+                  <div class="meta-hero-name" id="meta-hero-name">Element</div>
+                  <div class="meta-hero-sub">
+                    <span class="meta-hero-id" id="meta-hero-id">#0</span>
+                    <span class="meta-hero-guid" id="meta-hero-guid" title="IFC GlobalId">No GlobalId</span>
+                    <button type="button" id="btn-copy-meta-guid" class="btn-copy-guid" title="Copy IFC GlobalId">Copy GUID</button>
+                  </div>
+                  <div class="meta-quick-actions">
+                    <button type="button" class="btn-meta-mini" id="btn-meta-focus" title="Focus Camera on Element">Focus</button>
+                    <button type="button" class="btn-meta-mini" id="btn-meta-isolate" title="Isolate Selected Element">Isolate</button>
+                    <button type="button" class="btn-meta-mini accent" id="btn-meta-cost" title="Open 4D/5D Cost & Schedule">4D / 5D Cost</button>
+                  </div>
+                </div>
+
+                <!-- Filter & Batch Property Actions -->
+                <div class="meta-filter-bar">
+                  <div class="search-box" style="flex: 1; margin: 0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="text" id="metadata-search-input" placeholder="Filter attributes, Psets, Qto, GUID..." autocomplete="off" spellcheck="false" />
+                    <button type="button" class="btn-clear-search hidden" id="btn-clear-meta-search" title="Clear metadata filter">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="meta-toolbar-row">
+                  <span id="meta-filter-count" class="meta-filter-count">0 fields</span>
+                  <div style="display: flex; gap: 0.3rem;">
+                    <button type="button" class="btn-meta-mini" id="btn-meta-toggle-all">Collapse All</button>
+                    <button type="button" class="btn-meta-mini" id="btn-copy-metadata-json" title="Copy full element metadata as JSON">Copy JSON</button>
+                  </div>
+                </div>
+
+                <!-- Live Physical Dimensions Accordion -->
+                <details class="meta-accordion" open>
+                  <summary class="meta-accordion-summary">
+                    <span class="meta-acc-title">Physical Dimensions (Bounding Box)</span>
+                    <span class="meta-acc-badge">BBox</span>
+                  </summary>
+                  <div class="meta-accordion-body">
+                    <div class="property-table" id="prop-dimensions-table">
+                      <div class="prop-row">
+                        <span class="prop-label">Length (X)</span>
+                        <span class="prop-val font-mono" id="prop-dim-length">-</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Width (Z)</span>
+                        <span class="prop-val font-mono" id="prop-dim-width">-</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Height (Y)</span>
+                        <span class="prop-val font-mono" id="prop-dim-height">-</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Est. Volume</span>
+                        <span class="prop-val font-mono color-cyan" id="prop-dim-volume">-</span>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <!-- Grouped Attributes, Property Sets, Type & GIS Metadata -->
+                <div class="property-table meta-groups-root" id="element-metadata-table">
                   <div class="prop-row">
                     <span class="prop-label">Express ID</span>
                     <span class="prop-val" id="prop-express-id">-</span>
@@ -2064,26 +2148,8 @@
                     <span class="prop-val" id="prop-name">-</span>
                   </div>
                 </div>
-
-                <!-- Live Dimensions & Bounding Box -->
-                <div class="section-subtitle">Physical Dimensions (Bounding Box)</div>
-                <div class="property-table" id="prop-dimensions-table" style="background: var(--bg-card); border: 1.5px solid var(--border-strong); padding: 0.35rem; border-radius: 2px;">
-                  <div class="prop-row">
-                    <span class="prop-label">Length (X)</span>
-                    <span class="prop-val font-mono" id="prop-dim-length">-</span>
-                  </div>
-                  <div class="prop-row">
-                    <span class="prop-label">Width (Z)</span>
-                    <span class="prop-val font-mono" id="prop-dim-width">-</span>
-                  </div>
-                  <div class="prop-row">
-                    <span class="prop-label">Height (Y)</span>
-                    <span class="prop-val font-mono" id="prop-dim-height">-</span>
-                  </div>
-                  <div class="prop-row">
-                    <span class="prop-label">Est. Volume</span>
-                    <span class="prop-val font-mono color-cyan" id="prop-dim-volume">-</span>
-                  </div>
+                <div id="meta-no-filter-matches" class="meta-no-matches" style="display: none;">
+                  No metadata properties match your current filter.
                 </div>
 
                 <button type="button" class="btn-export-prompt" id="btn-export-prompt"
@@ -2098,34 +2164,88 @@
                   <span>Copy Structured AI Prompt</span>
                 </button>
 
-                <!-- Fragments Model Information & Data Query Console -->
-                <div class="model-data-query-card" style="background: var(--bg-hover); border: 1.5px solid var(--border-strong); border-radius: 4px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.25rem;">
-                    <span style="font-size: 0.68rem; font-weight: 800; color: var(--accent-500); display: flex; align-items: center; gap: 0.3rem;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                      Fragments Query Console
-                    </span>
-                    <span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono);">OBC/FRAGS</span>
+                <!-- Collapsible Fragments Query Console -->
+                <details class="meta-accordion">
+                  <summary class="meta-accordion-summary">
+                    <span class="meta-acc-title">Fragments Query Console</span>
+                    <span class="meta-acc-badge">OBC/FRAGS</span>
+                  </summary>
+                  <div class="meta-accordion-body">
+                    <div class="model-data-query-card" style="background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0.45rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;">
+                        <button type="button" class="btn-secondary" id="btn-query-log-attrs" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log raw and formatted element attributes to browser console">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          Log Attrs
+                        </button>
+                        <button type="button" class="btn-secondary" id="btn-query-log-psets" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log IsDefinedBy relationship Property Sets">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                          Log Psets
+                        </button>
+                        <button type="button" class="btn-secondary" id="btn-query-log-geom" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log raw BufferGeometry buffers">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                          Log Geom
+                        </button>
+                        <button type="button" class="btn-secondary" id="btn-query-log-structure" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log complete Spatial Structure hierarchy tree">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                          Log Structure
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                </details>
+              </div>
 
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;">
-                    <button type="button" class="btn-secondary" id="btn-query-log-attrs" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log raw and formatted element attributes to browser console">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                      Log Attrs
-                    </button>
-                    <button type="button" class="btn-secondary" id="btn-query-log-psets" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log IsDefinedBy relationship Property Sets">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                      Log Psets
-                    </button>
-                    <button type="button" class="btn-secondary" id="btn-query-log-geom" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log raw BufferGeometry buffers">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                      Log Geom
-                    </button>
-                    <button type="button" class="btn-secondary" id="btn-query-log-structure" style="font-size: 0.62rem; padding: 0.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.2rem;" title="Log complete Spatial Structure hierarchy tree">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-                      Log Structure
-                    </button>
+              <div id="metadata-empty-state" class="empty-state-container">
+                <div class="empty-state-card">
+                  <div class="empty-card-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
                   </div>
+                </div>
+                <span class="empty-state-text"><strong>Left-click</strong>, <strong>Double-click</strong>, or <strong>Right-click → Properties</strong> on any 3D element to view its full BIM Metadata, Property Sets, Quantities, and WGS84 coordinates.</span>
+                <div class="meta-empty-actions">
+                  <button type="button" class="btn-secondary btn-xs" id="btn-meta-empty-search">🔍 Search Elements</button>
+                  <button type="button" class="btn-secondary btn-xs" id="btn-meta-empty-params">📖 Browse IFC Params</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: 4D/5D Cost & Schedule Inspector Widget -->
+        <div class="tab-content-panel" id="tab-right-inspector">
+          <div class="panel widget-panel properties-widget">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="header-title-group">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>4D/5D Cost &amp; Schedule</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <button type="button" id="btn-inspector-param-reader" class="btn-inspector-param-reader" title="Open IFC Parameter Reader (Scan all parameters in model)">
+                  📖 Parameters
+                </button>
+                <button type="button" id="btn-panel-clear-selection" class="btn-esc-pill" title="Exit selection (Esc)" style="display: none;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span>Exit</span>
+                  <kbd class="hud-kbd">Esc</kbd>
+                </button>
+              </div>
+            </div>
+            <div class="panel-body thin-scrollbar">
+              <div id="properties-selected-state" style="display:none; flex-direction:column; gap:0.65rem; width:100%;">
+                <!-- Compact Link Banner to Dedicated Metadata Panel -->
+                <div id="inspector-element-banner" class="meta-inspector-banner hidden">
+                  <span id="inspector-banner-title" class="meta-banner-title">Selected Element</span>
+                  <button type="button" id="btn-inspector-open-meta" class="btn-meta-mini accent">Metadata →</button>
                 </div>
 
                 <!-- Multi-Selection Batch Operations Card -->
@@ -3144,8 +3264,8 @@
               <div class="step-item">
                 <div class="step-num">02</div>
                 <div class="step-body">
-                  <div class="step-name">Inspect Elements &amp; Properties</div>
-                  <div class="step-desc"><strong>Double-click</strong> any 3D element to open the Properties panel (Key <kbd>5</kbd>). View IFC type, name, storey, category, 4D task dates, material volumes, and live 5D unit cost fields.</div>
+                  <div class="step-name">Inspect Elements, Metadata &amp; Properties</div>
+                  <div class="step-desc"><strong>Left-click</strong>, <strong>Double-click</strong>, or <strong>Right-click → Properties</strong> on any 3D element to open the dedicated <strong>BIM Element Metadata</strong> tab (Key <kbd>8</kbd>). Search attributes, Property Sets (Psets), Qto quantities, WGS84 coordinates, or switch to Key <kbd>5</kbd> for 4D/5D Cost fields.</div>
                 </div>
               </div>
               <div class="step-item">
@@ -3324,8 +3444,9 @@
                 <div class="shortcut-group">
                   <div class="shortcut-row"><kbd>Dock Scroll</kbd> <span>Mouse Wheel or Pointer Drag to pan dock horizontally</span></div>
                   <div class="shortcut-row"><kbd>Hover Dock</kbd> <span>Apple magnification with elevated floating tooltip</span></div>
-                  <div class="shortcut-row"><kbd>Dbl Click</kbd> <span>Inspect 3D Element Properties &amp; 5D Cost</span></div>
-                  <div class="shortcut-row"><kbd>Right Click</kbd> <span>Context Menu (Isolate, Hide, Slice, BCF Issue)</span></div>
+                  <div class="shortcut-row"><kbd>Dbl Click</kbd> <span>Open BIM Element Metadata tab (Key 8)</span></div>
+                  <div class="shortcut-row"><kbd>Right Click</kbd> <span>Context Menu (Properties / Metadata, Isolate, BCF)</span></div>
+                  <div class="shortcut-row"><kbd>8</kbd> <span>Open Dedicated BIM Element Metadata Tab</span></div>
                   <div class="shortcut-row"><kbd>Scroll</kbd> <span>Zoom In / Out</span></div>
                   <div class="shortcut-row"><kbd>Left Drag</kbd> <span>Orbit Camera</span></div>
                   <div class="shortcut-row"><kbd>Right Drag</kbd> <span>Pan Camera</span></div>
@@ -3468,7 +3589,7 @@
       <div id="ctx-element-title" style="font-size: 0.64rem; font-weight: 800; color: var(--accent-500); padding: 0.25rem 0.45rem; border-bottom: 1px solid var(--border-subtle); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Element #186559</div>
       <button class="ctx-item" data-action="drop-pin" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Drop 3D Pin Here</button>
       <button class="ctx-item" data-action="create-bcf" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--color-purple); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg> Create BCF Issue Here</button>
-      <button class="ctx-item" data-action="properties" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> View Properties</button>
+      <button class="ctx-item" id="ctx-action-properties" data-action="properties" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> <span>Properties (Metadata)</span></button>
       <button class="ctx-item" data-action="xray" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg> X-Ray Isolate</button>
       <button class="ctx-item" data-action="isolate" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Isolate Element</button>
       <button class="ctx-item" data-action="focus" style="display: flex; align-items: center; gap: 0.45rem; width: 100%; background: none; border: none; padding: 0.35rem 0.45rem; font-size: 0.68rem; font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; border-radius: 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Focus Camera</button>
@@ -3557,15 +3678,25 @@
           <button id="btn-clear-clashes" class="btn-md btn-outline" title="Clear Clash Results and 3D Markers">
             <span>Clear</span>
           </button>
-          <button id="btn-export-clash-bcf" class="btn-md btn-outline" title="Export to BCF 3.0">
+          <button id="btn-export-clash-bcf" class="btn-md btn-outline" title="Export to BCF 3.0 JSON">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>BCF</span>
+            <span>JSON</span>
+          </button>
+          <button id="btn-export-clash-bcfzip" class="btn-md btn-outline" title="Export Native .bcfzip Archive with 3D Viewpoints">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+            <span>.bcfzip</span>
           </button>
         </div>
-        <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.68rem; color: var(--text-muted); margin-top: 0.45rem; cursor: pointer;">
-          <input type="checkbox" id="toggle-clash-deep-bvh" style="accent-color: #f43f5e;" />
-          <span>Deep Triangle BVH Verification (<code style="font-size:0.62rem;">OBF.Mesher</code>)</span>
-        </label>
+        <div class="clash-toggles-row" style="display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.45rem;">
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="toggle-clash-deep-bvh" style="accent-color: #f43f5e;" />
+            <span>Deep Triangle BVH (<code style="font-size:0.62rem;">OBF.Mesher</code>)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="toggle-clash-isolate-context" checked style="accent-color: #f43f5e;" />
+            <span>Isolate Pair on Focus</span>
+          </label>
+        </div>
         <div id="clash-rules-container" class="clash-rules-container"></div>
         <div id="clash-scan-summary" class="clash-scan-summary"></div>
         <div id="clash-matrix-container" class="clash-matrix-wrap"></div>
@@ -3676,6 +3807,22 @@
           <input type="checkbox" id="toggle-live-peers" aria-label="Toggle Live Peers On or Off" checked />
           <span class="toggle-slider"></span>
         </label>
+      </div>
+
+      <!-- Profile & Cross-Device Session Strip -->
+      <div class="collab-profile-bar">
+        <input type="text" id="collab-profile-name" class="collab-mini-input" placeholder="Your Name" aria-label="Your Display Name" />
+        <input type="text" id="collab-profile-role" class="collab-mini-input" placeholder="Role" aria-label="Your Project Role" />
+        <label class="collab-demo-filter" title="Hide seeded demo coworkers to show only real peers">
+          <input type="checkbox" id="toggle-hide-demo-peers" />
+          <span>Hide Demo</span>
+        </label>
+      </div>
+      <div class="collab-relay-bar">
+        <input type="text" id="collab-room-id" class="collab-mini-input" placeholder="Room ID" aria-label="Collaboration Room ID" style="max-width: 112px;" />
+        <input type="text" id="collab-ws-url" class="collab-mini-input" placeholder="wss://relay.example.com (optional)" aria-label="WebSocket Relay URL" />
+        <button id="btn-collab-ws-connect" class="btn-xs btn-outline" title="Connect or Disconnect WebSocket Relay">Relay</button>
+        <button id="btn-collab-rtc-p2p" class="btn-xs btn-outline" title="Serverless WebRTC P2P Connect">P2P</button>
       </div>
 
       <!-- Quick Action Ribbon -->
