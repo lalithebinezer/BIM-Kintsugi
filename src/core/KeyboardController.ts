@@ -32,6 +32,9 @@ export class KeyboardController {
       );
 
       if (e.key === 'Escape') {
+        if (typeof (window as any).__cancelBoxSelectDrag === 'function' && (window as any).__cancelBoxSelectDrag()) {
+          return;
+        }
         if (activeEl && (activeEl as HTMLElement).blur) {
           (activeEl as HTMLElement).blur();
         }
@@ -96,7 +99,16 @@ export class KeyboardController {
 
       // BIM Feature Hotkeys
       const keyLower = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && keyLower === 'a') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && keyLower === 'z') {
+        e.preventDefault();
+        (window as any).__redoSelection?.();
+      } else if ((e.ctrlKey || e.metaKey) && keyLower === 'y') {
+        e.preventDefault();
+        (window as any).__redoSelection?.();
+      } else if ((e.ctrlKey || e.metaKey) && keyLower === 'z') {
+        e.preventDefault();
+        (window as any).__undoSelection?.();
+      } else if ((e.ctrlKey || e.metaKey) && keyLower === 'a') {
         e.preventDefault();
         document.getElementById('btn-select-all')?.click();
       } else if ((e.ctrlKey || e.metaKey) && keyLower === 'i') {

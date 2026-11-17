@@ -101,7 +101,8 @@ import { HighlighterManager } from "./modules/HighlighterManager";
 import { ModelInfoManager } from "./modules/ModelInfoManager";
 import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
 import { SectionPlanesHUD } from "./ui/SectionPlanesHUD";
-import { SelectionManager } from "./modules/SelectionManager";
+import { SelectionManager, type SelectionBatchSummary } from "./modules/SelectionManager";
+import { PointerInputArbiter } from "./core/PointerInputArbiter";
 import { formatCurrency, formatItemCount, escapeHtml } from "./utils/formatters";
 
 import { InteractiveGanttDrawer } from "./ui/InteractiveGanttDrawer";
@@ -619,10 +620,88 @@ if (existingGroundShadow) {
   world.scene.three.remove(existingGroundShadow);
 }
 
-// Multi-Selection State Storage
+// Multi-Selection State Storage & Helpers
 let activeExpressId: number | null = null;
 let activeModelId: string | null = null;
 const multiSelectedElements: Record<string, Set<number>> = {};
+
+function countMapItems(map: Record<string, Set<number>> | undefined | null): number {
+  if (!map) return 0;
+  let total = 0;
+  for (const k in map) {
+    total += map[k]?.size || 0;
+  }
+  return total;
+}
+
+function syncMultiSelectedBridge(map: Record<string, Set<number>> | undefined | null) {
+  for (const k in multiSelectedElements) {
+    delete multiSelectedElements[k];
+  }
+  if (!map) return;
+  for (const mid in map) {
+    if (map[mid] && map[mid].size > 0) {
+      multiSelectedElements[mid] = new Set<number>(map[mid]);
+    }
+  }
+}
+
+let isAllElementsVisible = true;
+const EYE_OPEN_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>`;
+const EYE_CLOSED_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>`;
+
+function syncDockVisibilityState(allVisible: boolean) {
+  isAllElementsVisible = allVisible;
+  const iconWrap = document.getElementById("visibility-icon-wrap");
+  const tooltipText = document.getElementById("dock-tooltip-visibility");
+  const dockItem = document.getElementById("dock-item-visibility");
+  const btn = document.getElementById("btn-toggle-visibility");
+
+  if (iconWrap) {
+    iconWrap.innerHTML = allVisible ? EYE_OPEN_SVG : EYE_CLOSED_SVG;
+  }
+  if (tooltipText) {
+    tooltipText.innerText = allVisible ? "Hide All" : "Show All";
+  }
+  if (dockItem) {
+    dockItem.setAttribute("data-tooltip", allVisible ? "Hide All Elements (U)" : "Show All Elements (U)");
+  }
+  if (btn) {
+    btn.setAttribute("data-state", allVisible ? "visible" : "hidden");
+    btn.setAttribute("aria-label", allVisible ? "Hide All Elements" : "Show All Elements");
+    btn.classList.toggle("active-hidden", !allVisible);
+  }
+}
+
+function setHiddenIndicator(visible: boolean, label?: string) {
+  const pill = document.getElementById("viewport-hidden-indicator");
+  const countEl = document.getElementById("hidden-elements-count");
+  if (pill) {
+    pill.style.display = visible ? "inline-flex" : "none";
+    if (visible && countEl && label) {
+      countEl.textContent = label;
+    }
+  }
+  if (visible && typeof syncDockVisibilityState === "function") {
+    syncDockVisibilityState(false);
+  }
+}
+
+async function focusSelectionMap(targetMap: Record<string, Set<number>>) {
+  if (!targetMap || countMapItems(targetMap) === 0 || !world.camera?.controls) return;
+  try {
+    const boundingBoxer = components.get(OBC.BoundingBoxer);
+    boundingBoxer.list.clear();
+    await boundingBoxer.addFromModelIdMap(targetMap);
+    const box = boundingBoxer.get();
+    if (!box.isEmpty()) {
+      await (world.camera.controls as any).fitToBox(box, true);
+    }
+    boundingBoxer.list.clear();
+  } catch (e) {
+    console.warn("Zoom to selection failed:", e);
+  }
+}
 
 function updateBreadcrumbs(storeyName: string = "Level 0", elementName: string = "Element", _modelId?: string, expressId?: number) {
   const storeyEl = document.getElementById("breadcrumb-storey");
@@ -701,43 +780,36 @@ function updateViewportSelectionBar(customTitle?: string) {
 }
 (window as any).updateViewportSelectionBar = updateViewportSelectionBar;
 
-function updateMultiSelectionBatchCard() {
+function updateMultiSelectionBatchCard(batchSummary?: SelectionBatchSummary) {
   const card = document.getElementById("multi-selection-batch-card");
   const countEl = document.getElementById("batch-selected-count");
   const volEl = document.getElementById("batch-total-volume");
   const costEl = document.getElementById("batch-total-cost");
   if (!card || !countEl || !volEl || !costEl) return;
 
-  let totalCount = 0;
-  for (const mid in multiSelectedElements) {
-    totalCount += multiSelectedElements[mid].size;
-  }
+  const batch = batchSummary || SelectionManager.getInstance().getBatchSummary();
 
-  if (totalCount > 1) {
+  if (batch.totalCount > 1) {
     card.style.display = "flex";
-    countEl.innerText = String(totalCount);
-    const estVol = (totalCount * 0.45).toFixed(2);
-    const estCost = (totalCount * 125).toLocaleString();
-    volEl.innerText = `${estVol} m³`;
-    costEl.innerText = `$${estCost}`;
+    countEl.innerText = String(batch.totalCount);
+    volEl.innerText = `${batch.totalVolumeM3.toFixed(2)} m³`;
+    costEl.innerText = batch.formattedCost;
   } else {
     card.style.display = "none";
   }
   updateViewportSelectionBar();
 }
+(window as any).updateMultiSelectionBatchCard = updateMultiSelectionBatchCard;
 
 // Global Clean Exit from All Active 3D Selections
 async function clearAllSelections(notify: boolean = true) {
-  for (const mid in multiSelectedElements) {
-    multiSelectedElements[mid].clear();
-  }
+  syncMultiSelectedBridge({});
   activeExpressId = null;
   activeModelId = null;
 
   try {
-    await highlighter.clear("select");
+    await SelectionManager.getInstance().clearSelection(true);
     await highlighter.clear("hover");
-    SelectionManager.getInstance().clearSelection();
     SelectionManager.getInstance().toggleBoxSelectMode(false);
   } catch (e) {
     console.warn("Highlighter clear error:", e);
@@ -785,9 +857,16 @@ document.getElementById("btn-selection-hud-isolate")?.addEventListener("click", 
   document.getElementById("btn-isolate")?.click();
 });
 
-document.getElementById("btn-batch-isolate")?.addEventListener("click", () => {
-  highlighter.highlightByID("select", multiSelectedElements, true, true);
-  showToast("Isolated Selected Batch", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`);
+document.getElementById("btn-batch-isolate")?.addEventListener("click", async () => {
+  const ok = await SelectionManager.getInstance().isolateCurrentSelection();
+  if (ok) {
+    setHiddenIndicator(true, "Isolated Batch — Press U to Show All");
+    showToast("Isolated Selected Batch", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`);
+  }
+});
+
+document.getElementById("btn-unhide-all-pill")?.addEventListener("click", () => {
+  toggleAllVisibility(true);
 });
 
 document.getElementById("btn-batch-xray")?.addEventListener("click", () => {
@@ -854,76 +933,151 @@ try {
 }
 (window as any).viewer_mouse = mouse;
 
-// Add click/double-click listener for element picking and Shift+Click multi-selection
+// Single-click picking routed through PointerInputArbiter (Shift toggle, Ctrl/Alt subtract)
+// Double-click creates section planes when Clipper is active, or focuses camera onto hit element.
+PointerInputArbiter.getInstance().attach(container);
+PointerInputArbiter.getInstance().registerHandler({
+  id: "element-picking",
+  priority: "picking",
+  isActive: () => !clipper.enabled && !MeasurementSuite.getInstance().isMeasuringActive(),
+  onPointerUp: async (e: PointerEvent, withinDeadzone: boolean) => {
+    if (e.button !== 0 || !withinDeadzone) return;
+    const domEl = world.renderer?.three?.domElement;
+    const targetEl = e.target as HTMLElement | null;
+    if (targetEl?.closest?.("#bim-context-menu, #viewport-selection-bar, #viewport-hidden-indicator, .bottom-toolbar, .sidebar-panel")) return;
+    if (domEl && e.target !== domEl && e.target !== container) return;
+
+    try {
+      const caster = components.get(OBC.Raycasters).get(world);
+      const rect = container.getBoundingClientRect();
+      const pickPos = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      const result = (await caster.castRay({ position: pickPos })) as any;
+
+      if (!result || !result.fragments || result.localId === undefined || result.localId === null) {
+        if (!e.shiftKey && !e.ctrlKey && SelectionManager.getInstance().getSelectionInfo().totalCount > 0) {
+          await clearAllSelections(false);
+        }
+        return;
+      }
+
+      const modelId = String(result.fragments.modelId);
+      const localId = Number(result.localId);
+      const currentInfo = SelectionManager.getInstance().getSelectionInfo();
+
+      if (e.shiftKey) {
+        const nextMap: Record<string, Set<number>> = {};
+        for (const mid in currentInfo.modelIdMap) {
+          if (currentInfo.modelIdMap[mid].size > 0) {
+            nextMap[mid] = new Set(currentInfo.modelIdMap[mid]);
+          }
+        }
+        if (!nextMap[modelId]) nextMap[modelId] = new Set();
+        if (nextMap[modelId].has(localId)) {
+          nextMap[modelId].delete(localId);
+          if (nextMap[modelId].size === 0) delete nextMap[modelId];
+        } else {
+          nextMap[modelId].add(localId);
+        }
+
+        if (countMapItems(nextMap) === 0) {
+          await clearAllSelections(false);
+        } else {
+          SelectionManager.getInstance().syncFromSelectionMap(nextMap);
+          await highlighter.highlightByID("select", nextMap, true, false);
+        }
+        return;
+      }
+
+      if (e.ctrlKey || e.altKey) {
+        const nextMap: Record<string, Set<number>> = {};
+        for (const mid in currentInfo.modelIdMap) {
+          if (currentInfo.modelIdMap[mid].size > 0) {
+            nextMap[mid] = new Set(currentInfo.modelIdMap[mid]);
+          }
+        }
+        if (nextMap[modelId]?.has(localId)) {
+          nextMap[modelId].delete(localId);
+          if (nextMap[modelId].size === 0) delete nextMap[modelId];
+          if (countMapItems(nextMap) === 0) {
+            await clearAllSelections(false);
+          } else {
+            SelectionManager.getInstance().syncFromSelectionMap(nextMap);
+            await highlighter.highlightByID("select", nextMap, true, false);
+          }
+        }
+        return;
+      }
+
+      const singleMap = { [modelId]: new Set([localId]) };
+      await highlighter.highlightByID("select", singleMap, true, false);
+    } catch (err) {
+      console.error("Raycaster single picking failed:", err);
+    }
+  },
+});
+
 container.addEventListener("dblclick", async (e: MouseEvent) => {
+  const domEl = world.renderer?.three?.domElement;
+  if (domEl && e.target !== domEl && e.target !== container) return;
   if (clipper.enabled) {
     try {
       clippingModule.createSectionPlane();
     } catch (err) {
       console.error("Clipper failed to create plane:", err);
     }
-  } else {
-    try {
-      const caster = components.get(OBC.Raycasters).get(world);
-      const rect = container.getBoundingClientRect();
-      const dblPos = new THREE.Vector2(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1
-      );
-      const result = (await caster.castRay({ position: dblPos })) as any;
-      if (!result || !result.fragments) {
-        if (!e.shiftKey) {
-          await highlighter.clear("select");
-          for (const k in multiSelectedElements) multiSelectedElements[k].clear();
-          updateMultiSelectionBatchCard();
-          resetPropertiesPanel();
-          updateBreadcrumbs("All Storeys", "No Element Selected");
-        }
-        return;
+    return;
+  }
+
+  if (MeasurementSuite.getInstance().isMeasuringActive()) return;
+
+  try {
+    const caster = components.get(OBC.Raycasters).get(world);
+    const rect = container.getBoundingClientRect();
+    const dblPos = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    const result = (await caster.castRay({ position: dblPos })) as any;
+    if (!result || !result.fragments) {
+      if (!e.shiftKey) {
+        await clearAllSelections(false);
       }
-
-      const modelId = result.fragments.modelId;
-      const localId = result.localId;
-
-      if (e.shiftKey) {
-        if (!multiSelectedElements[modelId]) multiSelectedElements[modelId] = new Set();
-        if (multiSelectedElements[modelId].has(localId)) {
-          multiSelectedElements[modelId].delete(localId);
-        } else {
-          multiSelectedElements[modelId].add(localId);
-        }
-        await highlighter.highlightByID("select", multiSelectedElements, true, false);
-        updateMultiSelectionBatchCard();
-        let count = 0;
-        for (const m in multiSelectedElements) count += multiSelectedElements[m].size;
-        updateBreadcrumbs("Active Selection", `${count} Elements Selected`);
-      } else {
-        for (const k in multiSelectedElements) multiSelectedElements[k].clear();
-        multiSelectedElements[modelId] = new Set([localId]);
-        updateMultiSelectionBatchCard();
-
-        const modelIdMap = { [modelId]: new Set([localId]) };
-        await highlighter.highlightByID("select", modelIdMap, true, false);
-
-        const model = fragments.list.get(modelId);
-        if (model) {
-          await displayElementProperties(model, localId);
-          const tag = resolveElementTag(localId);
-          updateBreadcrumbs("Level 0", tag, modelId, localId);
-          if (propertyEditor) {
-            await propertyEditor.selectElement(model, localId);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Raycaster element picking failed:", err);
+      return;
     }
+
+    const modelId = String(result.fragments.modelId);
+    const localId = Number(result.localId);
+    const targetMap = { [modelId]: new Set([localId]) };
+
+    const activeSel = SelectionManager.getInstance().getSelectionInfo().modelIdMap;
+    const alreadySelected = Boolean(activeSel[modelId]?.has(localId));
+
+    if (!alreadySelected && !e.shiftKey) {
+      await highlighter.highlightByID("select", targetMap, true, false);
+    }
+
+    await focusSelectionMap(targetMap);
+
+    const indexedEl = FragmentIndexer.getInstance().getCachedElement(modelId, localId);
+    const resolvedStorey =
+      globalElementStoreysMap[`${modelId}-${localId}`] ||
+      indexedEl?.storey ||
+      "All Storeys";
+    const tag = resolveElementTag(localId, modelId);
+    updateBreadcrumbs(resolvedStorey, tag, modelId, localId);
+  } catch (err) {
+    console.error("Raycaster double-click focus failed:", err);
   }
 });
 
 // --- HIGHLIGHTER & SELECTION SETUP ---
 const highlighter = components.get(OBF.Highlighter);
 highlighter.setup({ world });
+highlighter.config.autoHighlightOnClick = false;
+(highlighter as any).multiple = "shiftKey";
 highlighter.enabled = true;
 
 // Configure selection colors
@@ -3884,6 +4038,48 @@ const initBim = async () => {
 
     // 4. Register selection and highlighting listeners
     highlighter.events.select.onHighlight.add(async (selection) => {
+      const totalSelected = countMapItems(selection);
+      SelectionManager.getInstance().syncFromSelectionMap(selection);
+
+      if (totalSelected === 0) {
+        resetPropertiesPanel();
+        if (propertyEditor) {
+          await propertyEditor.deselect();
+        }
+        document.body.classList.add("right-sidebar-collapsed");
+        return;
+      }
+
+      if (totalSelected > 1) {
+        const batch = SelectionManager.getInstance().getBatchSummary(selection);
+        if (batch.leadElement) {
+          activeModelId = batch.leadElement.modelId;
+          activeExpressId = batch.leadElement.expressId;
+        }
+        const emptyStateEl = document.getElementById("properties-empty-state");
+        if (emptyStateEl) emptyStateEl.style.display = "none";
+        const selectedStateEl = document.getElementById("properties-selected-state");
+        if (selectedStateEl) selectedStateEl.style.display = "flex";
+        const headerStatusText = document.getElementById("header-status-text");
+        if (headerStatusText) {
+          headerStatusText.innerText = `Batch: ${batch.totalCount} Elements (${batch.formattedCost})`;
+        }
+
+        const primaryStorey =
+          batch.storeys.length === 1 ? batch.storeys[0].storey : "Multi-Selection";
+        updateBreadcrumbs(primaryStorey, `${batch.totalCount} Elements Selected`);
+
+        MetadataPanelController.getInstance().setMultiSelectionState(batch);
+        updateMultiSelectionBatchCard(batch);
+        updateViewportSelectionBar();
+
+        document.body.classList.remove("right-sidebar-collapsed");
+        if (typeof (window as any).switchSidebarTab === "function") {
+          (window as any).switchSidebarTab("right-tab-bar", "metadata");
+        }
+        return;
+      }
+
       let firstExpressId: number | null = null;
       let selectedModel: any = null;
 
@@ -3893,8 +4089,7 @@ const initBim = async () => {
           firstExpressId = id;
           break;
         }
-        
-        // Find matching model by fragment or expressId
+
         for (const [, model] of fragments.list) {
           const anyModel = model as any;
           if (
@@ -3913,16 +4108,12 @@ const initBim = async () => {
         selectedModel = Array.from(fragments.list.values())[0];
       }
 
-      // Sync SelectionManager state and update HUD
-      SelectionManager.getInstance().syncFromSelectionMap(selection);
-
       if (firstExpressId !== null && selectedModel) {
         await displayElementProperties(selectedModel, firstExpressId, { targetTab: "metadata" });
         if (propertyEditor) {
           await propertyEditor.selectElement(selectedModel, firstExpressId);
         }
-        // Show right sidebar automatically on the dedicated Metadata tab
-        document.body.classList.remove('right-sidebar-collapsed');
+        document.body.classList.remove("right-sidebar-collapsed");
         if (typeof (window as any).switchSidebarTab === "function") {
           (window as any).switchSidebarTab("right-tab-bar", "metadata");
         }
@@ -3933,18 +4124,20 @@ const initBim = async () => {
       if (propertyEditor) {
         await propertyEditor.deselect();
       }
-      // Auto-hide properties panel when selection clears
-      document.body.classList.add('right-sidebar-collapsed');
+      document.body.classList.add("right-sidebar-collapsed");
     });
 
     highlighter.events.select.onClear.add(async () => {
-      SelectionManager.getInstance().clearSelection();
+      // Ignore intermediate clears during highlightByID replacement or partial autoToggle
+      if ((highlighter as any)._fromHighlight || countMapItems(highlighter.selection["select"]) > 0) {
+        return;
+      }
+      await SelectionManager.getInstance().clearSelection(true);
       resetPropertiesPanel();
       if (propertyEditor) {
         await propertyEditor.deselect();
       }
-      // Auto-hide properties panel when selection clears
-      document.body.classList.add('right-sidebar-collapsed');
+      document.body.classList.add("right-sidebar-collapsed");
     });
 
     // Hide model loader overlay once initialized
@@ -4612,41 +4805,22 @@ if (loadSampleBtn) {
 
 // Bottom Toolbar Actions: Single Unified Visibility Toggle Button (Show All / Hide All)
 const toggleVisibilityBtn = document.getElementById("btn-toggle-visibility");
-let isAllElementsVisible = true;
-
-const EYE_OPEN_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>`;
-const EYE_CLOSED_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>`;
 
 async function toggleAllVisibility(forceState?: boolean) {
   const hider = components.get(OBC.Hider);
   const nextState = forceState !== undefined ? forceState : !isAllElementsVisible;
-  isAllElementsVisible = nextState;
 
-  await hider.set(isAllElementsVisible);
-
-  const iconWrap = document.getElementById("visibility-icon-wrap");
-  const tooltipText = document.getElementById("dock-tooltip-visibility");
-  const dockItem = document.getElementById("dock-item-visibility");
-  const btn = document.getElementById("btn-toggle-visibility");
-
-  if (iconWrap) {
-    iconWrap.innerHTML = isAllElementsVisible ? EYE_OPEN_SVG : EYE_CLOSED_SVG;
-  }
-  if (tooltipText) {
-    tooltipText.innerText = isAllElementsVisible ? "Hide All" : "Show All";
-  }
-  if (dockItem) {
-    dockItem.setAttribute("data-tooltip", isAllElementsVisible ? "Hide All Elements (U)" : "Show All Elements (U)");
-  }
-  if (btn) {
-    btn.setAttribute("data-state", isAllElementsVisible ? "visible" : "hidden");
-    btn.setAttribute("aria-label", isAllElementsVisible ? "Hide All Elements" : "Show All Elements");
-    btn.classList.toggle("active-hidden", !isAllElementsVisible);
+  await hider.set(nextState);
+  syncDockVisibilityState(nextState);
+  if (nextState) {
+    setHiddenIndicator(false);
+  } else {
+    setHiddenIndicator(true, "All Elements Hidden — Press U to Show All");
   }
 
   showToast(
-    isAllElementsVisible ? "All 3D Elements Visible" : "All 3D Elements Hidden",
-    isAllElementsVisible ? "info" : "warning"
+    nextState ? "All 3D Elements Visible" : "All 3D Elements Hidden",
+    nextState ? "info" : "warning"
   );
 }
 
@@ -4704,30 +4878,9 @@ if (loadFragBtn) {
 const focusBtn = document.getElementById("btn-focus");
 if (focusBtn) {
   focusBtn.addEventListener("click", async () => {
-    const selectionMap = highlighter.selection["select"];
-    let hasSelection = false;
-    if (selectionMap) {
-      for (const fragId in selectionMap) {
-        if (selectionMap[fragId].size > 0) {
-          hasSelection = true;
-          break;
-        }
-      }
-    }
-
-    if (hasSelection) {
-      try {
-        const boundingBoxer = components.get(OBC.BoundingBoxer);
-        boundingBoxer.list.clear();
-        await boundingBoxer.addFromModelIdMap(selectionMap);
-        const box = boundingBoxer.get();
-        if (!box.isEmpty() && world.camera?.controls) {
-          await (world.camera.controls as any).fitToBox(box, true);
-        }
-        boundingBoxer.list.clear();
-      } catch (e) {
-        console.warn("Zoom to selection failed:", e);
-      }
+    const selectionMap = getActiveSelectionMap();
+    if (countMapItems(selectionMap) > 0) {
+      await focusSelectionMap(selectionMap);
     } else {
       // Zoom fit all models in scene
       if (fragments.list.size === 0) return;
@@ -4750,18 +4903,12 @@ if (focusBtn) {
 const hideSelectedBtn = document.getElementById("btn-hide-selected");
 if (hideSelectedBtn) {
   hideSelectedBtn.addEventListener("click", async () => {
-    const hider = components.get(OBC.Hider);
-    const selection = highlighter.selection["select"];
-    if (selection && Object.keys(selection).length > 0) {
-      let hasItems = false;
-      for (const id in selection) {
-        if (selection[id].size > 0) hasItems = true;
-      }
-      if (hasItems) {
-        await hider.set(false, selection);
-        await highlighter.clear("select");
-        resetPropertiesPanel();
-      }
+    const hiddenCount = await SelectionManager.getInstance().hideCurrentSelection();
+    if (hiddenCount > 0) {
+      resetPropertiesPanel();
+      document.body.classList.add("right-sidebar-collapsed");
+      setHiddenIndicator(true, `${hiddenCount} Hidden — Press U to Show All`);
+      showToast(`Hid ${hiddenCount} Element${hiddenCount === 1 ? "" : "s"} (Press U to Unhide)`);
     }
   });
 }
@@ -4769,16 +4916,11 @@ if (hideSelectedBtn) {
 const isolateBtn = document.getElementById("btn-isolate");
 if (isolateBtn) {
   isolateBtn.addEventListener("click", async () => {
-    const hider = components.get(OBC.Hider);
-    const selection = highlighter.selection["select"];
-    if (selection && Object.keys(selection).length > 0) {
-      let hasItems = false;
-      for (const id in selection) {
-        if (selection[id].size > 0) hasItems = true;
-      }
-      if (hasItems) {
-        await hider.isolate(selection);
-      }
+    const info = SelectionManager.getInstance().getSelectionInfo();
+    const ok = await SelectionManager.getInstance().isolateCurrentSelection();
+    if (ok) {
+      setHiddenIndicator(true, `Isolated ${info.totalCount} — Press U to Show All`);
+      showToast(`Isolated ${info.totalCount} Element${info.totalCount === 1 ? "" : "s"}`);
     }
   });
 }
@@ -4792,8 +4934,59 @@ if (clearSelectionBtn) {
   });
 }
 
-// Advanced Selection Suite Actions
+// Advanced Selection Suite Actions & Unified State Synchronization
 const selectionMgr = SelectionManager.getInstance();
+
+function renderSavedSelectionSetsUI() {
+  const listEl = document.getElementById("saved-selection-sets-list");
+  if (!listEl) return;
+  const sets = selectionMgr.getSavedSets();
+  if (sets.length === 0) {
+    listEl.innerHTML = `<div class="saved-sets-empty">No saved selection sets yet. Select elements and click Save Set.</div>`;
+    return;
+  }
+  listEl.innerHTML = "";
+  for (const s of sets) {
+    const row = document.createElement("div");
+    row.className = "saved-set-item";
+    row.innerHTML = `
+      <div class="saved-set-info">
+        <div class="saved-set-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</div>
+        <div class="saved-set-meta">${s.count} items • ${escapeHtml(s.createdAt)}</div>
+      </div>
+      <div class="saved-set-actions">
+        <button type="button" class="btn-meta-mini accent" data-set-restore="${escapeHtml(s.id)}" title="Restore selection set">Select</button>
+        <button type="button" class="btn-meta-mini" data-set-delete="${escapeHtml(s.id)}" title="Delete selection set">×</button>
+      </div>
+    `;
+    row.querySelector("[data-set-restore]")?.addEventListener("click", async () => {
+      await selectionMgr.restoreSelectionSet(s.id);
+    });
+    row.querySelector("[data-set-delete]")?.addEventListener("click", () => {
+      selectionMgr.deleteSavedSet(s.id);
+    });
+    listEl.appendChild(row);
+  }
+}
+
+renderSavedSelectionSetsUI();
+if (typeof window !== "undefined") {
+  window.addEventListener("bim-selection-sets-changed", () => renderSavedSelectionSetsUI());
+}
+
+selectionMgr.onSelectionChange((info, batch) => {
+  syncMultiSelectedBridge(info.modelIdMap);
+  updateMultiSelectionBatchCard(batch);
+  if (info.totalCount > 1) {
+    MetadataPanelController.getInstance().setMultiSelectionState(batch);
+  }
+});
+
+(window as any).__undoSelection = () => selectionMgr.undoSelection();
+(window as any).__redoSelection = () => selectionMgr.redoSelection();
+(window as any).__cancelBoxSelectDrag = () => selectionMgr.cancelActiveBoxDrag();
+(window as any).__saveCurrentSelectionSet = () => selectionMgr.saveCurrentSelectionSet();
+(window as any).__filterSelectionCategory = (cat: string) => selectionMgr.filterSelectionToCategory(cat);
 
 document.getElementById("btn-box-select")?.addEventListener("click", () => {
   selectionMgr.toggleBoxSelectMode();
@@ -4809,6 +5002,18 @@ document.getElementById("btn-invert-select")?.addEventListener("click", async ()
 
 document.getElementById("btn-selection-hud-category")?.addEventListener("click", async () => {
   await selectionMgr.selectSameCategory();
+});
+
+document.getElementById("btn-selection-hud-save-set")?.addEventListener("click", () => {
+  selectionMgr.saveCurrentSelectionSet();
+});
+
+document.getElementById("btn-finder-save-selection")?.addEventListener("click", () => {
+  selectionMgr.saveCurrentSelectionSet();
+});
+
+document.getElementById("btn-selection-hud-undo")?.addEventListener("click", async () => {
+  await selectionMgr.undoSelection();
 });
 
 document.getElementById("btn-selection-hud-xray")?.addEventListener("click", () => {
@@ -9136,6 +9341,11 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tool-pin-tour", title: "Play Guided 3D Issue Tour", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`, action: () => AnnotationModule.getInstance().startTour() },
     { id: "tool-export-bcf", title: "Export Pins (BCF / JSON Report)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, action: () => AnnotationModule.getInstance().exportBCFJSON() },
     { id: "tool-xray-toggle", title: "Toggle X-Ray Isolation Mode", category: "Display", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`, action: () => AnnotationModule.getInstance().toggleXRay() },
+    { id: "sel-box-mode", title: "Selection: Toggle Marquee Box Selection (B)", category: "Selection", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/></svg>`, action: () => SelectionManager.getInstance().toggleBoxSelectMode() },
+    { id: "sel-same-cat", title: "Selection: Select Same IFC Category (C)", category: "Selection", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>`, action: () => SelectionManager.getInstance().selectSameCategory() },
+    { id: "sel-undo", title: "Selection: Undo Previous Selection (Ctrl+Z)", category: "Selection", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`, action: () => SelectionManager.getInstance().undoSelection() },
+    { id: "sel-redo", title: "Selection: Redo Selection (Ctrl+Y)", category: "Selection", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>`, action: () => SelectionManager.getInstance().redoSelection() },
+    { id: "sel-save-set", title: "Selection: Save Current Selection Set", category: "Selection", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>`, action: () => SelectionManager.getInstance().saveCurrentSelectionSet() },
     { id: "suite-clash-audit", title: "Run Multi-Discipline Clash Matrix Audit", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`, action: () => { (document.getElementById("btn-header-clash") || document.getElementById("btn-dock-clash"))?.click(); ClashDetector.getInstance().runClashAudit(); } },
     { id: "suite-live-peers-toggle", title: "Toggle Live Workstation Peers (On/Off)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>`, action: () => {
       const cb = document.getElementById("toggle-live-peers") as HTMLInputElement | null;
@@ -9376,24 +9586,52 @@ container.addEventListener("contextmenu", async (e: MouseEvent) => {
     }
   }
 
+  const currentSelInfo = SelectionManager.getInstance().getSelectionInfo();
+  const isClickedInBatch =
+    currentSelInfo.totalCount > 1 &&
+    ctxModelId !== undefined &&
+    ctxExpressId !== undefined &&
+    Boolean(currentSelInfo.modelIdMap[ctxModelId]?.has(ctxExpressId));
+  const useBatchContext =
+    currentSelInfo.totalCount > 1 && (isClickedInBatch || ctxExpressId === undefined);
+
   if (ctxTitle) {
-    ctxTitle.innerHTML = ctxElementName
-      ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> ${escapeHtml(ctxElementName)}</span>`
+    const titleLabel = useBatchContext
+      ? `Batch: ${currentSelInfo.totalCount} Elements Selected`
+      : ctxElementName;
+    ctxTitle.innerHTML = titleLabel
+      ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> ${escapeHtml(titleLabel)}</span>`
       : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> 3D Point Coordinates</span>`;
   }
 
   const ctxPropsSpan = ctxMenu.querySelector('#ctx-action-properties span');
   if (ctxPropsSpan) {
-    ctxPropsSpan.textContent = ctxModelId && ctxExpressId !== undefined
-      ? "Properties (Metadata)"
-      : activeModelId && activeExpressId !== null
-        ? "Properties (Current Selection)"
-        : "Properties (Metadata)";
+    ctxPropsSpan.textContent = useBatchContext
+      ? `Batch Summary (${currentSelInfo.totalCount} items)`
+      : ctxModelId && ctxExpressId !== undefined
+        ? "Properties (Metadata)"
+        : activeModelId && activeExpressId !== null
+          ? "Properties (Current Selection)"
+          : "Properties (Metadata)";
+  }
+
+  const ctxIsolateSpan = ctxMenu.querySelector('#ctx-action-isolate span');
+  if (ctxIsolateSpan) {
+    ctxIsolateSpan.textContent = useBatchContext
+      ? `Isolate Selection (${currentSelInfo.totalCount})`
+      : "Isolate Element";
+  }
+
+  const ctxHideSpan = ctxMenu.querySelector('#ctx-action-hide span');
+  if (ctxHideSpan) {
+    ctxHideSpan.textContent = useBatchContext
+      ? `Hide Selection (${currentSelInfo.totalCount})`
+      : "Hide Element (H)";
   }
 
   ctxMenu.style.display = "flex";
   ctxMenu.style.left = `${Math.max(12, Math.min(window.innerWidth - 220, e.clientX))}px`;
-  ctxMenu.style.top = `${Math.max(12, Math.min(window.innerHeight - 220, e.clientY))}px`;
+  ctxMenu.style.top = `${Math.max(12, Math.min(window.innerHeight - 300, e.clientY))}px`;
 });
 
 // Close context menu on outside click
@@ -9402,6 +9640,25 @@ document.addEventListener("pointerdown", (e: MouseEvent) => {
     ctxMenu.style.display = "none";
   }
 });
+
+// Helper resolving context menu target selection map (preserves batch when right-clicked on batch)
+const resolveContextTargetMap = (): { map: Record<string, Set<number>>; isBatch: boolean } | null => {
+  const curInfo = SelectionManager.getInstance().getSelectionInfo();
+  const clickedInBatch =
+    curInfo.totalCount > 1 &&
+    ctxModelId !== undefined &&
+    ctxExpressId !== undefined &&
+    Boolean(curInfo.modelIdMap[ctxModelId]?.has(ctxExpressId));
+  if (curInfo.totalCount > 1 && (clickedInBatch || ctxExpressId === undefined)) {
+    return { map: curInfo.modelIdMap, isBatch: true };
+  }
+  const targetM = ctxModelId || activeModelId || undefined;
+  const targetId = ctxExpressId !== undefined ? ctxExpressId : (activeExpressId ?? undefined);
+  if (targetM && targetId !== undefined && targetId !== null) {
+    return { map: { [targetM]: new Set([targetId]) }, isBatch: false };
+  }
+  return null;
+};
 
 // Context Menu Action Listeners
 if (ctxMenu) {
@@ -9433,17 +9690,23 @@ if (ctxMenu) {
         bcfMgr.registerTopicMarker(topic);
         showToast(`Created BCF Issue & 3D Marker on ${ctxElementName || "Viewport"}`, "success");
       } else if (action === "properties") {
+        const target = resolveContextTargetMap();
+        if (target?.isBatch) {
+          const batch = SelectionManager.getInstance().getBatchSummary(target.map);
+          MetadataPanelController.getInstance().setMultiSelectionState(batch);
+          document.body.classList.remove("right-sidebar-collapsed");
+          (window as any).switchSidebarTab?.("right-tab-bar", "metadata");
+          return;
+        }
         const targetModelId = ctxModelId || activeModelId || undefined;
         const targetExpressId = ctxExpressId !== undefined ? ctxExpressId : (activeExpressId ?? undefined);
         const fragmentsMgr = components.get(OBC.FragmentsManager);
         const model = targetModelId ? fragmentsMgr.list.get(targetModelId) : null;
         if (model && targetModelId && targetExpressId !== undefined && targetExpressId !== null) {
-          for (const k in multiSelectedElements) multiSelectedElements[k].clear();
-          multiSelectedElements[targetModelId] = new Set([targetExpressId]);
-          updateMultiSelectionBatchCard();
-          SelectionManager.getInstance().syncFromSelectionMap(multiSelectedElements);
+          const singleMap = { [targetModelId]: new Set([targetExpressId]) };
+          SelectionManager.getInstance().syncFromSelectionMap(singleMap);
           try {
-            await highlighter.highlightByID("select", { [targetModelId]: new Set([targetExpressId]) }, true, false);
+            await highlighter.highlightByID("select", singleMap, true, false);
           } catch {}
           await displayElementProperties(model, targetExpressId, { targetTab: "metadata" });
         } else {
@@ -9451,18 +9714,70 @@ if (ctxMenu) {
           (window as any).switchSidebarTab?.("right-tab-bar", "metadata");
           showToast("Right-click or select a 3D element to inspect BIM Metadata", "info");
         }
-      } else if (action === "xray" && ctxModelId && ctxExpressId !== undefined) {
-        AnnotationModule.getInstance().toggleXRay();
-        showToast("Toggled X-Ray Mode", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`);
-      } else if (action === "isolate" && ctxModelId && ctxExpressId !== undefined) {
-        const highlighter = components.get(OBF.Highlighter);
-        if (highlighter) {
-          highlighter.highlightByID("select", { [ctxModelId]: new Set([ctxExpressId]) }, true, true);
-          showToast(`Isolated ${ctxElementName || "Element"}`, `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`);
+      } else if (action === "select-category") {
+        let cat: string | undefined;
+        if (ctxModelId && ctxExpressId !== undefined) {
+          cat = FragmentIndexer.getInstance().getCachedElement(ctxModelId, ctxExpressId)?.category;
         }
-      } else if (action === "focus" && ctxHitPoint) {
-        world.camera.controls.setLookAt(ctxHitPoint.x + 4, ctxHitPoint.y + 3, ctxHitPoint.z + 4, ctxHitPoint.x, ctxHitPoint.y, ctxHitPoint.z, true);
-        showToast("Focused Camera on Target", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`);
+        if (!cat && ctxModelId && ctxExpressId !== undefined) {
+          const singleMap = { [ctxModelId]: new Set([ctxExpressId]) };
+          SelectionManager.getInstance().syncFromSelectionMap(singleMap);
+          cat = SelectionManager.getInstance().getSelectionInfo().primaryCategory;
+        }
+        await SelectionManager.getInstance().selectSameCategory(cat);
+      } else if (action === "xray") {
+        const target = resolveContextTargetMap();
+        if (target) {
+          SelectionManager.getInstance().syncFromSelectionMap(target.map);
+          try {
+            await highlighter.highlightByID("select", target.map, true, false);
+          } catch {}
+        }
+        AnnotationModule.getInstance().toggleXRay();
+        showToast(
+          AnnotationModule.getInstance().isXRayActive ? "X-Ray Focus Activated" : "X-Ray Disabled",
+          `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"/><circle cx="12" cy="12" r="3"/></svg>`
+        );
+      } else if (action === "isolate") {
+        const target = resolveContextTargetMap();
+        if (target) {
+          SelectionManager.getInstance().syncFromSelectionMap(target.map);
+          try {
+            await highlighter.highlightByID("select", target.map, true, false);
+          } catch {}
+          await SelectionManager.getInstance().isolateCurrentSelection();
+          const count = countMapItems(target.map);
+          setHiddenIndicator(true, `Isolated ${count} — Press U to Show All`);
+          showToast(
+            target.isBatch ? `Isolated ${count} Selected Elements` : `Isolated ${ctxElementName || "Element"}`,
+            `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+          );
+        }
+      } else if (action === "hide") {
+        const target = resolveContextTargetMap();
+        if (target) {
+          SelectionManager.getInstance().syncFromSelectionMap(target.map);
+          const hiddenCount = await SelectionManager.getInstance().hideCurrentSelection();
+          resetPropertiesPanel();
+          document.body.classList.add("right-sidebar-collapsed");
+          setHiddenIndicator(true, `${hiddenCount} Hidden — Press U to Show All`);
+          showToast(`Hid ${hiddenCount} Element${hiddenCount === 1 ? "" : "s"} (Press U to Unhide)`);
+        }
+      } else if (action === "save-set") {
+        const target = resolveContextTargetMap();
+        if (target) {
+          SelectionManager.getInstance().syncFromSelectionMap(target.map);
+          SelectionManager.getInstance().saveCurrentSelectionSet();
+        }
+      } else if (action === "focus") {
+        const target = resolveContextTargetMap();
+        if (target) {
+          await focusSelectionMap(target.map);
+          showToast("Focused Camera on Target", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`);
+        } else if (ctxHitPoint) {
+          world.camera.controls.setLookAt(ctxHitPoint.x + 4, ctxHitPoint.y + 3, ctxHitPoint.z + 4, ctxHitPoint.x, ctxHitPoint.y, ctxHitPoint.z, true);
+          showToast("Focused Camera on Target", `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`);
+        }
       }
     });
   });

@@ -339,6 +339,10 @@ export class MeasurementSuite {
     return this.snapEnabled;
   }
 
+  public isMeasuringActive(): boolean {
+    return this.isMeasuring;
+  }
+
   public getMeasurements(): DimensionItem[] {
     return this.measurements;
   }

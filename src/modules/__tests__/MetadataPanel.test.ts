@@ -104,4 +104,43 @@ describe("MetadataPanelController & Dedicated Metadata Tab UX", () => {
     document.getElementById("btn-inspector-open-meta")!.click();
     expect(switchSpy).toHaveBeenCalledWith("right-tab-bar", "metadata");
   });
+
+  it("renders multi-selection batch summary with aggregate quantities and interactive category filter", () => {
+    const filterSpy = vi.fn();
+    (window as any).__filterSelectionCategory = filterSpy;
+
+    const ctrl = MetadataPanelController.getInstance();
+    ctrl.init();
+
+    ctrl.setMultiSelectionState({
+      totalCount: 14,
+      modelCount: 1,
+      categories: [
+        { category: "IFCWALL", count: 10, expressIds: [1, 2], modelId: "m1" },
+        { category: "IFCCOLUMN", count: 4, expressIds: [3], modelId: "m1" },
+      ],
+      storeys: [{ storey: "Level 1", count: 14 }],
+      totalVolumeM3: 24.5,
+      totalAreaM2: 88.25,
+      estimatedCost: 14250,
+      formattedCost: "$14,250.00",
+      sharedAttributes: [{ label: "Building Storey", value: "Level 1" }],
+      leadElement: {
+        modelId: "m1",
+        expressId: 1,
+        category: "IFCWALL",
+        name: "Wall W1",
+        storey: "Level 1",
+      },
+    });
+
+    expect(document.getElementById("meta-hero-name")!.textContent).toBe("14 Elements Selected");
+    expect(document.getElementById("meta-hero-entity")!.textContent).toBe("BATCH × 14");
+    expect(document.getElementById("inspector-banner-title")!.textContent).toContain("$14,250.00");
+
+    const filterBtn = document.querySelector<HTMLButtonElement>('[data-filter-category="IFCWALL"]')!;
+    expect(filterBtn).not.toBeNull();
+    filterBtn.click();
+    expect(filterSpy).toHaveBeenCalledWith("IFCWALL");
+  });
 });

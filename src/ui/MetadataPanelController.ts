@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/formatters";
+import type { SelectionBatchSummary } from "../modules/SelectionManager";
 
 export interface MetadataSummaryPayload {
   modelId: string;
@@ -26,6 +27,7 @@ export class MetadataPanelController {
   private static instance: MetadataPanelController | null = null;
   private initialized = false;
   private currentSummary: MetadataSummaryPayload | null = null;
+  private currentBatch: SelectionBatchSummary | null = null;
 
   private constructor() {}
 
@@ -93,6 +95,10 @@ export class MetadataPanelController {
       (window as any).switchSidebarTab?.("right-tab-bar", "metadata");
     });
 
+    document.getElementById("btn-meta-save-set")?.addEventListener("click", () => {
+      (window as any).__saveCurrentSelectionSet?.();
+    });
+
     document.getElementById("btn-metadata-clear-selection")?.addEventListener("click", () => {
       (window as any).clearAllSelections?.();
     });
@@ -155,6 +161,7 @@ export class MetadataPanelController {
 
   public setSelectedElementState(payload: MetadataSummaryPayload) {
     this.init();
+    this.currentBatch = null;
     this.currentSummary = payload;
 
     const emptyMeta = document.getElementById("metadata-empty-state");
@@ -196,8 +203,191 @@ export class MetadataPanelController {
     this.syncToggleAllLabel();
   }
 
+  public setMultiSelectionState(batch: SelectionBatchSummary) {
+    this.init();
+    this.currentSummary = null;
+    this.currentBatch = batch;
+
+    const emptyMeta = document.getElementById("metadata-empty-state");
+    const selectedMeta = document.getElementById("metadata-selected-state");
+    if (emptyMeta) emptyMeta.style.display = "none";
+    if (selectedMeta) selectedMeta.style.display = "flex";
+
+    const escMetaBtn = document.getElementById("btn-metadata-clear-selection");
+    if (escMetaBtn) escMetaBtn.style.display = "inline-flex";
+
+    const singleCat =
+      batch.categories.length === 1 ? batch.categories[0].category : null;
+    const singleStorey =
+      batch.storeys.length === 1 ? batch.storeys[0].storey : null;
+
+    const entityEl = document.getElementById("meta-hero-entity");
+    const storeyEl = document.getElementById("meta-hero-storey");
+    const nameEl = document.getElementById("meta-hero-name");
+    const idEl = document.getElementById("meta-hero-id");
+    const guidEl = document.getElementById("meta-hero-guid");
+    const guidBtn = document.getElementById("btn-copy-meta-guid") as HTMLButtonElement | null;
+
+    if (entityEl) {
+      entityEl.textContent = singleCat
+        ? `${singleCat} × ${batch.totalCount}`
+        : `BATCH × ${batch.totalCount}`;
+    }
+    if (storeyEl) {
+      storeyEl.textContent =
+        singleStorey ||
+        (batch.storeys.length > 1 ? `${batch.storeys.length} Storeys` : "");
+      storeyEl.classList.toggle("hidden", batch.storeys.length === 0);
+    }
+    if (nameEl) {
+      nameEl.textContent = `${batch.totalCount} Elements Selected`;
+    }
+    if (idEl) {
+      idEl.textContent = `${batch.categories.length} ${
+        batch.categories.length === 1 ? "Category" : "Categories"
+      }`;
+    }
+    if (guidEl) {
+      guidEl.textContent = batch.leadElement
+        ? `Lead: ${batch.leadElement.name}`
+        : "Multi-Element Batch";
+    }
+    if (guidBtn) guidBtn.disabled = true;
+
+    const dimLengthEl = document.getElementById("prop-dim-length");
+    const dimWidthEl = document.getElementById("prop-dim-width");
+    const dimHeightEl = document.getElementById("prop-dim-height");
+    const dimVolumeEl = document.getElementById("prop-dim-volume");
+    if (dimLengthEl) dimLengthEl.textContent = "-";
+    if (dimWidthEl) dimWidthEl.textContent = `${batch.totalAreaM2.toFixed(2)} m² Area`;
+    if (dimHeightEl) dimHeightEl.textContent = "-";
+    if (dimVolumeEl) dimVolumeEl.textContent = `${batch.totalVolumeM3.toFixed(2)} m³`;
+
+    const bannerEl = document.getElementById("inspector-element-banner");
+    const bannerNameEl = document.getElementById("inspector-banner-title");
+    if (bannerEl) bannerEl.classList.remove("hidden");
+    if (bannerNameEl) {
+      bannerNameEl.textContent = `Batch: ${batch.totalCount} Elements (${batch.formattedCost})`;
+    }
+
+    const tableEl = document.getElementById("element-metadata-table");
+    if (tableEl) {
+      tableEl.innerHTML = "";
+
+      const appendRow = (
+        container: HTMLElement,
+        label: string,
+        val: string,
+        valClass: string = ""
+      ) => {
+        const row = document.createElement("div");
+        row.className = "prop-row";
+        row.innerHTML = `<span class="prop-label">${escapeHtml(label)}</span><span class="prop-val ${valClass}">${escapeHtml(val)}</span>`;
+        container.appendChild(row);
+        return row;
+      };
+
+      // 1. Aggregate Takeoff & Valuation Accordion
+      const qtoGroup = this.createAccordionGroup(
+        "Aggregate Quantities & 5D Takeoff",
+        "",
+        true,
+        "Batch Qto"
+      );
+      appendRow(qtoGroup.content, "Selected Count", String(batch.totalCount), "font-mono font-bold");
+      appendRow(
+        qtoGroup.content,
+        "Net Volume (Sum)",
+        `${batch.totalVolumeM3.toFixed(2)} m³`,
+        "font-mono color-cyan"
+      );
+      appendRow(
+        qtoGroup.content,
+        "Surface Area (Sum)",
+        `${batch.totalAreaM2.toFixed(2)} m²`,
+        "font-mono"
+      );
+      appendRow(
+        qtoGroup.content,
+        "Est. Batch Cost",
+        batch.formattedCost,
+        "font-mono color-green font-bold"
+      );
+      tableEl.appendChild(qtoGroup.details);
+
+      // 2. Interactive Category Breakdown Accordion
+      if (batch.categories.length > 0) {
+        const catGroup = this.createAccordionGroup(
+          "Category Breakdown",
+          "",
+          true,
+          String(batch.categories.length)
+        );
+        for (const cat of batch.categories) {
+          const row = document.createElement("div");
+          row.className = "prop-row";
+          const cleanName = cat.category.replace(/^IFC_?/, "") || cat.category;
+          row.innerHTML = `
+            <span class="prop-label">${escapeHtml(cleanName)}</span>
+            <span class="prop-val" style="display:flex;align-items:center;gap:0.35rem;">
+              <strong class="font-mono">${cat.count}</strong>
+              <button type="button" class="meta-filter-btn" data-filter-category="${escapeHtml(
+                cat.category
+              )}" title="Filter selection down to ${escapeHtml(cat.category)}">Filter</button>
+            </span>
+          `;
+          row.querySelector("button")?.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            (window as any).__filterSelectionCategory?.(cat.category);
+          });
+          catGroup.content.appendChild(row);
+        }
+        tableEl.appendChild(catGroup.details);
+      }
+
+      // 3. Storey Distribution Accordion
+      if (batch.storeys.length > 0) {
+        const storeyGroup = this.createAccordionGroup(
+          "Storey Distribution",
+          "",
+          true,
+          String(batch.storeys.length)
+        );
+        for (const s of batch.storeys) {
+          appendRow(storeyGroup.content, s.storey, `${s.count} items`, "font-mono");
+        }
+        tableEl.appendChild(storeyGroup.details);
+      }
+
+      // 4. Shared Attributes Accordion
+      const ctxGroup = this.createAccordionGroup(
+        "Shared Batch Context",
+        "",
+        false,
+        "Uniform"
+      );
+      for (const attr of batch.sharedAttributes) {
+        appendRow(ctxGroup.content, attr.label, attr.value);
+      }
+      if (batch.leadElement) {
+        appendRow(
+          ctxGroup.content,
+          "Lead Element",
+          `${batch.leadElement.name} (#${batch.leadElement.expressId})`,
+          "color-cyan"
+        );
+      }
+      tableEl.appendChild(ctxGroup.details);
+    }
+
+    const searchInput = document.getElementById("metadata-search-input") as HTMLInputElement | null;
+    this.applyFilter(searchInput?.value || "");
+    this.syncToggleAllLabel();
+  }
+
   public reset() {
     this.currentSummary = null;
+    this.currentBatch = null;
 
     const emptyMeta = document.getElementById("metadata-empty-state");
     const selectedMeta = document.getElementById("metadata-selected-state");
@@ -293,8 +483,12 @@ export class MetadataPanelController {
     return this.currentSummary;
   }
 
+  public getCurrentBatchSummary(): SelectionBatchSummary | null {
+    return this.currentBatch;
+  }
+
   private copyCurrentMetadataAsJson() {
-    if (!this.currentSummary) {
+    if (!this.currentSummary && !this.currentBatch) {
       notifyToast("Select an element first to copy metadata JSON", "warning");
       return;
     }
@@ -306,9 +500,10 @@ export class MetadataPanelController {
       if (k && v !== undefined) fields[k] = v;
     });
 
+    const payload = this.currentSummary || { batchSelection: this.currentBatch };
     const json = JSON.stringify(
       {
-        ...this.currentSummary,
+        ...payload,
         renderedFields: fields,
       },
       null,
