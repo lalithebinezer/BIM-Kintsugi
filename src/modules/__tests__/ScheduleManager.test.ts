@@ -337,4 +337,20 @@ msp-8,COL_LTOS,IFCELEMENT,11-03-27,11-03-27,,,Planned,Dynamo_NCP_Snowdon_Towers_
     expect(elData.startDate).toBe("2026-08-01");
     expect(elData.endDate).toBe("2026-08-10");
   });
+
+  it("should format readable category task names without splitting uppercase letters", () => {
+    const categories = new Map<string, { modelId: string; elementIds: number[] }[]>([
+      ["IFCFOOTING", [{ modelId: "m1", elementIds: [1] }]],
+      ["IFCWALLSTANDARDCASE", [{ modelId: "m1", elementIds: [2] }]],
+      ["IFCBUILDINGELEMENTPROXY", [{ modelId: "m1", elementIds: [3] }]],
+    ]);
+
+    manager.generateFromCategories(categories, "2026-06-18");
+    const tasks = manager.getTasksSorted();
+    expect(tasks.map((t) => t.name)).toEqual([
+      "Footing Works",
+      "Wall (Standard) Works",
+      "Specialty Element Works",
+    ]);
+  });
 });

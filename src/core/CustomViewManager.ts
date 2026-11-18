@@ -344,21 +344,21 @@ export class CustomViewManager {
       const safeDesc = vp.description ? escapeHtml(vp.description) : "";
       const safeTime = escapeHtml(vp.timestamp);
       return `
-      <div class="viewpoint-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.45rem; cursor: pointer; transition: transform 0.1s ease;">
-        <div class="vp-info" data-restore-vpid="${safeId}" style="display: flex; align-items: center; gap: 0.4rem; flex: 1; overflow: hidden;">
+      <div class="viewpoint-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.45rem; cursor: pointer; transition: transform 0.1s ease; gap: 0.35rem;">
+        <div class="vp-info" data-restore-vpid="${safeId}" style="display: flex; align-items: center; gap: 0.4rem; flex: 1; min-width: 0; overflow: hidden;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="${vp.isPreset ? 'var(--accent-500)' : 'none'}" stroke="var(--accent-500)" stroke-width="2" style="flex-shrink:0;">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
-          <div style="display: flex; flex-direction: column; overflow: hidden;">
-            <div style="display: flex; align-items: center; gap: 0.3rem;">
-              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeName}</span>
-              ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
+          <div style="display: flex; flex-direction: column; min-width: 0; flex: 1; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 0.3rem; min-width: 0;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; min-width: 0; flex: 1;">${safeName}</span>
+              ${safeBadge ? `<span style="font-size: 0.52rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">${safeBadge}</span>` : ""}
             </div>
             ${safeDesc ? `<span style="font-size: 0.58rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${safeDesc}</span>` : ""}
           </div>
-          <span style="font-size: 0.6rem; color: var(--text-muted); margin-left: auto; font-family: var(--font-mono);">${safeTime}</span>
+          <span style="font-size: 0.58rem; color: var(--text-muted); margin-left: auto; font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;">${safeTime}</span>
         </div>
-        ${!vp.isPreset ? `<button data-delete-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.4rem;" title="Delete View">✕</button>` : ""}
+        ${!vp.isPreset ? `<button data-delete-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.2rem; margin-left: 0.25rem; flex-shrink: 0;" title="Delete View">✕</button>` : ""}
       </div>
     `;
     }).join("");
@@ -424,18 +424,18 @@ export class CustomViewManager {
             ? `<img src="${vp.thumbnailDataUrl}" alt="" style="width: 34px; height: 24px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); margin-right: 0.45rem; flex-shrink: 0;" />`
             : "";
           return `
-          <div class="view-card-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.4rem; cursor: pointer; transition: all 0.1s ease;">
+          <div class="view-card-chip" data-vpid="${safeId}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; margin-bottom: 0.4rem; cursor: pointer; transition: all 0.1s ease;">
             ${thumbHtml}
-            <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
-              <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary);">${safeName}</span>
-                ${safeBadge ? `<span style="font-size: 0.55rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px;">${safeBadge}</span>` : ""}
+            <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 0.3rem; min-width: 0;">
+                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1;">${safeName}</span>
+                ${safeBadge ? `<span style="font-size: 0.52rem; background: var(--accent-500); color: var(--accent-btn-text); font-weight: 800; padding: 1px 4px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">${safeBadge}</span>` : ""}
               </div>
-              <span style="font-size: 0.58rem; color: var(--text-muted);">${safeDesc}</span>
+              <span style="font-size: 0.58rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeDesc}</span>
             </div>
             ${!vp.isPreset ? `
-              <button data-delete-ribbon-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.25rem; font-size: 0.75rem;" title="Delete View">✕</button>
-            ` : `<span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono);">PRESET</span>`}
+              <button data-delete-ribbon-vpid="${safeId}" style="background: none; border: none; color: var(--color-error); font-weight: bold; cursor: pointer; padding: 0 0.25rem; font-size: 0.75rem; flex-shrink: 0;" title="Delete View">✕</button>
+            ` : `<span style="font-size: 0.58rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;">PRESET</span>`}
           </div>
         `;
         }).join("")}

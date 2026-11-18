@@ -218,9 +218,6 @@ export class MeasurementSuite {
   }
 
   private getActiveNativeMeasurer(): OBF.Measurement<any, any> | undefined {
-    if (this.activeType === "distance" || this.activeType === "delta") return this.lengthMeasurer;
-    if (this.activeType === "area") return this.areaMeasurer;
-    if (this.activeType === "angle") return this.angleMeasurer;
     if (this.activeType === "volume") return this.volumeMeasurer;
     return undefined;
   }
@@ -237,11 +234,6 @@ export class MeasurementSuite {
       const active = this.getActiveNativeMeasurer();
       if (active) {
         active.enabled = true;
-        if (this.activeType === "delta" && this.lengthMeasurer) {
-          this.lengthMeasurer.mode = this.snapEnabled ? "edge" : "free";
-        } else if (this.activeType === "distance" && this.lengthMeasurer) {
-          this.lengthMeasurer.mode = "free";
-        }
       }
     } catch (e) {}
   }
@@ -255,17 +247,22 @@ export class MeasurementSuite {
       arbiter.attach(container);
     }
 
+    const isUiClick = (target: HTMLElement | null) =>
+      !!target?.closest?.(
+        ".ui-layer header, .sidebar, .sidebar-panel, .bottom-toolbar, .hud-anchor-top-left, .hud-anchor-bottom-center, .hud-anchor-bottom-right, .enterprise-drawer, .timeline-panel, .bim-toolbar, .bim-modal, #viewport-selection-bar, #viewport-hidden-indicator, #measurement-panel, #minimap-container, #bim-context-menu, .view-cube-layer, button, input, select, a"
+      );
+
     arbiter.registerHandler({
       id: "measurement-suite",
       priority: "measurement",
       isActive: () => this.isMeasuring,
       onPointerMove: (e) => {
+        if (isUiClick(e.target as HTMLElement | null)) return;
         this.handlePointerMove(e);
       },
       onPointerUp: (e, isClickWithinDeadzone) => {
         if (!isClickWithinDeadzone || e.button !== 0) return;
-        const target = e.target as HTMLElement | null;
-        if (target?.closest?.(".bim-toolbar, .bim-modal, .sidebar-panel, #viewport-selection-bar, #measurement-panel")) {
+        if (isUiClick(e.target as HTMLElement | null)) {
           return;
         }
         this.handlePointerClick(e);
@@ -274,8 +271,7 @@ export class MeasurementSuite {
 
     window.addEventListener("dblclick", (e) => {
       if (!this.isMeasuring) return;
-      const target = e.target as HTMLElement;
-      if (target.closest(".bim-toolbar, .bim-modal, .sidebar-panel, #viewport-selection-bar, #measurement-panel")) {
+      if (isUiClick(e.target as HTMLElement | null)) {
         return;
       }
       try {
@@ -319,6 +315,17 @@ export class MeasurementSuite {
     this.currentPoints = [];
     this.snapMarker.visible = false;
     this.previewLine.visible = false;
+    try {
+      this.lengthMeasurer?.cancelCreation?.();
+      this.areaMeasurer?.cancelCreation?.();
+      this.angleMeasurer?.cancelCreation?.();
+      this.volumeMeasurer?.cancelCreation?.();
+    } catch (e) {}
+    if (typeof document !== "undefined") {
+      document.querySelectorAll(".btn-drawer-tool").forEach((b) => b.classList.remove("active"));
+      const tapeToggle = document.getElementById("settings-toggle-measure") as HTMLInputElement | null;
+      if (tapeToggle) tapeToggle.checked = false;
+    }
     this.syncNativeMeasurerState();
     this.updateMeasurementUI();
   }
@@ -358,12 +365,24 @@ export class MeasurementSuite {
         item.labelElement.parentElement.removeChild(item.labelElement);
       }
     }
+    this.currentPoints = [];
+    this.snapMarker.visible = false;
+    this.previewLine.visible = false;
     try {
+      this.lengthMeasurer?.cancelCreation?.();
+      this.areaMeasurer?.cancelCreation?.();
+      this.angleMeasurer?.cancelCreation?.();
+      this.volumeMeasurer?.cancelCreation?.();
       this.lengthMeasurer?.list?.clear();
       this.areaMeasurer?.list?.clear();
       this.angleMeasurer?.list?.clear();
       this.volumeMeasurer?.list?.clear();
     } catch (e) {}
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("#container .bim-3d-dimension-badge").forEach((el) => el.remove());
+      const hudLive = document.getElementById("measurement-live-val");
+      if (hudLive) hudLive.innerText = "0.000 m";
+    }
     this.measurements = [];
     this.updateMeasurementUI();
   }
@@ -694,6 +713,19 @@ export class MeasurementSuite {
     label.style.left = `${x}px`;
     label.style.top = `${y}px`;
     label.style.display = p.z < 1 ? "block" : "none";
+  }
+
+  public updateOverlayPositions() {
+    for (const item of this.measurements) {
+      if (!item.labelElement) continue;
+      let worldPos = item.start.position;
+      if (item.type === "angle" && item.extraPoints?.[0]) {
+        worldPos = item.extraPoints[0].position;
+      } else if (item.end) {
+        worldPos = item.start.position.clone().lerp(item.end.position, 0.5);
+      }
+      this.updateLabelPosition(item.labelElement, worldPos);
+    }
   }
 
   private getWorldPositionFromEvent(e: PointerEvent): THREE.Vector3 | null {

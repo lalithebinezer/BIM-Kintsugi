@@ -138,4 +138,11 @@ describe("Schedule4DEngine", () => {
     expect(Schedule4DEngine.weekOf(new Date("2026-06-25"), min, max)).toBe(4);
     expect(Schedule4DEngine.weekOf(new Date("2026-06-30"), min, max)).toBe(5);
   });
+
+  it("should not report false Delayed/Critical variance for planned-only elements without actuals", () => {
+    const buckets = engine.getVarianceBuckets(new Date("2026-07-15").getTime());
+    expect(buckets.counts.onSchedule).toBe(3);
+    expect(buckets.counts.delayed).toBe(0);
+    expect(buckets.counts.critical).toBe(0);
+  });
 });

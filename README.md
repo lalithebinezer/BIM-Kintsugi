@@ -2,14 +2,14 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.184-black?logo=threedotjs&logoColor=white)](https://threejs.org/)
-[![That Open Company](https://img.shields.io/badge/@thatopen/components-3.4.6-00e5ff)](https://thatopen.com/)
-[![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.4.3-00e5ff)](https://thatopen.com/)
+[![That Open Company](https://img.shields.io/badge/@thatopen/components-3.6.0-00e5ff)](https://thatopen.com/)
+[![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.6.1-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-213%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-255%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`v3.4.6`)**, **`@thatopen/components-front` (`v3.4.3`)**, **`@thatopen/fragments` (`v3.4.5`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
+**BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Engineering Studio (2D DXF · Scans · IFC Split · Civil)**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`^3.6.0`)**, **`@thatopen/components-front` (`^3.6.1`)**, **`@thatopen/fragments` (`^3.6.1`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
 
 🌐 **Live Demo**: [https://lalithebinezer.github.io/BIM-Kintsugi/](https://lalithebinezer.github.io/BIM-Kintsugi/)
 
@@ -18,7 +18,7 @@
 ## 📑 Table of Contents
 
 1. [Architecture & System Design](#-architecture--system-design)
-2. [That Open Engine (`v3.4.x`) Integration](#-that-open-engine-v34x-integration)
+2. [That Open Engine (`v3.6.x`) Integration](#-that-open-engine-v36x-integration)
 3. [Key Capabilities & Enterprise Suites](#-key-capabilities--enterprise-suites)
 4. [Directory & Module Structure](#-directory--module-structure)
 5. [Visual Themes & Post-Production Render Styles](#-visual-themes--post-production-render-styles)
@@ -32,49 +32,51 @@
 
 ## 🏗 Architecture & System Design
 
-The platform uses a **Singleton + Event-Driven Orchestrator** pattern (`src/main.ts` + `src/ui/EnterpriseSuitesController.ts`) connecting a single shared OpenBIM 3D engine (`BimEngine`) to specialized domain modules and HUD controllers:
+The platform uses a **Singleton + Event-Driven Orchestrator** pattern (`src/main.ts` + `src/ui/EnterpriseSuitesController.ts` + `src/core/PointerInputArbiter.ts`) connecting a single shared OpenBIM 3D engine (`BimEngine`) to specialized domain modules, background Web Workers, and HUD controllers:
 
 ```mermaid
 flowchart TD
-    A["index.html (DOM Shell & Enterprise Drawers)"] --> B["src/main.ts (Application Orchestrator)"]
+    A["index.html (DOM Shell, Dedicated META Tab & Enterprise Drawers)"] --> B["src/main.ts (Application Orchestrator)"]
 
-    subgraph CoreEngine ["Core 3D & OpenBIM Engine (src/core/)"]
+    subgraph CoreEngine ["Core 3D, Indexing & Input Pipeline (src/core/ & src/workers/)"]
         B --> C["BimEngine (OBC.Components Singleton)"]
-        B --> D["SceneManager (Sun / Shadows / Shaders)"]
-        B --> E["ViewportController (Camera & Navigation)"]
-        B --> F["ModelManager (WASM IFC/Frag Loader & IndexedDB)"]
-        B --> G["CustomViewManager (OBC.Viewpoints & Snapshots)"]
-        B --> H["KeyboardController (Hotkeys & WASD Walkthrough)"]
+        B --> P["PointerInputArbiter (Gizmo > Marquee > Measure > Clipper > Picking)"]
+        B --> I["FragmentIndexer & StreamingLoader (FRAGS v3 Async + Dual IndexedDB Cache)"]
+        B --> D["SceneManager, GraphicsPipeline & LodAndCullingManager"]
+        B --> E["ViewportController, CustomViewManager & PrecisionOriginController"]
+        B --> H["KeyboardController & BvhAccelerationService"]
+        B --> W["Web Workers (clashWorker & ifcMetadataWorker)"]
     end
 
     subgraph EnterpriseSuites ["Enterprise BIM Suites (src/modules/)"]
-        B --> M1["MeasurementSuite (Length, Area, Angle, Volume)"]
+        B --> M11["SelectionManager (Single Source of Truth, History & Saved Sets)"]
+        B --> M1["MeasurementSuite (Length, Delta, Angle, Area, Volume)"]
         B --> M2["ClippingModule & StoreyLevelSlicer (OBF.ClipStyler & OBC.Views)"]
-        B --> M3["ClashDetector & ClashToleranceInspector (3D AABB + OBF.Marker)"]
+        B --> M3["ClashDetector & ClashToleranceInspector (BVH/SAP Broad-Phase + OBF.Marker)"]
         B --> M4["BcfIssueManager (OBC.BCFTopics + .bcfzip Export)"]
-        B --> M5["ScheduleManager, PhasingTimelineModule & GanttPhasingModule (4D)"]
-        B --> M6["BoqGenerator & Boq5DModule (5D Qto Takeoff & Category Isolation)"]
+        B --> M5["ScheduleManager, Schedule4DEngine & GanttPhasingModule (4D)"]
+        B --> M6["BoqGenerator, Boq5DModule & EvmDashboardModule (5D / ANSI 748-B)"]
         B --> M7["CarbonLcaManager (6D ICE v3.0 LCA & 5-Band 3D Heatmap)"]
         B --> M8["BimAiCopilot (NL Query Engine + Optional Local Ollama LLM)"]
-        B --> M9["GraphicsVFXManager (Postproduction Styles & 4K Drawing Sheet)"]
+        B --> M9["GraphicsVFXManager, IfcSplitterModule & RealityCaptureModule"]
         B --> M10["MinimapModule (OBC.BoundingBoxer 2D Radar & Click Teleport)"]
-        B --> M11["SelectionManager (OBF.Highlighter, OBF.Outliner & OBC.Classifier)"]
     end
 
     subgraph UILayer ["UI & HUD Layer (src/ui/)"]
-        B --> U1["EnterpriseSuitesController (9 Slide-Over Drawers)"]
+        B --> U0["MetadataPanelController (Dedicated META Tab & Batch Takeoff)"]
+        B --> U1["EnterpriseSuitesController & EngineeringStudioController"]
         B --> U2["CommandPalette (Ctrl+K Fuzzy Action Launcher)"]
         B --> U3["BimViewCube (Interactive 3D Orientation Gizmo)"]
         B --> U4["PropertyEditor (IFC PropertySet Inspector & JSON/CSV Export)"]
-        B --> U5["UIManager & ToastManager (Dock, Theme Sync & Notifications)"]
+        B --> U5["UIManager, ResponsiveToolbar & ToastManager"]
     end
 ```
 
 ---
 
-## ⚙️ That Open Engine (`v3.4.x`) Integration
+## ⚙️ That Open Engine (`v3.6.x`) Integration
 
-BIM Kintsugi deeply integrates native `@thatopen/components` (`OBC`) and `@thatopen/components-front` (`OBF`) capabilities inside [`BimEngine`](src/core/BimEngine.ts):
+BIM Kintsugi integrates native `@thatopen/components` (`OBC`, `^3.6.0`), `@thatopen/components-front` (`OBF`, `^3.6.1`), and `@thatopen/fragments` (`^3.6.1`) capabilities inside [`BimEngine`](src/core/BimEngine.ts) and [`FragmentIndexer`](src/core/FragmentIndexer.ts):
 
 | Component | Module Integration | Purpose |
 | :--- | :--- | :--- |
@@ -99,6 +101,9 @@ BIM Kintsugi deeply integrates native `@thatopen/components` (`OBC`) and `@thato
 
 | Suite | Capabilities |
 | :--- | :--- |
+| **🎯 0a. Unified Selection, Undo/Redo & Saved Sets** | • Priority-arbitrated picking via [`PointerInputArbiter`](src/core/PointerInputArbiter.ts) and [`SelectionManager`](src/modules/SelectionManager.ts)<br>• **Left-click** inspect, **`Shift+Click`** toggle, **`Ctrl/Alt+Click`** subtract, **Double-click** focus camera, and Window (`L→R`), Crossing (`R→L`), or Subtract (`Ctrl+Drag`) box marquee (`B`)<br>• **25-step Selection Undo/Redo** (`Ctrl+Z` / `Ctrl+Y`), hidden-item filtering via `OBC.Hider.getVisibilityMap(false)`, `localStorage`-persisted **Saved Selection Sets** in Finder (`2`), and batch-aware Right-Click Smart Context Menu |
+| **📋 0b. Dedicated BIM Element Metadata Panel (`META`)** | • Dedicated Right-Sidebar tab (Key `8`) driven by [`MetadataPanelController`](src/ui/MetadataPanelController.ts) with collapsible Psets/Qto/GIS accordions, live search filter, click-to-copy GUID/fields/JSON, and AI prompt export<br>• **Multi-Selection Batch Mode**: displays summed `NetVolume` (`m³`), `Surface Area` (`m²`), real [`CostRateManager`](src/modules/CostRateManager.ts) valuation, interactive category `[Filter]` chips, and storey distribution |
+| **🏗️ 0c. Engineering Studio (DXF · Scans · IFC Split · Civil)** | • Dedicated studio ([`EngineeringStudioController`](src/ui/EngineeringStudioController.ts)) integrating 2D DXF overlays, E57/LAS/PLY point cloud reality capture, `IfcSplitterModule` storey/discipline sub-model export, and OpenBIM Civil 4.3 alignments |
 | **📐 1. Precision Measurement Suite** | • 5 measurement modes: **Point-to-Point Distance**, **XYZ Orthogonal Deltas**, **3-Point Angle**, **Multi-Point Polygon Area**, and **Element Volume (`m³`)**<br>• Configurable **Vertex (`15cm`)**, **Edge**, and **Orthogonal Axis** snapping<br>• Unit conversion (`m`, `mm`, `ft-in`) and 1-click **CSV Measurement Log** export |
 | **⚔️ 2. 3D Clash Detection Matrix** | • Real 3D `THREE.Box3` mesh intersection & clearance tolerance engine (`Critical`, `Major`, `Clearance`)<br>• Filterable by discipline pair (*MEP vs Structure*, *Architecture vs MEP*, *Clearance Envelopes*)<br>• **Zoom & Isolate**: highlights Element A in crimson (`#EF4444`) and Element B in amber (`#F59E0B`) while ghosting surrounding geometry (`X-Ray`)<br>• **1-Click `+ BCF Issue`**: promotes any clash directly into a BCF topic with camera viewpoint and 3D `OBF.Marker` pin |
 | **📋 3. BCF 2.1 / 3.0 Issue Tracker** | • Create, prioritize (`Critical`, `Major`, `Normal`), and restore coordination issues with live camera viewpoints<br>• Clustered 3D `OBF.Marker` viewport badges with click-to-fly camera restoration<br>• Native `.bcfzip` binary export via `OBC.BCFTopics` with JSON fallback |
@@ -128,18 +133,31 @@ BIM-Kintsugi/
 ├── .github/workflows/deploy.yml                # Automated GitHub Pages CI/CD workflow
 └── src/
     ├── main.ts                                 # Application entry point, render loop & module orchestrator
-    ├── style.css                               # Design system, 4 themes, responsive HUD & drawer styles
+    ├── style.css                               # Design system, 5 themes, responsive HUD & drawer styles
     │
-    ├── core/                                   # Core 3D Engine & OpenBIM Infrastructure
-    │   ├── BimEngine.ts                        # Central OpenBIM singleton (Worlds, Raycasters, Hoverer, Classifier)
+    ├── core/                                   # Core 3D Engine, Indexing & Performance Infrastructure
+    │   ├── BimEngine.ts                        # Central OpenBIM singleton (Worlds, Raycasters, Hoverer, Hider)
+    │   ├── FragmentIndexer.ts                  # Shared async FRAGS v3 spatial/category indexer + Box3 cache
+    │   ├── StreamingLoader.ts                  # Two-phase IFC/FRAG loader & dual IndexedDB fragment caching
+    │   ├── PointerInputArbiter.ts              # Priority pointer arbitration (Gizmo > Marquee > Measure > Picking)
+    │   ├── BvhAccelerationService.ts           # Three-mesh-bvh BVH acceleration & raycast patching
+    │   ├── clashBroadPhase.ts                  # Sweep-and-Prune broad-phase spatial collision filter
+    │   ├── GraphicsPipeline.ts                 # WebGPU probe, Adaptive DPR, Deferred Postproduction & PMREM
+    │   ├── LodAndCullingManager.ts             # Screen-space LOD & camera frustum culling
+    │   ├── InstancedBatchManager.ts            # Draw-call batching for repeated geometry
+    │   ├── PrecisionOriginController.ts        # Dual-origin local recentering against 32-bit Z-fighting
+    │   ├── MetadataSyncService.ts & Adapter    # Offline IndexedDB LRU metadata hydration & REST adapter
+    │   ├── ResourceLifecycleManager.ts         # GPU geometry/material/texture disposal tracking
     │   ├── CustomViewManager.ts                # Saved viewpoints (OBC.Viewpoints + JPEG thumbnails)
-    │   ├── KeyboardController.ts               # Global keyboard shortcuts & WASD walkthrough physics
+    │   ├── KeyboardController.ts               # Global keyboard shortcuts, Selection Undo/Redo & esc handling
     │   ├── ModelManager.ts                     # WASM IFC/Fragment loading, calibration & IndexedDB cache
     │   ├── SceneManager.ts                     # Lighting, shadows, ground grid & post-processing shaders
     │   ├── SoundManager.ts                     # Synthesized WebAudio UI feedback
-    │   ├── ViewpointManager.ts                 # Camera state bookmarks
-    │   ├── ViewportController.ts               # Camera projection modes & smooth transitions
-    │   └── __tests__/CustomViewManager.test.ts # Viewpoint unit tests
+    │   └── __tests__/                          # Core architecture, performance & camera controller tests
+    │
+    ├── workers/                                # Background Web Workers
+    │   ├── clashWorker.ts                      # Off-thread broad/narrow clash detection worker
+    │   └── ifcMetadataWorker.ts                # Off-thread IFC property extraction worker
     │
     ├── modules/                                # Enterprise Domain Feature Suites
     │   ├── ExecutiveReportModule.ts            # Executive Construction Twin Report (Print, PDF & EVM S-Curve)
@@ -162,20 +180,26 @@ BIM-Kintsugi/
     │   ├── BoqGenerator.ts                     # 5D Qto quantity takeoff & 3D category isolation
     │   ├── Boq5DModule.ts                      # 5D cost dashboard & CSV exporter
     │   ├── MinimapModule.ts                    # 2D radar minimap with OBC.BoundingBoxer & click teleport
-    │   ├── SelectionManager.ts                 # Marquee selection, OBF.Highlighter, OBF.Outliner & Classifier
-    │   ├── CinematicTourManager.ts             # Keyframe camera path & 360° drone orbit generator
-    │   ├── CollaborationManager.ts             # Multi-user presence & live cursor simulation
-    │   ├── IdsChecker.ts & IdsModule.ts        # IDS specification audit engine
-    │   ├── ExplosionModule.ts                  # Storey & category 3D explosion slider
-    │   ├── FederationModule.ts                 # Multi-model coordinate alignment matrix
-    │   └── __tests__/                          # 25 comprehensive Vitest unit test suites (213 tests)
+    │   ├── HighlighterManager.ts               # Deterministic highlight priority stack (`select: 100`..`audit-ghost: 5`)
+    │   ├── SelectionManager.ts                 # Single-source selection state, Undo/Redo, Saved Sets & FRAGS v3 batch Qto
+    │   ├── IfcSplitterModule.ts                # Split federated IFC models by storey or category
+    │   ├── RealityCaptureModule.ts             # E57/LAS/PLY point cloud & photogrammetry inspection
+    │   ├── PlanOverlayModule.ts                # 2D DXF/PDF drawing sheet alignment on storeys
+    │   ├── CivilAlignmentModule.ts             # OpenBIM Civil 4.3 linear infrastructure geometry
+    │   └── __tests__/                          # 31 comprehensive Vitest test files (255 tests)
     │
     ├── ui/                                     # UI Controllers & HUD Components
-    │   ├── EnterpriseSuitesController.ts       # Event wiring & reactive rendering for all 9 enterprise drawers
+    │   ├── MetadataPanelController.ts          # Dedicated META tab (single-element & batch takeoff summary)
+    │   ├── EngineeringStudioController.ts      # CAD, Scans, IFC Split & Civil Studio controller
+    │   ├── EnterpriseSuitesController.ts       # Event wiring & reactive rendering for enterprise drawers
+    │   ├── GraphicsAcceleratorController.ts    # DPR, MSAA, AO & LOD performance controls
+    │   ├── InteractiveGanttDrawer.ts           # Slide-up 4D Gantt chart & bi-directional 3D selection
+    │   ├── MinimapHUD.ts                       # 2D radar minimap DOM & teleport HUD controller
     │   ├── CommandPalette.ts                   # Ctrl+K fuzzy command launcher
     │   ├── BimViewCube.ts                      # Interactive 3D orientation gizmo
     │   ├── PropertyEditor.ts                   # IFC PropertySet inspector & JSON/CSV exporter
     │   ├── GlobalSearchOverlay.ts              # Instant element & GlobalId search modal
+    │   ├── ResponsiveToolbar.ts                # Fluid multi-device top ribbon & overflow handler
     │   ├── SectionPlanesHUD.ts                 # Active section planes manager HUD
     │   ├── ToastManager.ts                     # Non-blocking toast notification system
     │   └── UIManager.ts                        # Dock state, theme synchronization & layout manager
@@ -225,7 +249,7 @@ npm install
 ```bash
 npm run dev
 ```
-Open `http://localhost:3000/` in your browser. Click **Sample Model** in the top ribbon or drag-and-drop any `.ifc` or `.frag` file onto the viewport.
+Open `http://localhost:3000/` in your browser. Click **Load Sample** in the **Files** (`1`) panel or drag-and-drop any `.ifc` or `.frag` file onto the viewport.
 
 ### Production Build
 ```bash
@@ -237,19 +261,19 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 213-test Vitest suite across all 25 core and enterprise modules:
+Run strict TypeScript type-checking and the 255-test Vitest suite across all 31 core and enterprise test suites:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 25 unit test suites (213 tests)
-npm test -- --run
+# Run all 31 unit test files (255 tests)
+npm test
 ```
 
-The automated testing harness also executes a comprehensive 70+ point enterprise verification audit:
-- **0 runtime page errors**, **0 duplicate DOM IDs**.
-- **213/213 unit tests passing** across 25 test suites (100% green).
+The automated testing harness also executes end-to-end headless Chromium verification and multi-viewport visual audits:
+- **0 runtime page errors**, **0 console errors**, **0 stale DOM IDs**.
+- **255/255 unit tests passing** across 31 test suites (100% green).
 - **7-Platform AI Verification Matrix**: Automated test plans for TestSprite, Octomind, Momentic, Reflect, Mabl, Katalon Studio, and Applitools Eyes.
 - **Security & RBAC Enforcement**: Role-based privilege separation across Viewer, Member, Manager, and Admin tiers with persistent policies.
 - **100% WCAG 2.2 AA Compliance** across interactive controls and form inputs.
@@ -261,32 +285,49 @@ The automated testing harness also executes a comprehensive 70+ point enterprise
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
-| **`Ctrl + K` / `Cmd + K`** | **Command Palette** | Fuzzy search across 30+ BIM tools, suites, cameras, themes, and render styles |
-| **`Ctrl + P`** | **Executive Twin Report** | Open boardroom-ready executive construction report modal with vector print / PDF export |
-| **`+` / `PageUp`** | **Zoom In Camera** | Smoothly zoom camera into the model (proportional to distance & zoom speed) |
-| **`-` / `PageDown`** | **Zoom Out Camera** | Smoothly zoom camera out from the model (proportional to distance & zoom speed) |
-| **`[` / `]`** | **Camera Zoom Speed** | Decrease or increase camera zoom/dolly speed dynamically (0.1x to 5.0x) |
-| **`Shift + G`** | **Ground Reference Grid** | Toggle transparent ground reference plane with theme synchronization |
-| **`G`** | **GeoBIM GIS Basemap** | Open GeoBIM GIS & 3D Geospatial satellite terrain basemap suite |
-| **`V`** | **4D Variance Mode** | Toggle 4D planned vs. actual schedule variance ($SV) and delay cost impact ($CV) |
-| **`F`** | **Fit to Screen** | Frame all visible BIM geometry in the viewport |
-| **`H`** | **Reset Visibility** | Unhide all isolated/hidden elements and clear active highlights |
-| **`I`** | **Isolate Selection** | Isolate currently selected BIM elements |
-| **`C`** | **Category Select** | Select all visible elements sharing the same IFC category as current selection |
-| **`B`** | **Box Marquee Select** | Toggle drag marquee rectangle selection mode |
-| **`M`** | **3D Dimensions** | Toggle snap-to-vertex 3D distance, angle, and area dimensioning |
-| **`X`** | **X-Ray Ghost Mode** | Toggle translucent X-Ray ghosting on unselected geometry |
-| **`1` – `7`** | **Sidebar Modules** | Switch left sidebar tabs (Files, Finder, 4D Sched) & right modules (Scene, Inspect, Ctrls, Tools) |
-| **`0`** | **Isometric View** | Smooth transition to 3D isometric perspective |
-| **`W / A / S / D`** | **First-Person Walk** | Navigate through the model in First-Person walkthrough mode (`Shift` to sprint) |
-| **`Right-Click`** | **Context Menu** | Inspect Properties, Isolate, Hide, Slice at Elevation, or Create BCF Issue Here |
+| **`Ctrl + K` / `Cmd + K`** | **Command Palette** | Fuzzy search across BIM tools, suites, selection actions, cameras, themes, and render styles |
+| **`1` – `8`** | **Sidebar Modules** | Switch Left tabs (`1` Files, `2` Finder & Saved Sets, `3` 4D Sched) & Right tabs (`4` Scene, `5` 4D/5D Inspect, `6` Ctrls, `7` Tools, `8` Dedicated Metadata) |
+| **`Left-Click`** | **Inspect Metadata** | Select 3D element and open the dedicated **META** (`8`) panel |
+| **`Shift + Click`** | **Toggle Multi-Select** | Add or remove clicked elements in active selection without clearing previous items |
+| **`Ctrl / Alt + Click`** | **Subtract Element** | Remove the clicked element from current multi-selection |
+| **`Double-Click`** | **Select & Focus** | Select (if needed) and zoom/fit camera cleanly onto the hit element |
+| **`B` / `Alt + Drag`** | **Box Marquee Select** | Drag `L→R` for Window select, `R→L` for Crossing select; hold `Shift` to add or `Ctrl` to subtract |
+| **`Ctrl + A` / `Ctrl + I`** | **Select All / Invert** | Select all visible elements or invert visible selection (`OBC.Hider` aware) |
+| **`Ctrl + Z` / `Ctrl + Y`** | **Undo / Redo Selection** | Step backward/forward across 25 selection history states (including recovering cleared selections) |
+| **`C`** | **Category Select** | Select all visible elements sharing the primary IFC category |
+| **`I` / `H` / `U`** | **Isolate / Hide / Unhide** | Isolate (`I`) or Hide (`H`) selected elements; press `U` or click the **Show All** pill to restore all geometry |
+| **`F` / `Z`** | **Focus / Fit to Frame** | Focus camera onto active selection (`F`), or frame all visible geometry (`Z` or `F` with empty selection) |
+| **`T` / `P`** | **Top / Isometric View** | Snap camera to Top Plan view (`T`) or Isometric 3D perspective (`P`) |
+| **`+` / `-` & `[` / `]`** | **Zoom & Speed** | Zoom camera In/Out (`+`/`-`, `PageUp`/`PageDown`) or adjust zoom speed `0.1x–5.0x` (`[` / `]`) |
+| **`X`** | **3D Section Cut** | Toggle interactive 3D section cut planes (`OBC.Clipper`) |
+| **`M`** | **3D Dimensions** | Toggle snap-to-vertex 3D distance, delta, angle, area, and volume tools |
+| **`G` / `Shift + G`** | **GeoBIM GIS / Grid** | Open GeoBIM GIS 3D satellite basemap (`G`) or toggle ground reference grid (`Shift+G`) |
+| **`Space`** | **4D Play / Pause / Up** | Toggle 4D Timeline playback when active, or fly upward in First-Person mode |
+| **`W / A / S / D`** | **First-Person Walk** | Walk/strafe in First-Person mode (`Q`/`Space` up, `E`/`Shift`/`C` down) |
+| **`Right-Click`** | **Smart Context Menu** | Drop 3D Pin, Create BCF Issue, Properties / Batch Summary, Select Same Category, X-Ray Isolate, Isolate, Hide, Save Selection Set, or Focus |
 | **`Hover`** | **Element Tooltip** | ExpressID, IFC entity type, name/classification, storey, dimensions, and estimated volume |
-| **`?`** | **Help & Shortcuts** | Open the in-app interactive tutorial & shortcuts guide (`Escape` closes it) |
-| **`Escape`** | **Clear / Close** | Cancel active measurement/section tool, clear selection, or close open drawers and modals |
+| **`?`** | **Help & Shortcuts** | Open the in-app interactive tutorial & shortcuts guide |
+| **`Escape`** | **Cancel / Clear / Close** | Cancel an in-progress marquee drag (keeping selection), clear active selection, or close context menus & drawers |
 
 ---
 
 ## 📝 Recent Changes & Enhancements
+
+- **4D Simulation Reliability, Milestone Sync & Clean Exit Restoration** ([`Schedule4DEngine.ts`](src/modules/Schedule4DEngine.ts), [`AppearanceProfileEngine.ts`](src/modules/AppearanceProfileEngine.ts), [`InteractiveGanttDrawer.ts`](src/ui/InteractiveGanttDrawer.ts), [`PhasingTimelineModule.ts`](src/modules/PhasingTimelineModule.ts), [`main.ts`](src/main.ts)):
+  - Unified 4D task appearance styling, visibility state transitions, dynamic milestone pill synchronization, custom IFC parameter sequencing via `IfcParameterReader`, and deterministic cleanup restoring geometry visibility, materials, and pre-4D sidebar state on exit (`×`).
+- **Full Tool Audit, Measurement Lifecycle & Responsive HUD Alignment** ([`MeasurementSuite.ts`](src/modules/MeasurementSuite.ts), [`style.css`](src/style.css), [`EnterpriseSuitesController.ts`](src/ui/EnterpriseSuitesController.ts), [`KeyboardController.ts`](src/core/KeyboardController.ts), [`CustomViewManager.ts`](src/core/CustomViewManager.ts)):
+  - Replaced stale `btn-header-*` / legacy trigger IDs across Command Palette, Keyboard Shortcuts, AI Copilot, Collaboration Manager, Metadata Panel, and Phasing Timeline with active `btn-dock-*` / `timeline-play-btn` targets; parallelized lazy loading in `toggleGisSuite` and gated local Ollama polling behind `localStorage.bim_enable_ollama === "true"`.
+  - Unified `#settings-toggle-measure` and `#measurement-panel` controls with camera-tracked `.bim-3d-dimension-badge` labels, UI chrome pointer filtering, and complete `Clear All` + drawer-close cleanup.
+  - Prevented horizontal `.ui-layer` scroll drift (`overflow: clip` + `visibility: hidden` on collapsed sidebars), retained laptop header status/RBAC pills (`1280px–1440px`), fit all 28 dock tools cleanly without right-edge clipping, rounded minimap storey elevations to 2 decimals, prevented viewpoint preset badge wrapping, and repositioned the `Show All (U)` pill & mobile toast stack with zero overlap across `1440×900`, `1280×720`, `768×1024`, and `390×844`.
+- **Unified Selection System, Multi-Selection Batch Takeoff & Saved Sets** ([`SelectionManager.ts`](src/modules/SelectionManager.ts), [`MetadataPanelController.ts`](src/ui/MetadataPanelController.ts), [`main.ts`](src/main.ts)):
+  - Unified `SelectionManager` as the single selection store powering `#viewport-selection-bar`, `#multi-selection-batch-card`, dedicated **META** tab, and `#bim-context-menu`.
+  - Enabled native **`Shift + Click`** multi-select toggle and **`Ctrl/Alt + Click`** subtraction via `PointerInputArbiter` (`"picking"` priority), reserving **Double-Click** for camera focus/zoom with real storey breadcrumb lookup.
+  - Migrated `selectSameCategory`, `filterSelectionToCategory`, `isolateCategory`, `isolateStorey`, `selectAll`, `invertSelection`, and box-select fallback onto **FRAGS v3 `FragmentIndexer`** with hidden-element filtering via `OBC.Hider.getVisibilityMap(false)` and `Ctrl+Box` subtraction.
+  - Added **25-step Selection Undo/Redo** (`Ctrl+Z` / `Ctrl+Y`), mid-drag **`Esc`** cancellation, `crosshair` box cursor, **Saved Selection Sets** UI card in Finder (`#saved-selection-sets-section`), real **Batch Takeoff Summary** inside `META`, and batch-aware context menu actions (`Select Same Category`, fixed `X-Ray Isolate`, `Hide Selection`, `Save Selection Set`).
+- **Dedicated BIM Metadata Tab (`Key 8`) & Smart Right-Click Properties** ([`MetadataPanelController.ts`](src/ui/MetadataPanelController.ts)):
+  - Added dedicated `META` tab (`#tab-right-metadata`) separated from `INSPECT` (`Key 5` 4D/5D Cost & Schedule) with identity hero pills, live field filter search, collapsible Psets/Qto/WGS84 accordions, and click-to-copy GUID/values/JSON/AI prompt.
+- **Six Architecture, GPU & Streaming Performance Tracks** ([`FragmentIndexer.ts`](src/core/FragmentIndexer.ts), [`StreamingLoader.ts`](src/core/StreamingLoader.ts), [`GraphicsPipeline.ts`](src/core/GraphicsPipeline.ts), [`clashWorker.ts`](src/workers/clashWorker.ts)):
+  - Zero-FOUC boot splash, two-phase IFC/FRAG streaming + IndexedDB cache, off-thread BVH/Sweep-and-Prune clash worker, dual-origin precision centering, adaptive GPU lifecycle & LOD culling, and ThatOpen `3.6.x` stack with **Engineering Studio** (2D DXF, scans, `IfcSplitter`, Civil 4.3).
 
 - **ANSI/EIA 748-B, PMI & APM Earned Value Management (EVM) Control Suite** ([`EvmDashboardModule.ts`](src/modules/EvmDashboardModule.ts)):
   - **Multi-Method EAC Forecasting Engine**: Selectable forecasting models: Typical ($BAC/CPI$), Atypical ($AC+BAC-EV$), Composite ($CPI \times SPI$), and Weighted ($0.80 CPI + 0.20 SPI$) with live recalculation of Variance at Completion ($VAC$).
@@ -331,7 +372,7 @@ The automated testing harness also executes a comprehensive 70+ point enterprise
   - **Quick-View Toolbar**: Responsive icon-only compacting hiding label text under 1380px.
   - **4D Simulation Mode**: Full suppression of `#model-stats-hud` during 4D playback across all media queries.
   - **Hover Tooltip Bounds**: Accurate dynamic height measurement (`245px`) and obstacle clearance guaranteeing zero overlap with bottom HUD elements.
-- **Symmetrical Right Sidebar Tab Header** – Removed truncated `[#]` badge from the INSPECT tab, maintaining balanced layout across `[4] SCENE`, `[5] INSPECT`, `[6] CTRLS`, and `[7] TOOLS`.
+- **Symmetrical Right Sidebar Tab Header** – Clean icon/label layout across `[4] SCENE`, `[8] META`, `[5] INSPECT`, `[6] CTRLS`, and `[7] TOOLS`.
 - **5-Theme Color Synchronization** – Harmonized UI and 3D viewport backgrounds, ground grids, sidebars, segmented tab tracks, floating HUDs, and drawer controls across Obsidian Dark, Light Studio, Zen Minimalist, Cyberpunk, and Blueprint.
 - **Unified Magic Dock & Apple Magnifier** – Centralized bottom toolbar serving as the single source of truth for all tools (visibility, file cluster, dimensions, clashes, 6D carbon, AI copilot, live peers, BCF issues, 4D Gantt, 5D cost, marquee selection, isolation, and section cut). Features fluid Apple-style icon magnification, mouse-wheel and touch drag horizontal panning, dynamic responsive heights, and a body-level floating tooltip system (`#dock-global-tooltip`, `z-index: 2147483647`) with zero overflow clipping.
 - **5D Project Cost Control Suite & Unified BOQ** – Click the green **$** button on the bottom dock or 4D timeline to open comprehensive project cost control. Features live Earned Value Management (EVM) S-Curve (Planned Value PV vs. Earned Value EV), category cost breakdown (Concrete, Steel, MEP, Finishes), multi-currency support (USD, EUR, GBP, JPY, INR, CAD, AUD) with custom unit rates, 1-click **Export BOQ** spreadsheet, and buildingSMART IDS 4D/5D data readiness validation.
@@ -361,7 +402,7 @@ The automated testing harness also executes a comprehensive 70+ point enterprise
 
 ## 🌐 Production Deployment
 
-The repository includes an automated GitHub Pages workflow in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every push to `main` runs `npm ci && npm run build` and deploys the `./dist` bundle to GitHub Pages.
+The repository includes an automated GitHub Pages workflow in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every push to `main` runs `npm ci`, `npm run lint`, `npm test -- --run`, and `npm run build`, then deploys `./dist` to GitHub Pages.
 
 ---
 

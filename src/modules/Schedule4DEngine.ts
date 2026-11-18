@@ -219,11 +219,14 @@ export class Schedule4DEngine {
     const counts = { ahead: 0, onSchedule: 0, delayed: 0, critical: 0 };
 
     for (const e of this.elements) {
+      const hasExplicitTracking = e.actualEnd !== undefined || e.actualStart !== undefined || e.statusOverride !== undefined;
       const actEnd = e.actualEnd ?? (e.statusOverride === "Completed" ? Math.min(dateMs, e.end) : undefined);
       const isDone = e.statusOverride === "Completed" || (actEnd !== undefined && dateMs >= actEnd);
 
       let status: VarianceStatus = "On Schedule";
-      if (isDone) {
+      if (!hasExplicitTracking) {
+        status = "On Schedule";
+      } else if (isDone) {
         if (actEnd && actEnd < e.end - 2 * DAY_MS) {
           status = "Ahead";
         } else if (actEnd && actEnd > e.end + 7 * DAY_MS) {

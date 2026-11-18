@@ -67,26 +67,12 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     "engineering-panel": "btn-dock-engineering",
   };
 
-  const HEADER_DRAWER_MAP: Record<string, string> = {
-    "measurement-panel": "btn-header-measure",
-    "clash-panel": "btn-header-clash",
-    "carbon-panel": "btn-header-carbon",
-    "copilot-panel": "btn-header-copilot",
-    "collab-panel": "btn-header-collab",
-    "bcf-issues-panel": "btn-header-bcf",
-    "cost-control-panel": "btn-header-cost",
-    "evm-panel": "btn-header-evm",
-    "gis-panel": "btn-header-gis",
-  };
-
   function syncDockActiveStates() {
     for (const [panelId, dockBtnId] of Object.entries(DOCK_DRAWER_MAP)) {
       const panel = document.getElementById(panelId);
       const btn = document.getElementById(dockBtnId);
-      const headerBtn = document.getElementById(HEADER_DRAWER_MAP[panelId]);
       const isOpen = panel && !panel.classList.contains("hidden") && (panel as HTMLElement).style.display !== "none";
       if (btn) btn.classList.toggle("active", !!isOpen);
-      if (headerBtn) headerBtn.classList.toggle("active", !!isOpen);
     }
 
     // IFC Parameter Reader Modal sync
@@ -98,17 +84,20 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     // 4D Mode / Timeline sync
     const is4D = document.body.classList.contains("mode-4d");
     const ganttBtn = document.getElementById("btn-dock-gantt");
-    const headerGanttBtn = document.getElementById("btn-header-gantt");
     if (ganttBtn) ganttBtn.classList.toggle("active", is4D);
-    if (headerGanttBtn) headerGanttBtn.classList.toggle("active", is4D);
   }
   (window as any).syncDockActiveStates = syncDockActiveStates;
 
   function closeAllEnterpriseDrawers() {
+    const measurePanel = document.getElementById("measurement-panel");
+    const wasMeasuringOpen = measurePanel && !measurePanel.classList.contains("hidden");
     document.querySelectorAll(".enterprise-drawer").forEach((drawer) => {
       drawer.classList.add("hidden");
       (drawer as HTMLElement).style.display = "none";
     });
+    if (wasMeasuringOpen && measurementSuite.isMeasuringActive()) {
+      measurementSuite.stopMeasurement();
+    }
 
     const ifcModal = document.getElementById("ifc-parameter-reader-modal");
     if (ifcModal && !ifcModal.classList.contains("hidden")) {
@@ -119,7 +108,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       if (typeof (window as any).InteractiveGanttDrawer?.getInstance === "function") {
         (window as any).InteractiveGanttDrawer.getInstance().hide();
       }
-    } catch (e) {}
+    } catch (e) { }
 
     syncDockActiveStates();
   }
@@ -197,7 +186,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       })
       .join("");
 
-      bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
+    bcfList.querySelectorAll(".btn-bcf-restore").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const guid = (e.currentTarget as HTMLElement).getAttribute("data-guid");
         const topic = topics.find((item) => item.guid === guid);
@@ -211,7 +200,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   (window as any).renderBcfIssues = renderBcfIssues;
   renderBcfIssues();
 
-  const bindEnterpriseTrigger = (headerId: string, dockId: string, panelId: string, onOpen?: () => void) => {
+  const bindEnterpriseTrigger = (dockId: string, panelId: string, onOpen?: () => void) => {
     const handler = () => {
       toggleEnterpriseDrawer(panelId);
       const panel = document.getElementById(panelId);
@@ -219,19 +208,18 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
         onOpen();
       }
     };
-    document.getElementById(headerId)?.addEventListener("click", handler);
     document.getElementById(dockId)?.addEventListener("click", handler);
   };
 
-  bindEnterpriseTrigger("btn-header-measure", "btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
-  bindEnterpriseTrigger("btn-header-clash", "btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
-  bindEnterpriseTrigger("btn-header-carbon", "btn-dock-carbon", "carbon-panel", () => {
+  bindEnterpriseTrigger("btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
+  bindEnterpriseTrigger("btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
+  bindEnterpriseTrigger("btn-dock-carbon", "carbon-panel", () => {
     carbonManager.updateCarbonUI();
     void carbonManager.refreshFromFragments();
   });
-  bindEnterpriseTrigger("btn-header-copilot", "btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
-  bindEnterpriseTrigger("btn-header-collab", "btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
-  bindEnterpriseTrigger("btn-header-bcf", "btn-dock-bcf", "bcf-issues-panel", renderBcfIssues);
+  bindEnterpriseTrigger("btn-dock-copilot", "copilot-panel", () => bimAiCopilot.updateCopilotUI());
+  bindEnterpriseTrigger("btn-dock-collab", "collab-panel", () => collabManager.updateCollabUI());
+  bindEnterpriseTrigger("btn-dock-bcf", "bcf-issues-panel", renderBcfIssues);
 
   document.getElementById("btn-export-bcf-json")?.addEventListener("click", async () => {
     const exportedZip = await bcfIssueManager.exportNativeBcfZip();
@@ -295,6 +283,9 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       if (targetPanel) {
         targetPanel.classList.add("hidden");
         (targetPanel as HTMLElement).style.display = "none";
+        if (targetPanel.id === "measurement-panel" && measurementSuite.isMeasuringActive()) {
+          measurementSuite.stopMeasurement();
+        }
         syncDockActiveStates();
         SoundManager.getInstance().playClick();
       }
@@ -493,13 +484,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       const trimmed = incoming.trim();
       if (!trimmed) {
         const offer = await collabManager.createWebRtcOffer();
-        await navigator.clipboard?.writeText?.(offer).catch(() => {});
+        await navigator.clipboard?.writeText?.(offer).catch(() => { });
         showToast("WebRTC Offer copied! Share it with peer, then click P2P to paste their Answer.", "success");
       } else {
         const parsed = JSON.parse(trimmed);
         if (parsed?.type === "offer") {
           const answer = await collabManager.acceptWebRtcOfferAndCreateAnswer(trimmed);
-          await navigator.clipboard?.writeText?.(answer).catch(() => {});
+          await navigator.clipboard?.writeText?.(answer).catch(() => { });
           showToast("WebRTC Answer created & copied! Send it back to the host.", "success");
         } else if (parsed?.type === "answer") {
           await collabManager.acceptWebRtcAnswer(trimmed);
@@ -586,7 +577,6 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     SoundManager.getInstance().playClick();
   };
 
-  document.getElementById("btn-header-gantt")?.addEventListener("click", toggleUnified4DBar);
   document.getElementById("btn-dock-gantt")?.addEventListener("click", toggleUnified4DBar);
 
   // 5D Project Cost Control Unified Suite Trigger
@@ -604,7 +594,6 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   (window as any).toggleUnifiedCostControl = toggleUnifiedCostControl;
 
   document.getElementById("btn-dock-cost")?.addEventListener("click", toggleUnifiedCostControl);
-  document.getElementById("btn-header-cost")?.addEventListener("click", toggleUnifiedCostControl);
   document.getElementById("btn-timeline-cost-control")?.addEventListener("click", toggleUnifiedCostControl);
 
   // Earned Value Management (EVM) Unified Suite Trigger & Handlers
@@ -1006,8 +995,15 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   const toggleGisSuite = async () => {
     if (gisOpening) return;
     gisOpening = true;
-    try { gisModule = await gisFeature.load(); await geoTools.load(); } catch { return; }
-    finally { gisOpening = false; }
+    try {
+      const [loadedGis] = await Promise.all([gisFeature.load(), geoTools.load()]);
+      gisModule = loadedGis;
+    } catch (err) {
+      console.error("GeoBIM load failed:", err);
+      return;
+    } finally {
+      gisOpening = false;
+    }
     SoundManager.getInstance().playClick();
     toggleEnterpriseDrawer("gis-panel");
     const panel = document.getElementById("gis-panel");
@@ -1019,7 +1015,6 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   (window as any).toggleGisSuite = toggleGisSuite;
 
   document.getElementById("btn-dock-gis")?.addEventListener("click", toggleGisSuite);
-  document.getElementById("btn-header-gis")?.addEventListener("click", toggleGisSuite);
 
   const toggleEngineeringStudio = async () => {
     await runFeature(() => engineeringStudio.load());
@@ -1745,7 +1740,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     try {
       localStorage.setItem("bim_theme_preset", preset.name);
       localStorage.setItem("bim_theme", preset.name);
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       const hoverStyle = highlighter?.styles?.get("hover");
@@ -1753,13 +1748,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       const selectStyle = highlighter?.styles?.get("select");
       if (selectStyle) selectStyle.color = new THREE.Color(preset.select3D);
       BimEngine.getInstance().syncOutlinerTheme(preset.select3D, preset.hover3D);
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       if (world?.scene?.three) {
         world.scene.three.background = new THREE.Color(preset.background3D);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Synchronize 3D Ground Grid Helper (transparent & themed)
     try {
@@ -1783,13 +1778,13 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
           gh.material.needsUpdate = true;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       if (typeof (window as any).applyCategoryColors === "function") {
-        (window as any).applyCategoryColors().catch?.(() => {});
+        (window as any).applyCategoryColors().catch?.(() => { });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     document.querySelectorAll<HTMLSelectElement>(".select-theme-toggle").forEach((selector) => {
       if (selector.value !== preset.name) {

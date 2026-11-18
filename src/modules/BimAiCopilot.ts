@@ -191,7 +191,7 @@ export class BimAiCopilot {
 
     // 5.1 Section Planes & Clipping Cut Queries
     else if (q.includes("section") || q.includes("clipping") || q.includes("cut plane") || q.includes("section cut")) {
-      document.getElementById("btn-dock-section")?.click();
+      document.getElementById("btn-section-cut")?.click();
       responseText = "Section planes cutting tool is now ACTIVE. Double-click any face in 3D to create an orthogonal section cut plane.";
       executed.push("Toggle Section Cut Tool");
       followUps.push("Delete all section planes", "Invert section cut");
@@ -327,10 +327,7 @@ export class BimAiCopilot {
 
   private async queryLocalOllama(prompt: string): Promise<string | null> {
     if (typeof fetch === "undefined") return null;
-    if (
-      (globalThis as any).process?.env?.VITEST &&
-      (typeof localStorage === "undefined" || localStorage.getItem("bim_enable_ollama") !== "true")
-    ) {
+    if (typeof localStorage === "undefined" || localStorage.getItem("bim_enable_ollama") !== "true") {
       return null;
     }
     try {

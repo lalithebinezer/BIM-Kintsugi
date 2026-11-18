@@ -116,7 +116,7 @@ export class MetadataPanelController {
       if (overlay && typeof overlay.open === "function") {
         overlay.open();
       } else {
-        document.getElementById("btn-global-search")?.click();
+        document.getElementById("btn-open-command-palette")?.click();
       }
     });
 

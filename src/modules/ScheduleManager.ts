@@ -151,11 +151,7 @@ export class ScheduleManager {
         }
       }
 
-      const cleanName = categoryName
-        .replace(/^IFC/i, '')
-        .replace(/STANDARDCASE$/i, '')
-        .replace(/([A-Z])/g, ' $1')
-        .trim();
+      const cleanName = ScheduleManager.formatCategoryLabel(categoryName);
 
       const taskUnitCost = this.resolveFallbackUnitCost(categoryName);
       const taskTotalCost = Math.round(taskUnitCost * Math.max(1, allElementIds.size) * 100) / 100;
@@ -326,6 +322,54 @@ export class ScheduleManager {
     'In Progress': '#F59E0B',
     'Completed': '#10B981',
   };
+
+  /**
+   * Formats an IFC category identifier (e.g. IFCWALLSTANDARDCASE, IfcFooting) into a readable label.
+   */
+  public static formatCategoryLabel(categoryName: string): string {
+    const upper = categoryName.trim().toUpperCase();
+    const known: Record<string, string> = {
+      IFCFOOTING: "Footing",
+      IFCPILE: "Pile",
+      IFCCOLUMN: "Column",
+      IFCBEAM: "Beam",
+      IFCSLAB: "Slab",
+      IFCWALL: "Wall",
+      IFCWALLSTANDARDCASE: "Wall (Standard)",
+      IFCCURTAINWALL: "Curtain Wall",
+      IFCMEMBER: "Structural Member",
+      IFCPLATE: "Steel Plate",
+      IFCSTAIR: "Staircase",
+      IFCSTAIRFLIGHT: "Stair Flight",
+      IFCRAMP: "Ramp",
+      IFCRAILING: "Railing",
+      IFCWINDOW: "Window",
+      IFCDOOR: "Door",
+      IFCROOF: "Roof",
+      IFCCOVERING: "Cladding",
+      IFCBUILDINGELEMENTPROXY: "Specialty Element",
+      IFCFURNISHINGELEMENT: "Furnishings",
+      IFCFLOWSEGMENT: "MEP Segment",
+      IFCFLOWTERMINAL: "MEP Terminal",
+      IFCFLOWFITTING: "MEP Fitting",
+      IFCPIPESEGMENT: "Pipe Segment",
+      IFCDUCTSEGMENT: "Duct Segment",
+    };
+    if (known[upper]) return known[upper];
+    const stripped = categoryName
+      .trim()
+      .replace(/^IFC/i, "")
+      .replace(/STANDARDCASE$/i, " (Standard)")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .trim();
+    if (!stripped) return "Element";
+    // Title-case all-uppercase words cleanly without splitting every letter
+    return stripped
+      .split(/\s+/)
+      .map((w) => (w.startsWith("(") ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+      .join(" ");
+  }
 
   /**
    * Get task status color for timeline visualization.

@@ -863,7 +863,6 @@ export class CollaborationManager {
     const statusTextEl = document.getElementById("collab-live-status-text");
     const statusDotEl = document.getElementById("collab-live-status-dot");
     const dockBtn = document.getElementById("btn-dock-collab");
-    const headerBtn = document.getElementById("btn-header-collab");
 
     const enabled = this.isLivePeersEnabled;
     if (liveToggle) liveToggle.checked = enabled;
@@ -901,7 +900,6 @@ export class CollaborationManager {
       statusDotEl.classList.toggle("is-offline", !enabled);
     }
     dockBtn?.classList.toggle("peers-off", !enabled);
-    headerBtn?.classList.toggle("peers-off", !enabled);
 
     const allUsers = this.getActiveUsers();
     if (countBadge) {

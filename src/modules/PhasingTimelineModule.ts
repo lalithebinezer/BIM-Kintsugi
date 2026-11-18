@@ -252,7 +252,7 @@ export class PhasingTimelineModule {
   public updateUI() {
     if (typeof document === "undefined") return;
 
-    const playBtn = document.getElementById("btn-timeline-play");
+    const playBtn = document.getElementById("timeline-play-btn");
     const weekLabel = document.getElementById("timeline-week-label");
     const slider = document.getElementById("timeline-week-slider") as HTMLInputElement | null;
     const phaseName = document.getElementById("timeline-phase-name");

@@ -135,17 +135,17 @@ export class KeyboardController {
         }
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'h') {
         e.preventDefault();
-        (document.getElementById('btn-hide-selected') || document.getElementById('btn-dock-hide'))?.click();
+        document.getElementById('btn-hide-selected')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'i') {
         e.preventDefault();
-        (document.getElementById('btn-isolate') || document.getElementById('btn-dock-isolate'))?.click();
+        document.getElementById('btn-isolate')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'u') {
         (document.getElementById('btn-toggle-visibility') || document.getElementById('btn-show-all'))?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'x') {
         document.getElementById('btn-section-cut')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'm') {
         e.preventDefault();
-        (document.getElementById('btn-header-measure') || document.getElementById('btn-dock-measure'))?.click();
+        document.getElementById('btn-dock-measure')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 'z') {
         document.getElementById('btn-view-fit')?.click();
       } else if (!e.ctrlKey && !e.metaKey && keyLower === 't') {

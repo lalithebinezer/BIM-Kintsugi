@@ -598,16 +598,12 @@ export class AppearanceProfileEngine {
       models?: any;
     }
   ): Promise<void> {
-    const { renderer, hider, highlighter } = options || {};
+    const { hider, highlighter } = options || {};
 
-    // 1. Manage WebGLRenderer local clipping
-    if (renderer) {
-      if (result.activePlanes.length > 0) {
-        renderer.localClippingEnabled = true;
-      } else {
-        // Only disable if no other modules require it
-        renderer.localClippingEnabled = false;
-      }
+    // 1. Reset any stale model-level material clipping planes (shared fragment materials clip unrelated elements).
+    // Note: Renderer-level clippingPlanes (used by Storey Slicer / Section Box) are preserved untouched.
+    if (options?.models) {
+      this.clearModelClippingPlanes(options.models);
     }
 
     // 2. Apply visibility via ThatOpen Hider if available
@@ -622,56 +618,88 @@ export class AppearanceProfileEngine {
 
     // 3. Apply active color overrides through ThatOpen Highlighter
     if (highlighter) {
-      // Clear any previous dynamic appearance styles
-      for (const [styleName] of highlighter.styles) {
-        if (styleName.startsWith("appearance-profile-")) {
-          await highlighter.clear(styleName);
-        }
-      }
-
       let styleIdx = 0;
       for (const [, group] of result.buckets.activeColorOverrides) {
         const styleId = `appearance-profile-${styleIdx++}`;
-        if (!highlighter.styles.has(styleId)) {
-          highlighter.styles.set(styleId, {
-            color: new THREE.Color(group.color),
-            opacity: group.opacity,
-            transparent: group.opacity < 1.0,
-            renderedFaces: true as any,
-          });
-        }
-        await highlighter.highlightByID(styleId, group.expressIds, false, false);
+        highlighter.styles.set(styleId, {
+          color: new THREE.Color(group.color),
+          opacity: group.opacity,
+          transparent: group.opacity < 1.0,
+          renderedFaces: true as any,
+          priority: 30,
+        });
+        // Atomic swap (`removePrevious = true`) prevents blank flashes between frames
+        await highlighter.highlightByID(styleId, group.expressIds, true, false);
       }
+
+      // Clear only unused/extra dynamic appearance styles from prior frames
+      await this.clearHighlighterAppearanceStyles(highlighter, styleIdx);
     }
+  }
 
-    // 4. Attach active clipping planes to individual active element materials if model meshes are present
-    if (options?.models) {
-      const modelList = Array.isArray(options.models)
-        ? options.models
-        : options.models.values
-        ? Array.from(options.models.values())
-        : [options.models];
+  /**
+   * Remove any model-level material clipping planes applied during 4D simulation.
+   */
+  public clearModelClippingPlanes(models?: any): void {
+    if (!models) return;
+    const modelList = Array.isArray(models)
+      ? models
+      : models.values
+      ? Array.from(models.values())
+      : [models];
 
-      for (const model of modelList) {
-        const rootObj = (model?.object || model) as THREE.Object3D;
-        if (rootObj && typeof rootObj.traverse === "function") {
-          rootObj.traverse((child: any) => {
-            if (child.isMesh && child.material) {
-              const materials = Array.isArray(child.material) ? child.material : [child.material];
-              for (const mat of materials) {
-                // If clipping planes are active in the frame, set them cleanly
-                if (result.activePlanes.length > 0) {
-                  mat.clippingPlanes = result.activePlanes;
-                  mat.clipShadows = true;
-                } else {
-                  mat.clippingPlanes = [];
-                }
+    for (const model of modelList) {
+      const rootObj = (model?.object || model) as THREE.Object3D;
+      if (rootObj && typeof rootObj.traverse === "function") {
+        rootObj.traverse((child: any) => {
+          if (child.isMesh && child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            for (const mat of materials) {
+              if (Array.isArray(mat.clippingPlanes) && mat.clippingPlanes.length > 0) {
+                mat.clippingPlanes = [];
               }
             }
-          });
-        }
+          }
+        });
       }
     }
+  }
+
+  /**
+   * Clear dynamic appearance-profile highlights from the highlighter (optionally only indices >= startIndex).
+   */
+  public async clearHighlighterAppearanceStyles(highlighter?: any, startIndex: number = 0): Promise<void> {
+    if (!highlighter?.styles) return;
+    for (const [styleName] of highlighter.styles) {
+      if (!styleName.startsWith("appearance-profile-")) continue;
+      if (startIndex > 0) {
+        const idx = Number(styleName.slice("appearance-profile-".length));
+        if (Number.isFinite(idx) && idx < startIndex) continue;
+      }
+      // Skip empty styles to avoid unnecessary WebGL/worker clear overhead unless selection map isn't present (mocks)
+      const selMap = highlighter.selection?.[styleName];
+      if (highlighter.selection && selMap) {
+        let hasAny = false;
+        for (const set of Object.values(selMap) as any[]) {
+          if (set && set.size > 0) {
+            hasAny = true;
+            break;
+          }
+        }
+        if (!hasAny) continue;
+      } else if (highlighter.selection && !selMap) {
+        continue;
+      }
+      await highlighter.clear(styleName);
+    }
+  }
+
+  /**
+   * Clear both appearance-profile highlights and model material clipping planes (used when exiting 4D mode).
+   */
+  public async clearAppliedAppearance(options?: { highlighter?: any; models?: any }): Promise<void> {
+    await this.clearHighlighterAppearanceStyles(options?.highlighter);
+    this.clearModelClippingPlanes(options?.models);
   }
 
   /**

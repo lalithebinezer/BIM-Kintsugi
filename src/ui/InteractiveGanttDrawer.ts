@@ -311,12 +311,24 @@ export class InteractiveGanttDrawer {
       const leftPct = Math.max(0, Math.min(100, ((taskStart - minTime) / totalDuration) * 100));
       const widthPct = Math.max(1.5, Math.min(100 - leftPct, ((taskEnd - taskStart) / totalDuration) * 100));
 
+      const currentMs = (window as any).currentTimelineDate?.getTime?.();
+      let displayStatus = t.status;
+      if (Number.isFinite(currentMs) && Number.isFinite(taskStart) && Number.isFinite(taskEnd)) {
+        if (t.status === "Completed" || currentMs >= taskEnd) {
+          displayStatus = "Completed";
+        } else if (currentMs >= taskStart) {
+          displayStatus = "In Progress";
+        } else {
+          displayStatus = "Planned";
+        }
+      }
+
       const row = document.createElement("div");
       row.className = `gantt-task-row ${t.id === this.activeTaskId ? "active" : ""}`;
       row.dataset.taskId = t.id;
       row.dataset.category = t.category;
 
-      const statusClass = t.status === "Completed" ? "status-complete" : (t.status === "In Progress" ? "status-active" : "status-planned");
+      const statusClass = displayStatus === "Completed" ? "status-complete" : (displayStatus === "In Progress" ? "status-active" : "status-planned");
 
       row.innerHTML = `
         <div class="col-task-name" title="${t.name}">
@@ -328,7 +340,7 @@ export class InteractiveGanttDrawer {
           ${t.isCritical ? `<span class="gantt-cpm-badge" style="font-size: 0.62rem; font-weight: 800; background: var(--color-danger-subtle); color: var(--color-danger); border: 1px solid var(--color-danger-border); padding: 1px 3px; border-radius: 2px; margin-left: 4px;" title="Critical Path Task (Float: ${t.totalFloat ?? 0}d)">CPM</span>` : ''}
         </div>
         <div class="col-task-status">
-          <span class="gantt-status-tag ${statusClass}">${t.status}</span>
+          <span class="gantt-status-tag ${statusClass}">${displayStatus}</span>
         </div>
         <div class="col-task-dates">
           <span>${t.startDate.slice(5)} → ${t.endDate.slice(5)}</span>
@@ -465,14 +477,20 @@ export class InteractiveGanttDrawer {
       (window as any).jumpTimelineToDate(new Date(task.startDate));
     }
 
-    // Cross-isolate elements if task has assigned elements
+    // Highlight task elements in 4D mode (or isolate outside 4D mode) without corrupting cumulative 4D timeline
     if (task.elementIds.size > 0 && (window as any).components) {
       try {
         const components = (window as any).components;
-        const hider = components.get ? components.get((window as any).OBC?.Hider) : null;
-        if (hider) {
-          const mId = task.modelId || "default-model";
-          hider.isolate({ [mId]: task.elementIds });
+        const mId = task.modelId || "default-model";
+        const is4d = document.body.classList.contains("mode-4d");
+        const highlighter = (window as any).highlighter;
+        if (is4d && highlighter?.highlightByID) {
+          highlighter.highlightByID("select", { [mId]: task.elementIds }, true, false);
+        } else {
+          const hider = components.get ? components.get((window as any).OBC?.Hider) : null;
+          if (hider) {
+            hider.isolate({ [mId]: task.elementIds });
+          }
         }
       } catch (e) {
         console.warn("Cross-isolation failed:", e);

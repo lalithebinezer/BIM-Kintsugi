@@ -236,5 +236,73 @@ describe("AppearanceProfileEngine Suite", () => {
       expect(result.buckets.visible["default-model"].has(102)).toBe(true);
       expect(result.buckets.hidden["default-model"].has(201)).toBe(true);
     });
+
+    it("should update appearance-profile styles cleanly without applying destructive whole-model clipping planes", async () => {
+      const mat = new THREE.MeshBasicMaterial();
+      mat.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)];
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), mat);
+      const mockModel = { object: new THREE.Group().add(mesh) };
+
+      const styles = new Map<string, any>();
+      const highlightedCalls: Array<{ id: string; color: string }> = [];
+      const cleared: string[] = [];
+      const mockHighlighter = {
+        styles,
+        clear: async (id: string) => { cleared.push(id); },
+        highlightByID: async (id: string) => {
+          highlightedCalls.push({ id, color: `#${styles.get(id)?.color?.getHexString?.() || ""}` });
+        },
+      };
+      const hiddenCalls: any[] = [];
+      const shownCalls: any[] = [];
+      const mockHider = {
+        set: async (visible: boolean, bucket: any) => {
+          if (visible) shownCalls.push(bucket);
+          else hiddenCalls.push(bucket);
+        },
+      };
+
+      const tInstall: TaskLike[] = [{
+        id: "t-inst",
+        name: "Install Columns",
+        startDate: "2027-01-01",
+        endDate: "2027-01-10",
+        elementIds: [1],
+        appearanceProfileId: "Install_BottomUp",
+      }];
+      const resInstall = engine.evaluateTimelineFrame(new Date("2027-01-05").getTime(), tInstall);
+      expect(resInstall.activePlanes.length).toBeGreaterThan(0);
+
+      await engine.applyEvaluationResult(resInstall, {
+        hider: mockHider,
+        highlighter: mockHighlighter,
+        models: [mockModel],
+      });
+
+      // Whole-model shared material clipping must be cleared so unrelated elements stay visible
+      expect(mat.clippingPlanes).toEqual([]);
+      expect(highlightedCalls[0]).toEqual({ id: "appearance-profile-0", color: "#38bdf8" });
+
+      // Next frame switching to demolition (#ef4444) must update the reused style color
+      const tDemo: TaskLike[] = [{
+        id: "t-demo",
+        name: "Demolish Partition",
+        startDate: "2027-01-01",
+        endDate: "2027-01-10",
+        elementIds: [2],
+        appearanceProfileId: "Remove_TopDown",
+      }];
+      const resDemo = engine.evaluateTimelineFrame(new Date("2027-01-05").getTime(), tDemo);
+      await engine.applyEvaluationResult(resDemo, {
+        hider: mockHider,
+        highlighter: mockHighlighter,
+        models: [mockModel],
+      });
+
+      expect(highlightedCalls[1]).toEqual({ id: "appearance-profile-0", color: "#ef4444" });
+
+      await engine.clearAppliedAppearance({ highlighter: mockHighlighter, models: [mockModel] });
+      expect(cleared).toContain("appearance-profile-0");
+    });
   });
 });

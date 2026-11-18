@@ -64,8 +64,8 @@ export class StoreyLevelSlicer {
         this.levels = createdViews.map((v: any, idx: number) => ({
           id: v.id || `L${idx}`,
           name: v.id || `Storey ${idx + 1}`,
-          elevation: v.plane ? -v.plane.constant : idx * 3.5,
-          height: v.range || 3.5,
+          elevation: Math.round((v.plane ? -v.plane.constant : idx * 3.5) * 100) / 100,
+          height: Math.round((v.range || 3.5) * 100) / 100,
           viewId: v.id,
         }));
       }

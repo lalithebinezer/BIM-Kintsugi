@@ -239,7 +239,10 @@ export class MinimapModule {
         const select = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
         if (select) {
           select.innerHTML = this.config.levels
-            .map((lvl, idx) => `<option value="${idx}">${lvl.name} (${lvl.elevation >= 0 ? "+" : ""}${lvl.elevation}m)</option>`)
+            .map((lvl, idx) => {
+              const rounded = Math.round(lvl.elevation * 100) / 100;
+              return `<option value="${idx}">${lvl.name} (${rounded >= 0 ? "+" : ""}${rounded}m)</option>`;
+            })
             .join("");
           select.value = String(this.config.currentLevelIndex);
         }
