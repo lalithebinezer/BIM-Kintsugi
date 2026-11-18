@@ -580,22 +580,46 @@ export class GisModule {
         elevation = parseFloat(coordsMatch[3]) || elevation;
       }
 
-      // Extract IFCMAPCONVERSION
-      const mcMatch = model.match(/IFCMAPCONVERSION\s*\([^,]+,[^,]+,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)/i);
+      // Extract full 6-parameter IFCMAPCONVERSION (Eastings, Northings, OrthogonalHeight, XAxisAbscissa, XAxisOrdinate, Scale)
+      const mcMatch = model.match(
+        /IFCMAPCONVERSION\s*\([^,]+,[^,]+,\s*([-+\d.E]+)\s*,\s*([-+\d.E]+)\s*,\s*([-+\d.E]+)(?:\s*,\s*([-+\d.E]+|\$))?(?:\s*,\s*([-+\d.E]+|\$))?(?:\s*,\s*([-+\d.E]+|\$))?/i
+      );
+      let trueNorthAngle = this.location.trueNorthAngle;
       if (mcMatch) {
+        const eastings = parseFloat(mcMatch[1]);
+        const northings = parseFloat(mcMatch[2]);
+        const orthogonalHeight = parseFloat(mcMatch[3]);
+        const xAxisAbscissa = mcMatch[4] && mcMatch[4] !== "$" ? parseFloat(mcMatch[4]) : 1;
+        const xAxisOrdinate = mcMatch[5] && mcMatch[5] !== "$" ? parseFloat(mcMatch[5]) : 0;
+        const scale = mcMatch[6] && mcMatch[6] !== "$" ? parseFloat(mcMatch[6]) : 1;
+        const headingDeg = Number(((Math.atan2(xAxisOrdinate, xAxisAbscissa) * 180) / Math.PI).toFixed(4));
+        trueNorthAngle = ((360 - headingDeg) % 360 + 360) % 360;
+        if (Number.isFinite(orthogonalHeight) && orthogonalHeight !== 0) {
+          elevation = orthogonalHeight;
+        }
         mapConversion = {
-          eastings: parseFloat(mcMatch[1]),
-          northings: parseFloat(mcMatch[2]),
-          orthogonalHeight: parseFloat(mcMatch[3]),
+          eastings,
+          northings,
+          orthogonalHeight,
+          xAxisAbscissa,
+          xAxisOrdinate,
+          scale,
+          trueNorthDeg: Number(trueNorthAngle.toFixed(2)),
         };
       }
 
-      // Extract IFCPROJECTEDCRS
-      const crsMatch = model.match(/IFCPROJECTEDCRS\s*\(\s*'([^']+)'\s*,\s*'([^']+)'/i);
+      // Extract IFCPROJECTEDCRS (Name, Description, GeodeticDatum, VerticalDatum, MapProjection, MapZone)
+      const crsMatch = model.match(
+        /IFCPROJECTEDCRS\s*\(\s*'([^']*)'\s*,\s*(?:'([^']*)'|\$)(?:\s*,\s*(?:'([^']*)'|\$))?(?:\s*,\s*(?:'([^']*)'|\$))?(?:\s*,\s*(?:'([^']*)'|\$))?(?:\s*,\s*(?:'([^']*)'|\$))?/i
+      );
       if (crsMatch) {
         projectedCrs = {
           name: crsMatch[1],
-          description: crsMatch[2],
+          description: crsMatch[2] || "",
+          geodeticDatum: crsMatch[3] || undefined,
+          verticalDatum: crsMatch[4] || undefined,
+          mapProjection: crsMatch[5] || undefined,
+          mapZone: crsMatch[6] || undefined,
         };
       }
 
@@ -612,6 +636,7 @@ export class GisModule {
         latitude: Number(latitude.toFixed(6)),
         longitude: Number(longitude.toFixed(6)),
         elevationAMSL: Number(elevation.toFixed(2)),
+        trueNorthAngle: Number(trueNorthAngle.toFixed(2)),
         source: "ifc-site",
         address: siteName,
         crsName: projectedCrs?.name || this.location.crsName,

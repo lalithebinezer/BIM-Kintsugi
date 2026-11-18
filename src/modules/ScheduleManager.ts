@@ -10,6 +10,13 @@ import { resolveCategoryUnitCost } from "./BoqGenerator";
 import { DelayImpactEngine } from "./DelayImpactEngine";
 import { ScheduleImportParsers } from "./ScheduleImportParsers";
 import { FragmentIndexer } from "../core/FragmentIndexer";
+import {
+  solveCpmGraph,
+  rollupWbsHierarchy,
+  type TaskDependency,
+  type CpmSolveReport,
+} from "./CpmGraphSolver";
+import { RuleSearchEngine } from "./RuleSearchEngine";
 
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
@@ -21,6 +28,8 @@ export interface ScheduleTask {
   endDate: string;        // ISO date string YYYY-MM-DD
   actualStartDate?: string; // ISO date string YYYY-MM-DD
   actualEndDate?: string;   // ISO date string YYYY-MM-DD
+  baselineStartDate?: string; // Baseline ISO date YYYY-MM-DD
+  baselineEndDate?: string;   // Baseline ISO date YYYY-MM-DD
   status: TaskStatus;
   elementIds: Set<number>;
   modelId: string;
@@ -31,10 +40,23 @@ export interface ScheduleTask {
   costImpact?: number;
   quantity: number;
   wbsCode?: string;
+  parentId?: string;
+  outlineLevel?: number;
+  isSummary?: boolean;
+  predecessors?: TaskDependency[];
+  successors?: string[];
+  earlyStart?: string;
+  earlyFinish?: string;
+  lateStart?: string;
+  lateFinish?: string;
   totalFloat?: number;
+  freeFloat?: number;
   isCritical?: boolean;
+  outOfSequence?: boolean;
   simulationKey?: string;
   appearanceProfileId?: string;
+  selectionRuleId?: string;
+  customMetric?: number;
 }
 
 export interface ElementCostData {
@@ -1015,6 +1037,77 @@ export class ScheduleManager {
       totalElementsLinked,
       tasksMatched,
     };
+  }
+
+  /**
+   * Recomputes DAG CPM schedule dates/floats (totalFloat, freeFloat, critical path,
+   * out-of-sequence flags) and bottom-up WBS hierarchy rollups across all tasks.
+   */
+  public recomputeCpmAndRollups(): CpmSolveReport {
+    const taskList = this.getTasksSorted();
+    const report = solveCpmGraph(taskList);
+
+    // Populate bidirectional successor arrays cleanly
+    const succMap = new Map<string, string[]>();
+    for (const t of taskList) succMap.set(t.id, []);
+    for (const t of taskList) {
+      for (const dep of t.predecessors ?? []) {
+        const list = succMap.get(dep.predecessorId);
+        if (list && !list.includes(t.id)) list.push(t.id);
+      }
+    }
+
+    for (const t of taskList) {
+      const res = report.results.get(t.id);
+      const succs = succMap.get(t.id);
+      if (succs && succs.length > 0) t.successors = succs;
+      if (res) {
+        t.earlyStart = res.earlyStart;
+        t.earlyFinish = res.earlyFinish;
+        t.lateStart = res.lateStart;
+        t.lateFinish = res.lateFinish;
+        t.totalFloat = res.totalFloatDays;
+        t.freeFloat = res.freeFloatDays;
+        t.isCritical = res.isCritical;
+        t.outOfSequence = res.outOfSequence;
+      }
+    }
+
+    rollupWbsHierarchy(taskList);
+    return report;
+  }
+
+  /**
+   * Binds a dynamic Search Set rule ID to a schedule task and applies its resolved elements.
+   */
+  public bindSearchSetRuleToTask(
+    taskId: string,
+    ruleId: string,
+    elementMap: Record<string, Set<number>>
+  ): number {
+    const task = this.tasks.get(taskId);
+    if (!task) return 0;
+    task.selectionRuleId = ruleId;
+    return this.assignElementsToTask(taskId, elementMap);
+  }
+
+  /**
+   * Re-evaluates all tasks carrying a `selectionRuleId` against currently loaded BIM models.
+   */
+  public async refreshDynamicRuleBindings(): Promise<number> {
+    const ruleEngine = RuleSearchEngine.getInstance();
+    let totalUpdated = 0;
+    for (const task of this.tasks.values()) {
+      if (!task.selectionRuleId) continue;
+      const rule = ruleEngine.getRule(task.selectionRuleId);
+      if (!rule) continue;
+      const res = await ruleEngine.evaluateAgainstLoadedModels(rule);
+      if (res.matchedCount > 0) {
+        this.assignElementsToTask(task.id, res.modelIdMap);
+        totalUpdated++;
+      }
+    }
+    return totalUpdated;
   }
 
   /**

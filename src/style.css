@@ -10957,6 +10957,7 @@ body.resizing-radar * {
 /* INTERACTIVE GANTT DRAWER & MODEL DIFF                                */
 /* ═════════════════════════════════════════════════════════════════════ */
 .interactive-gantt-drawer {
+  --gantt-left-width: 470px;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -11105,11 +11106,201 @@ body.resizing-radar * {
 }
 
 .col-task-name {
-  width: 260px;
+  width: calc(var(--gantt-left-width, 470px) - 210px);
+  min-width: 120px;
   flex-shrink: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.gantt-drawer-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.gantt-pane-splitter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gantt-left-width, 470px) + 10px);
+  width: 6px;
+  cursor: col-resize;
+  z-index: 12;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+
+.gantt-pane-splitter:hover,
+.gantt-pane-splitter.dragging {
+  background: rgba(212, 255, 63, 0.45);
+}
+
+.gantt-scale-pill-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border-subtle, #23232C);
+  border-radius: 4px;
+  padding: 1px 2px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-gantt-scale {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-gantt-scale.active {
+  background: var(--accent-500, #D4FF3F);
+  color: #000;
+}
+
+.btn-gantt-tree-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent-500, #D4FF3F);
+  font-size: 0.6rem;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.gantt-task-row.is-summary {
+  background: rgba(255, 255, 255, 0.025);
+  font-weight: 700;
+}
+
+.gantt-bar-item.summary-bar {
+  background: rgba(148, 163, 184, 0.35);
+  border-top: 2px solid var(--accent-500, #D4FF3F);
+  border-left: 2px solid var(--accent-500, #D4FF3F);
+  border-right: 2px solid var(--accent-500, #D4FF3F);
+  color: #fff;
+}
+
+.gantt-ticks-tier-major {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 2px;
+  padding-bottom: 1px;
+}
+
+.gantt-tick-major {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding-left: 3px;
+}
+
+.gantt-dependency-svg {
+  position: absolute;
+  top: 0;
+  left: calc(var(--gantt-left-width, 470px) + 0.8rem);
+  width: calc(100% - var(--gantt-left-width, 470px) - 1.6rem);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* CasCADe 12-Indicator 4D Visual Analytics Panel */
+.cascade-4d-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(860px, 94vw);
+  background: var(--bg-surface, rgba(14, 14, 18, 0.96));
+  border: 1px solid var(--border-subtle, #2d2d39);
+  border-top: 2px solid var(--accent-500, #D4FF3F);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.55);
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cascade-4d-panel.hidden {
+  display: none !important;
+}
+
+.cascade-panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cascade-chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cascade-legend-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.cascade-band-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.62rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+
+.cascade-band-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-500, #D4FF3F);
+}
+
+.cascade-band-chip.isolated {
+  border-color: var(--accent-500, #D4FF3F);
+  box-shadow: 0 0 0 1px var(--accent-500, #D4FF3F);
+  background: rgba(212, 255, 63, 0.12);
+}
+
+.cascade-band-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.35);
 }
 
 .col-task-status {

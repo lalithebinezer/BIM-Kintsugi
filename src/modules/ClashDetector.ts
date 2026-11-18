@@ -10,7 +10,42 @@ import {
   runSweepAndPrune,
   type BroadPhaseClashHit,
   type BroadPhaseRuleTask,
+  type ClashScanMode,
 } from "../core/clashBroadPhase";
+import { ScheduleManager } from "./ScheduleManager";
+import { ClashToleranceInspector } from "./ClashToleranceInspector";
+import { WorkspaceCongestionAnalyzer } from "./WorkspaceCongestionAnalyzer";
+
+export interface BwmCriticalityInput {
+  penetrationMeters: number;
+  structuralWeight: number;
+  mepTimeWeight: number;
+  mepCostWeight: number;
+  localDensityN: number;
+  volumeRatioR?: number;
+  zoneCriticalityU?: number;
+}
+
+/**
+ * Six-Parameter Best-Worst Method (BWM) Clash Criticality Index (Bitaraf et al., 2024):
+ * CI = P * W_S * W_MEP(T) * W_MEP(C) * N * R * U
+ */
+export function computeBwmCriticalityIndex(input: BwmCriticalityInput): {
+  ci: number;
+  tier: "Critical" | "Medium" | "Low";
+} {
+  const p = Math.max(0.01, input.penetrationMeters);
+  const ws = Math.max(0.5, input.structuralWeight);
+  const wt = Math.max(0.5, input.mepTimeWeight);
+  const wc = Math.max(0.5, input.mepCostWeight);
+  const n = Math.max(1, input.localDensityN);
+  const r = Math.max(0.15, input.volumeRatioR ?? 0.5);
+  const u = Math.max(0.8, input.zoneCriticalityU ?? 1.0);
+  const ci = Number((p * ws * wt * wc * n * r * u).toFixed(2));
+  const tier: "Critical" | "Medium" | "Low" =
+    ci > 2.0 ? "Critical" : ci > 1.0 ? "Medium" : "Low";
+  return { ci, tier };
+}
 
 export type ClashSeverity = "critical" | "major" | "minor" | "clearance";
 export type ClashStatus = "new" | "active" | "reviewed" | "resolved";
@@ -32,6 +67,10 @@ export interface ClashResult {
   status: ClashStatus;
   overlapDistance: number; // in meters
   intersectionPoint: [number, number, number];
+  axisPenetration?: [number, number, number];
+  criticalityIndex?: number;
+  criticalityTier?: "Critical" | "Medium" | "Low";
+  temporalConcurrent?: boolean;
   assignedTo?: string;
   comment?: string;
   foundAt: string;
@@ -52,6 +91,8 @@ export interface ClashScanSummary {
   candidatePairs: number;
   elapsedMs: number;
   filteredFalsePositives: number;
+  prunedNonConcurrent?: number;
+  scanMode?: ClashScanMode;
   broadPhaseMode?: "worker-sap" | "sync-sap";
 }
 
@@ -80,6 +121,8 @@ export class ClashDetector {
   private promotedClashIds: Set<string> = new Set();
   private sapWorker: Worker | null = null;
   private workerJobSeq: number = 0;
+  private scanMode: ClashScanMode = "static-3d";
+  private sortByCriticality: boolean = true;
 
   private rules: ClashRuleConfig[] = [
     {
@@ -219,6 +262,20 @@ export class ClashDetector {
     return this.lastFalsePositivesFiltered;
   }
 
+  public setScanMode(mode: ClashScanMode) {
+    this.scanMode = mode;
+    this.updateClashUI();
+  }
+
+  public getScanMode(): ClashScanMode {
+    return this.scanMode;
+  }
+
+  public setSortByCriticality(enabled: boolean) {
+    this.sortByCriticality = enabled;
+    this.updateClashUI();
+  }
+
   public clearClashes(): void {
     this.clashResults = [];
     this.lastFalsePositivesFiltered = 0;
@@ -242,8 +299,14 @@ export class ClashDetector {
 
   private async runBroadPhaseSweep(
     boxes: Float64Array,
-    tasks: BroadPhaseRuleTask[]
-  ): Promise<{ hits: BroadPhaseClashHit[]; candidatePairs: number; mode: "worker-sap" | "sync-sap" }> {
+    tasks: BroadPhaseRuleTask[],
+    temporalWindows?: Float64Array
+  ): Promise<{
+    hits: BroadPhaseClashHit[];
+    candidatePairs: number;
+    prunedNonConcurrent: number;
+    mode: "worker-sap" | "sync-sap";
+  }> {
     if (typeof Worker !== "undefined" && boxes.length >= 60) {
       try {
         if (!this.sapWorker) {
@@ -253,7 +316,11 @@ export class ClashDetector {
         }
         const jobId = ++this.workerJobSeq;
         const worker = this.sapWorker;
-        const res = await new Promise<{ hits: BroadPhaseClashHit[]; candidatePairs: number }>((resolve, reject) => {
+        const res = await new Promise<{
+          hits: BroadPhaseClashHit[];
+          candidatePairs: number;
+          prunedNonConcurrent: number;
+        }>((resolve, reject) => {
           const timer = setTimeout(() => {
             cleanup();
             reject(new Error("Clash worker timeout"));
@@ -261,7 +328,11 @@ export class ClashDetector {
           const onMsg = (ev: MessageEvent<any>) => {
             if (ev.data?.jobId !== jobId) return;
             cleanup();
-            resolve({ hits: ev.data.hits || [], candidatePairs: ev.data.candidatePairs || 0 });
+            resolve({
+              hits: ev.data.hits || [],
+              candidatePairs: ev.data.candidatePairs || 0,
+              prunedNonConcurrent: ev.data.prunedNonConcurrent || 0,
+            });
           };
           const onErr = (err: any) => {
             cleanup();
@@ -274,7 +345,14 @@ export class ClashDetector {
           };
           worker.addEventListener("message", onMsg);
           worker.addEventListener("error", onErr);
-          worker.postMessage({ jobId, boxes, tasks, maxHits: ClashDetector.MAX_CLASH_RESULTS * 3 });
+          worker.postMessage({
+            jobId,
+            boxes,
+            tasks,
+            maxHits: ClashDetector.MAX_CLASH_RESULTS * 3,
+            mode: this.scanMode,
+            temporalWindows,
+          });
         });
         return { ...res, mode: "worker-sap" };
       } catch {
@@ -285,13 +363,17 @@ export class ClashDetector {
       }
     }
 
-    const syncRes = runSweepAndPrune(boxes, tasks, ClashDetector.MAX_CLASH_RESULTS * 3);
+    const syncRes = runSweepAndPrune(boxes, tasks, ClashDetector.MAX_CLASH_RESULTS * 3, {
+      mode: this.scanMode,
+      temporalWindows,
+    });
     return { ...syncRes, mode: "sync-sap" };
   }
 
   /**
    * Executes collision matrix scan across loaded BIM models using 1D Sweep-and-Prune
-   * offloaded to a Web Worker (with synchronous fallback) + optional BVH verification.
+   * offloaded to a Web Worker (with synchronous fallback) + optional BVH verification
+   * + 4D temporal window pruning and Six-Parameter BWM Criticality ranking.
    */
   public async runClashAudit(): Promise<ClashResult[]> {
     const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -305,9 +387,28 @@ export class ClashDetector {
       const rawResults: ClashResult[] = [];
       let broadPhaseMode: "worker-sap" | "sync-sap" = "sync-sap";
       let candidatePairs = 0;
+      let prunedNonConcurrent = 0;
+
+      // Build element-level 4D temporal window & float map from ScheduleManager
+      const elemScheduleMap = new Map<string, { startMs: number; endMs: number; isCritical: boolean }>();
+      const schedTasks = ScheduleManager.getInstance().tasks;
+      for (const task of schedTasks.values()) {
+        const sMs = Date.parse(task.startDate);
+        const eMs = Date.parse(task.endDate);
+        if (!Number.isFinite(sMs) || !Number.isFinite(eMs)) continue;
+        const mId = task.modelId || "default-model";
+        for (const eid of task.elementIds) {
+          elemScheduleMap.set(`${mId}:${eid}`, {
+            startMs: sMs,
+            endMs: eMs,
+            isCritical: Boolean(task.isCritical) || (task.totalFloat ?? 99) <= 2,
+          });
+        }
+      }
 
       if (elements.length > 0) {
         const boxes = new Float64Array(elements.length * 6);
+        const temporalWindows = new Float64Array(elements.length * 2);
         for (let i = 0; i < elements.length; i++) {
           const b = elements[i].box;
           const off = i * 6;
@@ -317,6 +418,12 @@ export class ClashDetector {
           boxes[off + 3] = b.max.x;
           boxes[off + 4] = b.max.y;
           boxes[off + 5] = b.max.z;
+
+          const win = elemScheduleMap.get(`${elements[i].modelId}:${elements[i].expressId}`);
+          if (win) {
+            temporalWindows[i * 2] = win.startMs;
+            temporalWindows[i * 2 + 1] = win.endMs;
+          }
         }
 
         const tasks: BroadPhaseRuleTask[] = [];
@@ -340,10 +447,15 @@ export class ClashDetector {
           }
         });
 
-        const sweepRes = await this.runBroadPhaseSweep(boxes, tasks);
+        const sweepRes = await this.runBroadPhaseSweep(boxes, tasks, temporalWindows);
         broadPhaseMode = sweepRes.mode;
         candidatePairs = sweepRes.candidatePairs;
+        prunedNonConcurrent = sweepRes.prunedNonConcurrent;
         const foundTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        // Compute BWM Criticality scores & local spatial density N
+        const peaks = WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey();
+        const hasSevereZone = Array.from(peaks.values()).some((p) => p.status === "Extreme");
 
         for (let k = 0; k < sweepRes.hits.length; k++) {
           const hit = sweepRes.hits[k];
@@ -351,10 +463,40 @@ export class ClashDetector {
           const elB = elements[hit.idxB];
           if (!elA || !elB) continue;
 
+          const discA = this.classifyDiscipline(elA.category);
+          const discB = this.classifyDiscipline(elB.category);
+
+          let localN = 1;
+          for (let j = 0; j < sweepRes.hits.length; j++) {
+            if (j === k) continue;
+            const other = sweepRes.hits[j];
+            const distSq =
+              (hit.ix - other.ix) ** 2 + (hit.iy - other.iy) ** 2 + (hit.iz - other.iz) ** 2;
+            if (distSq <= 4.0) localN++;
+          }
+
+          const schedA = elemScheduleMap.get(`${elA.modelId}:${elA.expressId}`);
+          const schedB = elemScheduleMap.get(`${elB.modelId}:${elB.expressId}`);
+          const touchesStruct = discA === "Structural" || discB === "Structural";
+          const touchesMep =
+            discA.includes("MEP") || discA === "Plumbing" || discA === "Electrical" ||
+            discB.includes("MEP") || discB === "Plumbing" || discB === "Electrical";
+          const anyCriticalTask = Boolean(schedA?.isCritical || schedB?.isCritical);
+
+          const { ci, tier } = computeBwmCriticalityIndex({
+            penetrationMeters: hit.overlap,
+            structuralWeight: touchesStruct ? 1.8 : 1.15,
+            mepTimeWeight: anyCriticalTask ? 1.85 : touchesMep ? 1.4 : 1.0,
+            mepCostWeight: touchesStruct && touchesMep ? 1.55 : touchesMep ? 1.25 : 1.0,
+            localDensityN: Math.min(8, localN),
+            volumeRatioR: hit.volumeRatio,
+            zoneCriticalityU: hasSevereZone ? 1.3 : 1.05,
+          });
+
           rawResults.push({
             id: `clash_${Date.now()}_${k + 1}`,
-            disciplineA: this.classifyDiscipline(elA.category),
-            disciplineB: this.classifyDiscipline(elB.category),
+            disciplineA: discA,
+            disciplineB: discB,
             elementA: {
               modelId: elA.modelId,
               expressId: elA.expressId,
@@ -370,6 +512,10 @@ export class ClashDetector {
             severity: hit.severity,
             status: "new",
             overlapDistance: hit.overlap,
+            axisPenetration: [hit.penX, hit.penY, hit.penZ],
+            criticalityIndex: ci,
+            criticalityTier: tier,
+            temporalConcurrent: hit.temporalConcurrent,
             intersectionPoint: [hit.ix, hit.iy, hit.iz],
             foundAt: foundTime,
           });
@@ -379,9 +525,13 @@ export class ClashDetector {
       // Optional Phase 5A: Deep triangle-level BVH verification using OBF.Mesher + three-mesh-bvh
       this.lastFalsePositivesFiltered = 0;
       const severityWeight: Record<ClashSeverity, number> = { critical: 0, major: 1, minor: 2, clearance: 3 };
-      rawResults.sort(
-        (x, y) => severityWeight[x.severity] - severityWeight[y.severity] || y.overlapDistance - x.overlapDistance
-      );
+      rawResults.sort((x, y) => {
+        if (this.sortByCriticality) {
+          const ciDiff = (y.criticalityIndex ?? 0) - (x.criticalityIndex ?? 0);
+          if (Math.abs(ciDiff) > 0.01) return ciDiff;
+        }
+        return severityWeight[x.severity] - severityWeight[y.severity] || y.overlapDistance - x.overlapDistance;
+      });
 
       let verifiedResults =
         this.deepMeshVerification && rawResults.length > 0
@@ -472,9 +622,14 @@ export class ClashDetector {
         candidatePairs: rawResults.length || candidatePairs,
         elapsedMs,
         filteredFalsePositives: this.lastFalsePositivesFiltered,
+        prunedNonConcurrent,
+        scanMode: this.scanMode,
         broadPhaseMode,
       };
       this.clashResults = verifiedResults;
+      if (scanSource === "model" && verifiedResults.length > 0) {
+        ClashToleranceInspector.getInstance().syncFromClashResults(verifiedResults);
+      }
       this.renderClashBeacons();
       return verifiedResults;
     } finally {
@@ -1134,10 +1289,14 @@ export class ClashDetector {
           const distLabel = c.severity === "clearance"
             ? `${(c.overlapDistance * 1000).toFixed(0)}mm clearance`
             : `${(c.overlapDistance * 1000).toFixed(0)}mm overlap`;
+          const ciTag = typeof c.criticalityIndex === "number"
+            ? `<span class="clash-ci-badge" style="font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:3px;background:rgba(168,85,247,0.18);color:#c084fc;border:1px solid rgba(168,85,247,0.4);" title="BWM Clash Criticality Index (${c.criticalityTier ?? ""})">CI ${c.criticalityIndex.toFixed(2)}</span>`
+            : "";
           card.innerHTML = `
             <div class="clash-card-header">
               <span class="clash-badge ${c.severity}">${c.severity.toUpperCase()}</span>
               <span class="clash-overlap">${distLabel}</span>
+              ${ciTag}
               <span class="clash-status-tag ${c.status}">${c.status}</span>
             </div>
             <div class="clash-pair-title">

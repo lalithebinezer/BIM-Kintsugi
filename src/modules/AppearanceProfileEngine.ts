@@ -695,6 +695,31 @@ export class AppearanceProfileEngine {
   }
 
   /**
+   * Configures a Three.js material for order-independent / overlap-clean translucency
+   * (compatible with ThatOpen `PostproductionMode.DEFERRED` without custom MRT FBO patches).
+   */
+  public applyTranslucentGhostPass(
+    material: THREE.Material,
+    opacity: number = 0.28,
+    mode: "alpha-hash" | "ghost-layer" = "alpha-hash"
+  ): void {
+    const mat = material as THREE.MeshStandardMaterial & { alphaHash?: boolean };
+    mat.opacity = Math.max(0.05, Math.min(0.95, opacity));
+    if (mode === "alpha-hash") {
+      // Stochastic coverage avoids depth-sorting flicker on overlapping temporary work zones
+      mat.transparent = false;
+      mat.alphaHash = true;
+      mat.depthWrite = true;
+      mat.dithering = true;
+    } else {
+      mat.alphaHash = false;
+      mat.transparent = true;
+      mat.depthWrite = false;
+    }
+    mat.needsUpdate = true;
+  }
+
+  /**
    * Clear both appearance-profile highlights and model material clipping planes (used when exiting 4D mode).
    */
   public async clearAppliedAppearance(options?: { highlighter?: any; models?: any }): Promise<void> {

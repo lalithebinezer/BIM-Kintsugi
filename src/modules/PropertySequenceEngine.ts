@@ -1,4 +1,5 @@
 import { FragmentIndexer } from "../core/FragmentIndexer";
+import { solveCpmGraph, type CpmInputTask } from "./CpmGraphSolver";
 
 /**
  * PropertySequenceEngine.ts
@@ -780,70 +781,60 @@ export class PropertySequenceEngine {
       }
     });
 
-    // 3. CPM Date Calculation (Forward Pass & Backward Pass)
-    const MS_PER_DAY = 86400000;
+    // 3. CPM Date Calculation via unified DAG solver (Forward Pass & Backward Pass)
     const baseStartMs = new Date(startDateStr).getTime();
     const taskCount = orderedNodes.length;
 
-    // Forward Pass: calculate Early Start (ES) and Early Finish (EF)
-    const esMsList: number[] = new Array(taskCount).fill(0);
-    const efMsList: number[] = new Array(taskCount).fill(0);
+    const cpmInputs: CpmInputTask[] = orderedNodes.map(({ node, wbsCode }, k) => {
+      const slug = (isMultiTier ? `${node.tier1}-${node.tier2}` : node.tier1)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-");
+      const id = `seq-task-${wbsCode.replace(/\./g, "_")}-${slug}`;
+      return {
+        id,
+        startDate: startDateStr,
+        endDate: startDateStr,
+        durationDays,
+        predecessors:
+          k > 0
+            ? [
+                {
+                  predecessorId: `seq-task-${orderedNodes[k - 1].wbsCode.replace(/\./g, "_")}-${(isMultiTier
+                    ? `${orderedNodes[k - 1].node.tier1}-${orderedNodes[k - 1].node.tier2}`
+                    : orderedNodes[k - 1].node.tier1
+                  )
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "-")}`,
+                  type: "FS",
+                  lagDays: -overlapDays,
+                },
+              ]
+            : undefined,
+      };
+    });
 
-    for (let k = 0; k < taskCount; k++) {
-      if (k === 0) {
-        esMsList[k] = baseStartMs;
-      } else {
-        // Predecessor finishes at efMsList[k-1]; with overlap, next starts at EF[k-1] - overlap
-        const predecessorFinish = efMsList[k - 1];
-        const earliestWithOverlap = predecessorFinish - (overlapDays * MS_PER_DAY);
-        esMsList[k] = Math.max(baseStartMs, earliestWithOverlap);
-      }
-      efMsList[k] = esMsList[k] + (durationDays * MS_PER_DAY);
-    }
-
-    const projectFinishMs = taskCount > 0 ? Math.max(...efMsList) : baseStartMs;
-
-    // Backward Pass: calculate Late Finish (LF) and Late Start (LS)
-    const lfMsList: number[] = new Array(taskCount).fill(0);
-    const lsMsList: number[] = new Array(taskCount).fill(0);
-    const totalFloatDays: number[] = new Array(taskCount).fill(0);
-    const freeFloatDays: number[] = new Array(taskCount).fill(0);
-
-    for (let k = taskCount - 1; k >= 0; k--) {
-      if (k === taskCount - 1) {
-        lfMsList[k] = projectFinishMs;
-      } else {
-        // Successor k+1 has Late Start lsMsList[k+1].
-        // Because ES[k+1] >= EF[k] - overlapDays, latest EF[k] <= LS[k+1] + overlapDays
-        const latestFromSuccessor = lsMsList[k + 1] + (overlapDays * MS_PER_DAY);
-        lfMsList[k] = Math.min(projectFinishMs, latestFromSuccessor);
-      }
-      lsMsList[k] = lfMsList[k] - (durationDays * MS_PER_DAY);
-
-      const floatMs = lsMsList[k] - esMsList[k];
-      totalFloatDays[k] = Math.max(0, Math.round(floatMs / MS_PER_DAY));
-
-      if (k < taskCount - 1) {
-        const freeFloatMs = esMsList[k + 1] - (efMsList[k] - (overlapDays * MS_PER_DAY));
-        freeFloatDays[k] = Math.max(0, Math.round(freeFloatMs / MS_PER_DAY));
-      } else {
-        freeFloatDays[k] = 0;
-      }
-    }
+    const cpmReport = solveCpmGraph(cpmInputs, baseStartMs);
+    const projectFinishMs = cpmReport.projectFinishMs;
 
     // 4. Construct Sequenced Task Results
     const tasks: SequencedTaskResult[] = [];
     let criticalCount = 0;
 
-    orderedNodes.forEach(({ node, wbsCode }, idx) => {
-      const taskStartMs = esMsList[idx];
-      const taskEndMs = efMsList[idx];
-      const taskStartDate = new Date(taskStartMs).toISOString().split("T")[0];
-      const taskEndDate = new Date(taskEndMs).toISOString().split("T")[0];
-      const lateStartDate = new Date(lsMsList[idx]).toISOString().split("T")[0];
-      const lateFinishDate = new Date(lfMsList[idx]).toISOString().split("T")[0];
+    orderedNodes.forEach(({ node, wbsCode }) => {
+      const slug = (isMultiTier ? `${node.tier1}-${node.tier2}` : node.tier1)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-");
+      const id = `seq-task-${wbsCode.replace(/\./g, "_")}-${slug}`;
+      const cpm = cpmReport.results.get(id);
 
-      const isCritical = enableCPM && totalFloatDays[idx] <= 0;
+      const taskStartDate = cpm?.earlyStart ?? startDateStr;
+      const taskEndDate = cpm?.earlyFinish ?? startDateStr;
+      const lateStartDate = cpm?.lateStart ?? taskStartDate;
+      const lateFinishDate = cpm?.lateFinish ?? taskEndDate;
+      const totalFloat = cpm?.totalFloatDays ?? 0;
+      const freeFloat = cpm?.freeFloatDays ?? 0;
+
+      const isCritical = enableCPM && totalFloat <= 0;
       if (isCritical) criticalCount++;
 
       // Convert Set<number> to number[] for each model
@@ -871,12 +862,8 @@ export class PropertySequenceEngine {
         }
       }
 
-      const slug = (isMultiTier ? `${node.tier1}-${node.tier2}` : node.tier1)
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-');
-
       tasks.push({
-        id: `seq-task-${wbsCode.replace(/\./g, '_')}-${slug}`,
+        id,
         name: cleanTaskName,
         propertyKey: isMultiTier ? `${primaryKey} > ${secondaryKey}` : primaryKey,
         propertyValue: node.compositeKey,
@@ -892,13 +879,13 @@ export class PropertySequenceEngine {
         earlyFinish: taskEndDate,
         lateStart: lateStartDate,
         lateFinish: lateFinishDate,
-        totalFloat: totalFloatDays[idx],
-        freeFloat: freeFloatDays[idx],
+        totalFloat,
+        freeFloat,
         isCritical
       });
     });
 
-    const projectStartDate = taskCount > 0 ? new Date(esMsList[0]).toISOString().split("T")[0] : startDateStr;
+    const projectStartDate = taskCount > 0 ? new Date(cpmReport.projectStartMs).toISOString().split("T")[0] : startDateStr;
     const projectEndDate = taskCount > 0 ? new Date(projectFinishMs).toISOString().split("T")[0] : startDateStr;
 
     return {

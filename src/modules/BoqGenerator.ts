@@ -8,6 +8,13 @@
 import * as THREE from 'three';
 import { BimEngine } from '../core/BimEngine';
 
+export interface QuantityProvenanceOption {
+  propertySetName: string;
+  quantityType: string;
+  value: number;
+  unit: string;
+}
+
 export interface BOQLineItem {
   expressId: number;
   modelId: string;
@@ -20,6 +27,14 @@ export interface BOQLineItem {
   totalCost: number;
   propertySetName: string;
   quantityType: string;
+  /** All Qto_* / custom quantity candidates discovered on this element for interactive provenance switching. */
+  availableQuantities?: QuantityProvenanceOption[];
+  classificationCode?: string;
+  expectedRateUnit?: string;
+  matchConfidence?: number;
+  matchConfirmed?: boolean;
+  wasteFactorPct?: number;
+  grossQuantity?: number;
 }
 
 export interface BOQSummary {
@@ -91,14 +106,24 @@ export function extractQuantityData(
   quantityType: string;
   unit: string;
   propertySetName: string;
+  availableQuantities: QuantityProvenanceOption[];
 } {
   let materialNumber = '';
   let quantity = 0;
   let quantityType = '';
   let unit = '';
   let propertySetName = '';
+  const availableQuantities: QuantityProvenanceOption[] = [];
 
-  // 1. Search standard Qto_* property sets
+  const inferUnit = (fieldName: string): string => {
+    if (/area/i.test(fieldName)) return 'm²';
+    if (/volume/i.test(fieldName)) return 'm³';
+    if (/length|width|height|depth|perimeter/i.test(fieldName)) return 'm';
+    if (/weight/i.test(fieldName)) return 'kg';
+    return 'ea';
+  };
+
+  // 1. Collect all standard Qto_* property set quantity candidates (preserving exact order)
   if (propertySets) {
     for (const [psetName, psetData] of Object.entries(propertySets)) {
       if (/^Qto_/i.test(psetName)) {
@@ -109,20 +134,22 @@ export function extractQuantityData(
               ? Number(val.value)
               : Number(val);
             if (!isNaN(numVal) && numVal > 0) {
-              quantity = numVal;
-              quantityType = fieldName;
-              propertySetName = psetName;
-              // Infer unit from field name
-              if (/area/i.test(fieldName)) unit = 'm²';
-              else if (/volume/i.test(fieldName)) unit = 'm³';
-              else if (/length|width|height|depth|perimeter/i.test(fieldName)) unit = 'm';
-              else if (/weight/i.test(fieldName)) unit = 'kg';
-              else unit = 'ea';
-              break;
+              const candUnit = inferUnit(fieldName);
+              availableQuantities.push({
+                propertySetName: psetName,
+                quantityType: fieldName,
+                value: numVal,
+                unit: candUnit,
+              });
+              if (quantity === 0) {
+                quantity = numVal;
+                quantityType = fieldName;
+                propertySetName = psetName;
+                unit = candUnit;
+              }
             }
           }
         }
-        if (quantity > 0) break;
       }
     }
   }
@@ -178,7 +205,120 @@ export function extractQuantityData(
     }
   }
 
-  return { materialNumber, quantity, quantityType, unit, propertySetName };
+  return { materialNumber, quantity, quantityType, unit, propertySetName, availableQuantities };
+}
+
+/**
+ * Switches an existing BOQLineItem's active quantity source using its discovered provenance list
+ * and recalculates totalCost cleanly.
+ */
+export function switchLineItemQuantitySource(
+  item: BOQLineItem,
+  targetField: string,
+  targetPset?: string
+): BOQLineItem {
+  const match = (item.availableQuantities ?? []).find(
+    (q) => q.quantityType === targetField && (!targetPset || q.propertySetName === targetPset)
+  );
+  if (!match) return item;
+  const wasteMult = 1 + (item.wasteFactorPct ?? 0) / 100;
+  const grossQuantity = Number((match.value * wasteMult).toFixed(3));
+  return {
+    ...item,
+    quantity: match.value,
+    grossQuantity,
+    unit: match.unit,
+    quantityType: match.quantityType,
+    propertySetName: match.propertySetName,
+    totalCost: Number((grossQuantity * item.unitCost).toFixed(2)),
+  };
+}
+
+/**
+ * Exports a structured BOQ summary into GAEB DA XML 3.2 (X83) interchange format
+ * grouped hierarchically by classification code or IFC category.
+ */
+export function buildGaebX83Xml(
+  summary: BOQSummary,
+  projectName: string = "BIM Kintsugi 5D BOQ"
+): string {
+  const esc = (s: string) =>
+    (s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+
+  const gaebUnit = (u: string): string => {
+    if (u === "m³" || u === "m3") return "m3";
+    if (u === "m²" || u === "m2") return "m2";
+    if (u === "m") return "m";
+    if (u === "kg") return "kg";
+    return "St";
+  };
+
+  const groups = new Map<string, BOQLineItem[]>();
+  for (const item of summary.items) {
+    const key = item.classificationCode || item.category || "GENERAL";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(item);
+  }
+
+  let catIdx = 1;
+  const ctgyBlocks: string[] = [];
+  for (const [groupKey, groupItems] of groups) {
+    const rNoCat = String(catIdx++).padStart(2, "0");
+    let itemIdx = 1;
+    const itemXml = groupItems
+      .map((item) => {
+        const rNoItem = `${rNoCat}.${String(itemIdx++).padStart(3, "0")}`;
+        const qty = item.grossQuantity ?? item.quantity;
+        const provNote = item.propertySetName && item.quantityType ? ` [${item.propertySetName}.${item.quantityType}]` : "";
+        return `          <Item ID="I-${item.expressId}" RNoPart="${esc(rNoItem)}">
+            <Qty>${qty.toFixed(3)}</Qty>
+            <QU>${esc(gaebUnit(item.unit))}</QU>
+            <UP>${item.unitCost.toFixed(2)}</UP>
+            <IT>${item.totalCost.toFixed(2)}</IT>
+            <Description>
+              <OutlineText>
+                <OutlTxt><TextOutlTxt>${esc(item.elementName + provNote)}</TextOutlTxt></OutlTxt>
+              </OutlineText>
+            </Description>
+          </Item>`;
+      })
+      .join("\n");
+
+    ctgyBlocks.push(`      <BoQCtgy ID="C-${rNoCat}" RNoPart="${esc(rNoCat)}">
+        <LblTx>${esc(groupKey)}</LblTx>
+        <BoQBody>
+          <Itemlist>
+${itemXml}
+          </Itemlist>
+        </BoQBody>
+      </BoQCtgy>`);
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<GAEB xmlns="http://www.gaeb.de/GAEB_DA_XML/DA83/3.2">
+  <GAEBInfo>
+    <Version>3.2</Version>
+    <ProgSystem>BIM-Kintsugi 5D</ProgSystem>
+  </GAEBInfo>
+  <Award>
+    <DP>83</DP>
+    <AwardInfo>
+      <Prj>${esc(projectName)}</Prj>
+      <Cur>USD</Cur>
+    </AwardInfo>
+    <BoQ ID="BOQ-1">
+      <BoQBkdn><Type>BoQLevel</Type><Length>2</Length></BoQBkdn>
+      <BoQBody>
+${ctgyBlocks.join("\n")}
+      </BoQBody>
+    </BoQ>
+  </Award>
+</GAEB>`;
 }
 
 /**

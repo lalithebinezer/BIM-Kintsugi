@@ -3050,6 +3050,11 @@
               <span>Variance Mode</span>
             </button>
 
+            <button class="btn-timeline-csv" id="btn-4d-cascade-toggle" title="Toggle CasCADe 12-Indicator ColorBrewer 4D Heatmap & 3D Dependency Vectors">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+              <span>CasCADe Lens</span>
+            </button>
+
             <button class="btn-timeline-csv" id="btn-timeline-audit-unassigned" title="Audit Unassigned 3D Elements (Heatmap glowing amber for unassigned, ghost assigned)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
               <span>Audit 3D</span>
@@ -3070,6 +3075,21 @@
               <span>Timeline Options</span>
             </button>
           </div>
+        </div>
+
+        <!-- CasCADe 12-Indicator 4D Analytics & 3D Vector Overlay Card -->
+        <div class="cascade-4d-panel hidden" id="cascade-4d-panel">
+          <div class="cascade-panel-row">
+            <label for="cascade-indicator-select">Indicator:</label>
+            <select id="cascade-indicator-select" class="timeline-options-select"></select>
+            <label for="cascade-scheme-select">Palette:</label>
+            <select id="cascade-scheme-select" class="timeline-options-select"></select>
+            <label class="cascade-chk"><input type="checkbox" id="cascade-chk-crit" checked /> Crit Arcs</label>
+            <label class="cascade-chk"><input type="checkbox" id="cascade-chk-predsuc" /> Pred/Succ</label>
+            <label class="cascade-chk"><input type="checkbox" id="cascade-chk-oos" checked /> Out-of-Seq</label>
+            <button type="button" id="btn-close-cascade-panel" class="btn-icon-sm" title="Exit CasCADe 4D Lens">✕</button>
+          </div>
+          <div class="cascade-legend-strip" id="cascade-legend-bands" title="Click any color band to isolate matching elements and ghost others"></div>
         </div>
 
         <!-- Centralized 4D Simulation & Timeline Options Dropup Card -->
@@ -3273,8 +3293,8 @@
               <div class="step-item">
                 <div class="step-num">01</div>
                 <div class="step-body">
-                  <div class="step-name">Load a Model</div>
-                  <div class="step-desc">Click <strong>Load Sample</strong> in the Files panel (Key <kbd>1</kbd>) or upload your own <code>.ifc</code> or <code>.frag</code> file from the bottom dock. Models stream into IndexedDB cache with FRAGS v3 spatial &amp; metadata indexing.</div>
+                  <div class="step-name">Load a Model &amp; Pre-Flight Scan</div>
+                  <div class="step-desc">Click <strong>Load Sample</strong> in the Files panel (Key <kbd>1</kbd>) or upload your own <code>.ifc</code> or <code>.frag</code> file from the bottom dock. IFC uploads run an automatic STEP <strong>Pre-Flight</strong> scan (schema, SI units, CRS, alignment, QTO, and native IFC4 <code>IfcWorkSchedule</code> extraction) before streaming into IndexedDB &amp; FRAGS v3.</div>
                 </div>
               </div>
               <div class="step-item">
@@ -3294,22 +3314,22 @@
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">4D Phasing, Custom Sequence &amp; Delay Impact</div>
-                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Use <strong>Parameters (4D)</strong> on the dock to choose custom IFC phasing properties, scrub the timeline (or press <kbd>Space</kbd>) to simulate construction phases with Synchro-grade <strong>Appearance Profiles</strong> (<code>Install</code>, <code>Remove</code>, <code>Temporary</code>, <code>Maintain</code>) and active growth cutting planes, toggle <strong>Variance Mode</strong> for <code>SV</code>/<code>CV</code> analysis, and click <strong>×</strong> on the timeline bar to exit and restore full visibility.</div>
+                  <div class="step-name">4D Phasing, WBS Gantt &amp; CasCADe Lens</div>
+                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, draggable splitter, SVG links, <strong>Rules XML</strong> Navisworks FindSpec import) with full DAG CPM (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag). Scrub the timeline (<kbd>Space</kbd>) with Synchro <strong>Appearance Profiles</strong>, switch on <strong>CasCADe Lens</strong> (12 schedule/slack/delta indicators, 15 ColorBrewer palettes, interactive band isolation &amp; 3D Bezier Dependency Arcs), or toggle <strong>Variance Mode</strong>.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">05</div>
                 <div class="step-body">
-                  <div class="step-name">5D Cost Control &amp; ANSI/EIA 748-B EVM Suite</div>
-                  <div class="step-desc">Click the green <strong>$</strong> or yellow <strong>EVM</strong> icon on the bottom dock or inside the 4D timeline. Access multi-model EAC forecasts (Typical, Atypical, Composite, Weighted), time-based Earned Schedule (<code>SV(t)</code>, <code>SPI(t)</code>), the APM Bulls-Eye Quadrant matrix, and 1-click exports for <strong>BOQ</strong>, <strong>CPR Format 1 (WBS)</strong>, and <strong>CPR Format 5 (VAR)</strong>.</div>
+                  <div class="step-name">5D Rule-Book BOQ, GAEB .X83 &amp; ANSI 748-B EVM</div>
+                  <div class="step-desc">Click the green <strong>$</strong> or yellow <strong>EVM</strong> icon on the bottom dock. Switch BOQ standards (<strong>DIN 276</strong>, <strong>Uniclass 2015</strong>, <strong>MasterFormat</strong>), import custom <code>.csv</code> rate catalogs, switch QTO provenance sources, run the 6-category <strong>Model &amp; BOQ Audit</strong>, or export hierarchical <strong>GAEB .X83</strong>, CSV BOQ, <strong>CPR Format 1</strong>, and <strong>CPR Format 5</strong> reports.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">06</div>
                 <div class="step-body">
-                  <div class="step-name">Clash Matrix, BCF Issues, Carbon &amp; Engineering Studio</div>
-                  <div class="step-desc">Launch <strong>Clash Matrix</strong>, <strong>BCF Issue Tracker</strong>, <strong>6D Embodied Carbon</strong>, or <strong>CAD &amp; Scans Engineering Studio</strong> from the bottom dock. Run async BVH interference audits, inspect point clouds/DXF overlays, split IFC sub-models, and export buildingSMART <strong>BCF/JSON</strong> reports.</div>
+                  <div class="step-name">4D Clashes, SLF Congestion, BCF, Carbon &amp; Engineering Studio</div>
+                  <div class="step-desc">Open <strong>Clash Matrix</strong> to run <strong>Static 3D</strong>, <strong>Temporal 4D</strong>, or <strong>Workspace 4D</strong> checks ranked by BWM Criticality Index (<code>CI</code>) and evaluate storey <strong>Analyze SLF</strong> trade congestion. Launch <strong>BCF Issue Tracker</strong>, <strong>6D Embodied Carbon</strong>, or <strong>Engineering Studio</strong> (2D DXF, point clouds, <code>IfcSplitter</code>, Civil 4.3 clothoids &amp; vertical profiles).</div>
                 </div>
               </div>
               <div class="step-item">
@@ -3341,15 +3361,15 @@
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">Engineering Studio (DXF · Scans · IFC Split · Civil)</div>
-                  <div class="tool-desc">Open from the bottom dock CAD icon to overlay 2D DXF plans, inspect E57/LAS/PLY point clouds, split large IFC models by storey or category (<code>IfcSplitter</code>), and visualize OpenBIM Civil 4.3 alignments.</div>
+                  <div class="tool-name">Engineering Studio, Pre-Flight &amp; Civil 4.3</div>
+                  <div class="tool-desc">Automatic IFC STEP Pre-Flight scanning + full 6-parameter <code>IfcMapConversion</code> True North extraction. Open CAD Studio for 2D DXF plans, E57/LAS/PLY point clouds, <code>IfcSplitter</code> sub-models, and Civil 4.3 clothoid &amp; vertical profile alignments.</div>
                 </div>
               </div>
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">5D Project Cost Control &amp; BOQ Suite</div>
-                  <div class="tool-desc">Accessible via the bottom dock <strong>$</strong> icon. Features cumulative budget tracking, live 4D/5D EVM S-Curve (Planned Value vs Earned Value), category cost bars, multi-currency conversion (USD, EUR, GBP, JPY, INR, CAD, AUD), and <strong>Export BOQ</strong> spreadsheet.</div>
+                  <div class="tool-name">5D Rule-Book Cost Control, GAEB &amp; BOQ Audit</div>
+                  <div class="tool-desc">Open via bottom dock <strong>$</strong>. Switch classification Rule-Books (<strong>DIN 276</strong>, <strong>Uniclass 2015</strong>, <strong>MasterFormat</strong>), import custom CSV catalogs, switch QTO provenance sources, audit model &amp; BOQ readiness (Green/Amber/Red), and export <strong>GAEB .X83</strong> or CSV BOQ.</div>
                 </div>
               </div>
               <div class="tool-card">
@@ -3369,8 +3389,8 @@
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">4D Phasing, Appearance Profiles &amp; Parameters</div>
-                  <div class="tool-desc">Single-source 4D simulator powered by <code>Schedule4DEngine</code>, <code>AppearanceProfileEngine</code>, and <code>DelayImpactEngine</code>. Customize sequencing via dock <strong>Parameters (4D)</strong>, animate Synchro-grade profiles (<code>Install</code>, <code>Remove</code>, <code>Temporary</code>, <code>Maintain</code>) with growth cutting planes, scrub dynamic milestones, track <code>SV</code>/<code>CV</code> variance &amp; critical path delays, import CSV / MSPDI XML / Primavera P6 XER schedules, and cleanly restore all geometry &amp; sidebars on exit.</div>
+                  <div class="tool-name">4D WBS Gantt, CasCADe Lens &amp; Search Sets</div>
+                  <div class="tool-desc">Full DAG CPM solver (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag), collapsible WBS Gantt (<code>M</code>/<code>W</code>/<code>D</code> zoom, splitter, SVG links), dynamic Navisworks <strong>Rules XML</strong> search sets, native IFC4 <code>IfcWorkSchedule</code> extraction, and <strong>CasCADe 4D Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation, and 3D Bezier Dependency Arcs).</div>
                 </div>
               </div>
               <div class="tool-card">
@@ -3383,8 +3403,8 @@
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">Multi-Discipline Clash Matrix</div>
-                  <div class="tool-desc">Real 3D mesh intersection and clearance tolerance audit. Filter by discipline pair (Architecture, Structure, MEP) with 1-click BCF issue promotion, isolated ghosting, and viewpoint capture.</div>
+                  <div class="tool-name">4D Spatio-Temporal Clash &amp; Workspace SLF</div>
+                  <div class="tool-desc">Switch between <strong>Static 3D</strong>, <strong>Temporal 4D</strong> (non-concurrent schedule pruning), and <strong>Workspace 4D</strong> envelopes ranked by BWM Criticality Index (<code>CI</code>). Run <strong>Analyze SLF</strong> to map storey Space Loading Factor congestion (<code>Optimal</code> / <code>Moderate</code> / <code>Extreme</code>) with 1-click BCF export.</div>
                 </div>
               </div>
               <div class="tool-card">
@@ -3555,7 +3575,9 @@
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.2 4.7 3 6v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1c1.8-1.3 3-3.5 3-6a7 7 0 0 0-7-7z"/></svg></span><span>Use <strong>Isolate (<kbd>I</kbd>)</strong>, <strong>Hide (<kbd>H</kbd>)</strong>, or <strong>X-Ray Isolate</strong> (right-click) to inspect elements cleanly — then press <kbd>U</kbd> or click the top-right <strong>Show All</strong> pill to restore everything.</span></div>
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M9 12l2 2 4-4"/></svg></span><span>Accidentally lost a selection? Press <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> for 25-step Selection Undo/Redo, or click <strong>Save Set</strong> in the Selection HUD to store reusable groups in Finder (<kbd>2</kbd>).</span></div>
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg></span><span>Use <strong>Solar Sun Sliders</strong> in Key <kbd>4</kbd> Scene Settings to evaluate daylighting and seasonal shading conditions.</span></div>
-              <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>In <strong>4D mode</strong>, use dock <strong>Parameters (4D)</strong> to switch sequencing attributes, test <strong>10x</strong> for an overview or <strong>1x</strong> per phase, and click <strong>×</strong> on the timeline bar to cleanly exit and restore model visibility.</span></div>
+              <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>In <strong>4D mode</strong>, use dock <strong>Parameters (4D)</strong> to switch sequencing attributes, click <strong>CasCADe Lens</strong> to visualize 12 indicators across ColorBrewer bands (click any swatch to isolate matching elements and toggle <code>Crit Arcs</code>, <code>Pred/Succ</code>, or <code>Out-of-Seq</code> 3D Bezier arcs), and click <strong>×</strong> on the timeline bar to cleanly exit and restore model visibility.</span></div>
+              <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span>In the <strong>Clash Drawer</strong>, switch Mode to <strong>Temporal 4D</strong> to prune clashes whose tasks never overlap on site, and click <strong>Analyze SLF</strong> to inspect storey Space Loading Factor congestion zones.</span></div>
+              <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span>In the <strong>5D Cost Control</strong> drawer (<kbd>$</kbd>), switch standards (<strong>DIN 276</strong> / <strong>Uniclass 2015</strong> / <strong>MasterFormat</strong>), import custom <code>.csv</code> rate catalogs, run <strong>Model &amp; BOQ Audit</strong>, or export <strong>GAEB .X83</strong>. Ask AI Copilot about quality audit, BOQ, or SLF congestion anytime.</span></div>
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><span>Issues created in the sidebar <strong>BCF Topic</strong> form (<kbd>7</kbd>) synchronize directly with the bottom dock <strong>BCF Issues</strong> drawer.</span></div>
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span><span>Click <strong>4K Sheet</strong> in the quick-view toolbar to capture a high-resolution technical drawing PNG, or run <strong>Export 4K Architectural Presentation Board</strong> from <kbd>Ctrl+K</kbd>.</span></div>
               <div class="tip-item"><span class="tip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>Press <kbd>?</kbd> at any time to reopen this guide. Your 4D/5D data and pin annotations are saved locally in the browser cache.</span></div>
@@ -3736,7 +3758,15 @@
             <span>.bcfzip</span>
           </button>
         </div>
-        <div class="clash-toggles-row" style="display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.45rem;">
+        <div class="clash-toggles-row" style="display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.45rem; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; color: var(--text-muted);">
+            <span>Mode</span>
+            <select id="clash-scan-mode" class="clash-status-select" aria-label="Clash Scan Mode">
+              <option value="static-3d" selected>Static 3D</option>
+              <option value="temporal-4d">Temporal 4D</option>
+              <option value="workspace-4d">Workspace 4D</option>
+            </select>
+          </label>
           <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(--text-muted); cursor: pointer;">
             <input type="checkbox" id="toggle-clash-deep-bvh" style="accent-color: #f43f5e;" />
             <span>Deep Triangle BVH (<code style="font-size:0.62rem;">OBF.Mesher</code>)</span>
@@ -3745,7 +3775,9 @@
             <input type="checkbox" id="toggle-clash-isolate-context" checked style="accent-color: #f43f5e;" />
             <span>Isolate Pair on Focus</span>
           </label>
+          <button id="btn-analyze-workspace-slf" class="btn-xs btn-outline" title="Evaluate Hosny et al. 4D Space Loading Factor (SLF) trade congestion per storey">Analyze SLF</button>
         </div>
+        <div id="clash-slf-summary" class="clash-scan-summary hidden" style="margin-top:0.35rem;"></div>
         <div id="clash-rules-container" class="clash-rules-container"></div>
         <div id="clash-scan-summary" class="clash-scan-summary"></div>
         <div id="clash-matrix-container" class="clash-matrix-wrap"></div>
@@ -4033,6 +4065,26 @@
           </svg>
           <span>Validate IDS 4D/5D Readiness</span>
         </button>
+
+        <!-- Rule-Book Classification Standard, GAEB X83 Export & DDC Quality Gate -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.4rem;">
+          <select id="drawer-cost-standard" class="clash-status-select" aria-label="Cost Classification Standard" title="Active BOQ Classification Rule-Book">
+            <option value="DIN276" selected>DIN 276 (DACH)</option>
+            <option value="UNICLASS">Uniclass 2015 (UK)</option>
+            <option value="MASTERFORMAT">CSI MasterFormat</option>
+          </select>
+          <button type="button" class="btn-cost-action boq" id="drawer-btn-export-gaeb" title="Export Hierarchical BOQ as GAEB DA XML (.X83)">
+            <span>Export GAEB .X83</span>
+          </button>
+          <label class="btn-cost-action rates" for="drawer-import-rate-catalog" style="cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0;" title="Import custom CWICR / regional cost catalog (.csv)">
+            <span>Import Rate Catalog</span>
+            <input type="file" id="drawer-import-rate-catalog" accept=".csv" class="hidden" />
+          </label>
+          <button type="button" class="btn-cost-action ids" id="drawer-btn-quality-audit" title="Run 6-Category BIM Data Quality & Traffic-Light BOQ Audit">
+            <span>Model &amp; BOQ Audit</span>
+          </button>
+        </div>
+        <div id="drawer-quality-summary" class="clash-scan-summary hidden" style="margin-top:0.35rem;"></div>
 
         <!-- Category Cost Breakdown Section -->
         <div class="drawer-section-header" style="margin-top: 0.75rem;">

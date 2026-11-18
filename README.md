@@ -6,7 +6,7 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.6.1-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-255%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-281%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Engineering Studio (2D DXF · Scans · IFC Split · Civil)**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`^3.6.0`)**, **`@thatopen/components-front` (`^3.6.1`)**, **`@thatopen/fragments` (`^3.6.1`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
@@ -45,18 +45,18 @@ flowchart TD
         B --> D["SceneManager, GraphicsPipeline & LodAndCullingManager"]
         B --> E["ViewportController, CustomViewManager & PrecisionOriginController"]
         B --> H["KeyboardController & BvhAccelerationService"]
-        B --> W["Web Workers (clashWorker & ifcMetadataWorker)"]
+        B --> W["Web Workers (clashWorker, ifcMetadataWorker, ifcPreflightWorker)"]
     end
 
     subgraph EnterpriseSuites ["Enterprise BIM Suites (src/modules/)"]
-        B --> M11["SelectionManager (Single Source of Truth, History & Saved Sets)"]
+        B --> M11["SelectionManager & RuleSearchEngine (Boolean / Navisworks XML Sets)"]
         B --> M1["MeasurementSuite (Length, Delta, Angle, Area, Volume)"]
         B --> M2["ClippingModule & StoreyLevelSlicer (OBF.ClipStyler & OBC.Views)"]
-        B --> M3["ClashDetector & ClashToleranceInspector (BVH/SAP Broad-Phase + OBF.Marker)"]
+        B --> M3["ClashDetector & WorkspaceCongestionAnalyzer (Static 3D / Temporal 4D / SLF & BWM CI)"]
         B --> M4["BcfIssueManager (OBC.BCFTopics + .bcfzip Export)"]
-        B --> M5["ScheduleManager, Schedule4DEngine & GanttPhasingModule (4D)"]
-        B --> M6["BoqGenerator, Boq5DModule & EvmDashboardModule (5D / ANSI 748-B)"]
-        B --> M7["CarbonLcaManager (6D ICE v3.0 LCA & 5-Band 3D Heatmap)"]
+        B --> M5["ScheduleManager, CpmGraphSolver, Cascade4DAnalytics & DependencyVectorOverlay (4D)"]
+        B --> M6["BoqGenerator, Boq5DModule, CostRuleBookEngine & EvmDashboardModule (5D / GAEB X83 / ANSI 748-B)"]
+        B --> M7["CarbonLcaManager & BimQualityAuditor (6D LCA & 6-Category QA/QC)"]
         B --> M8["BimAiCopilot (NL Query Engine + Optional Local Ollama LLM)"]
         B --> M9["GraphicsVFXManager, IfcSplitterModule & RealityCaptureModule"]
         B --> M10["MinimapModule (OBC.BoundingBoxer 2D Radar & Click Teleport)"]
@@ -103,15 +103,15 @@ BIM Kintsugi integrates native `@thatopen/components` (`OBC`, `^3.6.0`), `@thato
 | :--- | :--- |
 | **🎯 0a. Unified Selection, Undo/Redo & Saved Sets** | • Priority-arbitrated picking via [`PointerInputArbiter`](src/core/PointerInputArbiter.ts) and [`SelectionManager`](src/modules/SelectionManager.ts)<br>• **Left-click** inspect, **`Shift+Click`** toggle, **`Ctrl/Alt+Click`** subtract, **Double-click** focus camera, and Window (`L→R`), Crossing (`R→L`), or Subtract (`Ctrl+Drag`) box marquee (`B`)<br>• **25-step Selection Undo/Redo** (`Ctrl+Z` / `Ctrl+Y`), hidden-item filtering via `OBC.Hider.getVisibilityMap(false)`, `localStorage`-persisted **Saved Selection Sets** in Finder (`2`), and batch-aware Right-Click Smart Context Menu |
 | **📋 0b. Dedicated BIM Element Metadata Panel (`META`)** | • Dedicated Right-Sidebar tab (Key `8`) driven by [`MetadataPanelController`](src/ui/MetadataPanelController.ts) with collapsible Psets/Qto/GIS accordions, live search filter, click-to-copy GUID/fields/JSON, and AI prompt export<br>• **Multi-Selection Batch Mode**: displays summed `NetVolume` (`m³`), `Surface Area` (`m²`), real [`CostRateManager`](src/modules/CostRateManager.ts) valuation, interactive category `[Filter]` chips, and storey distribution |
-| **🏗️ 0c. Engineering Studio (DXF · Scans · IFC Split · Civil)** | • Dedicated studio ([`EngineeringStudioController`](src/ui/EngineeringStudioController.ts)) integrating 2D DXF overlays, E57/LAS/PLY point cloud reality capture, `IfcSplitterModule` storey/discipline sub-model export, and OpenBIM Civil 4.3 alignments |
+| **🏗️ 0c. Engineering Studio & IFC Pre-Flight** | • Dedicated studio ([`EngineeringStudioController`](src/ui/EngineeringStudioController.ts)) integrating 2D DXF overlays, E57/LAS/PLY point cloud reality capture, `IfcSplitterModule` sub-model export, and OpenBIM **Civil 4.3** clothoid transitions & parabolic vertical profile SVGs ([`CivilAlignmentModule`](src/modules/CivilAlignmentModule.ts))<br>• Background STEP Pre-Flight scanning ([`IfcStepParser`](src/modules/IfcStepParser.ts) + [`ifcPreflightWorker`](src/workers/ifcPreflightWorker.ts)) and full 6-parameter `IFCMAPCONVERSION` + `IFCPROJECTEDCRS` True North extraction ([`GisModule`](src/modules/GisModule.ts)) |
 | **📐 1. Precision Measurement Suite** | • 5 measurement modes: **Point-to-Point Distance**, **XYZ Orthogonal Deltas**, **3-Point Angle**, **Multi-Point Polygon Area**, and **Element Volume (`m³`)**<br>• Configurable **Vertex (`15cm`)**, **Edge**, and **Orthogonal Axis** snapping<br>• Unit conversion (`m`, `mm`, `ft-in`) and 1-click **CSV Measurement Log** export |
-| **⚔️ 2. 3D Clash Detection Matrix** | • Real 3D `THREE.Box3` mesh intersection & clearance tolerance engine (`Critical`, `Major`, `Clearance`)<br>• Filterable by discipline pair (*MEP vs Structure*, *Architecture vs MEP*, *Clearance Envelopes*)<br>• **Zoom & Isolate**: highlights Element A in crimson (`#EF4444`) and Element B in amber (`#F59E0B`) while ghosting surrounding geometry (`X-Ray`)<br>• **1-Click `+ BCF Issue`**: promotes any clash directly into a BCF topic with camera viewpoint and 3D `OBF.Marker` pin |
+| **⚔️ 2. 3D/4D Clash Detection & Workspace SLF** | • Switchable **Static 3D**, **Temporal 4D** (non-concurrent schedule overlap pruning), and **Workspace 4D** collision modes with Bitaraf **BWM Criticality Index (`CI`)** sorting ([`ClashDetector`](src/modules/ClashDetector.ts), [`clashBroadPhase`](src/core/clashBroadPhase.ts))<br>• **Workspace Congestion Analyzer (`SLF`)**: Hosny et al. Space Loading Factor (`Optimal <= 0.70`, `Moderate 0.70–0.90`, `Extreme > 0.90`) with 3D zone overlays ([`WorkspaceCongestionAnalyzer`](src/modules/WorkspaceCongestionAnalyzer.ts))<br>• **Zoom & Isolate + BCF**: highlights Element A/B with ghosted context and promotes clashes into BCF issues with 3D `OBF.Marker` pins |
 | **📋 3. BCF 2.1 / 3.0 Issue Tracker** | • Create, prioritize (`Critical`, `Major`, `Normal`), and restore coordination issues with live camera viewpoints<br>• Clustered 3D `OBF.Marker` viewport badges with click-to-fly camera restoration<br>• Native `.bcfzip` binary export via `OBC.BCFTopics` with JSON fallback |
-| **⏱️ 4. 4D Construction Phasing & Gantt** | • Automatic trade sequencing (`IFCSITE` → `IFCFOOTING` → `IFCSLAB` → `IFCWALL` → `IFCROOF` → `MEP`)<br>• Synchronized **3D Viewport Visibility**: hides unstarted tasks (`OBC.Hider`) and highlights active construction tasks in emerald (`Phase_InProgress`)<br>• Interactive bottom **4D Gantt & EVM Dock** (`CPI`, `SPI`, Critical Path toggle, and `1x`–`8x` playback) |
-| **💰 5. 5D Cost Estimation & BOQ** | • Automated `Qto_*` extraction (`NetVolume`, `NetArea`, `Length`, `Count`) and CSI MasterFormat trade pricing<br>• Interactive **3D Category Highlight & Isolation** directly from BOQ rows<br>• Visual trade budget bar, S-Curve cashflow chart, and `.csv` Bill of Quantities export |
+| **⏱️ 4. 4D WBS Gantt, CPM DAG & CasCADe Lens** | • **DAG CPM Solver & Dynamic Rules**: `FS`/`SS`/`FF`/`SF` + lag computation ([`CpmGraphSolver`](src/modules/CpmGraphSolver.ts)), WBS bottom-up rollups, Navisworks **FindSpec XML** boolean rule sets ([`RuleSearchEngine`](src/modules/RuleSearchEngine.ts)), and native **IFC4 `IfcWorkSchedule`** import alongside CSV / MSPDI XML / P6 XER<br>• **Collapsible WBS Gantt Drawer**: `M`/`W`/`D` timescale zoom, draggable splitter, direct timeline scrub, and SVG dependency connectors ([`InteractiveGanttDrawer`](src/ui/InteractiveGanttDrawer.ts))<br>• **CasCADe 4D Visual Analytics**: 12 indicators across 15 ColorBrewer 5-band palettes ([`Cascade4DAnalytics`](src/modules/Cascade4DAnalytics.ts)), interactive band isolation with translucency ghosting, and 3D Bezier Dependency Arcs ([`DependencyVectorOverlay`](src/modules/DependencyVectorOverlay.ts)) |
+| **💰 5. 5D Rule-Book BOQ, GAEB .X83 & Quality Audit** | • Automated `Qto_*` extraction with multi-parameter provenance switching, toggleable **DIN 276 / Uniclass 2015 / CSI MasterFormat** presets ([`CostRuleBookEngine`](src/modules/CostRuleBookEngine.ts)), custom `.csv` rate catalog import, and hierarchical **GAEB DA XML (`.X83`)** + CSV BOQ export ([`Boq5DModule`](src/modules/Boq5DModule.ts))<br>• **6-Category BIM QA/QC & BOQ Audit** ([`BimQualityAuditor`](src/modules/BimQualityAuditor.ts)): Green/Amber/Red BOQ readiness diagnostics (`MISSING_QTO`, `ZERO_RATE`, `UNIT_MISMATCH`, `LOW_CONFIDENCE`, `UNCLASSIFIED`) and CSV quality audit export |
 | **📈 6. ANSI/EIA 748-B & APM Earned Value Management (EVM)** | • Full compliance with ANSI/EIA 748-B, PMI EVM Practice Standard, DOE Module 6, and APM EVM Handbook<br>• **Multi-Model EAC Forecasting**: Typical ($BAC/CPI$), Atypical ($AC+BAC-EV$), Composite ($CPI \times SPI$), and Weighted ($0.8CPI+0.2SPI$)<br>• **Earned Schedule (ES) Time-Based Metrics**: $SV(t)$ (days), $SPI(t)$, $EAC(t)$ duration forecast, and projected completion date<br>• **APM Bulls-Eye Quadrant Matrix**: Real-time CPI vs SPI scatter plot with centered axes (1.0, 1.0) and concentric $\pm 10\%$ / $\pm 20\%$ tolerance rings<br>• **ANSI 748-B Variance Threshold Audit**: Automatic Tier 1 ($\pm 30\%/\$10\text{k}$) and Tier 2 ($\pm 10\%/\$25\text{k}$) VAR alerts with direct **CPR Format 1 (WBS Ledger CSV)** and **CPR Format 5 (VAR Report)** generation |
 | **🌿 7. 6D Embodied Carbon & LCA** | • ICE Database v3.0 embodied carbon engine (`kgCO₂e/m³`) using real IFC `Qto_*NetVolume` properties and 3D bounding volumes<br>• **5-Band 3D Carbon Intensity Heatmap** (`Grade A` Emerald → `Grade E` Crimson) painted directly onto 3D model geometry via `OBF.Highlighter`<br>• Material optimization simulator (*Fly-Ash Concrete*, *Cross-Laminated Timber*, *EAF Recycled Steel*) and LEED / EN 15978 CSV report export |
-| **🤖 8. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Highlight high carbon elements"*, *"Cost summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
+| **🤖 8. AI BIM Copilot** | • Natural-language BIM query & command execution (*"How many walls and doors?"*, *"Slice Level 2"*, *"Show Pen Mode"*, *"Run model quality audit"*, *"Check workspace SLF congestion"*, *"Export GAEB BOQ summary"*)<br>• Optional local **Ollama (`http://localhost:11434`)** LLM enrichment with XSS-safe rendering |
 | **🎨 9. VFX Studio & 4K Drawing Sheet** | • 6 `OBF.PostproductionAspect` render styles: **Shaded**, **Pen / Technical Drawing**, **Color + Pen**, **Shaded + Pen + AO**, **Clay / Ambient Occlusion**, and **Wireframe**<br>• Dynamic Solar Azimuth & Elevation shadow simulation<br>• **4K Technical Drawing Sheet Generator** (`3840×2160` PNG with ISO architectural border, project title block, scale bar, north arrow, and revision metadata) |
 | **🧭 10. 2D Radar Minimap & Storey Slicer** | • Live 2D architectural footprint projection computed from loaded `THREE.Mesh` bounding boxes and `OBC.BoundingBoxer`<br>• **Interactive Navigation**: Click to teleport camera, drag avatar/cone to rotate gaze in real time, or toggle First-Person WASD Walk mode<br>• **Compass Rose & Face North**: True North indicator button with 1-click camera orientation snap<br>• **Storey Sync & Auto-Tracking**: Automatic IFC `IfcBuildingStorey` detection with live elevation auto-tracking and 1-click horizontal floor slicing<br>• **Clash & Selection Layer**: Live pulsing reticle for selected elements and interactive hazard pins for multi-discipline clashes on the active floor<br>• **Tactical Pan & Zoom**: Scroll wheel zoom, Shift/right-click pan, quick Zoom In/Out/Fit controls, live metric coordinate readout (`X/Z/Dist`), and expandable size preset (180px ↔ 290px) |
 | **📊 11. Executive Twin Report (Print & PDF)** | • 1-Click executive project report modal synthesizing 4D schedule progress, 5D EVM S-Curve (PV vs EV vs AC), category trade quantities, 3D clash resolution matrix, 6D embodied carbon rating, and BCF coordination status<br>• **Print-Optimized `@media print` Layout**: Boardroom-ready vector print formatting with zero background ink waste and instant PDF export via `window.print()`<br>• Complete JSON schema report download for enterprise BI ingestion |
@@ -141,7 +141,7 @@ BIM-Kintsugi/
     │   ├── StreamingLoader.ts                  # Two-phase IFC/FRAG loader & dual IndexedDB fragment caching
     │   ├── PointerInputArbiter.ts              # Priority pointer arbitration (Gizmo > Marquee > Measure > Picking)
     │   ├── BvhAccelerationService.ts           # Three-mesh-bvh BVH acceleration & raycast patching
-    │   ├── clashBroadPhase.ts                  # Sweep-and-Prune broad-phase spatial collision filter
+    │   ├── clashBroadPhase.ts                  # Sweep-and-Prune 3D & Temporal 4D broad-phase collision filter
     │   ├── GraphicsPipeline.ts                 # WebGPU probe, Adaptive DPR, Deferred Postproduction & PMREM
     │   ├── LodAndCullingManager.ts             # Screen-space LOD & camera frustum culling
     │   ├── InstancedBatchManager.ts            # Draw-call batching for repeated geometry
@@ -153,40 +153,52 @@ BIM-Kintsugi/
     │   ├── ModelManager.ts                     # WASM IFC/Fragment loading, calibration & IndexedDB cache
     │   ├── SceneManager.ts                     # Lighting, shadows, ground grid & post-processing shaders
     │   ├── SoundManager.ts                     # Synthesized WebAudio UI feedback
-    │   └── __tests__/                          # Core architecture, performance & camera controller tests
+    │   └── __tests__/                          # Core architecture, performance & camera controller tests (4 files)
     │
     ├── workers/                                # Background Web Workers
-    │   ├── clashWorker.ts                      # Off-thread broad/narrow clash detection worker
-    │   └── ifcMetadataWorker.ts                # Off-thread IFC property extraction worker
+    │   ├── clashWorker.ts                      # Off-thread broad/narrow 3D & Temporal 4D clash detection worker
+    │   ├── ifcMetadataWorker.ts                # Off-thread IFC property extraction worker
+    │   └── ifcPreflightWorker.ts               # Off-thread STEP schema, unit, CRS, QTO & 4D pre-flight worker
     │
     ├── modules/                                # Enterprise Domain Feature Suites
     │   ├── ExecutiveReportModule.ts            # Executive Construction Twin Report (Print, PDF & EVM S-Curve)
     │   ├── EvmDashboardModule.ts               # ANSI/EIA 748-B EVM suite, multi-EAC forecasts, Earned Schedule & Bulls-Eye
     │   ├── AccessControlManager.ts             # Multi-tenancy Role-Based Access Control (RBAC) security engine
+    │   ├── CostRuleBookEngine.ts               # DIN 276 / Uniclass 2015 / MasterFormat rules, CSV import & BOQ audit
     │   ├── CostRateManager.ts                  # Multi-currency cost rates & dimensional unit multipliers
+    │   ├── BimQualityAuditor.ts                # 6-category BIM QA/QC ruleset & CSV audit report generator
     │   ├── DelayImpactEngine.ts                # Critical path delay calculations & financial penalties
     │   ├── MeasurementSuite.ts                 # 5-mode 3D measurements (Length, Delta, Angle, Area, Volume)
     │   ├── ClippingModule.ts                   # 6-DOF section box, custom planes & OBF.ClipStyler hatches
     │   ├── StoreyLevelSlicer.ts                # IFC storey elevation slicer & OBC.Views 2D floor plans
-    │   ├── ClashDetector.ts                    # 3D Box3 clash detection, OBF.Highlighter & OBF.Marker pins
-    │   ├── ClashToleranceInspector.ts          # Hard vs soft clearance envelope verifier
+    │   ├── ClashDetector.ts                    # Static 3D / Temporal 4D / Workspace 4D clashes, BWM CI & OBF.Marker pins
+    │   ├── ClashToleranceInspector.ts          # Hard vs soft clearance envelope & clash sync verifier
+    │   ├── WorkspaceCongestionAnalyzer.ts      # Hosny et al. 4D Space Loading Factor (SLF) & 3D congestion overlays
     │   ├── BcfIssueManager.ts                  # BCF 2.1/3.0 issue manager (OBC.BCFTopics + .bcfzip export)
     │   ├── CarbonLcaManager.ts                 # 6D embodied carbon LCA & 5-band 3D heatmap
-    │   ├── BimAiCopilot.ts                     # Natural-language BIM copilot & local Ollama connector
+    │   ├── BimAiCopilot.ts                     # Natural-language BIM copilot (audit, BOQ, SLF) & local Ollama
     │   ├── GraphicsVFXManager.ts               # Postproduction render styles, sun study & 4K Drawing Sheet
-    │   ├── ScheduleManager.ts                  # 4D construction schedule & date-interpolated task states
+    │   ├── ScheduleManager.ts                  # 4D construction schedule, WBS rollups & dynamic search bindings
+    │   ├── CpmGraphSolver.ts                   # DAG CPM solver (FS/SS/FF/SF + lag, float, WBS rollups)
+    │   ├── RuleSearchEngine.ts                 # Boolean search sets & Navisworks FindSpec XML rule importer
+    │   ├── ScheduleImportParsers.ts            # CSV, MSPDI XML, Primavera P6 XER & IFC4 IfcWorkSchedule parsers
+    │   ├── Cascade4DAnalytics.ts               # CasCADe 12-indicator ColorBrewer 4D heatmap & legend isolator
+    │   ├── DependencyVectorOverlay.ts          # Elevated 3D Bezier schedule dependency arcs (Crit/Pred/Succ/OOS)
+    │   ├── AppearanceProfileEngine.ts          # Synchro 4D appearance profiles, growth planes & alpha-hash ghosting
     │   ├── PhasingTimelineModule.ts            # 4D phasing timeline & 3D viewport visibility sync
     │   ├── GanttPhasingModule.ts               # Interactive 4D Gantt chart & EVM metrics (CPI/SPI)
-    │   ├── BoqGenerator.ts                     # 5D Qto quantity takeoff & 3D category isolation
-    │   ├── Boq5DModule.ts                      # 5D cost dashboard & CSV exporter
+    │   ├── BoqGenerator.ts                     # 5D Qto quantity takeoff, provenance tracking & GAEB .X83 XML
+    │   ├── Boq5DModule.ts                      # 5D Rule-Book cost dashboard, CSV & GAEB .X83 exporter
+    │   ├── IfcStepParser.ts                    # Multi-line IFC STEP parser, Qto_* extractor & pre-flight scanner
+    │   ├── GisModule.ts                        # WGS84/UTM, 6-param IfcMapConversion, basemaps & solar alignment
     │   ├── MinimapModule.ts                    # 2D radar minimap with OBC.BoundingBoxer & click teleport
     │   ├── HighlighterManager.ts               # Deterministic highlight priority stack (`select: 100`..`audit-ghost: 5`)
     │   ├── SelectionManager.ts                 # Single-source selection state, Undo/Redo, Saved Sets & FRAGS v3 batch Qto
     │   ├── IfcSplitterModule.ts                # Split federated IFC models by storey or category
     │   ├── RealityCaptureModule.ts             # E57/LAS/PLY point cloud & photogrammetry inspection
     │   ├── PlanOverlayModule.ts                # 2D DXF/PDF drawing sheet alignment on storeys
-    │   ├── CivilAlignmentModule.ts             # OpenBIM Civil 4.3 linear infrastructure geometry
-    │   └── __tests__/                          # 31 comprehensive Vitest test files (255 tests)
+    │   ├── CivilAlignmentModule.ts             # OpenBIM Civil 4.3 alignments, clothoids & parabolic vertical profile
+    │   └── __tests__/                          # 32 Vitest module test suites (36 total files / 281 tests)
     │
     ├── ui/                                     # UI Controllers & HUD Components
     │   ├── MetadataPanelController.ts          # Dedicated META tab (single-element & batch takeoff summary)
@@ -261,19 +273,19 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 255-test Vitest suite across all 31 core and enterprise test suites:
+Run strict TypeScript type-checking and the 281-test Vitest suite across all 36 core and enterprise test suites (`32` module suites + `4` core suites):
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 31 unit test files (255 tests)
+# Run all 36 unit test files (281 tests)
 npm test
 ```
 
 The automated testing harness also executes end-to-end headless Chromium verification and multi-viewport visual audits:
 - **0 runtime page errors**, **0 console errors**, **0 stale DOM IDs**.
-- **255/255 unit tests passing** across 31 test suites (100% green).
+- **281/281 unit tests passing** across 36 test files (100% green).
 - **7-Platform AI Verification Matrix**: Automated test plans for TestSprite, Octomind, Momentic, Reflect, Mabl, Katalon Studio, and Applitools Eyes.
 - **Security & RBAC Enforcement**: Role-based privilege separation across Viewer, Member, Manager, and Admin tiers with persistent policies.
 - **100% WCAG 2.2 AA Compliance** across interactive controls and form inputs.
@@ -312,6 +324,13 @@ The automated testing harness also executes end-to-end headless Chromium verific
 ---
 
 ## 📝 Recent Changes & Enhancements
+
+- **5-Phase 4D/5D/QA/Infra Platform Upgrade** (clean-room MIT TypeScript modules leaving `BimEngine.ts` and `@thatopen/*` packages untouched):
+  - **Phase 1 — Dynamic Search Sets, DAG CPM Solver & WBS Gantt** ([`CpmGraphSolver.ts`](src/modules/CpmGraphSolver.ts), [`RuleSearchEngine.ts`](src/modules/RuleSearchEngine.ts), [`ScheduleManager.ts`](src/modules/ScheduleManager.ts), [`ScheduleImportParsers.ts`](src/modules/ScheduleImportParsers.ts), [`InteractiveGanttDrawer.ts`](src/ui/InteractiveGanttDrawer.ts)): Added full `FS`/`SS`/`FF`/`SF` + lag CPM computation, cycle detection, total/free float, bottom-up WBS hierarchy rollups, Navisworks FindSpec XML rule import, IFC4 `IfcWorkSchedule` STEP extraction, collapsible Gantt rows, draggable pane splitter, `M`/`W`/`D` timescale zoom, and SVG dependency connectors.
+  - **Phase 2 — CasCADe 4D Visual Analytics & 3D Dependency Arcs** ([`Cascade4DAnalytics.ts`](src/modules/Cascade4DAnalytics.ts), [`DependencyVectorOverlay.ts`](src/modules/DependencyVectorOverlay.ts), [`AppearanceProfileEngine.ts`](src/modules/AppearanceProfileEngine.ts), [`HighlighterManager.ts`](src/modules/HighlighterManager.ts)): Added 12 schedule/slack/delta indicators across 15 5-stop ColorBrewer scales, interactive legend band isolation with alpha-hash/ghost translucency, and 3D Bezier dependency vectors (`Crit Arcs`, `Pred/Succ`, `Out-of-Seq`).
+  - **Phase 3 — 4D Spatio-Temporal Clashes, Workspace SLF & BWM Criticality Index** ([`WorkspaceCongestionAnalyzer.ts`](src/modules/WorkspaceCongestionAnalyzer.ts), [`clashBroadPhase.ts`](src/core/clashBroadPhase.ts), [`clashWorker.ts`](src/workers/clashWorker.ts), [`ClashDetector.ts`](src/modules/ClashDetector.ts)): Added `Static 3D`, `Temporal 4D` (non-concurrent overlap pruning), and `Workspace 4D` scan modes, Six-Parameter BWM Criticality Index (`CI`) ranking, and Hosny et al. storey `SLF` congestion analysis with 3D translucent zones.
+  - **Phase 4 — Rule-Book 5D BOQ, GAEB .X83, 6-Category QA/QC & Copilot Intents** ([`CostRuleBookEngine.ts`](src/modules/CostRuleBookEngine.ts), [`BimQualityAuditor.ts`](src/modules/BimQualityAuditor.ts), [`BoqGenerator.ts`](src/modules/BoqGenerator.ts), [`Boq5DModule.ts`](src/modules/Boq5DModule.ts), [`BimAiCopilot.ts`](src/modules/BimAiCopilot.ts)): Added toggleable `DIN 276`, `Uniclass 2015`, and `CSI MasterFormat` presets, CSV custom catalog import, QTO provenance switching, `GAEB .X83` XML export, traffic-light BOQ validation (`MISSING_QTO`, `ZERO_RATE`, `UNIT_MISMATCH`, `LOW_CONFIDENCE`, `UNCLASSIFIED`), 6-category model quality auditing, and Copilot intents for audits, BOQ, and workspace congestion.
+  - **Phase 5 — STEP Pre-Flight Scanner, Full `IfcMapConversion` & Civil Clothoids** ([`IfcStepParser.ts`](src/modules/IfcStepParser.ts), [`ifcPreflightWorker.ts`](src/workers/ifcPreflightWorker.ts), [`GisModule.ts`](src/modules/GisModule.ts), [`CivilAlignmentModule.ts`](src/modules/CivilAlignmentModule.ts)): Added off-thread IFC STEP pre-flight schema/unit/CRS/QTO/4D detection, auto-import of native IFC4 schedules on IFC load, 6-parameter `IFCMAPCONVERSION` + `IFCPROJECTEDCRS` True North calculation, and Simpson-integrated spiral clothoid & vertical parabola alignment profiles.
 
 - **4D Simulation Reliability, Milestone Sync & Clean Exit Restoration** ([`Schedule4DEngine.ts`](src/modules/Schedule4DEngine.ts), [`AppearanceProfileEngine.ts`](src/modules/AppearanceProfileEngine.ts), [`InteractiveGanttDrawer.ts`](src/ui/InteractiveGanttDrawer.ts), [`PhasingTimelineModule.ts`](src/modules/PhasingTimelineModule.ts), [`main.ts`](src/main.ts)):
   - Unified 4D task appearance styling, visibility state transitions, dynamic milestone pill synchronization, custom IFC parameter sequencing via `IfcParameterReader`, and deterministic cleanup restoring geometry visibility, materials, and pre-4D sidebar state on exit (`×`).

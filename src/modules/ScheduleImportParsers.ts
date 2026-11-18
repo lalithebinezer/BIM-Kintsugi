@@ -2,15 +2,21 @@ import type * as XLSX from "xlsx";
 import { lazyFeature } from "../utils/lazyFeature";
 const excelLibrary = lazyFeature("Excel import", () => import("xlsx"));
 import type { ScheduleTask, TaskStatus } from "./ScheduleManager";
+import {
+  rollupWbsHierarchy,
+  solveCpmGraph,
+  type DependencyType,
+  type TaskDependency,
+} from "./CpmGraphSolver";
 
 /**
  * ScheduleImportParsers — Importers for MS Project (MSPDI XML), Oracle Primavera (P6 XER),
- * and Bentley Synchro / Standard Excel Spreadsheets (.xlsx / .xls).
+ * Bentley Synchro / Nested Excel Spreadsheets (.xlsx / .xls), and Native IFC4 WorkSchedules.
  */
 
 export interface ParsedScheduleResult {
   tasks: ScheduleTask[];
-  format: "MSPDI_XML" | "PRIMAVERA_P6_XER" | "EXCEL_WORKBOOK";
+  format: "MSPDI_XML" | "PRIMAVERA_P6_XER" | "EXCEL_WORKBOOK" | "IFC4_WORKSCHEDULE";
   projectName: string;
 }
 
@@ -42,11 +48,19 @@ export class ScheduleImportParsers {
     const taskRegex = /<Task[\s\S]*?>([\s\S]*?)<\/Task>/gi;
     let match: RegExpExecArray | null;
     let idx = 1;
+    const outlineStack: Array<{ level: number; id: string }> = [];
 
     const getTag = (block: string, tag: string) => {
       const reg = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
       const m = block.match(reg);
       return m ? m[1].replace(/&amp;/g, "&").trim() : "";
+    };
+
+    const mspTypeToDepType = (rawType: string): DependencyType => {
+      if (rawType === "0") return "FF";
+      if (rawType === "2") return "SF";
+      if (rawType === "3") return "SS";
+      return "FS";
     };
 
     while ((match = taskRegex.exec(xmlText)) !== null) {
@@ -62,18 +76,50 @@ export class ScheduleImportParsers {
       const percentComplete = Number(getTag(block, "PercentComplete") || "0");
       const cost = Number(getTag(block, "Cost") || "0");
       const wbsCode = getTag(block, "WBS") || getTag(block, "OutlineNumber") || String(idx);
+      const outlineLevelRaw = Number(getTag(block, "OutlineLevel") || "1");
+      const outlineLevel = Number.isFinite(outlineLevelRaw) && outlineLevelRaw > 0 ? outlineLevelRaw : 1;
+      const isSummary = getTag(block, "Summary") === "1";
       const isCritical = getTag(block, "Critical") === "1";
       const totalSlackMinutes = Number(getTag(block, "TotalSlack") || "0");
+      const freeSlackMinutes = Number(getTag(block, "FreeSlack") || "0");
       const totalFloat = !isNaN(totalSlackMinutes) ? Math.round(totalSlackMinutes / 480) : 0;
+      const freeFloat = !isNaN(freeSlackMinutes) ? Math.round(freeSlackMinutes / 480) : 0;
 
       if (!startRaw || !finishRaw) continue;
 
       const startDate = startRaw.split("T")[0];
       const endDate = finishRaw.split("T")[0];
+      const baselineBlock = block.match(/<Baseline\b[^>]*>([\s\S]*?)<\/Baseline>/i)?.[1] ?? "";
+      const baselineStartRaw = baselineBlock ? getTag(baselineBlock, "Start") : "";
+      const baselineFinishRaw = baselineBlock ? getTag(baselineBlock, "Finish") : "";
+      const baselineStartDate = baselineStartRaw ? baselineStartRaw.split("T")[0] : undefined;
+      const baselineEndDate = baselineFinishRaw ? baselineFinishRaw.split("T")[0] : undefined;
 
       let status: TaskStatus = "Planned";
       if (percentComplete >= 100) status = "Completed";
       else if (percentComplete > 0) status = "In Progress";
+
+      // Extract PredecessorLink graph edges
+      const predecessors: TaskDependency[] = [];
+      const predRegex = /<PredecessorLink\b[^>]*>([\s\S]*?)<\/PredecessorLink>/gi;
+      let predMatch: RegExpExecArray | null;
+      while ((predMatch = predRegex.exec(block)) !== null) {
+        const pBlock = predMatch[1];
+        const pUid = getTag(pBlock, "PredecessorUID");
+        if (!pUid || pUid === "0") continue;
+        const pType = mspTypeToDepType(getTag(pBlock, "Type"));
+        const pLagMin = Number(getTag(pBlock, "LinkLag") || "0");
+        predecessors.push({
+          predecessorId: `msp-${pUid}`,
+          type: pType,
+          lagDays: Number.isFinite(pLagMin) ? Math.round(pLagMin / 480) : 0,
+        });
+      }
+
+      while (outlineStack.length > 0 && outlineStack[outlineStack.length - 1].level >= outlineLevel) {
+        outlineStack.pop();
+      }
+      const parentId = outlineStack.length > 0 ? outlineStack[outlineStack.length - 1].id : undefined;
 
       // Extract custom simulation property from ExtendedAttribute
       let simulationKey = "";
@@ -95,25 +141,36 @@ export class ScheduleImportParsers {
       }
 
       const category = this.guessCategoryFromName(name);
+      const taskId = `msp-${uid}`;
+      outlineStack.push({ level: outlineLevel, id: taskId });
 
       tasks.push({
-        id: `msp-${uid}`,
+        id: taskId,
         name,
         category,
         startDate,
         endDate,
+        baselineStartDate,
+        baselineEndDate,
         status,
         elementIds: new Set<number>(),
         modelId: "",
         unitCost: cost,
         quantity: 1,
         wbsCode,
+        parentId,
+        outlineLevel,
+        isSummary,
+        predecessors: predecessors.length > 0 ? predecessors : undefined,
         totalFloat,
+        freeFloat,
         isCritical,
         simulationKey,
       });
       idx++;
     }
+
+    rollupWbsHierarchy(tasks);
 
     return {
       tasks,
@@ -310,6 +367,16 @@ export class ScheduleImportParsers {
       <CalendarUID>1</CalendarUID>
     </Task>`;
 
+    const taskIdToUid = new Map<string, number>();
+    tasks.forEach((t, idx) => taskIdToUid.set(t.id, idx + 1));
+
+    const depTypeToMsp = (type: DependencyType): number => {
+      if (type === "FF") return 0;
+      if (type === "SF") return 2;
+      if (type === "SS") return 3;
+      return 1;
+    };
+
     const taskXml = tasks.map((t, idx) => {
       const uid = idx + 1;
       const s = new Date(t.startDate);
@@ -328,10 +395,11 @@ export class ScheduleImportParsers {
         .trim() || (t.category || "General");
 
       const wbs = t.wbsCode || String(uid);
-      const outlineLevel = wbs.includes(".") ? wbs.split(".").length : 1;
+      const outlineLevel = t.outlineLevel ?? (wbs.includes(".") ? wbs.split(".").length : 1);
       const elemCount = t.elementIds ? t.elementIds.size : (t.quantity || 1);
       const isCrit = t.isCritical ? "YES" : "NO";
       const totalFloatHours = (t.totalFloat ?? 0) * 8;
+      const freeFloatHours = (t.freeFloat ?? 0) * 8;
 
       // Assign to trade resource
       const resource = tradeMap.get(t.category || "General");
@@ -345,9 +413,24 @@ export class ScheduleImportParsers {
     </Assignment>`);
       }
 
-      // Predecessor link: sequential Finish-to-Start link to previous task
+      // Emit real predecessor DAG links if present; otherwise sequential Finish-to-Start
       let predecessorXml = "";
-      if (idx > 0) {
+      if (t.predecessors && t.predecessors.length > 0) {
+        predecessorXml = t.predecessors
+          .map((dep) => {
+            const pUid = taskIdToUid.get(dep.predecessorId);
+            if (!pUid) return "";
+            const lagMin = Math.round((dep.lagDays ?? 0) * 480);
+            return `\n      <PredecessorLink>
+        <PredecessorUID>${pUid}</PredecessorUID>
+        <Type>${depTypeToMsp(dep.type)}</Type>
+        <CrossProject>0</CrossProject>
+        <LinkLag>${lagMin}</LinkLag>
+        <LagFormat>7</LagFormat>
+      </PredecessorLink>`;
+          })
+          .join("");
+      } else if (idx > 0 && !t.isSummary) {
         predecessorXml = `\n      <PredecessorLink>
         <PredecessorUID>${idx}</PredecessorUID>
         <Type>1</Type>
@@ -356,6 +439,11 @@ export class ScheduleImportParsers {
         <LagFormat>7</LagFormat>
       </PredecessorLink>`;
       }
+
+      const baselineXml =
+        t.baselineStartDate || t.baselineEndDate
+          ? `\n      <Baseline>\n        <Number>0</Number>\n        <Start>${t.baselineStartDate || t.startDate}T08:00:00</Start>\n        <Finish>${t.baselineEndDate || t.endDate}T17:00:00</Finish>\n      </Baseline>`
+          : "";
 
       const pctComplete = t.status === "Completed" ? 100 : (t.status === "In Progress" ? 50 : 0);
       const isMilestone = durationHours <= 0 ? 1 : 0;
@@ -368,6 +456,7 @@ export class ScheduleImportParsers {
       <Name>${xmlEscape(cleanName)}</Name>
       <Type>0</Type>
       <IsNull>0</IsNull>
+      <Summary>${t.isSummary ? 1 : 0}</Summary>
       <CreateDate>${t.startDate}T08:00:00</CreateDate>
       <Active>1</Active>
       <Manual>0</Manual>
@@ -388,14 +477,15 @@ export class ScheduleImportParsers {
       <PercentComplete>${pctComplete}</PercentComplete>
       <PercentWorkComplete>${pctComplete}</PercentWorkComplete>
       <Cost>${cost.toFixed(2)}</Cost>
-      <EarlyStart>${t.startDate}T08:00:00</EarlyStart>
-      <EarlyFinish>${t.endDate}T17:00:00</EarlyFinish>
-      <LateStart>${(t as any).lateStart || t.startDate}T08:00:00</LateStart>
-      <LateFinish>${(t as any).lateFinish || t.endDate}T17:00:00</LateFinish>
+      <EarlyStart>${t.earlyStart || t.startDate}T08:00:00</EarlyStart>
+      <EarlyFinish>${t.earlyFinish || t.endDate}T17:00:00</EarlyFinish>
+      <LateStart>${t.lateStart || t.startDate}T08:00:00</LateStart>
+      <LateFinish>${t.lateFinish || t.endDate}T17:00:00</LateFinish>
+      <FreeSlack>${freeFloatHours * 60}</FreeSlack>
       <TotalSlack>${totalFloatHours * 60}</TotalSlack>
       <Critical>${t.isCritical ? 1 : 0}</Critical>
       <ConstraintType>0</ConstraintType>
-      <CalendarUID>1</CalendarUID>${predecessorXml}
+      <CalendarUID>1</CalendarUID>${predecessorXml}${baselineXml}
       <ExtendedAttribute>
         <FieldID>188743731</FieldID>
         <Value>${xmlEscape(cleanCat)}</Value>
@@ -746,6 +836,10 @@ ${assignmentsXml}
         const catCol = findCol("category", "trade", "discipline", "type");
         const statusCol = findCol("status", "state", "progress");
         const idsCol = findCol("expressids", "elementids", "ids", "elements");
+        const nestingCol = findCol("tasknesting", "outlinelevel", "nesting", "level", "indent");
+
+        const nestingStack: Array<{ level: number; id: string; wbsParts: number[] }> = [];
+        let topLevelCounter = 0;
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
@@ -770,6 +864,30 @@ ${assignmentsXml}
             });
           }
 
+          let outlineLevel: number | undefined;
+          let parentId: string | undefined;
+          let wbsCode: string | undefined;
+          if (nestingCol >= 0 && row[nestingCol] !== undefined && row[nestingCol] !== "") {
+            const rawLevel = Math.max(0, Math.round(cleanNum(row[nestingCol])));
+            outlineLevel = rawLevel + 1;
+            while (nestingStack.length > 0 && nestingStack[nestingStack.length - 1].level >= rawLevel) {
+              nestingStack.pop();
+            }
+            if (nestingStack.length > 0) {
+              parentId = nestingStack[nestingStack.length - 1].id;
+              const parentWbs = nestingStack[nestingStack.length - 1].wbsParts;
+              const childIndex = tasks.filter((t) => t.parentId === parentId).length + 1;
+              const wbsParts = [...parentWbs, childIndex];
+              wbsCode = wbsParts.join(".");
+              nestingStack.push({ level: rawLevel, id, wbsParts });
+            } else {
+              topLevelCounter++;
+              const wbsParts = [topLevelCounter];
+              wbsCode = wbsParts.join(".");
+              nestingStack.push({ level: rawLevel, id, wbsParts });
+            }
+          }
+
           tasks.push({
             id,
             name,
@@ -782,8 +900,15 @@ ${assignmentsXml}
             unitCost,
             totalCost: totalCost || (unitCost * Math.max(1, elementIds.size)),
             quantity: Math.max(1, elementIds.size),
+            wbsCode,
+            parentId,
+            outlineLevel,
             simulationKey: name,
           });
+        }
+
+        if (nestingCol >= 0 && tasks.length > 0) {
+          rollupWbsHierarchy(tasks);
         }
       }
     }
@@ -792,6 +917,287 @@ ${assignmentsXml}
       tasks,
       format: "EXCEL_WORKBOOK",
       projectName: fileName.replace(/\.[^/.]+$/, ""),
+    };
+  }
+
+  /**
+   * Parses native IFC4 STEP temporal entities (IFCWORKPLAN, IFCWORKSCHEDULE,
+   * IFCTASK, IFCTASKTIME, IFCRELSEQUENCE, IFCRELNESTS, IFCRELASSIGNSTOPROCESS).
+   */
+  public static parseIfcWorkSchedule(
+    ifcText: string,
+    defaultModelId: string = "default-model"
+  ): ParsedScheduleResult {
+    const empty: ParsedScheduleResult = {
+      tasks: [],
+      format: "IFC4_WORKSCHEDULE",
+      projectName: "IFC4 WorkSchedule",
+    };
+    if (!ifcText) return empty;
+
+    // Normalize multi-line STEP statements cleanly (preserving quoted string literals)
+    const normalized = ifcText.replace(/\r?\n/g, " ");
+    const statements = normalized.split(";");
+
+    const parseIdList = (raw: string): number[] =>
+      raw
+        .split(",")
+        .map((s) => parseInt(s.replace(/#/g, "").trim(), 10))
+        .filter((n) => Number.isFinite(n));
+
+    const splitTopLevelArgs = (argText: string): string[] => {
+      const args: string[] = [];
+      let cur = "";
+      let depth = 0;
+      let inStr = false;
+      for (let i = 0; i < argText.length; i++) {
+        const ch = argText[i];
+        if (ch === "'") inStr = !inStr;
+        if (!inStr) {
+          if (ch === "(") depth++;
+          else if (ch === ")") depth--;
+          else if (ch === "," && depth === 0) {
+            args.push(cur.trim());
+            cur = "";
+            continue;
+          }
+        }
+        cur += ch;
+      }
+      if (cur.trim().length > 0) args.push(cur.trim());
+      return args;
+    };
+
+    const unquote = (v?: string): string => {
+      if (!v || v === "$") return "";
+      const t = v.trim();
+      if (t.startsWith("'") && t.endsWith("'") && t.length >= 2) {
+        return t.slice(1, -1).trim();
+      }
+      return t;
+    };
+
+    const parseIsoDurationDays = (raw: string): number => {
+      const str = unquote(raw).toUpperCase();
+      if (!str) return 0;
+      const dayMatch = str.match(/P(?:(\d+)W)?(?:(\d+)D)?/);
+      const hourMatch = str.match(/T(?:(\d+)H)?/);
+      const weeks = dayMatch?.[1] ? parseInt(dayMatch[1], 10) : 0;
+      const days = dayMatch?.[2] ? parseInt(dayMatch[2], 10) : 0;
+      const hours = hourMatch?.[1] ? parseInt(hourMatch[1], 10) : 0;
+      return weeks * 7 + days + Math.round(hours / 8);
+    };
+
+    const refIdOf = (v?: string): number | null => {
+      if (!v) return null;
+      const m = v.match(/#(\d+)/);
+      return m ? parseInt(m[1], 10) : null;
+    };
+
+    const taskTimes = new Map<number, {
+      scheduleStart?: string;
+      scheduleFinish?: string;
+      actualStart?: string;
+      actualFinish?: string;
+      scheduleDurationDays?: number;
+      earlyStart?: string;
+      earlyFinish?: string;
+      lateStart?: string;
+      lateFinish?: string;
+      totalFloatDays?: number;
+      freeFloatDays?: number;
+      isCritical?: boolean;
+      statusTime?: string;
+    }>();
+
+    const rawTasks = new Map<number, {
+      stepId: number;
+      guid: string;
+      name: string;
+      identification: string;
+      status: TaskStatus;
+      taskTimeId: number | null;
+      priority: number;
+    }>();
+
+    const sequences: Array<{ predId: number; succId: number; type: DependencyType; lagDays: number }> = [];
+    const parentLinks = new Map<number, number>(); // childTaskId -> parentTaskId
+    const processProducts = new Map<number, Set<number>>(); // taskStepId -> Set<elementStepId>
+    let scheduleName = "IFC4 WorkSchedule";
+
+    for (const rawStmt of statements) {
+      const stmt = rawStmt.trim();
+      const match = stmt.match(/^#(\d+)\s*=\s*(IFC[A-Z0-9_]+)\s*\((.*)\)$/i);
+      if (!match) continue;
+      const stepId = parseInt(match[1], 10);
+      const entity = match[2].toUpperCase();
+      const args = splitTopLevelArgs(match[3]);
+
+      if (entity === "IFCWORKSCHEDULE" || entity === "IFCWORKPLAN") {
+        const name = unquote(args[2]);
+        if (name && entity === "IFCWORKSCHEDULE") scheduleName = name;
+      } else if (entity === "IFCTASKTIME") {
+        // IFCTASKTIME(Name, DataOrigin, UserDefinedDataOrigin, ScheduleDuration, ScheduleStart, ScheduleFinish,
+        // EarlyStart, EarlyFinish, LateStart, LateFinish, FreeFloat, TotalFloat, IsCritical, StatusTime,
+        // ActualDuration, ActualStart, ActualFinish, RemainingTime, Completion)
+        const durDays = parseIsoDurationDays(args[3]);
+        const schedStart = unquote(args[4]).split("T")[0];
+        const schedFinish = unquote(args[5]).split("T")[0];
+        const earlyStart = unquote(args[6]).split("T")[0];
+        const earlyFinish = unquote(args[7]).split("T")[0];
+        const lateStart = unquote(args[8]).split("T")[0];
+        const lateFinish = unquote(args[9]).split("T")[0];
+        const freeFloatDays = args[10] && args[10] !== "$" ? parseIsoDurationDays(args[10]) : undefined;
+        const totalFloatDays = args[11] && args[11] !== "$" ? parseIsoDurationDays(args[11]) : undefined;
+        const isCritical = args[12] === ".T.";
+        const statusTime = unquote(args[13]).split("T")[0];
+        const actualStart = unquote(args[15]).split("T")[0];
+        const actualFinish = unquote(args[16]).split("T")[0];
+        taskTimes.set(stepId, {
+          scheduleDurationDays: durDays || undefined,
+          scheduleStart: schedStart || undefined,
+          scheduleFinish: schedFinish || undefined,
+          earlyStart: earlyStart || undefined,
+          earlyFinish: earlyFinish || undefined,
+          lateStart: lateStart || undefined,
+          lateFinish: lateFinish || undefined,
+          freeFloatDays,
+          totalFloatDays,
+          isCritical,
+          statusTime: statusTime || undefined,
+          actualStart: actualStart || undefined,
+          actualFinish: actualFinish || undefined,
+        });
+      } else if (entity === "IFCTASK") {
+        // IFCTASK(GlobalId, OwnerHistory, Name, Description, ObjectType, Identification, LongDescription, Status, WorkMethod, IsMilestone, Priority, TaskTime, PredefinedType)
+        const guid = unquote(args[0]) || `ifc-task-${stepId}`;
+        const name = unquote(args[2]) || unquote(args[5]) || `IFC Task #${stepId}`;
+        const identification = unquote(args[5]) || String(stepId);
+        const rawStatus = unquote(args[7]).toLowerCase();
+        const status: TaskStatus = rawStatus.includes("complete") || rawStatus.includes("done")
+          ? "Completed"
+          : rawStatus.includes("progress") || rawStatus.includes("started") || rawStatus.includes("active")
+          ? "In Progress"
+          : "Planned";
+        const priority = parseInt(args[10] || "50", 10) || 50;
+        const taskTimeId = refIdOf(args[11]);
+        rawTasks.set(stepId, { stepId, guid, name, identification, status, taskTimeId, priority });
+      } else if (entity === "IFCRELSEQUENCE") {
+        // IFCRELSEQUENCE(GlobalId, OwnerHistory, Name, Description, RelatingProcess, RelatedProcess, TimeLag, SequenceType, UserDefinedSequenceType)
+        const predId = refIdOf(args[4]);
+        const succId = refIdOf(args[5]);
+        const seqRaw = (args[7] || ".FINISH_START.").toUpperCase();
+        let depType: DependencyType = "FS";
+        if (seqRaw.includes("START_START")) depType = "SS";
+        else if (seqRaw.includes("FINISH_FINISH")) depType = "FF";
+        else if (seqRaw.includes("START_FINISH")) depType = "SF";
+        const lagDays = parseIsoDurationDays(args[6]);
+        if (predId && succId) {
+          sequences.push({ predId, succId, type: depType, lagDays });
+        }
+      } else if (entity === "IFCRELNESTS") {
+        // RelatingObject (#parent), RelatedObjects ((#child1, #child2))
+        const parentId = refIdOf(args[4]);
+        const childListRaw = args[5]?.replace(/^\(|\)$/g, "") ?? "";
+        if (parentId && childListRaw) {
+          for (const cid of parseIdList(childListRaw)) {
+            parentLinks.set(cid, parentId);
+          }
+        }
+      } else if (entity === "IFCRELASSIGNSTOPROCESS") {
+        // IFCRELASSIGNSTOPROCESS(GlobalId, OwnerHistory, Name, Description, RelatedObjects, RelatedObjectsType, RelatingProcess, QuantityInProcess)
+        const objListRaw = args[4]?.replace(/^\(|\)$/g, "") ?? "";
+        const processId = refIdOf(args[6]);
+        if (processId && objListRaw) {
+          if (!processProducts.has(processId)) processProducts.set(processId, new Set<number>());
+          const set = processProducts.get(processId)!;
+          for (const oid of parseIdList(objListRaw)) set.add(oid);
+        }
+      }
+    }
+
+    const tasks: ScheduleTask[] = [];
+    const fallbackStart = new Date().toISOString().split("T")[0];
+    const stepToTaskId = new Map<number, string>();
+
+    for (const t of rawTasks.values()) {
+      stepToTaskId.set(t.stepId, `ifc-task-${t.stepId}`);
+    }
+
+    const predsBySucc = new Map<number, TaskDependency[]>();
+    for (const seq of sequences) {
+      const predTaskId = stepToTaskId.get(seq.predId);
+      if (!predTaskId) continue;
+      if (!predsBySucc.has(seq.succId)) predsBySucc.set(seq.succId, []);
+      predsBySucc.get(seq.succId)!.push({
+        predecessorId: predTaskId,
+        type: seq.type,
+        lagDays: seq.lagDays,
+      });
+    }
+
+    for (const t of rawTasks.values()) {
+      const tt = t.taskTimeId ? taskTimes.get(t.taskTimeId) : undefined;
+      const startDate = tt?.scheduleStart || tt?.earlyStart || fallbackStart;
+      const startMs = Date.parse(startDate) || Date.now();
+      const computedEnd = new Date(startMs + Math.max(1, tt?.scheduleDurationDays ?? 1) * 86_400_000)
+        .toISOString()
+        .split("T")[0];
+      const endDate = tt?.scheduleFinish || tt?.earlyFinish || computedEnd;
+      const elementIds = processProducts.get(t.stepId) ?? new Set<number>();
+      const parentStepId = parentLinks.get(t.stepId);
+      const parentId = parentStepId ? stepToTaskId.get(parentStepId) : undefined;
+      const preds = predsBySucc.get(t.stepId);
+
+      tasks.push({
+        id: `ifc-task-${t.stepId}`,
+        name: t.name,
+        category: this.guessCategoryFromName(t.name),
+        startDate,
+        endDate,
+        actualStartDate: tt?.actualStart,
+        actualEndDate: tt?.actualFinish,
+        earlyStart: tt?.earlyStart,
+        earlyFinish: tt?.earlyFinish,
+        lateStart: tt?.lateStart,
+        lateFinish: tt?.lateFinish,
+        totalFloat: tt?.totalFloatDays,
+        freeFloat: tt?.freeFloatDays,
+        isCritical: tt?.isCritical,
+        status: t.status,
+        elementIds,
+        modelId: defaultModelId,
+        unitCost: 0,
+        quantity: elementIds.size,
+        wbsCode: t.identification,
+        parentId,
+        predecessors: preds && preds.length > 0 ? preds : undefined,
+        simulationKey: t.name,
+      });
+    }
+
+    if (tasks.length > 0) {
+      const cpm = solveCpmGraph(tasks);
+      for (const task of tasks) {
+        const c = cpm.results.get(task.id);
+        if (c) {
+          task.earlyStart = task.earlyStart || c.earlyStart;
+          task.earlyFinish = task.earlyFinish || c.earlyFinish;
+          task.lateStart = task.lateStart || c.lateStart;
+          task.lateFinish = task.lateFinish || c.lateFinish;
+          if (task.totalFloat === undefined) task.totalFloat = c.totalFloatDays;
+          if (task.freeFloat === undefined) task.freeFloat = c.freeFloatDays;
+          if (task.isCritical === undefined) task.isCritical = c.isCritical;
+          task.outOfSequence = c.outOfSequence;
+        }
+      }
+      rollupWbsHierarchy(tasks);
+    }
+
+    return {
+      tasks,
+      format: "IFC4_WORKSCHEDULE",
+      projectName: scheduleName,
     };
   }
 

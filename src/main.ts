@@ -113,6 +113,14 @@ import { CinematicTourManager } from "./modules/CinematicTourManager";
 
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 import { DelayImpactEngine } from "./modules/DelayImpactEngine";
+import {
+  CASCADE_INDICATORS,
+  COLORBREWER_SCHEMES,
+  evaluateCascadeLens,
+  type CascadeIndicatorId,
+  type ColorBrewerSchemeName,
+} from "./modules/Cascade4DAnalytics";
+import { DependencyVectorOverlay } from "./modules/DependencyVectorOverlay";
 
 import { AccessControlManager, Permission, type UserRole } from "./modules/AccessControlManager";
 import { MetadataSyncService } from "./core/MetadataSyncService";
@@ -121,6 +129,7 @@ import { StreamingLoader } from "./core/StreamingLoader";
 import { PrecisionOriginController } from "./core/PrecisionOriginController";
 import { FragmentIndexer } from "./core/FragmentIndexer";
 import { MetadataPanelController } from "./ui/MetadataPanelController";
+import { scanIfcPreflight } from "./modules/IfcStepParser";
 
 BUI.Manager.init();
 initResponsiveToolbar();
@@ -1174,6 +1183,15 @@ highlighter.styles.set("audit-ghost", {
   renderedFaces: true as any,
 });
 
+for (let bandIdx = 0; bandIdx < 5; bandIdx++) {
+  highlighter.styles.set(`cascade-band-${bandIdx}`, {
+    color: new THREE.Color(COLORBREWER_SCHEMES.Spectral[bandIdx]),
+    opacity: 0.88,
+    transparent: true,
+    renderedFaces: true as any,
+  });
+}
+
 HighlighterManager.applyStylePriorities(highlighter);
 
 // --- ITEMS FINDER / SEMANTIC QUERIES ---
@@ -1249,6 +1267,13 @@ let timelineRenderPending = false;
 let timelineRenderPendingForce = false;
 let timelineInFlightPromise: Promise<void> | null = null;
 let isVarianceMode = false;
+let isCascadeMode = false;
+let cascadeIndicator: CascadeIndicatorId = "totalSlack";
+let cascadeScheme: ColorBrewerSchemeName = "Spectral";
+let cascadeIsolatedBand: number | null = null;
+let cascadeShowCrit = true;
+let cascadeShowPredSuc = false;
+let cascadeShowOos = true;
 
 // Define sequencing helpers globally
 function getStoreyIndex(storeyName: string): number {
@@ -3553,6 +3578,9 @@ function updateVarianceButtonUI(varianceActive: boolean) {
 const btn4dVariance = document.getElementById("btn-4d-variance-toggle");
 btn4dVariance?.addEventListener("click", () => {
   isVarianceMode = !isVarianceMode;
+  if (isVarianceMode && isCascadeMode) {
+    setCascadeMode(false);
+  }
   updateVarianceButtonUI(isVarianceMode);
   updateVarianceLegendUI(isVarianceMode);
   showToast(
@@ -3561,6 +3589,80 @@ btn4dVariance?.addEventListener("click", () => {
   );
   updateTimelineVisualState(true);
 });
+
+function setCascadeMode(active: boolean) {
+  isCascadeMode = active;
+  const btn = document.getElementById("btn-4d-cascade-toggle");
+  const panel = document.getElementById("cascade-4d-panel");
+  btn?.classList.toggle("active", active);
+  panel?.classList.toggle("hidden", !active);
+  if (!active) {
+    cascadeIsolatedBand = null;
+    DependencyVectorOverlay.getInstance().clear();
+  }
+}
+
+(function initCascadeLensControls() {
+  const indSelect = document.getElementById("cascade-indicator-select") as HTMLSelectElement | null;
+  const schSelect = document.getElementById("cascade-scheme-select") as HTMLSelectElement | null;
+  if (indSelect && indSelect.options.length === 0) {
+    CASCADE_INDICATORS.forEach((m) => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.label;
+      if (m.id === cascadeIndicator) opt.selected = true;
+      indSelect.appendChild(opt);
+    });
+    indSelect.addEventListener("change", () => {
+      cascadeIndicator = indSelect.value as CascadeIndicatorId;
+      cascadeIsolatedBand = null;
+      updateTimelineVisualState(true);
+    });
+  }
+  if (schSelect && schSelect.options.length === 0) {
+    (Object.keys(COLORBREWER_SCHEMES) as ColorBrewerSchemeName[]).forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      if (name === cascadeScheme) opt.selected = true;
+      schSelect.appendChild(opt);
+    });
+    schSelect.addEventListener("change", () => {
+      cascadeScheme = schSelect.value as ColorBrewerSchemeName;
+      updateTimelineVisualState(true);
+    });
+  }
+  document.getElementById("cascade-chk-crit")?.addEventListener("change", (e) => {
+    cascadeShowCrit = (e.target as HTMLInputElement).checked;
+    updateTimelineVisualState(true);
+  });
+  document.getElementById("cascade-chk-predsuc")?.addEventListener("change", (e) => {
+    cascadeShowPredSuc = (e.target as HTMLInputElement).checked;
+    updateTimelineVisualState(true);
+  });
+  document.getElementById("cascade-chk-oos")?.addEventListener("change", (e) => {
+    cascadeShowOos = (e.target as HTMLInputElement).checked;
+    updateTimelineVisualState(true);
+  });
+  document.getElementById("btn-4d-cascade-toggle")?.addEventListener("click", () => {
+    const next = !isCascadeMode;
+    if (next && isVarianceMode) {
+      isVarianceMode = false;
+      updateVarianceButtonUI(false);
+      updateVarianceLegendUI(false);
+    }
+    setCascadeMode(next);
+    showToast(
+      next ? `CasCADe Lens ON (${cascadeIndicator} / ${cascadeScheme})` : "CasCADe 4D Lens OFF",
+      next ? "info" : "success"
+    );
+    updateTimelineVisualState(true);
+  });
+  document.getElementById("btn-close-cascade-panel")?.addEventListener("click", () => {
+    setCascadeMode(false);
+    updateTimelineVisualState(true);
+  });
+})();
 
 // Advanced Schedule Import (MS Project XML & Primavera P6 XER) with Automatic SIMULATION Property Linking
 const btnImportScheduleAdv = document.getElementById("btn-import-schedule-advanced") as HTMLInputElement | null;
@@ -4376,11 +4478,23 @@ async function loadModelData(name: string, buffer: Uint8Array) {
     let ingestedStoreys: Record<string, string> = {};
     let ingestedCount = 0;
 
+    let loadedIfcStepText: string | null = null;
+    let preflightReport: ReturnType<typeof scanIfcPreflight> | null = null;
+
     if (name.endsWith(".ifc") || (buffer && buffer.length > 50 && buffer[0] === 0x49 && buffer[1] === 0x53 && buffer[2] === 0x4F)) {
       try {
         console.log(`[MetadataSyncService] Offloading IFC STEP metadata indexing for ${name}...`);
         const dec = new TextDecoder("utf-8", { fatal: false });
         const ifcText = dec.decode(buffer);
+        loadedIfcStepText = ifcText;
+        preflightReport = scanIfcPreflight(ifcText);
+        const pfFlags = [
+          preflightReport.hasMapConversion ? "CRS/MapConv" : "",
+          preflightReport.hasAlignment ? "Alignment" : "",
+          preflightReport.hasWorkSchedule ? "IFC4 Schedule" : "",
+          preflightReport.hasElementQuantities ? "Qto" : "",
+        ].filter(Boolean).join(" · ");
+        subtitle.innerText = `Pre-flight: ${preflightReport.schema} (${preflightReport.lengthUnitLabel}, ${preflightReport.totalEntities.toLocaleString()} entities)${pfFlags ? ` · ${pfFlags}` : ""}`;
         const ingested = await metadataService.ingestStepMetadata(name, ifcText);
         ingestedCount = ingested.elementCount;
         ingestedStoreys = ingested.storeysMap;
@@ -4560,9 +4674,22 @@ async function loadModelData(name: string, buffer: Uint8Array) {
         }
       }
 
-      // Auto-populate 4D Schedule tasks for all elements and categories in loaded model
+      // Auto-populate 4D Schedule tasks: prefer native IFC4 WorkSchedule if present, else categories
+      let usedNativeIfc4Schedule = false;
+      if (preflightReport?.hasWorkSchedule && loadedIfcStepText && (!scheduleManager || scheduleManager.tasks.size === 0)) {
+        try {
+          const parsedIfc4 = ScheduleImportParsers.parseIfcWorkSchedule(loadedIfcStepText, model?.modelId || name);
+          if (parsedIfc4.tasks.length > 0 && scheduleManager) {
+            for (const t of parsedIfc4.tasks) scheduleManager.tasks.set(t.id, t);
+            scheduleManager.recomputeCpmAndRollups();
+            usedNativeIfc4Schedule = true;
+            showToast(`Loaded native IFC4 4D Schedule (${parsedIfc4.tasks.length} tasks)`, "success");
+          }
+        } catch { }
+      }
+
       const categoriesGroup = classifier.list.get("Categories");
-      if (categoriesGroup) {
+      if (!usedNativeIfc4Schedule && categoriesGroup) {
         if (!scheduleManager || scheduleManager.tasks.size === 0) {
           const catMap = new Map<string, { modelId: string; elementIds: number[] }[]>();
           for (const [catName, groupData] of categoriesGroup) {
@@ -8125,6 +8252,12 @@ async function clearAll4DHighlights(keepStyles: Set<string> = new Set()) {
     "timeline-variance-onschedule",
     "timeline-variance-delayed",
     "timeline-variance-critical",
+    "cascade-band-0",
+    "cascade-band-1",
+    "cascade-band-2",
+    "cascade-band-3",
+    "cascade-band-4",
+    "audit-ghost",
   ];
   for (const styleName of timelineStyles) {
     if (!keepStyles.has(styleName) && highlighter.styles.has(styleName) && isStyleSelectionNonEmpty(styleName)) {
@@ -8176,7 +8309,8 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   const currentBoundary = schedule4DEngine.getBoundaryIndex(dateMs);
   const profileEngine = AppearanceProfileEngine.getInstance();
   const halfDayStep = Math.floor(dateMs / (12 * 60 * 60 * 1000));
-  const visualKey = `${isVarianceMode ? "V" : "P"}:${currentBoundary}:${halfDayStep}:${scheduleManager?.tasks?.size || 0}:${profileEngine.activeProfileId}`;
+  const activeGanttId = InteractiveGanttDrawer.getInstance().getActiveTaskId() || "";
+  const visualKey = `${isCascadeMode ? `C:${cascadeIndicator}:${cascadeScheme}:${cascadeIsolatedBand ?? "all"}:${cascadeShowCrit}:${cascadeShowPredSuc}:${cascadeShowOos}:${activeGanttId}` : isVarianceMode ? "V" : "P"}:${currentBoundary}:${halfDayStep}:${scheduleManager?.tasks?.size || 0}:${profileEngine.activeProfileId}`;
 
   // Skip redundant frame re-evaluation unless timeline date stepped or forced
   if (!force && visualKey === lastRenderedVisualKey) {
@@ -8201,7 +8335,65 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   const completeStyle = highlighter.styles.get("timeline-completed");
   if (completeStyle) completeStyle.color.set(completeColor);
 
-  if (isVarianceMode) {
+  if (isCascadeMode) {
+    const tasksList = scheduleManager?.getTasksSorted() ?? [];
+    const evalRes = evaluateCascadeLens(tasksList, {
+      indicator: cascadeIndicator,
+      scheme: cascadeScheme,
+      isolatedBandIndex: cascadeIsolatedBand,
+    });
+
+    // Always render interactive ColorBrewer legend swatches (even before a 3D model is loaded)
+    const legendContainer = document.getElementById("cascade-legend-bands");
+    if (legendContainer) {
+      legendContainer.innerHTML = evalRes.bands
+        .map(
+          (b) => `
+          <button type="button" class="cascade-band-chip ${cascadeIsolatedBand === b.bandIndex ? "isolated" : ""}" data-band="${b.bandIndex}" title="Click to isolate this range">
+            <span class="cascade-band-swatch" style="background:${b.hex};"></span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.rangeLabel)} (${b.elementCount})</span>
+          </button>`
+        )
+        .join("");
+      legendContainer.querySelectorAll<HTMLButtonElement>(".cascade-band-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const bIdx = Number(chip.dataset.band);
+          cascadeIsolatedBand = cascadeIsolatedBand === bIdx ? null : bIdx;
+          updateTimelineVisualState(true);
+        });
+      });
+    }
+
+    if ((fragments as any)?.initialized && fragments.list.size > 0) {
+      await hider.set(true);
+      if (!is4dMode) return;
+
+      for (const band of evalRes.bands) {
+        const styleId = `cascade-band-${band.bandIndex}`;
+        const st = highlighter.styles.get(styleId);
+        if (st) st.color.set(band.hex);
+        if (band.elementCount > 0) {
+          keepStyles.add(styleId);
+          await highlighter.highlightByID(styleId, band.modelIdMap, true, false);
+        }
+      }
+
+      if (evalRes.isolatedBandIndex !== null && Object.keys(evalRes.ghostMap).length > 0) {
+        keepStyles.add("audit-ghost");
+        await highlighter.highlightByID("audit-ghost", evalRes.ghostMap, true, false);
+      }
+
+      await clearAll4DHighlights(keepStyles);
+      if (!is4dMode) return;
+
+      await DependencyVectorOverlay.getInstance().render(tasksList, {
+        showCriticalPath: cascadeShowCrit,
+        showPredSucc: cascadeShowPredSuc,
+        showOutOfSequence: cascadeShowOos,
+        activeTaskId: InteractiveGanttDrawer.getInstance().getActiveTaskId(),
+      });
+    }
+  } else if (isVarianceMode) {
     const delayEngine = DelayImpactEngine.getInstance();
     const tasksList = scheduleManager?.getTasksSorted() ?? [];
     const vBuckets = tasksList.length > 0
@@ -9078,6 +9270,10 @@ function apply4dMode(active: boolean) {
       updateVarianceButtonUI(false);
       updateVarianceLegendUI(false);
     }
+    if (isCascadeMode) {
+      setCascadeMode(false);
+    }
+    DependencyVectorOverlay.getInstance().clear();
     const pendingFrame = timelineInFlightPromise;
     void (async () => {
       try {

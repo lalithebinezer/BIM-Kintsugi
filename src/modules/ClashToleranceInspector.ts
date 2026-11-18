@@ -73,6 +73,50 @@ export class ClashToleranceInspector {
     return this.toleranceClashes;
   }
 
+  /**
+   * Replaces demo items with live CI-ranked intersections from ClashDetector.
+   */
+  public syncFromClashResults(
+    clashes: Array<{
+      id: string;
+      elementA: { expressId: number; name: string; category: string };
+      elementB: { expressId: number; name: string; category: string };
+      overlapDistance: number;
+      intersectionPoint: [number, number, number];
+      axisPenetration?: [number, number, number];
+      criticalityIndex?: number;
+      severity: string;
+    }>
+  ): void {
+    if (!clashes || clashes.length === 0) return;
+    this.toleranceClashes = clashes.slice(0, 50).map((c) => {
+      const penMm = Math.round(c.overlapDistance * 1000 * 10) / 10;
+      const [px, py, pz] = c.axisPenetration ?? [c.overlapDistance, c.overlapDistance, c.overlapDistance];
+      const dx = Math.round(px * 1000 * 10) / 10;
+      const dy = Math.round(py * 1000 * 10) / 10;
+      const dz = Math.round(pz * 1000 * 10) / 10;
+      const sev: "High" | "Medium" | "Low" =
+        c.severity === "critical" || (c.criticalityIndex ?? 0) > 2.0
+          ? "High"
+          : c.severity === "major" || (c.criticalityIndex ?? 0) > 1.0
+          ? "Medium"
+          : "Low";
+      const minAxis = dy <= dx && dy <= dz ? "vertically" : "horizontally";
+      return {
+        id: c.id,
+        elementA: { id: c.elementA.expressId, name: c.elementA.name, category: c.elementA.category },
+        elementB: { id: c.elementB.expressId, name: c.elementB.name, category: c.elementB.category },
+        penetrationDepthMm: penMm,
+        deltaX: dx,
+        deltaY: dy,
+        deltaZ: dz,
+        severity: sev,
+        recommendation: `Offset ${c.elementA.name} ${minAxis} by ${(penMm + 25).toFixed(0)}mm or coordinate sleeve against ${c.elementB.name}.`,
+        position: new THREE.Vector3(c.intersectionPoint[0], c.intersectionPoint[1], c.intersectionPoint[2]),
+      };
+    });
+  }
+
   public focusClash(clash: ClashToleranceItem) {
     try {
       const camera = this.engine.world?.camera;

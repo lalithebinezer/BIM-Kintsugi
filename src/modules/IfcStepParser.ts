@@ -7,14 +7,119 @@ export interface ParsedIfcElementRecord {
   psets: Record<string, Record<string, string>>;
 }
 
+export interface IfcPreflightReport {
+  schema: string;
+  lengthUnitFactor: number;
+  lengthUnitLabel: string;
+  totalEntities: number;
+  entityHistogram: Record<string, number>;
+  hasMapConversion: boolean;
+  hasProjectedCrs: boolean;
+  hasAlignment: boolean;
+  hasWorkSchedule: boolean;
+  hasElementQuantities: boolean;
+}
+
 /**
- * Pure, dependency-free STEP (ISO-10303-21) parser shared by both main-thread
- * parameter readers and off-thread metadata Web Workers.
+ * Splits ISO-10303-21 STEP text into complete single-statement strings terminated by `;`,
+ * preserving multi-line STEP entities safely across newline breaks.
+ */
+export function splitStepStatements(content: string): string[] {
+  const out: string[] = [];
+  if (!content) return out;
+  let buf = "";
+  let inString = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (ch === "'") {
+      inString = !inString;
+      buf += ch;
+      continue;
+    }
+    if (!inString && ch === ";") {
+      const trimmed = buf.trim();
+      if (trimmed) out.push(trimmed);
+      buf = "";
+      continue;
+    }
+    if (ch === "\r" || ch === "\n") {
+      buf += " ";
+    } else {
+      buf += ch;
+    }
+  }
+  const rem = buf.trim();
+  if (rem) out.push(rem);
+  return out;
+}
+
+/**
+ * Fast streaming-capable pre-flight STEP inspector (detects schema, SI units,
+ * entity counts, georeferencing, civil alignments, and 4D work schedules before full WASM parsing).
+ */
+export function scanIfcPreflight(content: string): IfcPreflightReport {
+  let schema = "UNKNOWN";
+  const schemaMatch = content.match(/FILE_SCHEMA\s*\(\s*\(\s*'([^']+)'/i);
+  if (schemaMatch) schema = schemaMatch[1].toUpperCase();
+
+  let lengthUnitFactor = 1.0;
+  let lengthUnitLabel = "m";
+  if (/IFCSIUNIT\s*\([^,]*,\s*\.LENGTHUNIT\.\s*,\s*\.MILLI\.\s*,\s*\.METRE\./i.test(content)) {
+    lengthUnitFactor = 0.001;
+    lengthUnitLabel = "mm";
+  } else if (/IFCSIUNIT\s*\([^,]*,\s*\.LENGTHUNIT\.\s*,\s*\.CENTI\.\s*,\s*\.METRE\./i.test(content)) {
+    lengthUnitFactor = 0.01;
+    lengthUnitLabel = "cm";
+  } else if (/IFCCONVERSIONBASEDUNIT\s*\([^)]*'FOOT'/i.test(content)) {
+    lengthUnitFactor = 0.3048;
+    lengthUnitLabel = "ft";
+  }
+
+  const histogram: Record<string, number> = {};
+  let totalEntities = 0;
+  let hasMapConversion = false;
+  let hasProjectedCrs = false;
+  let hasAlignment = false;
+  let hasWorkSchedule = false;
+  let hasElementQuantities = false;
+
+  const entityRe = /#\d+\s*=\s*(IFC[A-Z0-9_]+)\s*\(/gi;
+  let m: RegExpExecArray | null;
+  while ((m = entityRe.exec(content)) !== null) {
+    const ent = m[1].toUpperCase();
+    totalEntities++;
+    histogram[ent] = (histogram[ent] ?? 0) + 1;
+    if (ent === "IFCMAPCONVERSION") hasMapConversion = true;
+    else if (ent === "IFCPROJECTEDCRS") hasProjectedCrs = true;
+    else if (ent.startsWith("IFCALIGNMENT")) hasAlignment = true;
+    else if (ent === "IFCWORKSCHEDULE" || ent === "IFCWORKPLAN" || ent === "IFCTASK") hasWorkSchedule = true;
+    else if (ent === "IFCELEMENTQUANTITY") hasElementQuantities = true;
+  }
+
+  return {
+    schema,
+    lengthUnitFactor,
+    lengthUnitLabel,
+    totalEntities,
+    entityHistogram: histogram,
+    hasMapConversion,
+    hasProjectedCrs,
+    hasAlignment,
+    hasWorkSchedule,
+    hasElementQuantities,
+  };
+}
+
+/**
+ * Pure, dependency-free STEP (ISO-10303-21) parser shared by main-thread parameter
+ * readers and off-thread metadata Web Workers. Supports multi-line STEP entities,
+ * Pset_*, and Qto_* element quantities (`IFCELEMENTQUANTITY` / `IFCQUANTITY*`).
  */
 export function parseIfcStepText(content: string): Record<number, ParsedIfcElementRecord> {
   if (!content) return {};
 
-  const lines = content.split("\n");
+  const statements = splitStepStatements(content);
   const propValues = new Map<number, { name: string; val: string }>();
   const psets = new Map<number, { name: string; pvalIds: number[] }>();
   const elemPsets = new Map<number, number[]>();
@@ -24,8 +129,12 @@ export function parseIfcStepText(content: string): Record<number, ParsedIfcEleme
 
   const rePropVal =
     /^#(\d+)\s*=\s*IFCPROPERTYSINGLEVALUE\s*\(\s*'([^']*)'\s*,\s*[^,]*\s*,\s*([A-Za-z0-9_]+)\s*\(\s*([^)]*)\s*\)/i;
+  const rePhysQty =
+    /^#(\d+)\s*=\s*IFCQUANTITY(?:LENGTH|AREA|VOLUME|WEIGHT|COUNT|TIME)\s*\(\s*'([^']*)'\s*,\s*[^,]*\s*,\s*[^,]*\s*,\s*([-+\d.E]+)\s*(?:,|\))/i;
   const rePset =
     /^#(\d+)\s*=\s*IFCPROPERTYSET\s*\(\s*'([^']*)'\s*,\s*[^,]*\s*,\s*'([^']*)'\s*,\s*[^,]*\s*,\s*\(([^)]*)\)/i;
+  const reElemQty =
+    /^#(\d+)\s*=\s*IFCELEMENTQUANTITY\s*\(\s*'([^']*)'\s*,\s*[^,]*\s*,\s*'([^']*)'\s*,\s*[^,]*\s*,\s*[^,]*\s*,\s*\(([^)]*)\)/i;
   const reRelProp =
     /IFCRELDEFINESBYPROPERTIES\s*\([^,]+,[^,]+,[^,]+,[^,]+,\s*\(([^)]*)\)\s*,\s*#(\d+)/i;
   const reStorey = /^#(\d+)\s*=\s*IFCBUILDINGSTOREY\s*\(\s*'([^']*)'\s*,\s*[^,]*\s*,\s*'([^']*)'/i;
@@ -36,13 +145,19 @@ export function parseIfcStepText(content: string): Record<number, ParsedIfcEleme
 
   const SKIP_TYPES = new Set([
     "IFCRELDEFINESBYPROPERTIES",
+    "IFCRELDEFINESBYTYPE",
     "IFCRELCONTAINEDINSPATIALSTRUCTURE",
     "IFCRELASSOCIATESMATERIAL",
-    "IFCRELDEFINESBYTYPE",
     "IFCRELVOIDSELEMENT",
     "IFCRELAGGREGATES",
     "IFCPROPERTYSET",
+    "IFCELEMENTQUANTITY",
     "IFCPROPERTYSINGLEVALUE",
+    "IFCQUANTITYLENGTH",
+    "IFCQUANTITYAREA",
+    "IFCQUANTITYVOLUME",
+    "IFCQUANTITYWEIGHT",
+    "IFCQUANTITYCOUNT",
     "IFCPOLYLOOP",
     "IFCFACEOUTERBOUND",
     "IFCFACE",
@@ -78,8 +193,8 @@ export function parseIfcStepText(content: string): Record<number, ParsedIfcEleme
       .map((s) => parseInt(s.replace(/#/g, "").trim(), 10))
       .filter((n) => !isNaN(n));
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (let i = 0; i < statements.length; i++) {
+    const line = statements[i];
     if (!line || line.startsWith("/*")) continue;
 
     let m = line.match(rePropVal);
@@ -92,11 +207,23 @@ export function parseIfcStepText(content: string): Record<number, ParsedIfcEleme
       continue;
     }
 
+    m = line.match(rePhysQty);
+    if (m) {
+      propValues.set(parseInt(m[1], 10), { name: m[2], val: m[3].trim() });
+      continue;
+    }
+
     m = line.match(rePset);
     if (m) {
       const id = parseInt(m[1], 10);
-      const psetName = m[3];
-      psets.set(id, { name: psetName, pvalIds: parseIdList(m[4]) });
+      psets.set(id, { name: m[3], pvalIds: parseIdList(m[4]) });
+      continue;
+    }
+
+    m = line.match(reElemQty);
+    if (m) {
+      const id = parseInt(m[1], 10);
+      psets.set(id, { name: m[3], pvalIds: parseIdList(m[4]) });
       continue;
     }
 

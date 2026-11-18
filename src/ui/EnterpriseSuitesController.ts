@@ -14,6 +14,11 @@ import { StoreyLevelSlicer } from "../modules/StoreyLevelSlicer";
 import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
+import { ScheduleManager } from "../modules/ScheduleManager";
+import { WorkspaceCongestionAnalyzer } from "../modules/WorkspaceCongestionAnalyzer";
+import { CostRuleBookEngine, type ClassificationStandard } from "../modules/CostRuleBookEngine";
+import { Boq5DModule } from "../modules/Boq5DModule";
+import { BimQualityAuditor } from "../modules/BimQualityAuditor";
 import type { GisModule } from "../modules/GisModule";
 import { evmDashboard, gisFeature, geoTools, engineeringStudio } from "../modules/optionalFeatures";
 import { runFeature } from "../utils/lazyFeature";
@@ -330,8 +335,43 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     clashDetector.setSeverityFilter(val);
   });
 
+  document.getElementById("clash-scan-mode")?.addEventListener("change", (e) => {
+    const mode = ((e.target as HTMLSelectElement).value || "static-3d") as any;
+    clashDetector.setScanMode(mode);
+    showToast(`Clash Mode: ${mode}`, "info");
+  });
+
+  document.getElementById("btn-analyze-workspace-slf")?.addEventListener("click", async () => {
+    const tasks = ScheduleManager.getInstance().getTasksSorted();
+    if (tasks.length === 0) {
+      showToast("Generate or import a 4D schedule before analyzing Workspace SLF", "warning");
+      return;
+    }
+    const series = await WorkspaceCongestionAnalyzer.getInstance().analyzeLoadedModels(tasks);
+    const peaks = WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey();
+    const summaryEl = document.getElementById("clash-slf-summary");
+    if (summaryEl) {
+      summaryEl.classList.remove("hidden");
+      const items = Array.from(peaks.values())
+        .sort((a, b) => b.slf - a.slf)
+        .slice(0, 4)
+        .map((p) => {
+          const color = p.status === "Extreme" ? "#ef4444" : p.status === "Moderate" ? "#f59e0b" : "#10b981";
+          return `<span style="margin-right:8px;"><strong style="color:${color};">${escapeHtml(p.storey)}</strong> SLF=${p.slf.toFixed(2)} (${p.status})</span>`;
+        });
+      summaryEl.innerHTML = items.length > 0 ? items.join("") : `Analyzed ${series.length} windows.`;
+    }
+    const extremeCount = Array.from(peaks.values()).filter((p) => p.status === "Extreme").length;
+    showToast(
+      `SLF Congestion Audit: ${peaks.size} zones analyzed (${extremeCount} Extreme > 0.90)`,
+      extremeCount > 0 ? "warning" : "success"
+    );
+  });
+
   document.getElementById("btn-clear-clashes")?.addEventListener("click", () => {
     clashDetector.clearClashes();
+    WorkspaceCongestionAnalyzer.getInstance().clearOverlays();
+    document.getElementById("clash-slf-summary")?.classList.add("hidden");
     showToast("Cleared Clash Results & 3D Markers", "info");
   });
 
@@ -621,6 +661,44 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("gantt-spi-val")?.addEventListener("click", toggleUnifiedEvmSuite);
   document.getElementById("drawer-btn-open-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
   document.getElementById("btn-open-evm-from-sidebar")?.addEventListener("click", toggleUnifiedEvmSuite);
+
+  // Rule-Book Classification Standard, GAEB X83, Rate Catalog Import & Quality Audit
+  document.getElementById("drawer-cost-standard")?.addEventListener("change", (e) => {
+    const std = ((e.target as HTMLSelectElement).value || "DIN276") as ClassificationStandard;
+    CostRuleBookEngine.getInstance().setStandard(std);
+    showToast(`Active BOQ Classification: ${std}`, "info");
+  });
+
+  document.getElementById("drawer-btn-export-gaeb")?.addEventListener("click", async () => {
+    const std = (document.getElementById("drawer-cost-standard") as HTMLSelectElement | null)?.value as ClassificationStandard | undefined;
+    await new Boq5DModule().exportGaebX83("BIM-Kintsugi 5D Project", std);
+    showToast("Exported GAEB DA XML (.X83) BOQ!", "success");
+  });
+
+  document.getElementById("drawer-import-rate-catalog")?.addEventListener("change", async (e) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const added = CostRuleBookEngine.getInstance().importCatalogFromCsv(text);
+      showToast(`Imported ${added} custom rate items into Rule-Book`, added > 0 ? "success" : "warning");
+    } finally {
+      input.value = "";
+    }
+  });
+
+  document.getElementById("drawer-btn-quality-audit")?.addEventListener("click", async () => {
+    const report = await BimQualityAuditor.getInstance().auditLoadedModels();
+    const boqSummary = await new Boq5DModule().generateSummary();
+    const boqAudit = CostRuleBookEngine.getInstance().auditBoqSummary(boqSummary);
+    const outEl = document.getElementById("drawer-quality-summary");
+    if (outEl) {
+      outEl.classList.remove("hidden");
+      outEl.innerHTML = `Model Quality: <strong>${report.scorePercent}%</strong> (${report.summaryBySeverity.error} err / ${report.summaryBySeverity.warning} warn) · BOQ Light: <strong style="text-transform:uppercase;">${boqAudit.status}</strong> (${boqAudit.greenCount}G/${boqAudit.amberCount}A/${boqAudit.redCount}R)`;
+    }
+    showToast(`Audit: Model ${report.scorePercent}% · BOQ ${boqAudit.status.toUpperCase()}`, report.status === "failed" ? "warning" : "success");
+  });
 
   // EVM Drawer Actions & Simulator
   document.getElementById("btn-export-evm-csv")?.addEventListener("click", () => {

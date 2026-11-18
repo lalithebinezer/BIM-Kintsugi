@@ -207,6 +207,11 @@ export class HighlighterManager {
       "timeline-variance-ahead": 30,
       "timeline-variance-onschedule": 30,
       "timeline-variance-delayed": 30,
+      "cascade-band-0": 32,
+      "cascade-band-1": 32,
+      "cascade-band-2": 32,
+      "cascade-band-3": 32,
+      "cascade-band-4": 32,
       hover: 10,
       "audit-ghost": 5,
     };

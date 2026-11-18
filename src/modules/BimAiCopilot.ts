@@ -9,6 +9,10 @@ import { CarbonLcaManager } from "./CarbonLcaManager";
 import { MeasurementSuite } from "./MeasurementSuite";
 import { StoreyLevelSlicer } from "./StoreyLevelSlicer";
 import { GraphicsVFXManager } from "./GraphicsVFXManager";
+import { BimQualityAuditor, exportQualityAuditCsv } from "./BimQualityAuditor";
+import { Boq5DModule } from "./Boq5DModule";
+import { CostRuleBookEngine } from "./CostRuleBookEngine";
+import { WorkspaceCongestionAnalyzer } from "./WorkspaceCongestionAnalyzer";
 import { escapeHtml } from "../utils/formatters";
 
 export interface CopilotMessage {
@@ -287,6 +291,51 @@ export class BimAiCopilot {
           executed.push("Export Microsoft Project XML");
         }
         followUps.push("Open 4D Gantt drawer", "Run clash detection", "Export BOQ as CSV");
+      }
+    }
+
+    // 10. Model Data-Quality Audit (DDC 6-Category Validation)
+    else if (q.includes("quality") || q.includes("validate model") || q.includes("data readiness")) {
+      const report = await BimQualityAuditor.getInstance().auditLoadedModels();
+      if (report.totalElements === 0) {
+        responseText = "No BIM elements loaded to audit. Load an IFC or Fragments model first.";
+      } else {
+        if (q.includes("csv") || q.includes("export")) {
+          this.triggerFileDownload(exportQualityAuditCsv(report), "BIM_Quality_Audit.csv", "text/csv;charset=utf-8;");
+          executed.push("Export Quality Audit CSV");
+        }
+        responseText = `BIM Data Quality Audit (${report.status.toUpperCase()}): ${report.scorePercent}% score across ${report.totalElements} elements (${report.summaryBySeverity.error} errors, ${report.summaryBySeverity.warning} warnings).`;
+        executed.push("Run Model Quality Audit");
+        followUps.push("Export BOQ GAEB X83", "Find congested workspaces", "Run clash detection");
+      }
+    }
+
+    // 11. Rule-Book 5D BOQ Audit & GAEB X83 Export
+    else if (q.includes("boq") || q.includes("gaeb") || q.includes("unpriced") || q.includes("cost catalog")) {
+      const boqMod = new Boq5DModule();
+      const summary = await boqMod.generateSummary();
+      const audit = CostRuleBookEngine.getInstance().auditBoqSummary(summary);
+      if (q.includes("gaeb") || q.includes("x83")) {
+        await boqMod.exportGaebX83();
+        executed.push("Export GAEB DA XML X83");
+      }
+      responseText = `5D Rule-Book BOQ: ${summary.totalElements} line items totaling $${Math.round(summary.totalCost).toLocaleString("en-US")}. Audit Traffic Light: ${audit.status.toUpperCase()} (${audit.greenCount} verified, ${audit.amberCount} review, ${audit.redCount} critical).`;
+      executed.push("Generate 5D Rule-Book BOQ", "Validate BOQ Traffic-Light Audit");
+      followUps.push("Run model quality audit", "Export GAEB X83");
+    }
+
+    // 12. 4D Workspace Congestion (SLF) Check
+    else if (q.includes("congest") || q.includes("slf") || q.includes("workspace")) {
+      const tasks = ((window as any).scheduleManager || ScheduleManager.getInstance()).getTasksSorted();
+      if (tasks.length === 0) {
+        responseText = "No 4D schedule tasks found. Generate or import a schedule before analyzing Space Loading Factor (SLF).";
+      } else {
+        const series = await WorkspaceCongestionAnalyzer.getInstance().analyzeLoadedModels(tasks);
+        const peaks = Array.from(WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey().values());
+        const extreme = peaks.filter((p) => p.status === "Extreme");
+        responseText = `4D Space Loading Factor (SLF) checked across ${peaks.length} zones (${series.length} time windows): ${extreme.length} Extreme congestion zones (> 0.90).`;
+        executed.push("Analyze 4D Workspace SLF");
+        followUps.push("Run clash detection", "Open 4D Gantt drawer");
       }
     }
 

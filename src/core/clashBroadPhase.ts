@@ -1,3 +1,5 @@
+export type ClashScanMode = "static-3d" | "temporal-4d" | "workspace-4d";
+
 export interface BroadPhaseRuleTask {
   ruleIdx: number;
   groupA: number[];
@@ -13,6 +15,11 @@ export interface BroadPhaseClashHit {
   isHard: boolean;
   severity: "critical" | "major" | "clearance";
   overlap: number;
+  penX: number;
+  penY: number;
+  penZ: number;
+  volumeRatio: number;
+  temporalConcurrent: boolean;
   ix: number;
   iy: number;
   iz: number;
@@ -20,23 +27,33 @@ export interface BroadPhaseClashHit {
 
 /**
  * Pure 1D X-axis Sweep-and-Prune AABB broad-phase collision kernel.
- * Designed to execute inside a dedicated Web Worker (`clashWorker.ts`) OR
- * synchronously on the main thread when Workers are unavailable (e.g. Vitest).
+ * Supports static 3D checks and optional 4D temporal interval filtering
+ * (`temporalWindows`: stride 2 Float64Array `[startMs, endMs]`).
  *
  * `boxes` layout: stride 6 Float64Array -> [minX, minY, minZ, maxX, maxY, maxZ].
  */
 export function runSweepAndPrune(
   boxes: Float64Array,
   tasks: BroadPhaseRuleTask[],
-  maxHits: number = 600
-): { hits: BroadPhaseClashHit[]; candidatePairs: number } {
+  maxHits: number = 600,
+  options?: {
+    mode?: ClashScanMode;
+    temporalWindows?: Float64Array;
+    workspacePaddingM?: number;
+  }
+): { hits: BroadPhaseClashHit[]; candidatePairs: number; prunedNonConcurrent: number } {
   const hits: BroadPhaseClashHit[] = [];
   const seenPairs = new Set<string>();
   let candidatePairs = 0;
+  let prunedNonConcurrent = 0;
+  const mode = options?.mode ?? "static-3d";
+  const windows = options?.temporalWindows;
+  const extraPad = mode === "workspace-4d" ? Math.max(0, options?.workspacePaddingM ?? 0.35) : 0;
 
   for (let t = 0; t < tasks.length; t++) {
     const task = tasks[t];
     const { groupA, groupB, hardTolerance, softBuffer, ruleIdx } = task;
+    const effectiveBuffer = softBuffer + extraPad;
     if (!groupA.length || !groupB.length) continue;
 
     // Sort element index lists along world X min coordinate
@@ -57,8 +74,8 @@ export function runSweepAndPrune(
       const aMaxY = boxes[baseA + 4];
       const aMaxZ = boxes[baseA + 5];
 
-      const aLeftBound = aMinX - softBuffer;
-      const aRightBound = aMaxX + softBuffer;
+      const aLeftBound = aMinX - effectiveBuffer;
+      const aRightBound = aMaxX + effectiveBuffer;
 
       // Advance left sweep cursor past any B intervals strictly to the left of A
       while (bStart < lenB && boxes[sortedB[bStart] * 6 + 3] < aLeftBound) {
@@ -79,13 +96,29 @@ export function runSweepAndPrune(
 
         const bMinY = boxes[baseB + 1];
         const bMaxY = boxes[baseB + 4];
-        if (aMaxY + softBuffer < bMinY || bMaxY + softBuffer < aMinY) continue;
+        if (aMaxY + effectiveBuffer < bMinY || bMaxY + effectiveBuffer < aMinY) continue;
 
         const bMinZ = boxes[baseB + 2];
         const bMaxZ = boxes[baseB + 5];
-        if (aMaxZ + softBuffer < bMinZ || bMaxZ + softBuffer < aMinZ) continue;
+        if (aMaxZ + effectiveBuffer < bMinZ || bMaxZ + effectiveBuffer < aMinZ) continue;
 
         candidatePairs++;
+
+        // 4D Spatio-Temporal window overlap check when active in temporal/workspace mode
+        let temporalConcurrent = true;
+        if (mode !== "static-3d" && windows && windows.length > Math.max(idxA, idxB) * 2 + 1) {
+          const sA = windows[idxA * 2];
+          const eA = windows[idxA * 2 + 1];
+          const sB = windows[idxB * 2];
+          const eB = windows[idxB * 2 + 1];
+          if (sA > 0 && eA >= sA && sB > 0 && eB >= sB) {
+            temporalConcurrent = !(eA < sB || eB < sA);
+            if (!temporalConcurrent) {
+              prunedNonConcurrent++;
+              continue;
+            }
+          }
+        }
 
         const pairKey = idxA < idxB ? `${idxA}:${idxB}` : `${idxB}:${idxA}`;
         if (seenPairs.has(pairKey)) continue;
@@ -96,14 +129,19 @@ export function runSweepAndPrune(
         const minPen = Math.min(penX, penY, penZ);
 
         const isHard = minPen >= hardTolerance;
-        const isClearance = !isHard && softBuffer > 0 && minPen >= -softBuffer;
+        const isClearance = !isHard && effectiveBuffer > 0 && minPen >= -effectiveBuffer;
         if (!isHard && !isClearance) continue;
 
         seenPairs.add(pairKey);
 
         const overlap = isHard
           ? Number(minPen.toFixed(3))
-          : Math.max(0.001, Number((minPen >= 0 ? minPen : softBuffer + minPen).toFixed(3)));
+          : Math.max(0.001, Number((minPen >= 0 ? minPen : effectiveBuffer + minPen).toFixed(3)));
+
+        const interVol = Math.max(0, penX) * Math.max(0, penY) * Math.max(0, penZ);
+        const volA = Math.max(0.001, (aMaxX - aMinX) * (aMaxY - aMinY) * (aMaxZ - aMinZ));
+        const volB = Math.max(0.001, (bMaxX - bMinX) * (bMaxY - bMinY) * (bMaxZ - bMinZ));
+        const volumeRatio = Number(Math.max(0.15, Math.min(1.5, interVol / Math.min(volA, volB) + 0.5)).toFixed(3));
 
         const ix = (Math.max(aMinX, bMinX) + Math.min(aMaxX, bMaxX)) * 0.5;
         const iy = (Math.max(aMinY, bMinY) + Math.min(aMaxY, bMaxY)) * 0.5;
@@ -122,17 +160,22 @@ export function runSweepAndPrune(
           isHard,
           severity,
           overlap,
+          penX: Number(Math.max(0, penX).toFixed(3)),
+          penY: Number(Math.max(0, penY).toFixed(3)),
+          penZ: Number(Math.max(0, penZ).toFixed(3)),
+          volumeRatio,
+          temporalConcurrent,
           ix,
           iy,
           iz,
         });
 
         if (hits.length >= maxHits) {
-          return { hits, candidatePairs };
+          return { hits, candidatePairs, prunedNonConcurrent };
         }
       }
     }
   }
 
-  return { hits, candidatePairs };
+  return { hits, candidatePairs, prunedNonConcurrent };
 }
