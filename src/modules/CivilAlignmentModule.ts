@@ -117,11 +117,21 @@ export function formatChainage(stationMeters: number): string {
   return `${km}+${String(rem).padStart(3, "0")}`;
 }
 
+export interface CivilProfileSample {
+  station: number;
+  elevation: number;
+  x?: number;
+  y?: number;
+  z?: number;
+  label?: string;
+}
+
 /**
- * Renders a lightweight inline SVG Elevation vs. Chainage profile diagram for vertical alignments.
+ * Renders a lightweight inline SVG Elevation vs. Chainage profile diagram for vertical alignments,
+ * with interactive clickable station markers (`data-station`, `data-x`, `data-y`, `data-z`).
  */
 export function buildVerticalProfileSvg(
-  samples: Array<{ station: number; elevation: number }>,
+  samples: CivilProfileSample[],
   width: number = 320,
   height: number = 96
 ): string {
@@ -130,19 +140,40 @@ export function buildVerticalProfileSvg(
   const maxS = Math.max(...samples.map((p) => p.station));
   const minE = Math.min(...samples.map((p) => p.elevation));
   const maxE = Math.max(...samples.map((p) => p.elevation));
-  const pad = 10;
+  const padX = 12;
+  const padTop = 12;
+  const padBot = 16;
   const spanS = Math.max(1, maxS - minS);
   const spanE = Math.max(0.1, maxE - minE);
 
-  const pts = samples
-    .map((p) => {
-      const px = pad + ((p.station - minS) / spanS) * (width - pad * 2);
-      const py = height - pad - ((p.elevation - minE) / spanE) * (height - pad * 2);
-      return `${px.toFixed(1)},${py.toFixed(1)}`;
-    })
-    .join(" ");
+  const mapped = samples.map((p) => ({
+    sample: p,
+    px: padX + ((p.station - minS) / spanS) * (width - padX * 2),
+    py: height - padBot - ((p.elevation - minE) / spanE) * (height - padTop - padBot),
+  }));
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"><polyline fill="none" stroke="#38bdf8" stroke-width="2" points="${pts}"/><text x="${pad}" y="${height - 2}" font-size="9" fill="#94a3b8">${formatChainage(minS)}</text><text x="${width - 42}" y="${height - 2}" font-size="9" fill="#94a3b8">${formatChainage(maxS)}</text></svg>`;
+  const pts = mapped.map((m) => `${m.px.toFixed(1)},${m.py.toFixed(1)}`).join(" ");
+  const midY = ((padTop + (height - padBot)) / 2).toFixed(1);
+
+  // Sample up to 9 evenly spaced interactive dots along the profile
+  const step = Math.max(1, Math.floor((mapped.length - 1) / 8));
+  const dotIndices = new Set<number>();
+  for (let i = 0; i < mapped.length; i += step) dotIndices.add(i);
+  dotIndices.add(mapped.length - 1);
+
+  const dots = Array.from(dotIndices)
+    .map((idx) => {
+      const m = mapped[idx];
+      const ch = formatChainage(m.sample.station);
+      const elev = m.sample.elevation.toFixed(2);
+      const xAttr = Number.isFinite(m.sample.x) ? ` data-x="${m.sample.x!.toFixed(2)}"` : "";
+      const yAttr = Number.isFinite(m.sample.y) ? ` data-y="${m.sample.y!.toFixed(2)}"` : "";
+      const zAttr = Number.isFinite(m.sample.z) ? ` data-z="${m.sample.z!.toFixed(2)}"` : "";
+      return `<circle class="civil-station-dot" cx="${m.px.toFixed(1)}" cy="${m.py.toFixed(1)}" r="3.6" fill="#0ea5e9" stroke="#e0f2fe" stroke-width="1.2" data-station="${m.sample.station.toFixed(1)}" data-elevation="${elev}"${xAttr}${yAttr}${zAttr} style="cursor:pointer;"><title>Chainage ${ch} · Elev ${elev} m</title></circle>`;
+    })
+    .join("");
+
+  return `<svg class="civil-profile-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"><line x1="${padX}" y1="${midY}" x2="${width - padX}" y2="${midY}" stroke="rgba(148,163,184,0.22)" stroke-dasharray="3 3"/><polyline fill="none" stroke="#38bdf8" stroke-width="2" points="${pts}"/>${dots}<text x="${padX}" y="${padTop - 2}" font-size="8.5" fill="#94a3b8">${maxE.toFixed(1)}m</text><text x="${padX}" y="${height - 3}" font-size="8.5" fill="#94a3b8">${formatChainage(minS)} (${minE.toFixed(1)}m)</text><text x="${width - 46}" y="${height - 3}" font-size="8.5" fill="#94a3b8">${formatChainage(maxS)}</text></svg>`;
 }
 
 export class CivilAlignmentModule {
@@ -226,6 +257,85 @@ export class CivilAlignmentModule {
     }
     this.crossSectionEnabled = target;
     return target;
+  }
+
+  /**
+   * Extracts station/elevation/world-XYZ samples from attached IFC 4.3 alignment curves.
+   * When no alignment curves exist in the loaded model, generates a clean clothoid + vertical
+   * parabola preview profile so the vertical profile viewer remains interactive.
+   */
+  public extractVerticalProfileSamples(): { samples: CivilProfileSample[]; isPreview: boolean } {
+    const samples: CivilProfileSample[] = [];
+    for (const group of this.alignmentGroups) {
+      let runningDist = 0;
+      let prevPt: THREE.Vector3 | null = null;
+      group.traverse((obj) => {
+        if ((obj as THREE.Line).isLine) {
+          const pos = (obj as THREE.Line).geometry?.getAttribute?.("position");
+          if (!pos || pos.count < 2) return;
+          for (let i = 0; i < pos.count; i++) {
+            const pt = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i));
+            if (prevPt) runningDist += pt.distanceTo(prevPt);
+            prevPt = pt;
+            samples.push({
+              station: runningDist,
+              elevation: pt.y,
+              x: pt.x,
+              y: pt.y,
+              z: pt.z,
+            });
+          }
+        }
+      });
+      if (samples.length >= 2) break;
+    }
+
+    if (samples.length >= 2) {
+      return { samples, isPreview: false };
+    }
+
+    // Synthetic clothoid horizontal + parabolic vertical preview (0+000 to 0+240)
+    const horiz = sampleClothoidSegment(
+      {
+        startX: 0,
+        startZ: 0,
+        startDirRad: 0,
+        length: 240,
+        startRadius: Infinity,
+        endRadius: 180,
+        startStation: 0,
+      },
+      16
+    );
+    const vert = sampleVerticalParabola(12.0, 0.035, -0.025, 240, 0, 16);
+    const preview: CivilProfileSample[] = vert.map((v, idx) => {
+      const h = horiz[Math.min(idx, horiz.length - 1)];
+      return {
+        station: v.station,
+        elevation: v.elevation,
+        x: h.x,
+        y: v.elevation,
+        z: h.z,
+        label: formatChainage(v.station),
+      };
+    });
+    return { samples: preview, isPreview: true };
+  }
+
+  /**
+   * Smoothly flies the active 3D camera to an alignment station's world coordinate.
+   */
+  public flyToStation(sample: CivilProfileSample): boolean {
+    if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y) || !Number.isFinite(sample.z)) {
+      return false;
+    }
+    const controls = (this.engine.world?.camera as any)?.controls;
+    if (!controls || typeof controls.setLookAt !== "function") return false;
+    const tx = sample.x!;
+    const ty = sample.y!;
+    const tz = sample.z!;
+    void controls.setLookAt(tx + 18, ty + 14, tz + 18, tx, ty, tz, true);
+    return true;
   }
 
   public clearAlignments() {

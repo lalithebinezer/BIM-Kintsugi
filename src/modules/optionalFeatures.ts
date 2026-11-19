@@ -38,3 +38,11 @@ export const engineeringStudio = lazyFeature("engineering studio UI", async () =
   const { initEngineeringStudioController } = await import("../ui/EngineeringStudioController");
   return initEngineeringStudioController();
 });
+export const ruleBuilderFeature = lazyFeature("dynamic rule builder", async () =>
+  (await import("../ui/RuleBuilderModal")).RuleBuilderModal.getInstance());
+export const workspaceCongestionFeature = lazyFeature("4D workspace SLF analyzer", async () =>
+  (await import("./WorkspaceCongestionAnalyzer")).WorkspaceCongestionAnalyzer.getInstance());
+export const bimQualityAuditorFeature = lazyFeature("BIM quality auditor", async () =>
+  (await import("./BimQualityAuditor")).BimQualityAuditor.getInstance());
+export const scheduleParsersFeature = lazyFeature("schedule import/export parsers", async () =>
+  (await import("./ScheduleImportParsers")).ScheduleImportParsers);

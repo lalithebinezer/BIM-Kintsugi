@@ -1296,7 +1296,10 @@
             <div class="saved-sets-section" id="saved-selection-sets-section">
               <div class="saved-sets-header">
                 <span class="saved-sets-title">Saved Selection Sets</span>
-                <button type="button" class="btn-meta-mini accent" id="btn-finder-save-selection" title="Save active 3D selection as named set">+ Save Set</button>
+                <div style="display:flex; gap:0.25rem;">
+                  <button type="button" class="btn-meta-mini" id="btn-finder-rule-builder" title="Open Visual Dynamic Search Set Rule Builder">Rules</button>
+                  <button type="button" class="btn-meta-mini accent" id="btn-finder-save-selection" title="Save active 3D selection as named set">+ Save Set</button>
+                </div>
               </div>
               <div class="saved-sets-list" id="saved-selection-sets-list">
                 <div class="saved-sets-empty">No saved selection sets yet. Select elements and click Save Set.</div>
@@ -3055,6 +3058,11 @@
               <span>CasCADe Lens</span>
             </button>
 
+            <button class="btn-timeline-csv" id="btn-4d-slf-toggle" title="Sync 3D Workspace Congestion (SLF) zone overlays live with 4D Timeline date">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+              <span id="timeline-slf-badge">4D SLF</span>
+            </button>
+
             <button class="btn-timeline-csv" id="btn-timeline-audit-unassigned" title="Audit Unassigned 3D Elements (Heatmap glowing amber for unassigned, ghost assigned)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
               <span>Audit 3D</span>
@@ -3314,22 +3322,22 @@
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">4D Phasing, WBS Gantt &amp; CasCADe Lens</div>
-                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, draggable splitter, SVG links, <strong>Rules XML</strong> Navisworks FindSpec import) with full DAG CPM (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag). Scrub the timeline (<kbd>Space</kbd>) with Synchro <strong>Appearance Profiles</strong>, switch on <strong>CasCADe Lens</strong> (12 schedule/slack/delta indicators, 15 ColorBrewer palettes, interactive band isolation &amp; 3D Bezier Dependency Arcs), or toggle <strong>Variance Mode</strong>.</div>
+                  <div class="step-name">4D Phasing, WBS Gantt, Rule Builder &amp; CasCADe Lens</div>
+                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, draggable splitter, SVG links, visual <strong>Rule Builder</strong> &amp; <strong>Rules XML</strong> Navisworks import) with full DAG CPM (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag). Scrub the timeline (<kbd>Space</kbd>) with Synchro <strong>Appearance Profiles</strong>, toggle <strong>4D SLF</strong> live congestion zones, or switch on <strong>CasCADe Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation &amp; 3D Bezier Dependency Arcs).</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">05</div>
                 <div class="step-body">
-                  <div class="step-name">5D Rule-Book BOQ, GAEB .X83 &amp; ANSI 748-B EVM</div>
-                  <div class="step-desc">Click the green <strong>$</strong> or yellow <strong>EVM</strong> icon on the bottom dock. Switch BOQ standards (<strong>DIN 276</strong>, <strong>Uniclass 2015</strong>, <strong>MasterFormat</strong>), import custom <code>.csv</code> rate catalogs, switch QTO provenance sources, run the 6-category <strong>Model &amp; BOQ Audit</strong>, or export hierarchical <strong>GAEB .X83</strong>, CSV BOQ, <strong>CPR Format 1</strong>, and <strong>CPR Format 5</strong> reports.</div>
+                  <div class="step-name">5D Rule-Book BOQ, Audit Drill-Down &amp; ANSI 748-B EVM</div>
+                  <div class="step-desc">Click the green <strong>$</strong> or yellow <strong>EVM</strong> icon on the bottom dock. Switch BOQ standards (<strong>DIN 276</strong>, <strong>Uniclass 2015</strong>, <strong>MasterFormat</strong>), import custom <code>.csv</code> rate catalogs, run <strong>Model &amp; BOQ Audit</strong> to drill down into clickable 3D issues, switch per-item <strong>QTO Provenance</strong> sources, or export <strong>GAEB .X83</strong>, QA CSV, BOQ CSV, <strong>CPR Format 1</strong>, and <strong>CPR Format 5</strong> reports.</div>
                 </div>
               </div>
               <div class="step-item">
                 <div class="step-num">06</div>
                 <div class="step-body">
-                  <div class="step-name">4D Clashes, SLF Congestion, BCF, Carbon &amp; Engineering Studio</div>
-                  <div class="step-desc">Open <strong>Clash Matrix</strong> to run <strong>Static 3D</strong>, <strong>Temporal 4D</strong>, or <strong>Workspace 4D</strong> checks ranked by BWM Criticality Index (<code>CI</code>) and evaluate storey <strong>Analyze SLF</strong> trade congestion. Launch <strong>BCF Issue Tracker</strong>, <strong>6D Embodied Carbon</strong>, or <strong>Engineering Studio</strong> (2D DXF, point clouds, <code>IfcSplitter</code>, Civil 4.3 clothoids &amp; vertical profiles).</div>
+                  <div class="step-name">4D Clashes, SLF Sync, BCF, Carbon &amp; Engineering Studio</div>
+                  <div class="step-desc">Open <strong>Clash Matrix</strong> to run <strong>Static 3D</strong>, <strong>Temporal 4D</strong>, or <strong>Workspace 4D</strong> checks ranked by BWM Criticality Index (<code>CI</code>), analyze storey <strong>SLF</strong> congestion, and enable <strong>Sync SLF with 4D</strong>. Launch <strong>BCF Issue Tracker</strong>, <strong>6D Embodied Carbon</strong>, or <strong>Engineering Studio</strong> (2D DXF, point clouds, <code>IfcSplitter</code>, and clickable Civil 4.3 vertical profile stations).</div>
                 </div>
               </div>
               <div class="step-item">
@@ -3776,6 +3784,10 @@
             <span>Isolate Pair on Focus</span>
           </label>
           <button id="btn-analyze-workspace-slf" class="btn-xs btn-outline" title="Evaluate Hosny et al. 4D Space Loading Factor (SLF) trade congestion per storey">Analyze SLF</button>
+          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; color: var(--text-muted); cursor: pointer;" title="Automatically update 3D SLF congestion zones as the 4D timeline scrubs">
+            <input type="checkbox" id="clash-sync-4d-slf" style="accent-color: #f59e0b;" />
+            <span>Sync SLF with 4D</span>
+          </label>
         </div>
         <div id="clash-slf-summary" class="clash-scan-summary hidden" style="margin-top:0.35rem;"></div>
         <div id="clash-rules-container" class="clash-rules-container"></div>
@@ -4085,6 +4097,15 @@
           </button>
         </div>
         <div id="drawer-quality-summary" class="clash-scan-summary hidden" style="margin-top:0.35rem;"></div>
+        <div id="drawer-audit-drilldown" class="audit-drilldown-card hidden" style="margin-top:0.4rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:0.4rem; margin-bottom:0.3rem;">
+            <span style="font-size:0.68rem; font-weight:700; color:var(--text-primary);">QA &amp; BOQ Drill-Down</span>
+            <button type="button" id="drawer-btn-export-qa-csv" class="btn-xs btn-outline" title="Download 6-category BIM Quality Audit CSV">Export QA CSV</button>
+          </div>
+          <div id="drawer-audit-issues-list" class="audit-drilldown-list thin-scrollbar"></div>
+          <div style="font-size:0.66rem; font-weight:700; color:var(--text-muted); margin-top:0.45rem; margin-bottom:0.25rem;">QTO Provenance Source Switcher</div>
+          <div id="drawer-boq-provenance-list" class="audit-drilldown-list thin-scrollbar"></div>
+        </div>
 
         <!-- Category Cost Breakdown Section -->
         <div class="drawer-section-header" style="margin-top: 0.75rem;">
@@ -5005,6 +5026,13 @@
             <button type="button" id="btn-eng-civil-cross-section" class="btn-md btn-outline">Cross Section</button>
           </div>
           <div id="eng-civil-status" style="font-size: 0.64rem; color: var(--text-muted); font-family: var(--font-mono);">Not scanned yet</div>
+          <div id="eng-civil-profile-wrap" class="civil-profile-wrap hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+              <span style="font-size:0.64rem; font-weight:700; color:var(--text-primary);">Vertical Profile (Click Station to Fly)</span>
+              <span id="eng-civil-chainage-readout" style="font-size:0.6rem; font-family:var(--font-mono); color:var(--color-info);">—</span>
+            </div>
+            <div id="eng-civil-profile-container"></div>
+          </div>
         </div>
       </div>
     </div>

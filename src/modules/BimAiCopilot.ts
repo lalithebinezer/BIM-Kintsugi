@@ -2,17 +2,12 @@ import { BimEngine } from "../core/BimEngine";
 import { SelectionManager } from "./SelectionManager";
 import { PropertySequenceEngine } from "./PropertySequenceEngine";
 import { ScheduleManager } from "./ScheduleManager";
-import { ScheduleImportParsers } from "./ScheduleImportParsers";
 import { ModelManager } from "../core/ModelManager";
 import { ClashDetector } from "./ClashDetector";
 import { CarbonLcaManager } from "./CarbonLcaManager";
 import { MeasurementSuite } from "./MeasurementSuite";
 import { StoreyLevelSlicer } from "./StoreyLevelSlicer";
 import { GraphicsVFXManager } from "./GraphicsVFXManager";
-import { BimQualityAuditor, exportQualityAuditCsv } from "./BimQualityAuditor";
-import { Boq5DModule } from "./Boq5DModule";
-import { CostRuleBookEngine } from "./CostRuleBookEngine";
-import { WorkspaceCongestionAnalyzer } from "./WorkspaceCongestionAnalyzer";
 import { escapeHtml } from "../utils/formatters";
 
 export interface CopilotMessage {
@@ -279,6 +274,7 @@ export class BimAiCopilot {
         responseText = "There are no schedule tasks available to export. Generate a 4D sequence or load a model first.";
       } else {
         const isP6 = q.includes("primavera") || q.includes("p6") || q.includes("xer");
+        const { ScheduleImportParsers } = await import("./ScheduleImportParsers");
         if (isP6) {
           const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
           this.triggerFileDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
@@ -296,6 +292,7 @@ export class BimAiCopilot {
 
     // 10. Model Data-Quality Audit (DDC 6-Category Validation)
     else if (q.includes("quality") || q.includes("validate model") || q.includes("data readiness")) {
+      const { BimQualityAuditor, exportQualityAuditCsv } = await import("./BimQualityAuditor");
       const report = await BimQualityAuditor.getInstance().auditLoadedModels();
       if (report.totalElements === 0) {
         responseText = "No BIM elements loaded to audit. Load an IFC or Fragments model first.";
@@ -312,6 +309,10 @@ export class BimAiCopilot {
 
     // 11. Rule-Book 5D BOQ Audit & GAEB X83 Export
     else if (q.includes("boq") || q.includes("gaeb") || q.includes("unpriced") || q.includes("cost catalog")) {
+      const [{ Boq5DModule }, { CostRuleBookEngine }] = await Promise.all([
+        import("./Boq5DModule"),
+        import("./CostRuleBookEngine"),
+      ]);
       const boqMod = new Boq5DModule();
       const summary = await boqMod.generateSummary();
       const audit = CostRuleBookEngine.getInstance().auditBoqSummary(summary);
@@ -330,8 +331,10 @@ export class BimAiCopilot {
       if (tasks.length === 0) {
         responseText = "No 4D schedule tasks found. Generate or import a schedule before analyzing Space Loading Factor (SLF).";
       } else {
-        const series = await WorkspaceCongestionAnalyzer.getInstance().analyzeLoadedModels(tasks);
-        const peaks = Array.from(WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey().values());
+        const { WorkspaceCongestionAnalyzer } = await import("./WorkspaceCongestionAnalyzer");
+        const analyzer = WorkspaceCongestionAnalyzer.getInstance();
+        const series = await analyzer.analyzeLoadedModels(tasks);
+        const peaks = Array.from(analyzer.getPeakSlfByStorey().values());
         const extreme = peaks.filter((p) => p.status === "Extreme");
         responseText = `4D Space Loading Factor (SLF) checked across ${peaks.length} zones (${series.length} time windows): ${extreme.length} Extreme congestion zones (> 0.90).`;
         executed.push("Analyze 4D Workspace SLF");

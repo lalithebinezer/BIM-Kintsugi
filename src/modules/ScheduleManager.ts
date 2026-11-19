@@ -8,7 +8,6 @@
 import { CostRateManager } from "./CostRateManager";
 import { resolveCategoryUnitCost } from "./BoqGenerator";
 import { DelayImpactEngine } from "./DelayImpactEngine";
-import { ScheduleImportParsers } from "./ScheduleImportParsers";
 import { FragmentIndexer } from "../core/FragmentIndexer";
 import {
   solveCpmGraph,
@@ -16,7 +15,6 @@ import {
   type TaskDependency,
   type CpmSolveReport,
 } from "./CpmGraphSolver";
-import { RuleSearchEngine } from "./RuleSearchEngine";
 
 export type TaskStatus = 'Planned' | 'In Progress' | 'Completed';
 
@@ -775,6 +773,7 @@ export class ScheduleManager {
    * Import schedule from Excel workbook (.xlsx / .xls) including Bentley Synchro multi-sheet workbooks.
    */
   async importScheduleFromExcel(buffer: ArrayBuffer | Uint8Array, fileName?: string): Promise<number> {
+    const { ScheduleImportParsers } = await import("./ScheduleImportParsers");
     const res = await ScheduleImportParsers.parseExcel(buffer, fileName);
     if (!res || res.tasks.length === 0) return 0;
 
@@ -1095,6 +1094,7 @@ export class ScheduleManager {
    * Re-evaluates all tasks carrying a `selectionRuleId` against currently loaded BIM models.
    */
   public async refreshDynamicRuleBindings(): Promise<number> {
+    const { RuleSearchEngine } = await import("./RuleSearchEngine");
     const ruleEngine = RuleSearchEngine.getInstance();
     let totalUpdated = 0;
     for (const task of this.tasks.values()) {

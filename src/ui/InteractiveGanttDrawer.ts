@@ -1,6 +1,5 @@
 import { ScheduleManager, type ScheduleTask } from "../modules/ScheduleManager";
-import { ScheduleImportParsers } from "../modules/ScheduleImportParsers";
-import { RuleSearchEngine } from "../modules/RuleSearchEngine";
+import { ruleBuilderFeature, scheduleParsersFeature } from "../modules/optionalFeatures";
 import { showToast } from "./ToastManager";
 
 export type GanttTimeScale = "month" | "week" | "day";
@@ -69,6 +68,7 @@ export class InteractiveGanttDrawer {
               <button type="button" class="btn-gantt-scale active" data-scale="week" title="Weekly Grid">W</button>
               <button type="button" class="btn-gantt-scale" data-scale="day" title="Zoom in to Days">D</button>
             </div>
+            <button id="btn-gantt-rule-builder" class="btn-gantt-drawer-action" title="Open Visual Dynamic Search Set Rule Builder & 4D Task Binder">Rule Builder</button>
             <button id="btn-gantt-import-rules" class="btn-gantt-drawer-action" title="Import Autodesk Navisworks Search Sets (.xml) for dynamic 4D rule binding">Rules XML</button>
             <input type="file" id="gantt-rules-file-input" accept=".xml" style="display: none;" />
             <button id="btn-gantt-cost-control" class="btn-gantt-drawer-action" title="Open Unified 5D Project Cost Control Suite" style="border-color: var(--color-success-border); color: var(--color-success);">
@@ -140,6 +140,15 @@ export class InteractiveGanttDrawer {
       });
     });
 
+    // Visual Dynamic Search Set Rule Builder modal (lazy-loaded)
+    panel.querySelector("#btn-gantt-rule-builder")?.addEventListener("click", async () => {
+      const modal = await ruleBuilderFeature.load();
+      modal.open({
+        preselectedTaskId: this.activeTaskId ?? undefined,
+        onBound: () => this.render(),
+      });
+    });
+
     // Navisworks XML Rule Set import button
     const rulesBtn = panel.querySelector("#btn-gantt-import-rules");
     const rulesInput = panel.querySelector<HTMLInputElement>("#gantt-rules-file-input");
@@ -149,6 +158,7 @@ export class InteractiveGanttDrawer {
       if (!file) return;
       try {
         const text = await file.text();
+        const { RuleSearchEngine } = await import("../modules/RuleSearchEngine");
         const ruleEngine = RuleSearchEngine.getInstance();
         const imported = ruleEngine.importNavisworksXml(text);
         if (imported.length === 0) {
@@ -831,7 +841,7 @@ export class InteractiveGanttDrawer {
     });
   }
 
-  public exportSchedule(format: "MSPDI" | "P6" | "CSV"): void {
+  public async exportSchedule(format: "MSPDI" | "P6" | "CSV"): Promise<void> {
     const scheduleManager: ScheduleManager | undefined = (window as any).scheduleManager;
     if (!scheduleManager || scheduleManager.tasks.size === 0) {
       showToast("No schedule tasks available to export", "warning");
@@ -839,11 +849,13 @@ export class InteractiveGanttDrawer {
     }
     const tasks = scheduleManager.getTasksSorted();
     if (format === "MSPDI") {
-      const xml = ScheduleImportParsers.exportToMSPDI(tasks);
+      const Parsers = await scheduleParsersFeature.load();
+      const xml = Parsers.exportToMSPDI(tasks);
       this.triggerDownload(xml, "BIM_Kintsugi_Schedule.xml", "application/xml");
       showToast(`Exported ${tasks.length} tasks to Microsoft Project XML`, "success");
     } else if (format === "P6") {
-      const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
+      const Parsers = await scheduleParsersFeature.load();
+      const xer = Parsers.exportToPrimaveraP6(tasks);
       this.triggerDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
       showToast(`Exported ${tasks.length} tasks to Oracle Primavera P6 XER`, "success");
     } else if (format === "CSV") {

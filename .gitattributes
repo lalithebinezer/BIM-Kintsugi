@@ -1,0 +1,17 @@
+# Normalize text line endings to LF across Windows/macOS/Linux
+* text=auto eol=lf
+
+# Explicitly mark binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.wasm binary
+*.frag binary
+*.zip binary
+*.bcfzip binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

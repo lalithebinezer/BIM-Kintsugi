@@ -1,4 +1,7 @@
 import './style.css';
+import './styles/sequence-and-param-reader.css';
+import './styles/selection-and-metadata.css';
+import './styles/option1-ux.css';
 import './responsive.css';
 import './theme.css';
 import { initResponsiveToolbar } from "./ui/ResponsiveToolbar";
@@ -6,24 +9,7 @@ import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import fragmentsWorkerUrl from "@thatopen/fragments/worker?url";
 import * as WEBIFC from "web-ifc";
-
-function isRelatedObject(relatedObjects: any, idToMatch: number): boolean {
-  if (!relatedObjects) return false;
-  if (Array.isArray(relatedObjects)) {
-    try {
-      for (let i = 0; i < relatedObjects.length; i++) {
-        try {
-          const obj = relatedObjects[i];
-          if (Number(obj?.value ?? obj) === idToMatch) return true;
-        } catch (e) {
-          // Ignore getter errors from WebAssembly/Proxy properties
-        }
-      }
-    } catch (e) { }
-    return false;
-  }
-  return Number(relatedObjects.value ?? relatedObjects) === idToMatch;
-}
+import { isRelatedObject, getCategoryColor } from "./utils/categoryColors";
 
 import * as OBF from "@thatopen/components-front";
 import * as BUI from "@thatopen/ui";
@@ -43,31 +29,6 @@ import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
 
 import { CameraSpeedController } from "./core/CameraSpeedController";
-function getCategoryColor(_theme: string, category: string): string {
-  const categoryColorMap: Record<string, string> = {
-    IFCWALL: "#94a3b8",
-    IFCWALLSTANDARDCASE: "#94a3b8",
-    IFCSLAB: "#60a5fa",
-    IFCROOF: "#6b7280",
-    IFCCOLUMN: "#fbbf24",
-    IFCBEAM: "#f97316",
-    IFCDOOR: "#34d399",
-    IFCWINDOW: "#38bdf8",
-    IFCSTAIR: "#a78bfa",
-    IFCSTAIRFLIGHT: "#a78bfa",
-    IFCRAILING: "#e879f9",
-    IFCFURNISHINGELEMENT: "#fb923c",
-    IFCFLOWSEGMENT: "#22d3ee",
-    IFCFLOWFITTING: "#22d3ee",
-    IFCFLOWTERMINAL: "#4ade80",
-    IFCSPACE: "#fde68a",
-    IFCFOOTING: "#d97706",
-    IFCPILE: "#92400e",
-    IFCPLATE: "#78716c",
-    IFCCOVERING: "#a3e635",
-  };
-  return categoryColorMap[category.toUpperCase()] ?? "#a78bfa";
-}
 import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
 import { PropertySequenceEngine } from "./modules/PropertySequenceEngine";
 import { IfcParameterReader } from "./modules/IfcParameterReader";
@@ -78,7 +39,7 @@ import { CostRateManager } from "./modules/CostRateManager";
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
 import { BimEngine } from "./core/BimEngine";
-import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature } from "./modules/optionalFeatures";
+import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature, scheduleParsersFeature } from "./modules/optionalFeatures";
 import { runFeature } from "./utils/lazyFeature";
 import { ModelManager } from "./core/ModelManager";
 import { ViewportController } from "./core/ViewportController";
@@ -86,7 +47,6 @@ import { ClippingModule } from "./modules/ClippingModule";
 import { QueryModule } from "./modules/QueryModule";
 import { IdsModule } from "./modules/IdsModule";
 import { Timeline4DModule } from "./modules/Timeline4DModule";
-import { Boq5DModule } from "./modules/Boq5DModule";
 import { FederationModule } from "./modules/FederationModule";
 import { CommandPalette } from "./ui/CommandPalette";
 import { SceneManager } from "./core/SceneManager";
@@ -106,21 +66,14 @@ import { PointerInputArbiter } from "./core/PointerInputArbiter";
 import { formatCurrency, formatItemCount, escapeHtml } from "./utils/formatters";
 
 import { InteractiveGanttDrawer } from "./ui/InteractiveGanttDrawer";
-import { ScheduleImportParsers } from "./modules/ScheduleImportParsers";
+import { Cascade4DController } from "./ui/Cascade4DController";
+import { runIfcPreflightSummary, tryImportNativeIfc4Schedule } from "./core/IfcPreflightCoordinator";
 
 import { SoundManager } from "./core/SoundManager";
 import { CinematicTourManager } from "./modules/CinematicTourManager";
 
 import { AppearanceProfileEngine, PRESET_APPEARANCE_PROFILES } from "./modules/AppearanceProfileEngine";
 import { DelayImpactEngine } from "./modules/DelayImpactEngine";
-import {
-  CASCADE_INDICATORS,
-  COLORBREWER_SCHEMES,
-  evaluateCascadeLens,
-  type CascadeIndicatorId,
-  type ColorBrewerSchemeName,
-} from "./modules/Cascade4DAnalytics";
-import { DependencyVectorOverlay } from "./modules/DependencyVectorOverlay";
 
 import { AccessControlManager, Permission, type UserRole } from "./modules/AccessControlManager";
 import { MetadataSyncService } from "./core/MetadataSyncService";
@@ -129,7 +82,7 @@ import { StreamingLoader } from "./core/StreamingLoader";
 import { PrecisionOriginController } from "./core/PrecisionOriginController";
 import { FragmentIndexer } from "./core/FragmentIndexer";
 import { MetadataPanelController } from "./ui/MetadataPanelController";
-import { scanIfcPreflight } from "./modules/IfcStepParser";
+import type { IfcPreflightReport } from "./modules/IfcStepParser";
 
 BUI.Manager.init();
 initResponsiveToolbar();
@@ -329,7 +282,6 @@ const queryModule = new QueryModule();
 const idsModule = new IdsModule();
 const timeline4DModule = new Timeline4DModule();
 (window as any).timeline4DModule = timeline4DModule;
-const boq5DModule = new Boq5DModule();
 const federationModule = new FederationModule();
 
 // Initialize Global BIM Search Overlay
@@ -344,11 +296,10 @@ const sectionPlanesHUD = SectionPlanesHUD.getInstance();
 (window as any).modelManager = modelManager;
 (window as any).viewportController = viewportController;
 (window as any).federationModule = federationModule;
-(window as any).boq5DModule = boq5DModule;
 (window as any).clippingModule = clippingModule;
 (window as any).InteractiveGanttDrawer = InteractiveGanttDrawer;
 (window as any).PropertySequenceEngine = PropertySequenceEngine;
-(window as any).ScheduleImportParsers = ScheduleImportParsers;
+const cascade4DController = Cascade4DController.getInstance();
 (window as any).AppearanceProfileEngine = AppearanceProfileEngine;
 (window as any).PRESET_APPEARANCE_PROFILES = PRESET_APPEARANCE_PROFILES;
 (window as any).DelayImpactEngine = DelayImpactEngine;
@@ -1183,9 +1134,10 @@ highlighter.styles.set("audit-ghost", {
   renderedFaces: true as any,
 });
 
+const DEFAULT_CASCADE_BAND_HEX = ["#d7191c", "#fdae61", "#ffffbf", "#abdda4", "#2b83ba"];
 for (let bandIdx = 0; bandIdx < 5; bandIdx++) {
   highlighter.styles.set(`cascade-band-${bandIdx}`, {
-    color: new THREE.Color(COLORBREWER_SCHEMES.Spectral[bandIdx]),
+    color: new THREE.Color(DEFAULT_CASCADE_BAND_HEX[bandIdx]),
     opacity: 0.88,
     transparent: true,
     renderedFaces: true as any,
@@ -1267,13 +1219,7 @@ let timelineRenderPending = false;
 let timelineRenderPendingForce = false;
 let timelineInFlightPromise: Promise<void> | null = null;
 let isVarianceMode = false;
-let isCascadeMode = false;
-let cascadeIndicator: CascadeIndicatorId = "totalSlack";
-let cascadeScheme: ColorBrewerSchemeName = "Spectral";
-let cascadeIsolatedBand: number | null = null;
-let cascadeShowCrit = true;
-let cascadeShowPredSuc = false;
-let cascadeShowOos = true;
+// CasCADe 4D & SLF state managed by Cascade4DController
 
 // Define sequencing helpers globally
 function getStoreyIndex(storeyName: string): number {
@@ -3578,8 +3524,8 @@ function updateVarianceButtonUI(varianceActive: boolean) {
 const btn4dVariance = document.getElementById("btn-4d-variance-toggle");
 btn4dVariance?.addEventListener("click", () => {
   isVarianceMode = !isVarianceMode;
-  if (isVarianceMode && isCascadeMode) {
-    setCascadeMode(false);
+  if (isVarianceMode && cascade4DController.isCascadeMode) {
+    void cascade4DController.setCascadeMode(false);
   }
   updateVarianceButtonUI(isVarianceMode);
   updateVarianceLegendUI(isVarianceMode);
@@ -3590,79 +3536,17 @@ btn4dVariance?.addEventListener("click", () => {
   updateTimelineVisualState(true);
 });
 
-function setCascadeMode(active: boolean) {
-  isCascadeMode = active;
-  const btn = document.getElementById("btn-4d-cascade-toggle");
-  const panel = document.getElementById("cascade-4d-panel");
-  btn?.classList.toggle("active", active);
-  panel?.classList.toggle("hidden", !active);
-  if (!active) {
-    cascadeIsolatedBand = null;
-    DependencyVectorOverlay.getInstance().clear();
-  }
-}
-
-(function initCascadeLensControls() {
-  const indSelect = document.getElementById("cascade-indicator-select") as HTMLSelectElement | null;
-  const schSelect = document.getElementById("cascade-scheme-select") as HTMLSelectElement | null;
-  if (indSelect && indSelect.options.length === 0) {
-    CASCADE_INDICATORS.forEach((m) => {
-      const opt = document.createElement("option");
-      opt.value = m.id;
-      opt.textContent = m.label;
-      if (m.id === cascadeIndicator) opt.selected = true;
-      indSelect.appendChild(opt);
-    });
-    indSelect.addEventListener("change", () => {
-      cascadeIndicator = indSelect.value as CascadeIndicatorId;
-      cascadeIsolatedBand = null;
-      updateTimelineVisualState(true);
-    });
-  }
-  if (schSelect && schSelect.options.length === 0) {
-    (Object.keys(COLORBREWER_SCHEMES) as ColorBrewerSchemeName[]).forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      if (name === cascadeScheme) opt.selected = true;
-      schSelect.appendChild(opt);
-    });
-    schSelect.addEventListener("change", () => {
-      cascadeScheme = schSelect.value as ColorBrewerSchemeName;
-      updateTimelineVisualState(true);
-    });
-  }
-  document.getElementById("cascade-chk-crit")?.addEventListener("change", (e) => {
-    cascadeShowCrit = (e.target as HTMLInputElement).checked;
-    updateTimelineVisualState(true);
-  });
-  document.getElementById("cascade-chk-predsuc")?.addEventListener("change", (e) => {
-    cascadeShowPredSuc = (e.target as HTMLInputElement).checked;
-    updateTimelineVisualState(true);
-  });
-  document.getElementById("cascade-chk-oos")?.addEventListener("change", (e) => {
-    cascadeShowOos = (e.target as HTMLInputElement).checked;
-    updateTimelineVisualState(true);
-  });
-  document.getElementById("btn-4d-cascade-toggle")?.addEventListener("click", () => {
-    const next = !isCascadeMode;
-    if (next && isVarianceMode) {
+cascade4DController.init({
+  is4dMode: () => is4dMode,
+  onRequestVisualRefresh: (force) => updateTimelineVisualState(force),
+  onDisableVarianceMode: () => {
+    if (isVarianceMode) {
       isVarianceMode = false;
       updateVarianceButtonUI(false);
       updateVarianceLegendUI(false);
     }
-    setCascadeMode(next);
-    showToast(
-      next ? `CasCADe Lens ON (${cascadeIndicator} / ${cascadeScheme})` : "CasCADe 4D Lens OFF",
-      next ? "info" : "success"
-    );
-    updateTimelineVisualState(true);
-  });
-  document.getElementById("btn-close-cascade-panel")?.addEventListener("click", () => {
-    setCascadeMode(false);
-    updateTimelineVisualState(true);
-  });
-})();
+  },
+});
 
 // Advanced Schedule Import (MS Project XML & Primavera P6 XER) with Automatic SIMULATION Property Linking
 const btnImportScheduleAdv = document.getElementById("btn-import-schedule-advanced") as HTMLInputElement | null;
@@ -3671,11 +3555,12 @@ btnImportScheduleAdv?.addEventListener("change", async (e) => {
   if (target.files && target.files[0]) {
     const file = target.files[0];
     const text = await file.text();
+    const Parsers = await scheduleParsersFeature.load();
     let res = null;
     if (file.name.toLowerCase().endsWith(".xml")) {
-      res = ScheduleImportParsers.parseMSPDI(text);
+      res = Parsers.parseMSPDI(text);
     } else if (file.name.toLowerCase().endsWith(".xer")) {
-      res = ScheduleImportParsers.parsePrimaveraP6(text);
+      res = Parsers.parsePrimaveraP6(text);
     }
     if (res && res.tasks.length > 0) {
       scheduleManager.tasks.clear();
@@ -3774,7 +3659,8 @@ async function sync4DWithSimulationProperty(customXmlUrl?: string) {
   }
 
   // Parse MSPDI XML from Synchro
-  const res = ScheduleImportParsers.parseMSPDI(xmlText);
+  const Parsers = await scheduleParsersFeature.load();
+  const res = Parsers.parseMSPDI(xmlText);
   if (!res || res.tasks.length === 0) {
     showToast("Could not parse tasks from Synchro Schedule XML.", "error");
     return;
@@ -4479,7 +4365,7 @@ async function loadModelData(name: string, buffer: Uint8Array) {
     let ingestedCount = 0;
 
     let loadedIfcStepText: string | null = null;
-    let preflightReport: ReturnType<typeof scanIfcPreflight> | null = null;
+    let preflightReport: IfcPreflightReport | null = null;
 
     if (name.endsWith(".ifc") || (buffer && buffer.length > 50 && buffer[0] === 0x49 && buffer[1] === 0x53 && buffer[2] === 0x4F)) {
       try {
@@ -4487,14 +4373,9 @@ async function loadModelData(name: string, buffer: Uint8Array) {
         const dec = new TextDecoder("utf-8", { fatal: false });
         const ifcText = dec.decode(buffer);
         loadedIfcStepText = ifcText;
-        preflightReport = scanIfcPreflight(ifcText);
-        const pfFlags = [
-          preflightReport.hasMapConversion ? "CRS/MapConv" : "",
-          preflightReport.hasAlignment ? "Alignment" : "",
-          preflightReport.hasWorkSchedule ? "IFC4 Schedule" : "",
-          preflightReport.hasElementQuantities ? "Qto" : "",
-        ].filter(Boolean).join(" · ");
-        subtitle.innerText = `Pre-flight: ${preflightReport.schema} (${preflightReport.lengthUnitLabel}, ${preflightReport.totalEntities.toLocaleString()} entities)${pfFlags ? ` · ${pfFlags}` : ""}`;
+        const pf = await runIfcPreflightSummary(ifcText);
+        preflightReport = pf.report;
+        subtitle.innerText = pf.subtitleText;
         const ingested = await metadataService.ingestStepMetadata(name, ifcText);
         ingestedCount = ingested.elementCount;
         ingestedStoreys = ingested.storeysMap;
@@ -4675,18 +4556,12 @@ async function loadModelData(name: string, buffer: Uint8Array) {
       }
 
       // Auto-populate 4D Schedule tasks: prefer native IFC4 WorkSchedule if present, else categories
-      let usedNativeIfc4Schedule = false;
-      if (preflightReport?.hasWorkSchedule && loadedIfcStepText && (!scheduleManager || scheduleManager.tasks.size === 0)) {
-        try {
-          const parsedIfc4 = ScheduleImportParsers.parseIfcWorkSchedule(loadedIfcStepText, model?.modelId || name);
-          if (parsedIfc4.tasks.length > 0 && scheduleManager) {
-            for (const t of parsedIfc4.tasks) scheduleManager.tasks.set(t.id, t);
-            scheduleManager.recomputeCpmAndRollups();
-            usedNativeIfc4Schedule = true;
-            showToast(`Loaded native IFC4 4D Schedule (${parsedIfc4.tasks.length} tasks)`, "success");
-          }
-        } catch { }
-      }
+      const usedNativeIfc4Schedule = await tryImportNativeIfc4Schedule(
+        preflightReport,
+        loadedIfcStepText,
+        scheduleManager,
+        model?.modelId || name
+      );
 
       const categoriesGroup = classifier.list.get("Categories");
       if (!usedNativeIfc4Schedule && categoriesGroup) {
@@ -5285,13 +5160,14 @@ function getExportableScheduleTasks(): ScheduleTask[] {
 
 // --- ENTERPRISE SCHEDULE EXPORTERS (MS Project XML & Primavera P6 XER) ---
 const btnExportMspdi = document.getElementById("btn-export-mspdi-xml");
-btnExportMspdi?.addEventListener("click", () => {
+btnExportMspdi?.addEventListener("click", async () => {
   const tasks = getExportableScheduleTasks();
   if (tasks.length === 0) {
     showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
     return;
   }
-  const xml = ScheduleImportParsers.exportToMSPDI(tasks);
+  const Parsers = await scheduleParsersFeature.load();
+  const xml = Parsers.exportToMSPDI(tasks);
   const blob = new Blob([xml], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -5305,13 +5181,14 @@ btnExportMspdi?.addEventListener("click", () => {
 });
 
 const btnExportP6 = document.getElementById("btn-export-primavera-p6");
-btnExportP6?.addEventListener("click", () => {
+btnExportP6?.addEventListener("click", async () => {
   const tasks = getExportableScheduleTasks();
   if (tasks.length === 0) {
     showToast("No schedule tasks available to export. Generate a sequence or load a model first.", "warning");
     return;
   }
-  const xer = ScheduleImportParsers.exportToPrimaveraP6(tasks);
+  const Parsers = await scheduleParsersFeature.load();
+  const xer = Parsers.exportToPrimaveraP6(tasks);
   const blob = new Blob([xer], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -8310,13 +8187,17 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   const profileEngine = AppearanceProfileEngine.getInstance();
   const halfDayStep = Math.floor(dateMs / (12 * 60 * 60 * 1000));
   const activeGanttId = InteractiveGanttDrawer.getInstance().getActiveTaskId() || "";
-  const visualKey = `${isCascadeMode ? `C:${cascadeIndicator}:${cascadeScheme}:${cascadeIsolatedBand ?? "all"}:${cascadeShowCrit}:${cascadeShowPredSuc}:${cascadeShowOos}:${activeGanttId}` : isVarianceMode ? "V" : "P"}:${currentBoundary}:${halfDayStep}:${scheduleManager?.tasks?.size || 0}:${profileEngine.activeProfileId}`;
+  const visualKey = `${cascade4DController.isCascadeMode ? cascade4DController.getVisualKeySegment(activeGanttId) : `${isVarianceMode ? "V" : "P"}|${cascade4DController.getVisualKeySegment(activeGanttId)}`}:${currentBoundary}:${halfDayStep}:${scheduleManager?.tasks?.size || 0}:${profileEngine.activeProfileId}`;
 
   // Skip redundant frame re-evaluation unless timeline date stepped or forced
   if (!force && visualKey === lastRenderedVisualKey) {
     return;
   }
   lastRenderedVisualKey = visualKey;
+
+  if (cascade4DController.is4dSlfSyncActive) {
+    await cascade4DController.syncSlfForDate(scheduleManager?.getTasksSorted() ?? [], dateMs);
+  }
 
   const hider = components.get(OBC.Hider);
   const keepStyles = new Set<string>();
@@ -8335,64 +8216,16 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   const completeStyle = highlighter.styles.get("timeline-completed");
   if (completeStyle) completeStyle.color.set(completeColor);
 
-  if (isCascadeMode) {
-    const tasksList = scheduleManager?.getTasksSorted() ?? [];
-    const evalRes = evaluateCascadeLens(tasksList, {
-      indicator: cascadeIndicator,
-      scheme: cascadeScheme,
-      isolatedBandIndex: cascadeIsolatedBand,
+  if (cascade4DController.isCascadeMode) {
+    await cascade4DController.renderCascadeFrame({
+      tasksList: scheduleManager?.getTasksSorted() ?? [],
+      fragments,
+      hider,
+      highlighter,
+      keepStyles,
+      clearAll4DHighlights,
+      activeGanttTaskId: InteractiveGanttDrawer.getInstance().getActiveTaskId(),
     });
-
-    // Always render interactive ColorBrewer legend swatches (even before a 3D model is loaded)
-    const legendContainer = document.getElementById("cascade-legend-bands");
-    if (legendContainer) {
-      legendContainer.innerHTML = evalRes.bands
-        .map(
-          (b) => `
-          <button type="button" class="cascade-band-chip ${cascadeIsolatedBand === b.bandIndex ? "isolated" : ""}" data-band="${b.bandIndex}" title="Click to isolate this range">
-            <span class="cascade-band-swatch" style="background:${b.hex};"></span>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.rangeLabel)} (${b.elementCount})</span>
-          </button>`
-        )
-        .join("");
-      legendContainer.querySelectorAll<HTMLButtonElement>(".cascade-band-chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-          const bIdx = Number(chip.dataset.band);
-          cascadeIsolatedBand = cascadeIsolatedBand === bIdx ? null : bIdx;
-          updateTimelineVisualState(true);
-        });
-      });
-    }
-
-    if ((fragments as any)?.initialized && fragments.list.size > 0) {
-      await hider.set(true);
-      if (!is4dMode) return;
-
-      for (const band of evalRes.bands) {
-        const styleId = `cascade-band-${band.bandIndex}`;
-        const st = highlighter.styles.get(styleId);
-        if (st) st.color.set(band.hex);
-        if (band.elementCount > 0) {
-          keepStyles.add(styleId);
-          await highlighter.highlightByID(styleId, band.modelIdMap, true, false);
-        }
-      }
-
-      if (evalRes.isolatedBandIndex !== null && Object.keys(evalRes.ghostMap).length > 0) {
-        keepStyles.add("audit-ghost");
-        await highlighter.highlightByID("audit-ghost", evalRes.ghostMap, true, false);
-      }
-
-      await clearAll4DHighlights(keepStyles);
-      if (!is4dMode) return;
-
-      await DependencyVectorOverlay.getInstance().render(tasksList, {
-        showCriticalPath: cascadeShowCrit,
-        showPredSucc: cascadeShowPredSuc,
-        showOutOfSequence: cascadeShowOos,
-        activeTaskId: InteractiveGanttDrawer.getInstance().getActiveTaskId(),
-      });
-    }
   } else if (isVarianceMode) {
     const delayEngine = DelayImpactEngine.getInstance();
     const tasksList = scheduleManager?.getTasksSorted() ?? [];
@@ -9270,10 +9103,7 @@ function apply4dMode(active: boolean) {
       updateVarianceButtonUI(false);
       updateVarianceLegendUI(false);
     }
-    if (isCascadeMode) {
-      setCascadeMode(false);
-    }
-    DependencyVectorOverlay.getInstance().clear();
+    void cascade4DController.clearOnExit4D();
     const pendingFrame = timelineInFlightPromise;
     void (async () => {
       try {

@@ -246,18 +246,49 @@ export function initEngineeringStudioController(): { refreshStatus: () => Promis
   // 4. IFC 4.3 Civil Alignments (Phase 5C)
   const civilStatusEl = document.getElementById("eng-civil-status");
   const crossSecBtn = document.getElementById("btn-eng-civil-cross-section") as HTMLButtonElement | null;
+  const civilProfileWrap = document.getElementById("eng-civil-profile-wrap");
+  const civilProfileContainer = document.getElementById("eng-civil-profile-container");
+  const civilChainageReadout = document.getElementById("eng-civil-chainage-readout");
 
   document.getElementById("btn-eng-scan-civil")?.addEventListener("click", () => {
     void runFeature(async () => {
       const mod = await civilAlignmentFeature.load();
+      const { buildVerticalProfileSvg, formatChainage } = await import("../modules/CivilAlignmentModule");
       const report = await mod.scanAndAttachAlignments();
+      const { samples, isPreview } = mod.extractVerticalProfileSamples();
+
       if (civilStatusEl) {
-        civilStatusEl.textContent = `Scanned ${report.modelCount} model(s): ${report.alignmentCount} alignment group(s), ${report.curveCount} curve(s)`;
+        civilStatusEl.textContent = `Scanned ${report.modelCount} model(s): ${report.alignmentCount} alignment group(s), ${report.curveCount} curve(s)${isPreview ? " · Preview profile active" : ""}`;
+      }
+      if (civilProfileWrap && civilProfileContainer && samples.length >= 2) {
+        civilProfileWrap.classList.remove("hidden");
+        civilProfileContainer.innerHTML = buildVerticalProfileSvg(samples, 290, 92);
+        if (civilChainageReadout) {
+          civilChainageReadout.textContent = `${formatChainage(samples[0].station)} – ${formatChainage(samples[samples.length - 1].station)}`;
+        }
+        civilProfileContainer.querySelectorAll<SVGCircleElement>(".civil-station-dot").forEach((dot) => {
+          dot.addEventListener("click", () => {
+            const station = Number(dot.dataset.station ?? 0);
+            const elevation = Number(dot.dataset.elevation ?? 0);
+            const x = dot.dataset.x !== undefined ? Number(dot.dataset.x) : undefined;
+            const y = dot.dataset.y !== undefined ? Number(dot.dataset.y) : undefined;
+            const z = dot.dataset.z !== undefined ? Number(dot.dataset.z) : undefined;
+            const flew = mod.flyToStation({ station, elevation, x, y, z });
+            const ch = formatChainage(station);
+            if (civilChainageReadout) {
+              civilChainageReadout.textContent = `Ch ${ch} · ${elevation.toFixed(2)}m`;
+            }
+            showToast(
+              flew ? `Camera flew to Chainage ${ch} (Elev ${elevation.toFixed(2)}m)` : `Selected Chainage ${ch} (Elev ${elevation.toFixed(2)}m)`,
+              "info"
+            );
+          });
+        });
       }
       showToast(
         report.alignmentCount > 0
           ? `Attached ${report.alignmentCount} IFC 4.3 alignment(s)`
-          : "No IFC 4.3 alignments found in current model",
+          : "No IFC 4.3 alignments found — loaded interactive clothoid profile preview",
         report.alignmentCount > 0 ? "success" : "info"
       );
     });

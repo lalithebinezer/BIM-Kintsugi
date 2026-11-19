@@ -1,0 +1,280 @@
+
+/* â”€â”€â”€ Option 1: Visual Rule Builder Modal, Audit Drill-Down & Civil Profile â”€â”€â”€ */
+.rb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100020;
+  background: rgba(6, 10, 18, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.rb-modal-overlay.hidden {
+  display: none !important;
+}
+.rb-modal-card {
+  width: min(640px, 95vw);
+  max-height: 85vh;
+  background: var(--bg-panel, #11161f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+.rb-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.95rem;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+.rb-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.rb-modal-body {
+  padding: 0.8rem 0.95rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.rb-section-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.rb-saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 112px;
+  overflow-y: auto;
+}
+.rb-saved-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 7px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+}
+.rb-saved-item.active {
+  border-color: var(--accent, #d4ff3f);
+}
+.rb-saved-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.rb-saved-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rb-saved-count {
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.rb-saved-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.rb-empty {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  padding: 0.35rem 0;
+}
+.rb-name-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.rb-name-row input {
+  flex: 1;
+}
+.rb-conditions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.rb-cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+.rb-cond-row select,
+.rb-cond-row input[type="text"] {
+  font-size: 0.66rem;
+  padding: 0.22rem 0.35rem;
+  border-radius: 6px;
+  background: var(--bg-input, rgba(0, 0, 0, 0.25));
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+.rb-cond-val {
+  flex: 1;
+  min-width: 90px;
+}
+.rb-cond-neg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.rb-bind-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.rb-bind-row select {
+  flex: 1;
+}
+.rb-test-output {
+  font-size: 0.67rem;
+  font-family: var(--font-mono);
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary);
+}
+.rb-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding: 0.65rem 0.95rem;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.audit-drilldown-card {
+  padding: 0.45rem;
+  border-radius: 8px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+.audit-drilldown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 130px;
+  overflow-y: auto;
+}
+.audit-issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.28rem 0.4rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  color: var(--text-primary);
+  font-size: 0.64rem;
+  cursor: pointer;
+}
+.audit-issue-row.static {
+  cursor: default;
+}
+.audit-issue-row:not(.static):hover {
+  border-color: var(--accent, #d4ff3f);
+  background: rgba(255, 255, 255, 0.04);
+}
+.audit-sev-pill {
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.32rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.audit-sev-pill.sev-err {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+.audit-sev-pill.sev-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+.audit-sev-pill.sev-info {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+}
+.audit-empty {
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.1rem;
+}
+.prov-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.3rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+.prov-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.64rem;
+}
+.prov-item-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prov-item-cost {
+  font-family: var(--font-mono);
+  color: var(--color-success, #10b981);
+  flex-shrink: 0;
+}
+.prov-source-select {
+  width: 100%;
+  font-size: 0.62rem;
+}
+
+.civil-profile-wrap {
+  padding: 0.4rem;
+  border-radius: 8px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+.civil-profile-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.civil-station-dot:hover {
+  r: 5;
+  fill: #d4ff3f;
+}

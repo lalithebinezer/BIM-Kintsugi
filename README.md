@@ -6,7 +6,7 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.6.1-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-281%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-289%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Engineering Studio (2D DXF · Scans · IFC Split · Civil)**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`^3.6.0`)**, **`@thatopen/components-front` (`^3.6.1`)**, **`@thatopen/fragments` (`^3.6.1`)**, and **Three.js (`r184`)** — with zero heavy frontend framework overhead.
@@ -130,13 +130,21 @@ BIM-Kintsugi/
 ├── package.json                                # Dependencies & scripts (dev, build, lint, test)
 ├── tsconfig.json                               # Strict TypeScript 6.0 configuration
 ├── vite.config.ts                              # Vite 8 bundler & vendor chunk splitting
-├── .github/workflows/deploy.yml                # Automated GitHub Pages CI/CD workflow
+├── .github/workflows/deploy.yml                # Automated GitHub Pages CI/CD + Playwright E2E Smoke Gate
+├── .gitattributes                              # Cross-platform LF text / binary normalization
+├── scripts/
+│   └── e2e-smoke.mjs                           # Headless Chromium Playwright E2E smoke test suite
 └── src/
     ├── main.ts                                 # Application entry point, render loop & module orchestrator
-    ├── style.css                               # Design system, 5 themes, responsive HUD & drawer styles
+    ├── style.css                               # Core design system, HUD & drawer base styles
+    ├── styles/                                 # Cascade-preserving modular CSS partials
+    │   ├── sequence-and-param-reader.css       # Property-Driven 4D Sequence & IFC Parameter Reader styles
+    │   ├── selection-and-metadata.css          # Dedicated Metadata Panel & Saved Selection Sets styles
+    │   └── option1-ux.css                      # Visual Rule Builder, Audit Drill-Down & Civil Profile styles
     │
     ├── core/                                   # Core 3D Engine, Indexing & Performance Infrastructure
     │   ├── BimEngine.ts                        # Central OpenBIM singleton (Worlds, Raycasters, Hoverer, Hider)
+    │   ├── IfcPreflightCoordinator.ts          # Off-thread Worker IFC STEP pre-flight & IFC4 schedule auto-import
     │   ├── FragmentIndexer.ts                  # Shared async FRAGS v3 spatial/category indexer + Box3 cache
     │   ├── StreamingLoader.ts                  # Two-phase IFC/FRAG loader & dual IndexedDB fragment caching
     │   ├── PointerInputArbiter.ts              # Priority pointer arbitration (Gizmo > Marquee > Measure > Picking)
@@ -198,9 +206,11 @@ BIM-Kintsugi/
     │   ├── RealityCaptureModule.ts             # E57/LAS/PLY point cloud & photogrammetry inspection
     │   ├── PlanOverlayModule.ts                # 2D DXF/PDF drawing sheet alignment on storeys
     │   ├── CivilAlignmentModule.ts             # OpenBIM Civil 4.3 alignments, clothoids & parabolic vertical profile
-    │   └── __tests__/                          # 32 Vitest module test suites (36 total files / 281 tests)
+    │   └── __tests__/                          # 34 Vitest module/integration test suites (38 total files / 289 tests)
     │
     ├── ui/                                     # UI Controllers & HUD Components
+    │   ├── Cascade4DController.ts              # CasCADe 4D Lens & 4D-synced SLF controller (lazy-loaded analytics)
+    │   ├── RuleBuilderModal.ts                 # Visual boolean Search Set Rule Builder & 4D Task Binder modal
     │   ├── MetadataPanelController.ts          # Dedicated META tab (single-element & batch takeoff summary)
     │   ├── EngineeringStudioController.ts      # CAD, Scans, IFC Split & Civil Studio controller
     │   ├── EnterpriseSuitesController.ts       # Event wiring & reactive rendering for enterprise drawers
@@ -273,19 +283,22 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking and the 281-test Vitest suite across all 36 core and enterprise test suites (`32` module suites + `4` core suites):
+Run strict TypeScript type-checking, the 289-test Vitest suite across all 38 test suites (`34` module/integration suites + `4` core suites), and the Playwright Chromium E2E smoke test:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 36 unit test files (281 tests)
+# Run all 38 unit & integration test files (289 tests)
 npm test
+
+# Run headless Chromium Playwright E2E smoke suite against production preview
+npm run test:e2e
 ```
 
 The automated testing harness also executes end-to-end headless Chromium verification and multi-viewport visual audits:
 - **0 runtime page errors**, **0 console errors**, **0 stale DOM IDs**.
-- **281/281 unit tests passing** across 36 test files (100% green).
+- **289/289 unit & integration tests passing** across 38 test files (100% green), including a real IFC4 STEP fixture pipeline test (`sample_enterprise_4d.ifc`).
 - **7-Platform AI Verification Matrix**: Automated test plans for TestSprite, Octomind, Momentic, Reflect, Mabl, Katalon Studio, and Applitools Eyes.
 - **Security & RBAC Enforcement**: Role-based privilege separation across Viewer, Member, Manager, and Admin tiers with persistent policies.
 - **100% WCAG 2.2 AA Compliance** across interactive controls and form inputs.
@@ -324,6 +337,11 @@ The automated testing harness also executes end-to-end headless Chromium verific
 ---
 
 ## 📝 Recent Changes & Enhancements
+
+- **Interactive UX, Bundle Modularization & CI Smoke Gate (Options 1–3)**:
+  - **Visual Dynamic Rule Builder & Audit Drill-Down** ([`RuleBuilderModal.ts`](src/ui/RuleBuilderModal.ts), [`EnterpriseSuitesController.ts`](src/ui/EnterpriseSuitesController.ts), [`EngineeringStudioController.ts`](src/ui/EngineeringStudioController.ts)): Added visual boolean search-set builder (`NEWSET`/`AND`/`OR`/`NOT`) with live 3D highlight & 4D task binding, clickable QA/BOQ audit drill-down + QA CSV export + inline QTO provenance switcher, 4D timeline-synced Workspace `SLF` congestion zones (`#btn-4d-slf-toggle` / `#clash-sync-4d-slf`), and clickable Civil 4.3 vertical profile stations (`flyToStation`).
+  - **Modularization & Code-Splitting** ([`Cascade4DController.ts`](src/ui/Cascade4DController.ts), [`IfcPreflightCoordinator.ts`](src/core/IfcPreflightCoordinator.ts), [`optionalFeatures.ts`](src/modules/optionalFeatures.ts), [`src/styles/`](src/styles/)): Split 10 on-demand lazy chunks out of the initial entry bundle (`index-*.js` reduced from `889.5 KB` → `778.8 KB`, `-12.4%`) and extracted 1,535 lines of CSS into cascade-preserving partials.
+  - **Off-Thread Pre-Flight Worker, Real IFC4 Fixture & Playwright CI Gate** ([`ifcPreflightWorker.ts`](src/workers/ifcPreflightWorker.ts), [`EndToEndIfcFixture.test.ts`](src/modules/__tests__/EndToEndIfcFixture.test.ts), [`scripts/e2e-smoke.mjs`](scripts/e2e-smoke.mjs), [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), [`.gitattributes`](.gitattributes)): Wired Web Worker IFC STEP pre-flight scanning, added a real IFC4 fixture integration test, normalized line endings to LF, and added a headless Chromium Playwright smoke gate (`npm run test:e2e`) to GitHub Actions before publishing to GitHub Pages.
 
 - **5-Phase 4D/5D/QA/Infra Platform Upgrade** (clean-room MIT TypeScript modules leaving `BimEngine.ts` and `@thatopen/*` packages untouched):
   - **Phase 1 — Dynamic Search Sets, DAG CPM Solver & WBS Gantt** ([`CpmGraphSolver.ts`](src/modules/CpmGraphSolver.ts), [`RuleSearchEngine.ts`](src/modules/RuleSearchEngine.ts), [`ScheduleManager.ts`](src/modules/ScheduleManager.ts), [`ScheduleImportParsers.ts`](src/modules/ScheduleImportParsers.ts), [`InteractiveGanttDrawer.ts`](src/ui/InteractiveGanttDrawer.ts)): Added full `FS`/`SS`/`FF`/`SF` + lag CPM computation, cycle detection, total/free float, bottom-up WBS hierarchy rollups, Navisworks FindSpec XML rule import, IFC4 `IfcWorkSchedule` STEP extraction, collapsible Gantt rows, draggable pane splitter, `M`/`W`/`D` timescale zoom, and SVG dependency connectors.
@@ -421,7 +439,7 @@ The automated testing harness also executes end-to-end headless Chromium verific
 
 ## 🌐 Production Deployment
 
-The repository includes an automated GitHub Pages workflow in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every push to `main` runs `npm ci`, `npm run lint`, `npm test -- --run`, and `npm run build`, then deploys `./dist` to GitHub Pages.
+The repository includes an automated GitHub Pages workflow in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every push to `main` runs `npm ci`, `npm run lint`, `npm test -- --run`, `npm run build`, and the headless Chromium Playwright smoke gate (`npm run test:e2e`), then deploys `./dist` to GitHub Pages.
 
 ---
 

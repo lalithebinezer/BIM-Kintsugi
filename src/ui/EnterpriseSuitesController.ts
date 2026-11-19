@@ -15,12 +15,20 @@ import { BcfIssueManager } from "../modules/BcfIssueManager";
 import { CinematicTourManager } from "../modules/CinematicTourManager";
 import { ClashToleranceInspector } from "../modules/ClashToleranceInspector";
 import { ScheduleManager } from "../modules/ScheduleManager";
-import { WorkspaceCongestionAnalyzer } from "../modules/WorkspaceCongestionAnalyzer";
-import { CostRuleBookEngine, type ClassificationStandard } from "../modules/CostRuleBookEngine";
-import { Boq5DModule } from "../modules/Boq5DModule";
-import { BimQualityAuditor } from "../modules/BimQualityAuditor";
+import type { ClassificationStandard } from "../modules/CostRuleBookEngine";
+import { switchLineItemQuantitySource, type BOQSummary } from "../modules/BoqGenerator";
+import type { QualityAuditReport } from "../modules/BimQualityAuditor";
+import * as OBF from "@thatopen/components-front";
 import type { GisModule } from "../modules/GisModule";
-import { evmDashboard, gisFeature, geoTools, engineeringStudio } from "../modules/optionalFeatures";
+import {
+  evmDashboard,
+  gisFeature,
+  geoTools,
+  engineeringStudio,
+  ruleBuilderFeature,
+  workspaceCongestionFeature,
+  bimQualityAuditorFeature,
+} from "../modules/optionalFeatures";
 import { runFeature } from "../utils/lazyFeature";
 import type { EvmDashboardModule } from "../modules/EvmDashboardModule";
 import { showToast } from "./ToastManager";
@@ -347,8 +355,9 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       showToast("Generate or import a 4D schedule before analyzing Workspace SLF", "warning");
       return;
     }
-    const series = await WorkspaceCongestionAnalyzer.getInstance().analyzeLoadedModels(tasks);
-    const peaks = WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey();
+    const analyzer = await workspaceCongestionFeature.load();
+    const series = await analyzer.analyzeLoadedModels(tasks);
+    const peaks = analyzer.getPeakSlfByStorey();
     const summaryEl = document.getElementById("clash-slf-summary");
     if (summaryEl) {
       summaryEl.classList.remove("hidden");
@@ -368,9 +377,27 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     );
   });
 
+  // 4D Timeline-Synced Workspace SLF Toggle (Clash Drawer)
+  document.getElementById("clash-sync-4d-slf")?.addEventListener("change", async (e) => {
+    const enabled = (e.target as HTMLInputElement).checked;
+    if (typeof (window as any).set4dSlfSync === "function") {
+      (window as any).set4dSlfSync(enabled);
+    } else if (!enabled) {
+      const analyzer = await workspaceCongestionFeature.load();
+      analyzer.clearOverlays();
+    }
+    showToast(enabled ? "4D SLF Zones synced with timeline" : "4D SLF sync disabled", "info");
+  });
+
+  // Finder Dynamic Search Set Rule Builder Trigger
+  document.getElementById("btn-finder-rule-builder")?.addEventListener("click", async () => {
+    const modal = await ruleBuilderFeature.load();
+    modal.open();
+  });
+
   document.getElementById("btn-clear-clashes")?.addEventListener("click", () => {
     clashDetector.clearClashes();
-    WorkspaceCongestionAnalyzer.getInstance().clearOverlays();
+    void workspaceCongestionFeature.load().then((a) => a.clearOverlays()).catch(() => {});
     document.getElementById("clash-slf-summary")?.classList.add("hidden");
     showToast("Cleared Clash Results & 3D Markers", "info");
   });
@@ -662,15 +689,17 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("drawer-btn-open-evm")?.addEventListener("click", toggleUnifiedEvmSuite);
   document.getElementById("btn-open-evm-from-sidebar")?.addEventListener("click", toggleUnifiedEvmSuite);
 
-  // Rule-Book Classification Standard, GAEB X83, Rate Catalog Import & Quality Audit
-  document.getElementById("drawer-cost-standard")?.addEventListener("change", (e) => {
+  // Rule-Book Classification Standard, GAEB X83, Rate Catalog Import & Quality Audit (lazy-loaded)
+  document.getElementById("drawer-cost-standard")?.addEventListener("change", async (e) => {
     const std = ((e.target as HTMLSelectElement).value || "DIN276") as ClassificationStandard;
+    const { CostRuleBookEngine } = await import("../modules/CostRuleBookEngine");
     CostRuleBookEngine.getInstance().setStandard(std);
     showToast(`Active BOQ Classification: ${std}`, "info");
   });
 
   document.getElementById("drawer-btn-export-gaeb")?.addEventListener("click", async () => {
     const std = (document.getElementById("drawer-cost-standard") as HTMLSelectElement | null)?.value as ClassificationStandard | undefined;
+    const { Boq5DModule } = await import("../modules/Boq5DModule");
     await new Boq5DModule().exportGaebX83("BIM-Kintsugi 5D Project", std);
     showToast("Exported GAEB DA XML (.X83) BOQ!", "success");
   });
@@ -681,6 +710,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (!file) return;
     try {
       const text = await file.text();
+      const { CostRuleBookEngine } = await import("../modules/CostRuleBookEngine");
       const added = CostRuleBookEngine.getInstance().importCatalogFromCsv(text);
       showToast(`Imported ${added} custom rate items into Rule-Book`, added > 0 ? "success" : "warning");
     } finally {
@@ -688,16 +718,154 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     }
   });
 
-  document.getElementById("drawer-btn-quality-audit")?.addEventListener("click", async () => {
-    const report = await BimQualityAuditor.getInstance().auditLoadedModels();
-    const boqSummary = await new Boq5DModule().generateSummary();
+  let lastQualityReport: QualityAuditReport | null = null;
+
+  const renderAuditSummaryBanner = async (report: QualityAuditReport, boqSummary: BOQSummary) => {
+    const { CostRuleBookEngine } = await import("../modules/CostRuleBookEngine");
     const boqAudit = CostRuleBookEngine.getInstance().auditBoqSummary(boqSummary);
     const outEl = document.getElementById("drawer-quality-summary");
     if (outEl) {
       outEl.classList.remove("hidden");
       outEl.innerHTML = `Model Quality: <strong>${report.scorePercent}%</strong> (${report.summaryBySeverity.error} err / ${report.summaryBySeverity.warning} warn) · BOQ Light: <strong style="text-transform:uppercase;">${boqAudit.status}</strong> (${boqAudit.greenCount}G/${boqAudit.amberCount}A/${boqAudit.redCount}R)`;
     }
-    showToast(`Audit: Model ${report.scorePercent}% · BOQ ${boqAudit.status.toUpperCase()}`, report.status === "failed" ? "warning" : "success");
+    return boqAudit;
+  };
+
+  const renderAuditDrilldown = async (report: QualityAuditReport, boqSummary: BOQSummary) => {
+    const boqAudit = await renderAuditSummaryBanner(report, boqSummary);
+    const wrap = document.getElementById("drawer-audit-drilldown");
+    const issuesEl = document.getElementById("drawer-audit-issues-list");
+    const provEl = document.getElementById("drawer-boq-provenance-list");
+    if (!wrap || !issuesEl || !provEl) return;
+
+    wrap.classList.remove("hidden");
+
+    const combinedRows: string[] = [];
+    report.issues.slice(0, 15).forEach((iss) => {
+      const badgeCls = iss.severity === "error" ? "sev-err" : iss.severity === "warning" ? "sev-warn" : "sev-info";
+      combinedRows.push(
+        `<button type="button" class="audit-issue-row" data-model-id="${escapeHtml(iss.modelId)}" data-express-id="${iss.expressId}" title="Click to highlight element in 3D">
+          <span class="audit-sev-pill ${badgeCls}">${escapeHtml(iss.severity)}</span>
+          <span class="audit-issue-text"><strong>${escapeHtml(iss.ruleId)}</strong> ${escapeHtml(iss.message)}</span>
+        </button>`
+      );
+    });
+    boqAudit.issues.slice(0, 10).forEach((biss) => {
+      const badgeCls = biss.severity === "red" ? "sev-err" : "sev-warn";
+      combinedRows.push(
+        `<div class="audit-issue-row static">
+          <span class="audit-sev-pill ${badgeCls}">${escapeHtml(biss.code)}</span>
+          <span class="audit-issue-text">${escapeHtml(biss.message)}</span>
+        </div>`
+      );
+    });
+
+    issuesEl.innerHTML =
+      combinedRows.length > 0
+        ? combinedRows.join("")
+        : `<div class="audit-empty">All quality &amp; BOQ checks passed with 0 issues.</div>`;
+
+    issuesEl.querySelectorAll<HTMLButtonElement>("button.audit-issue-row").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const modelId = btn.dataset.modelId || "";
+        const expressId = Number(btn.dataset.expressId);
+        if (!modelId || !Number.isFinite(expressId)) return;
+        try {
+          const hl = BimEngine.getInstance().components.get(OBF.Highlighter);
+          await hl.highlightByID("select", { [modelId]: new Set([expressId]) }, true, false);
+        } catch {
+          // Ignore in headless/non-WebGL environments
+        }
+        showToast(`Highlighted element #${expressId} from audit`, "info");
+      });
+    });
+
+    // QTO Provenance Source Switcher
+    const topItems = boqSummary.items.slice(0, 12);
+    if (topItems.length === 0) {
+      provEl.innerHTML = `<div class="audit-empty">Load an IFC/FRAG model to inspect element QTO sources.</div>`;
+    } else {
+      provEl.innerHTML = topItems
+        .map((item, itemIdx) => {
+          const sources = item.availableQuantities ?? [];
+          const sourceOptions =
+            sources.length > 0
+              ? sources
+                  .map((s, sIdx) => {
+                    const selected =
+                      s.propertySetName === item.propertySetName && s.quantityType === item.quantityType ? "selected" : "";
+                    return `<option value="${sIdx}" ${selected}>${escapeHtml(s.propertySetName)}.${escapeHtml(s.quantityType)} (${s.value.toFixed(2)} ${escapeHtml(s.unit)})</option>`;
+                  })
+                  .join("")
+              : `<option value="0" selected>${escapeHtml(item.propertySetName || "Computed")}.${escapeHtml(item.quantityType || "Qty")} (${item.quantity.toFixed(2)} ${escapeHtml(item.unit)})</option>`;
+          return `
+            <div class="prov-item-row" data-item-idx="${itemIdx}">
+              <div class="prov-item-top">
+                <span class="prov-item-name" title="${escapeHtml(item.elementName)}">${escapeHtml(item.elementName)}</span>
+                <span class="prov-item-cost">$${item.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              </div>
+              <select class="prov-source-select clash-status-select" data-item-idx="${itemIdx}" aria-label="QTO Quantity Source for ${escapeHtml(item.elementName)}">${sourceOptions}</select>
+            </div>
+          `;
+        })
+        .join("");
+
+      provEl.querySelectorAll<HTMLSelectElement>(".prov-source-select").forEach((sel) => {
+        sel.addEventListener("change", () => {
+          const itemIdx = Number(sel.dataset.itemIdx);
+          const sourceIdx = Number(sel.value);
+          const item = boqSummary.items[itemIdx];
+          const chosen = item?.availableQuantities?.[sourceIdx];
+          if (!item || !chosen) return;
+          const updated = switchLineItemQuantitySource(item, chosen.quantityType, chosen.propertySetName);
+          boqSummary.items[itemIdx] = updated;
+          boqSummary.totalCost = Number(
+            boqSummary.items.reduce((sum, li) => sum + li.totalCost, 0).toFixed(2)
+          );
+          if (lastQualityReport) {
+            void renderAuditDrilldown(lastQualityReport, boqSummary);
+          }
+          showToast(
+            `Switched QTO source for ${updated.elementName} → ${updated.quantity} ${updated.unit}`,
+            "success"
+          );
+        });
+      });
+    }
+
+    return boqAudit;
+  };
+
+  document.getElementById("drawer-btn-export-qa-csv")?.addEventListener("click", async () => {
+    if (!lastQualityReport) {
+      showToast("Run Model & BOQ Audit first", "info");
+      return;
+    }
+    const { exportQualityAuditCsv } = await import("../modules/BimQualityAuditor");
+    const csv = exportQualityAuditCsv(lastQualityReport);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BIM_Quality_Audit_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Exported BIM Quality Audit CSV!", "success");
+  });
+
+  document.getElementById("drawer-btn-quality-audit")?.addEventListener("click", async () => {
+    const auditor = await bimQualityAuditorFeature.load();
+    const { Boq5DModule } = await import("../modules/Boq5DModule");
+    const report = await auditor.auditLoadedModels();
+    const boqSummary = await new Boq5DModule().generateSummary();
+    lastQualityReport = report;
+    const boqAudit = await renderAuditDrilldown(report, boqSummary);
+    showToast(
+      `Audit: Model ${report.scorePercent}% · BOQ ${boqAudit ? boqAudit.status.toUpperCase() : "OK"}`,
+      report.status === "failed" ? "warning" : "success"
+    );
   });
 
   // EVM Drawer Actions & Simulator

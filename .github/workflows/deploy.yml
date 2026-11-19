@@ -45,6 +45,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Playwright Chromium for E2E Smoke
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Smoke Gate
+        run: npm run test:e2e
+
       - name: Deploy to gh-pages branch (Branch-based fallback)
         uses: peaceiris/actions-gh-pages@v4
         with:

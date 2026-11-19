@@ -14,7 +14,6 @@ import {
 } from "../core/clashBroadPhase";
 import { ScheduleManager } from "./ScheduleManager";
 import { ClashToleranceInspector } from "./ClashToleranceInspector";
-import { WorkspaceCongestionAnalyzer } from "./WorkspaceCongestionAnalyzer";
 
 export interface BwmCriticalityInput {
   penetrationMeters: number;
@@ -454,6 +453,7 @@ export class ClashDetector {
         const foundTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
         // Compute BWM Criticality scores & local spatial density N
+        const { WorkspaceCongestionAnalyzer } = await import("./WorkspaceCongestionAnalyzer");
         const peaks = WorkspaceCongestionAnalyzer.getInstance().getPeakSlfByStorey();
         const hasSevereZone = Array.from(peaks.values()).some((p) => p.status === "Extreme");
 

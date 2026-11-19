@@ -203,6 +203,8 @@ export function computeWorkspaceSlfSeries(
 export class WorkspaceCongestionAnalyzer {
   private static instance: WorkspaceCongestionAnalyzer | null = null;
   private lastSeries: StoreySlfPoint[] = [];
+  private lastStoreyBoxes: Map<string, THREE.Box3> = new Map();
+  private lastTaskSignature: string = "";
   private overlayGroup: THREE.Group | null = null;
 
   private constructor() {}
@@ -218,6 +220,10 @@ export class WorkspaceCongestionAnalyzer {
     return this.lastSeries;
   }
 
+  public getLastStoreyBoxes(): Map<string, THREE.Box3> {
+    return this.lastStoreyBoxes;
+  }
+
   public getPeakSlfByStorey(): Map<string, StoreySlfPoint> {
     const peaks = new Map<string, StoreySlfPoint>();
     for (const pt of this.lastSeries) {
@@ -228,7 +234,43 @@ export class WorkspaceCongestionAnalyzer {
   }
 
   /**
-   * Computes 4D SLF series across all loaded models via FragmentIndexer.
+   * Returns the StoreySlfPoint slice active at `dateMs` (or closest preceding window).
+   */
+  public getActivePointsAtDate(dateMs: number): StoreySlfPoint[] {
+    if (this.lastSeries.length === 0) return [];
+    const byStorey = new Map<string, StoreySlfPoint>();
+    for (const pt of this.lastSeries) {
+      const startMs = Date.parse(pt.dateIso);
+      const endMs = Date.parse(pt.windowEndIso);
+      if (dateMs >= startMs && dateMs <= endMs) {
+        const prev = byStorey.get(pt.storey);
+        if (!prev || pt.slf > prev.slf) byStorey.set(pt.storey, pt);
+      }
+    }
+    if (byStorey.size > 0) return Array.from(byStorey.values());
+    // Fallback to nearest window by midpoint
+    let bestDist = Infinity;
+    let bestMid = 0;
+    for (const pt of this.lastSeries) {
+      const mid = (Date.parse(pt.dateIso) + Date.parse(pt.windowEndIso)) / 2;
+      const dist = Math.abs(dateMs - mid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestMid = mid;
+      }
+    }
+    for (const pt of this.lastSeries) {
+      const mid = (Date.parse(pt.dateIso) + Date.parse(pt.windowEndIso)) / 2;
+      if (Math.abs(mid - bestMid) <= 1) {
+        const prev = byStorey.get(pt.storey);
+        if (!prev || pt.slf > prev.slf) byStorey.set(pt.storey, pt);
+      }
+    }
+    return Array.from(byStorey.values());
+  }
+
+  /**
+   * Computes 4D SLF series across all loaded models via FragmentIndexer and caches storey bounding boxes.
    */
   public async analyzeLoadedModels(
     tasks: ScheduleTask[],
@@ -237,6 +279,7 @@ export class WorkspaceCongestionAnalyzer {
     const engine = BimEngine.getInstance();
     const indexer = FragmentIndexer.getInstance();
     const lookup = new Map<string, WorkspaceElementInfo>();
+    const storeyBoxes = new Map<string, THREE.Box3>();
 
     if ((engine.fragments as any)?.initialized && engine.fragments?.list) {
       for (const [modelId, model] of engine.fragments.list) {
@@ -250,12 +293,40 @@ export class WorkspaceCongestionAnalyzer {
             volumeM3: el.volumeM3,
             box: el.box,
           });
+          if (el.box && !el.box.isEmpty()) {
+            const st = el.storey || "Default Zone";
+            const acc = storeyBoxes.get(st) ?? new THREE.Box3();
+            acc.union(el.box);
+            storeyBoxes.set(st, acc);
+          }
         }
       }
     }
 
+    this.lastStoreyBoxes = storeyBoxes;
+    this.lastTaskSignature = `${tasks.length}:${tasks[0]?.id ?? ""}:${tasks[tasks.length - 1]?.id ?? ""}`;
     this.lastSeries = computeWorkspaceSlfSeries(tasks, lookup, options);
     return this.lastSeries;
+  }
+
+  /**
+   * Synchronizes 3D translucent SLF congestion overlays to a specific 4D simulation timestamp.
+   */
+  public async syncOverlaysForDate(
+    tasks: ScheduleTask[],
+    dateMs: number
+  ): Promise<{ points: StoreySlfPoint[]; peak: StoreySlfPoint | null; renderedCount: number }> {
+    const sig = `${tasks.length}:${tasks[0]?.id ?? ""}:${tasks[tasks.length - 1]?.id ?? ""}`;
+    if (this.lastSeries.length === 0 || this.lastTaskSignature !== sig) {
+      await this.analyzeLoadedModels(tasks);
+    }
+    const activePoints = this.getActivePointsAtDate(dateMs);
+    const renderedCount = this.renderZoneOverlays(activePoints, this.lastStoreyBoxes);
+    let peak: StoreySlfPoint | null = null;
+    for (const pt of activePoints) {
+      if (!peak || pt.slf > peak.slf) peak = pt;
+    }
+    return { points: activePoints, peak, renderedCount };
   }
 
   /**
