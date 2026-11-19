@@ -62,28 +62,4 @@ var e={USD:{code:`USD`,symbol:`$`,name:`US Dollar (USD)`,conversionRate:1},EUR:{
             </div>
           </td>
         </tr>
-      `).join(``);let a=this.modalEl.querySelector(`#btn-cost-rates-reset`);a&&(a.onclick=()=>{confirm(`Reset all category rates and unit types to project defaults?`)&&(this.resetToDefaults(),this.renderModalContent(t))});let o=this.modalEl.querySelector(`#btn-cost-rates-save`);o&&(o.onclick=()=>{(this.modalEl?.querySelectorAll(`#cost-rate-table-body tr`))?.forEach(e=>{let t=e.dataset.cat;if(!t)return;let n=e.querySelector(`.cost-unit-select`),r=e.querySelector(`.cost-rate-input`),i=Number(r?.value)||0,a=n?.value||`ea`;this.updateRate(t,i,a)}),this.saveState(),this.closeCostRateModal(),t&&t()})}};function a(e){try{return i.getInstance().formatPrice(e)}catch{return`$${e.toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}`}}function o(e){return`${e.toLocaleString()} items`}function s(e){return String(e).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}var c={success:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>`,info:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,warning:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,error:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`};function l(e){if(!e)return c.info;let t=e.trim().toLowerCase();return t in c?c[t]:e}function u(e,t=c.info,n=3200){if(typeof document>`u`)return;let r=document.getElementById(`bim-toast-container`);if(!r)return;let i=l(t),a=document.createElement(`div`);a.className=`bim-toast-item`,a.style.cssText=`
-    background: var(--bg-panel, rgba(18, 20, 28, 0.94));
-    color: var(--text-primary, #ffffff);
-    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.16));
-    border-radius: 9999px;
-    padding: 0.38rem 0.85rem;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08);
-    font-size: 0.7rem;
-    font-weight: 700;
-    font-family: var(--font-body, sans-serif);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    pointer-events: auto;
-    animation: popIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    max-width: min(90vw, 360px);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    user-select: none;
-    opacity: 0.5;
-    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  `,a.addEventListener(`mouseenter`,()=>{a.style.opacity=`0.95`}),a.addEventListener(`mouseleave`,()=>{a.style.opacity=`0.5`}),a.innerHTML=`
-    <span style="display: inline-flex; align-items: center; flex-shrink: 0;">${i}</span>
-    <span style="flex: 1; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s(e)}</span>
-  `,r.appendChild(a),setTimeout(()=>{a.style.transition=`opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)`,a.style.opacity=`0`,a.style.transform=`translateY(-8px) scale(0.96)`,setTimeout(()=>a.remove(),240)},n)}export{i as a,o as i,s as n,a as r,u as t};
+      `).join(``);let a=this.modalEl.querySelector(`#btn-cost-rates-reset`);a&&(a.onclick=()=>{confirm(`Reset all category rates and unit types to project defaults?`)&&(this.resetToDefaults(),this.renderModalContent(t))});let o=this.modalEl.querySelector(`#btn-cost-rates-save`);o&&(o.onclick=()=>{(this.modalEl?.querySelectorAll(`#cost-rate-table-body tr`))?.forEach(e=>{let t=e.dataset.cat;if(!t)return;let n=e.querySelector(`.cost-unit-select`),r=e.querySelector(`.cost-rate-input`),i=Number(r?.value)||0,a=n?.value||`ea`;this.updateRate(t,i,a)}),this.saveState(),this.closeCostRateModal(),t&&t()})}};function a(e){try{return i.getInstance().formatPrice(e)}catch{return`$${e.toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}`}}function o(e){return`${e.toLocaleString()} items`}function s(e){return String(e).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`)}export{i,a as n,o as r,s as t};
