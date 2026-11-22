@@ -55,6 +55,14 @@ export interface ScheduleTask {
   appearanceProfileId?: string;
   selectionRuleId?: string;
   customMetric?: number;
+  /** Optional explicit IFC property name from CSV (e.g. `SIMULATION`, `Pset_WallCommon.Reference`) */
+  matchProperty?: string;
+  /** Optional explicit property value from CSV to exact-match against 3D elements (defaults to `name`) */
+  matchValue?: string;
+  /** Recorded IFC property name(s) that exact-matched this task to 3D elements */
+  matchedProperty?: string;
+  /** Tracks which cost column(s) were supplied in CSV so exact values are preserved on element linking */
+  costSource?: "total" | "unit" | "both" | "fallback";
 }
 
 export interface ElementCostData {
@@ -68,6 +76,15 @@ export interface ElementCostData {
   actualEndDate?: string;
   delayDays?: number;
   costImpact?: number;
+}
+
+export interface LevelWiseScheduleElement {
+  modelId: string;
+  expressId: number;
+  category: string;
+  storey?: string;
+  /** World-space minimum Y elevation (meters) from element bounding box */
+  minY?: number;
 }
 
 /**
@@ -222,6 +239,244 @@ export class ScheduleManager {
 
       phaseIndex++;
     }
+  }
+
+  /**
+   * Computes a semantic elevation sort rank from storey/level names when 3D Y bounds are unavailable
+   * (e.g. Footings/Pit < Basement B2 < B1 < Ground/L0 < L1 < L2 < ... < Roof).
+   */
+  public static parseLevelElevationRank(storeyName: string): number {
+    const s = storeyName.trim().toLowerCase();
+    if (/footing|foundation|pile|pit|subgrade/.test(s)) return -100;
+    const bMatch = s.match(/\b(?:b|basement|sub|ug|p)[\s_-]*(\d+)\b/);
+    if (bMatch) return -10 * Number(bMatch[1]);
+    if (/\bbasement\b|\bcellar\b/.test(s)) return -10;
+    if (/\bground\b|\bgf\b|\bentry\b|\bl0\b|\blevel[\s_-]*0\b/.test(s)) return 0;
+    if (/\broof\b|\bparapet\b|\bpenthouse\b|\btos\b|\brtos\b|\bltos\b/.test(s)) return 900;
+    const lMatch = s.match(/(?:level|lvl|floor|fl|storey|story|ll|l)[\s_-]*(-?\d+(?:\.\d+)?)/);
+    if (lMatch) return Number(lMatch[1]) * 10;
+    const anyNum = s.match(/(-?\d+(?:\.\d+)?)/);
+    if (anyNum) return Number(anyNum[1]) * 10;
+    return 500;
+  }
+
+  /**
+   * Generates a bottom-up, level-wise 4D construction schedule:
+   * builds the lowest level completely (sorted by trade construction order), then moves upward
+   * level by level to the top/roof level, creating WBS parent summary tasks per level with FS links.
+   */
+  generateLevelWiseSchedule(
+    elements: LevelWiseScheduleElement[],
+    projectStartDate?: string
+  ): number {
+    if (!elements || elements.length === 0) return 0;
+
+    const start = projectStartDate || new Date().toISOString().split("T")[0];
+    const startMs = new Date(start).getTime();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const TRADE_DURATION_DAYS = 7;
+
+    const CONSTRUCTION_ORDER: Record<string, number> = {
+      IFCSITE: 0,
+      IFCFOOTING: 1,
+      IFCPILE: 2,
+      IFCCOLUMN: 3,
+      IFCBEAM: 4,
+      IFCSLAB: 5,
+      IFCWALL: 6,
+      IFCWALLSTANDARDCASE: 6,
+      IFCSTAIR: 7,
+      IFCSTAIRFLIGHT: 7,
+      IFCROOF: 8,
+      IFCDOOR: 9,
+      IFCWINDOW: 10,
+      IFCRAILING: 11,
+      IFCCOVERING: 12,
+      IFCPLATE: 13,
+      IFCFURNISHINGELEMENT: 14,
+      IFCFLOWSEGMENT: 15,
+      IFCFLOWFITTING: 16,
+      IFCFLOWTERMINAL: 17,
+    };
+
+    // 1. Group elements by storey (falling back to 3.5m elevation buckets if storey is missing)
+    const levelBuckets = new Map<
+      string,
+      {
+        label: string;
+        yValues: number[];
+        byCategory: Map<string, { modelId: string; expressIds: Set<number> }>;
+      }
+    >();
+
+    for (const el of elements) {
+      let label = (el.storey || "").trim();
+      if (!label || label.toLowerCase() === "unassigned" || label.toLowerCase() === "default") {
+        if (typeof el.minY === "number" && Number.isFinite(el.minY)) {
+          const band = Math.floor(el.minY / 3.5) * 3.5;
+          label = `Elevation ${band >= 0 ? "+" : ""}${band.toFixed(1)}m`;
+        } else {
+          label = "Level 1";
+        }
+      }
+
+      let bucket = levelBuckets.get(label);
+      if (!bucket) {
+        bucket = { label, yValues: [], byCategory: new Map() };
+        levelBuckets.set(label, bucket);
+      }
+      if (typeof el.minY === "number" && Number.isFinite(el.minY)) {
+        bucket.yValues.push(el.minY);
+      }
+      const catKey = (el.category || "IFCELEMENT").toUpperCase();
+      let catEntry = bucket.byCategory.get(catKey);
+      if (!catEntry) {
+        catEntry = { modelId: el.modelId, expressIds: new Set<number>() };
+        bucket.byCategory.set(catKey, catEntry);
+      }
+      catEntry.expressIds.add(el.expressId);
+    }
+
+    // 2. Sort levels strictly bottom-to-top using 10th-percentile geometric minY (or semantic rank)
+    const sortedLevels = Array.from(levelBuckets.values())
+      .map((b) => {
+        let sortElevation: number;
+        if (b.yValues.length > 0) {
+          const sortedY = [...b.yValues].sort((a, c) => a - c);
+          sortElevation = sortedY[Math.floor(sortedY.length * 0.1)];
+        } else {
+          sortElevation = ScheduleManager.parseLevelElevationRank(b.label);
+        }
+        return { ...b, sortElevation, hasGeomY: b.yValues.length > 0 };
+      })
+      .sort((a, b) => {
+        if (a.hasGeomY && b.hasGeomY) {
+          if (Math.abs(a.sortElevation - b.sortElevation) > 0.15) {
+            return a.sortElevation - b.sortElevation;
+          }
+        }
+        const rankDiff =
+          ScheduleManager.parseLevelElevationRank(a.label) -
+          ScheduleManager.parseLevelElevationRank(b.label);
+        if (rankDiff !== 0) return rankDiff;
+        return a.label.localeCompare(b.label);
+      });
+
+    // 3. Emit level WBS parent summaries and child trade tasks bottom -> top
+    let cursorMs = startMs;
+    let prevLeafTaskId: string | null = null;
+    let createdTasks = 0;
+
+    sortedLevels.forEach((lvl, lvlIdx) => {
+      const wbsLevel = `${lvlIdx + 1}`;
+      const levelSlug = lvl.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `l${lvlIdx + 1}`;
+      const summaryId = `auto-lvl-${lvlIdx + 1}-${levelSlug}`;
+      const levelStartIso = new Date(cursorMs).toISOString().split("T")[0];
+
+      const sortedTrades = [...lvl.byCategory.entries()].sort(([catA], [catB]) => {
+        const orderA = CONSTRUCTION_ORDER[catA] ?? 50;
+        const orderB = CONSTRUCTION_ORDER[catB] ?? 50;
+        return orderA - orderB || catA.localeCompare(catB);
+      });
+
+      const levelElementIds = new Set<number>();
+      let levelModelId = "";
+      const summaryTask: ScheduleTask = {
+        id: summaryId,
+        name: `${lvl.label}`,
+        wbsCode: wbsLevel,
+        outlineLevel: 1,
+        isSummary: true,
+        category: "IFCBUILDINGSTOREY",
+        startDate: levelStartIso,
+        endDate: levelStartIso,
+        status: "Planned",
+        elementIds: levelElementIds,
+        modelId: levelModelId,
+        unitCost: 0,
+        totalCost: 0,
+        quantity: 0,
+      };
+      this.tasks.set(summaryId, summaryTask);
+      createdTasks++;
+
+      sortedTrades.forEach(([categoryName, data], tradeIdx) => {
+        const tradeStartMs = cursorMs;
+        const tradeEndMs = tradeStartMs + TRADE_DURATION_DAYS * DAY_MS;
+        const tradeStart = new Date(tradeStartMs).toISOString().split("T")[0];
+        const tradeEnd = new Date(tradeEndMs).toISOString().split("T")[0];
+
+        const taskId = `auto-lvl-${lvlIdx + 1}-${categoryName.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+        const cleanCat = ScheduleManager.formatCategoryLabel(categoryName);
+        const taskUnitCost = this.resolveFallbackUnitCost(categoryName);
+        const count = Math.max(1, data.expressIds.size);
+        const taskTotalCost = Math.round(taskUnitCost * count * 100) / 100;
+        levelModelId = data.modelId || levelModelId;
+
+        const childTask: ScheduleTask = {
+          id: taskId,
+          name: `${lvl.label} — ${cleanCat}`,
+          wbsCode: `${wbsLevel}.${tradeIdx + 1}`,
+          parentId: summaryId,
+          outlineLevel: 2,
+          isSummary: false,
+          category: categoryName,
+          startDate: tradeStart,
+          endDate: tradeEnd,
+          status: "Planned",
+          elementIds: new Set(data.expressIds),
+          modelId: data.modelId,
+          unitCost: taskUnitCost,
+          totalCost: taskTotalCost,
+          quantity: data.expressIds.size,
+          predecessors: prevLeafTaskId
+            ? [{ predecessorId: prevLeafTaskId, type: "FS", lagDays: 0 }]
+            : undefined,
+        };
+
+        this.tasks.set(taskId, childTask);
+        createdTasks++;
+
+        for (const id of data.expressIds) {
+          levelElementIds.add(id);
+          this.elementData.set(`${data.modelId}:${id}`, {
+            unitCost: taskUnitCost,
+            quantity: 1,
+            taskName: childTask.name,
+            taskStatus: "Planned",
+            startDate: tradeStart,
+            endDate: tradeEnd,
+          });
+
+          if (typeof window !== "undefined" && (window as any).twinDatabase) {
+            const dbKey = `${data.modelId}-${id}`;
+            const existing = (window as any).twinDatabase[dbKey] || {
+              modelId: data.modelId,
+              expressId: id,
+              quantity: 1,
+              unitCost: taskUnitCost,
+              calculatedCost: taskUnitCost,
+            };
+            existing.task = childTask.name;
+            existing.startDate = tradeStart;
+            existing.endDate = tradeEnd;
+            existing.status = "Planned";
+            existing.isCustomized = true;
+            (window as any).twinDatabase[dbKey] = existing;
+          }
+        }
+
+        prevLeafTaskId = taskId;
+        cursorMs = tradeEndMs;
+      });
+
+      summaryTask.modelId = levelModelId;
+      summaryTask.quantity = levelElementIds.size;
+      summaryTask.endDate = new Date(Math.max(cursorMs, startMs + DAY_MS)).toISOString().split("T")[0];
+    });
+
+    this.recomputeCpmAndRollups();
+    return createdTasks;
   }
 
   /**
@@ -632,12 +887,12 @@ export class ScheduleManager {
   /**
    * Import schedule CSV and update tasks, element data, itemized 5D costs, and 4D actual variance dates.
    */
-  importScheduleFromCSV(csvText: string): number {
+  importScheduleFromCSV(csvText: string, options?: { replaceExisting?: boolean }): number {
     const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length <= 1) return 0;
 
     let importedCount = 0;
-    const headerLine = lines[0];
+    const headerLine = lines[0].replace(/^\uFEFF/, "");
     const headers = this.parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ""));
 
     const findCol = (...aliases: string[]) => {
@@ -648,22 +903,27 @@ export class ScheduleManager {
       });
     };
 
-    const idIdx = findCol("TaskID", "ID", "UID", "Code");
-    const nameIdx = findCol("TaskName", "Name", "Description", "Task");
-    const catIdx = findCol("Category", "Type", "Trade");
-    const startIdx = findCol("StartDate", "Start", "EarlyStart", "TargetStart");
-    const endIdx = findCol("EndDate", "End", "Finish", "EarlyFinish", "TargetEnd");
+    const idIdx = findCol("TaskID", "ID", "UID", "Code", "ActivityID");
+    const nameIdx = findCol("TaskName", "Name", "Description", "Task", "ActivityName", "Activity");
+    const catIdx = findCol("Category", "Type", "Trade", "Discipline");
+    const wbsIdx = findCol("WBS", "WBSCode", "WBS_Code", "OutlineNumber");
+    const startIdx = findCol("StartDate", "Start", "EarlyStart", "TargetStart", "PlannedStart");
+    const endIdx = findCol("EndDate", "End", "Finish", "EarlyFinish", "TargetEnd", "PlannedFinish", "PlannedEnd");
     const actualStartIdx = findCol("ActualStartDate", "ActualStart", "ActStart", "Actual_Start", "Act_Start");
     const actualEndIdx = findCol("ActualEndDate", "ActualEnd", "ActualFinish", "ActFinish", "Actual_End", "Act_Finish");
     const statusIdx = findCol("Status", "State", "Progress");
     const modelIdx = findCol("ModelID", "Model");
     const idsIdx = findCol("ExpressIDs", "ElementIDs", "IDs", "ExpressID");
     const unitCostIdx = findCol("UnitCost", "UnitRate", "Rate", "Unit_Cost");
-    const totalCostIdx = findCol("TotalCost", "Cost", "Total_Cost", "Budget", "PlannedCost", "Price");
-    const actualCostIdx = findCol("ActualCost", "ActCost", "Actual_Cost");
+    const totalCostIdx = findCol("TotalCost", "Cost", "Total_Cost", "Budget", "PlannedCost", "Price", "BAC");
+    const actualCostIdx = findCol("ActualCost", "ActCost", "Actual_Cost", "AC");
+    const qtyIdx = findCol("Quantity", "Qty", "Count");
     const delayDaysIdx = findCol("DelayDays", "Delay", "VarianceDays", "Slippage");
     const costImpactIdx = findCol("CostImpact", "DelayCost", "CostVariance");
     const profileIdx = findCol("AppearanceProfile", "Profile", "ProfileID", "Appearance");
+    const matchPropIdx = findCol("MatchProperty", "PropertyName", "IFCProperty", "LinkProperty", "Property");
+    const matchValIdx = findCol("MatchValue", "PropertyValue", "LinkValue");
+    const predIdx = findCol("Predecessors", "Predecessor", "Dependencies");
 
     const cleanNumber = (val: string): number => {
       if (!val) return 0;
@@ -672,15 +932,18 @@ export class ScheduleManager {
       return isNaN(num) ? 0 : num;
     };
 
+    const parsedTasks: ScheduleTask[] = [];
+
     for (let i = 1; i < lines.length; i++) {
       const cols = this.parseCsvLine(lines[i]);
-      if (cols.length < 4) continue;
+      if (cols.length < 3) continue;
 
       const getCol = (idx: number) => (idx >= 0 && cols[idx] ? cols[idx].trim().replace(/^"|"$/g, "") : "");
 
       const id = getCol(idIdx) || `csv-task-${i}`;
       const name = getCol(nameIdx) || `Custom Task ${i}`;
       const category = getCol(catIdx) || "IFCELEMENT";
+      const wbsCode = getCol(wbsIdx) || undefined;
       const startDate = this.normalizeDateString(getCol(startIdx));
       const endDate = this.normalizeDateString(getCol(endIdx));
       const actualStartDateRaw = getCol(actualStartIdx);
@@ -693,8 +956,12 @@ export class ScheduleManager {
       const rawUnitCost = Math.max(0, cleanNumber(getCol(unitCostIdx)));
       const rawTotalCost = Math.max(0, cleanNumber(getCol(totalCostIdx)));
       const rawActualCost = Math.max(0, cleanNumber(getCol(actualCostIdx)));
+      const rawQty = Math.max(0, cleanNumber(getCol(qtyIdx)));
       const rawDelayDays = cleanNumber(getCol(delayDaysIdx));
       const rawCostImpact = cleanNumber(getCol(costImpactIdx));
+      const matchProperty = getCol(matchPropIdx) || undefined;
+      const matchValue = getCol(matchValIdx) || undefined;
+      const predRaw = getCol(predIdx);
 
       if (!startDate || !endDate) continue;
 
@@ -706,25 +973,49 @@ export class ScheduleManager {
         });
       }
 
-      const count = Math.max(1, elementIds.size);
+      const count = elementIds.size > 0 ? elementIds.size : (rawQty > 0 ? rawQty : 1);
       let unitCost = rawUnitCost;
       let totalCost = rawTotalCost;
+      let costSource: "total" | "unit" | "both" | "fallback" = "fallback";
 
-      if (totalCost > 0 && unitCost === 0) {
+      if (totalCost > 0 && unitCost > 0) {
+        costSource = "both";
+      } else if (totalCost > 0 && unitCost === 0) {
+        costSource = "total";
         unitCost = Math.round((totalCost / count) * 100) / 100;
       } else if (unitCost > 0 && totalCost === 0) {
+        costSource = "unit";
         totalCost = Math.round((unitCost * count) * 100) / 100;
       } else if (unitCost === 0 && totalCost === 0) {
+        costSource = "fallback";
         unitCost = this.resolveFallbackUnitCost(category);
         totalCost = Math.round((unitCost * count) * 100) / 100;
       }
 
       const appearanceProfileId = getCol(profileIdx) || undefined;
+      const predecessors: TaskDependency[] | undefined = predRaw
+        ? predRaw
+            .split(/[;,]/)
+            .map((tok) => tok.trim())
+            .filter(Boolean)
+            .map((tok) => {
+              const m = tok.match(/^(.+?)(FS|SS|FF|SF)([+-]\d+)?$/i);
+              if (m) {
+                return {
+                  predecessorId: m[1].trim(),
+                  type: m[2].toUpperCase() as TaskDependency["type"],
+                  lagDays: m[3] ? Number(m[3]) : 0,
+                };
+              }
+              return { predecessorId: tok, type: "FS" as const, lagDays: 0 };
+            })
+        : undefined;
 
       const task: ScheduleTask = {
         id,
         name,
         category,
+        wbsCode,
         startDate,
         endDate,
         actualStartDate,
@@ -734,11 +1025,15 @@ export class ScheduleManager {
         modelId,
         unitCost,
         totalCost,
+        costSource,
         actualCost: rawActualCost > 0 ? rawActualCost : undefined,
         delayDays: rawDelayDays !== 0 ? rawDelayDays : undefined,
         costImpact: rawCostImpact !== 0 ? rawCostImpact : undefined,
         quantity: count,
         appearanceProfileId,
+        matchProperty,
+        matchValue,
+        predecessors,
       };
 
       // Calculate task delay and cost impact using DelayImpactEngine
@@ -746,26 +1041,38 @@ export class ScheduleManager {
       task.delayDays = impact.delayDays;
       task.costImpact = impact.totalCostImpact;
 
-      this.tasks.set(id, task);
+      parsedTasks.push(task);
+    }
 
-      for (const expressId of elementIds) {
-        this.elementData.set(`${modelId}:${expressId}`, {
-          unitCost,
+    if (parsedTasks.length === 0) return 0;
+
+    if (options?.replaceExisting) {
+      this.tasks.clear();
+      this.elementData.clear();
+    }
+
+    for (const task of parsedTasks) {
+      this.tasks.set(task.id, task);
+
+      for (const expressId of task.elementIds) {
+        this.elementData.set(`${task.modelId}:${expressId}`, {
+          unitCost: task.unitCost,
           quantity: 1,
-          taskName: name,
-          taskStatus: status,
-          startDate,
-          endDate,
-          actualStartDate,
-          actualEndDate,
-          delayDays: impact.delayDays,
-          costImpact: impact.totalCostImpact,
+          taskName: task.name,
+          taskStatus: task.status,
+          startDate: task.startDate,
+          endDate: task.endDate,
+          actualStartDate: task.actualStartDate,
+          actualEndDate: task.actualEndDate,
+          delayDays: task.delayDays,
+          costImpact: task.costImpact,
         });
       }
 
       importedCount++;
     }
 
+    this.recomputeCpmAndRollups();
     return importedCount;
   }
 

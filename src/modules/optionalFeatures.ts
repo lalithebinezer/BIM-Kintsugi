@@ -46,3 +46,5 @@ export const bimQualityAuditorFeature = lazyFeature("BIM quality auditor", async
   (await import("./BimQualityAuditor")).BimQualityAuditor.getInstance());
 export const scheduleParsersFeature = lazyFeature("schedule import/export parsers", async () =>
   (await import("./ScheduleImportParsers")).ScheduleImportParsers);
+export const csvExportModalFeature = lazyFeature("CSV export property selector", async () =>
+  (await import("../ui/CsvExportModal")).CsvExportModal.getInstance());

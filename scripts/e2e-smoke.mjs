@@ -77,8 +77,11 @@ try {
   await page.evaluate(() => window.toggle4DMode(true));
   await page.waitForTimeout(300);
   await page.locator("#btn-4d-cascade-toggle").click();
-  await page.waitForTimeout(250);
-  assert(await page.locator("#cascade-4d-panel").isVisible(), "CasCADe 4D panel not visible");
+  await page.locator("#cascade-4d-panel").waitFor({ state: "visible", timeout: 5000 });
+  await page.waitForFunction(
+    () => (document.getElementById("cascade-indicator-select")?.options?.length || 0) > 0,
+    { timeout: 5000 }
+  );
   await page.selectOption("#cascade-indicator-select", "freeSlack");
   await page.selectOption("#cascade-scheme-select", "BuGn");
   await page.waitForTimeout(250);
@@ -98,8 +101,7 @@ try {
   assert(await page.locator("#gantt-chart-drawer").isVisible(), "Gantt drawer not visible");
   assert((await page.locator("#gantt-pane-splitter").count()) === 1, "Gantt pane splitter missing");
   await page.locator("#btn-gantt-rule-builder").click();
-  await page.waitForTimeout(250);
-  assert(await page.locator("#rule-builder-modal").isVisible(), "Rule Builder modal not visible");
+  await page.locator("#rule-builder-modal").waitFor({ state: "visible", timeout: 5000 });
   await page.fill("#rb-rule-name", "CI Smoke Walls");
   await page.locator("#rb-btn-save").click();
   await page.waitForTimeout(200);
@@ -121,7 +123,7 @@ try {
   assert((await page.locator("#clash-scan-mode option").count()) === 3, "Expected 3 clash scan modes");
   await page.selectOption("#clash-scan-mode", "temporal-4d");
   await page.locator("#btn-analyze-workspace-slf").click();
-  await page.waitForTimeout(300);
+  await page.locator("#clash-slf-summary").waitFor({ state: "visible", timeout: 5000 });
   assert((await page.locator("#clash-slf-summary").innerText()).includes("SLF="), "SLF summary missing");
 
   // 5. 5D Cost Drawer (Uniclass + Quality & BOQ Audit Drill-Down)
@@ -129,18 +131,16 @@ try {
   await page.waitForTimeout(250);
   await page.selectOption("#drawer-cost-standard", "UNICLASS");
   await page.locator("#drawer-btn-quality-audit").click();
-  await page.waitForTimeout(350);
-  assert(await page.locator("#drawer-audit-drilldown").isVisible(), "Audit drill-down not visible");
+  await page.locator("#drawer-audit-drilldown").waitFor({ state: "visible", timeout: 5000 });
   assert((await page.locator("#drawer-btn-export-qa-csv").count()) === 1, "Export QA CSV button missing");
 
   // 6. Engineering Studio Civil 4.3 Vertical Profile SVG
   await page.evaluate(() => document.getElementById("btn-dock-engineering")?.click());
-  await page.waitForTimeout(250);
+  await page.locator('[data-eng-tab="civil"]').waitFor({ state: "visible", timeout: 5000 });
   await page.locator('[data-eng-tab="civil"]').click({ force: true });
-  await page.waitForTimeout(200);
+  await page.locator("#btn-eng-scan-civil").waitFor({ state: "visible", timeout: 5000 });
   await page.locator("#btn-eng-scan-civil").click({ force: true });
-  await page.waitForTimeout(300);
-  assert(await page.locator("#eng-civil-profile-wrap").isVisible(), "Civil vertical profile not visible");
+  await page.locator("#eng-civil-profile-wrap").waitFor({ state: "visible", timeout: 5000 });
   const civilDotCount = await page.locator("#eng-civil-profile-container .civil-station-dot").count();
   assert(civilDotCount >= 2, `Expected >=2 civil station dots, got ${civilDotCount}`);
 

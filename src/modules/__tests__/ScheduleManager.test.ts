@@ -353,4 +353,41 @@ msp-8,COL_LTOS,IFCELEMENT,11-03-27,11-03-27,,,Planned,Dynamo_NCP_Snowdon_Towers_
       "Specialty Element Works",
     ]);
   });
+
+  it("should generate a bottom-up level-wise schedule completing lower levels before upper levels", () => {
+    const count = manager.generateLevelWiseSchedule(
+      [
+        // Deliberately unsorted: Roof first, then Level 2, then Level 1, then Footing
+        { modelId: "m1", expressId: 401, category: "IFCROOF", storey: "Roof", minY: 12.0 },
+        { modelId: "m1", expressId: 301, category: "IFCWALL", storey: "Level 2", minY: 4.0 },
+        { modelId: "m1", expressId: 302, category: "IFCCOLUMN", storey: "Level 2", minY: 4.0 },
+        { modelId: "m1", expressId: 201, category: "IFCWALL", storey: "Level 1", minY: 0.0 },
+        { modelId: "m1", expressId: 202, category: "IFCCOLUMN", storey: "Level 1", minY: 0.0 },
+        { modelId: "m1", expressId: 101, category: "IFCFOOTING", storey: "T.O. Footing", minY: -3.0 },
+      ],
+      "2026-06-18"
+    );
+
+    expect(count).toBeGreaterThanOrEqual(9); // 4 level summaries + 6 trade tasks
+
+    const leafTasks = Array.from(manager.tasks.values()).filter((t) => !t.isSummary);
+    expect(leafTasks.map((t) => t.name)).toEqual([
+      "T.O. Footing — Footing",
+      "Level 1 — Column",
+      "Level 1 — Wall",
+      "Level 2 — Column",
+      "Level 2 — Wall",
+      "Roof — Roof",
+    ]);
+
+    // Level 1 must finish before Level 2 starts, and Level 2 before Roof starts
+    const l1Wall = leafTasks.find((t) => t.name === "Level 1 — Wall")!;
+    const l2Col = leafTasks.find((t) => t.name === "Level 2 — Column")!;
+    const l2Wall = leafTasks.find((t) => t.name === "Level 2 — Wall")!;
+    const roof = leafTasks.find((t) => t.name === "Roof — Roof")!;
+
+    expect(l2Col.startDate >= l1Wall.endDate).toBe(true);
+    expect(roof.startDate >= l2Wall.endDate).toBe(true);
+    expect(l2Col.predecessors?.[0]?.predecessorId).toBe(l1Wall.id);
+  });
 });

@@ -39,7 +39,7 @@ import { CostRateManager } from "./modules/CostRateManager";
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
 import { BimEngine } from "./core/BimEngine";
-import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature, scheduleParsersFeature } from "./modules/optionalFeatures";
+import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature, scheduleParsersFeature, csvExportModalFeature } from "./modules/optionalFeatures";
 import { runFeature } from "./utils/lazyFeature";
 import { ModelManager } from "./core/ModelManager";
 import { ViewportController } from "./core/ViewportController";
@@ -2954,20 +2954,10 @@ const btnRunIdsAudit = document.getElementById("btn-run-ids-audit");
 btnRunIdsAudit?.addEventListener("click", triggerIdsAudit);
 document.getElementById("drawer-btn-run-ids")?.addEventListener("click", triggerIdsAudit);
 
-// Wire 4D Schedule CSV Template Export & Import Listeners
-const exportScheduleCsvHandler = () => {
-  const csvData = scheduleManager.exportScheduleTemplateCSV();
-  const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `4D_Schedule_Cost_${new Date().toISOString().split("T")[0]}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  updateViewportHint("4D Schedule CSV with itemized 5D unit & total costs downloaded!");
-  showToast("4D Schedule CSV with itemized 5D costs downloaded!", "success");
+// Wire 4D Schedule CSV Template Export & Import Listeners (opens Meta Property selector modal)
+const exportScheduleCsvHandler = async () => {
+  const modal = await csvExportModalFeature.load();
+  await modal.open(scheduleManager);
 };
 
 const btnExport4dCsv = document.getElementById("btn-export-4d-csv");
@@ -2977,10 +2967,22 @@ const btnExportScheduleCsv = document.getElementById("btn-export-schedule-csv");
 btnExportScheduleCsv?.addEventListener("click", exportScheduleCsvHandler);
 
 // Synchronize imported schedule tasks and 5D itemized costs into active loaded fragment models
-function syncImportedScheduleWithActiveModels(): number {
-  if (!scheduleManager || scheduleManager.tasks.size === 0) return 0;
+async function syncImportedScheduleWithActiveModels(): Promise<{
+  linkedElementsCount: number;
+  linkedTasksCount: number;
+  unlinkedTasksCount: number;
+  matchedProperties: string[];
+}> {
+  if (!scheduleManager || scheduleManager.tasks.size === 0) {
+    return { linkedElementsCount: 0, linkedTasksCount: 0, unlinkedTasksCount: 0, matchedProperties: [] };
+  }
 
   const activeModels = Array.from(fragments.list.entries());
+
+  // Exact-match CSV/Excel task names (or MatchProperty/MatchValue) against loaded 3D model properties
+  const { linkScheduleTasksToLoadedModels } = await import("./modules/CsvSchedulePropertyLinker");
+  const linkReport = await linkScheduleTasksToLoadedModels(scheduleManager, activeModels);
+
   const singleActiveModel = activeModels.length === 1 ? activeModels[0] : null;
   let linkedElementsCount = 0;
 
@@ -3052,6 +3054,10 @@ function syncImportedScheduleWithActiveModels(): number {
         taskStatus: task.status,
         startDate: task.startDate,
         endDate: task.endDate,
+        actualStartDate: task.actualStartDate,
+        actualEndDate: task.actualEndDate,
+        delayDays: task.delayDays,
+        costImpact: task.costImpact,
       });
 
       linkedElementsCount++;
@@ -3059,7 +3065,12 @@ function syncImportedScheduleWithActiveModels(): number {
   }
 
   saveDatabase();
-  return linkedElementsCount;
+  return {
+    linkedElementsCount,
+    linkedTasksCount: linkReport.linkedTasks,
+    unlinkedTasksCount: linkReport.unlinkedTasks,
+    matchedProperties: linkReport.matchedPropertiesUsed,
+  };
 }
 
 export function getActiveSelectionMap(): Record<string, Set<number>> {
@@ -3089,11 +3100,11 @@ async function handleScheduleFile(file: File) {
       count = await scheduleManager.importScheduleFromExcel(buffer, file.name);
     } else {
       const text = await file.text();
-      count = scheduleManager.importScheduleFromCSV(text);
+      count = scheduleManager.importScheduleFromCSV(text, { replaceExisting: true });
     }
 
     if (count > 0) {
-      syncImportedScheduleWithActiveModels();
+      const syncRes = await syncImportedScheduleWithActiveModels();
       updateDashboardMetrics();
       calculateTimelineBounds();
       updateCumulative5DCost();
@@ -3107,8 +3118,14 @@ async function handleScheduleFile(file: File) {
       if (currentTimelineDate) {
         await updateTimelineVisualState(true);
       }
-      showToast(`Imported ${count} 4D tasks with 5D costs from ${file.name}!`, "success");
-      updateViewportHint(`Custom 4D Schedule applied (${count} tasks updated with costs)`);
+      const propInfo = syncRes.matchedProperties.length > 0
+        ? ` via ${syncRes.matchedProperties.slice(0, 3).join(", ")}`
+        : "";
+      const matchSummary = syncRes.linkedElementsCount > 0
+        ? ` · Exact-linked ${syncRes.linkedTasksCount}/${count} tasks (${syncRes.linkedElementsCount} 3D elements${propInfo})`
+        : ` · Load a 3D model with matching properties to link elements`;
+      showToast(`Imported ${count} 4D/5D tasks from ${file.name}${matchSummary}`, "success");
+      updateViewportHint(`CSV 4D/5D Schedule applied (${syncRes.linkedElementsCount} elements linked with CSV dates & costs)`);
     } else {
       showToast(`Could not parse valid 4D tasks from ${file.name}. Please check column headers or sheet names.`, "warning");
     }
@@ -3265,7 +3282,7 @@ async function loadSampleCapeStoneSchedule() {
     const text = await res.text();
     const count = scheduleManager.importScheduleFromCSV(text);
     if (count > 0) {
-      syncImportedScheduleWithActiveModels();
+      await syncImportedScheduleWithActiveModels();
       updateDashboardMetrics();
       calculateTimelineBounds();
       updateCumulative5DCost();
@@ -4566,19 +4583,52 @@ async function loadModelData(name: string, buffer: Uint8Array) {
       const categoriesGroup = classifier.list.get("Categories");
       if (!usedNativeIfc4Schedule && categoriesGroup) {
         if (!scheduleManager || scheduleManager.tasks.size === 0) {
-          const catMap = new Map<string, { modelId: string; elementIds: number[] }[]>();
-          for (const [catName, groupData] of categoriesGroup) {
-            const res = await groupData.get();
-            const itemsArr: { modelId: string; elementIds: number[] }[] = [];
-            for (const mId in res) {
-              itemsArr.push({ modelId: mId, elementIds: Array.from(res[mId]) });
+          // Prefer bottom-up level-wise scheduling (lowest elevation/level first, moving upward)
+          const levelElements: Array<{
+            modelId: string;
+            expressId: number;
+            category: string;
+            storey?: string;
+            minY?: number;
+          }> = [];
+          try {
+            const indexer = FragmentIndexer.getInstance();
+            for (const [mId, fragModel] of fragments.list) {
+              const indexed = await indexer.indexModel(mId, fragModel, {
+                includeBoxes: true,
+                includePsets: false,
+              });
+              for (const el of indexed.elements) {
+                levelElements.push({
+                  modelId: mId,
+                  expressId: el.expressId,
+                  category: el.category,
+                  storey: el.storey,
+                  minY: el.box && !el.box.isEmpty() ? el.box.min.y : undefined,
+                });
+              }
             }
-            catMap.set(catName, itemsArr);
+          } catch {
+            // Fall back to category grouping below
           }
-          scheduleManager.generateFromCategories(catMap, "2026-06-18");
+
+          if (levelElements.length > 0) {
+            scheduleManager.generateLevelWiseSchedule(levelElements, "2026-06-18");
+          } else {
+            const catMap = new Map<string, { modelId: string; elementIds: number[] }[]>();
+            for (const [catName, groupData] of categoriesGroup) {
+              const res = await groupData.get();
+              const itemsArr: { modelId: string; elementIds: number[] }[] = [];
+              for (const mId in res) {
+                itemsArr.push({ modelId: mId, elementIds: Array.from(res[mId]) });
+              }
+              catMap.set(catName, itemsArr);
+            }
+            scheduleManager.generateFromCategories(catMap, "2026-06-18");
+          }
         } else {
           // A custom/imported schedule is already present: bind its tasks to newly loaded model!
-          syncImportedScheduleWithActiveModels();
+          await syncImportedScheduleWithActiveModels();
           const models = Array.from(fragments.list.values());
           scheduleManager.syncTasksWithModelSimulation(models, twinDatabase);
         }
@@ -4740,7 +4790,7 @@ window.addEventListener("drop", async (e) => {
 async function loadSampleModel(sampleType: string = "snowdon") {
   const isSnowdon = sampleType === "snowdon";
   const fileName = isSnowdon
-    ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc"
+    ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc"
     : "school_arq.frag";
 
   const loadSampleBtn = document.getElementById("load-sample-btn");
@@ -4760,16 +4810,12 @@ async function loadSampleModel(sampleType: string = "snowdon") {
       const base = (import.meta as any).env?.BASE_URL || "./";
       const cleanBase = base.endsWith("/") ? base : base + "/";
       try {
-        candidates.push(new URL("Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc", window.location.href).href);
-        candidates.push(new URL("Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc", window.location.href).href);
+        candidates.push(new URL("Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc", window.location.href).href);
       } catch (e) { }
       candidates.push(
-        `${cleanBase}Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc`,
-        `${cleanBase}Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc`,
-        "./Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc",
-        "./Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc",
-        "/Dynamo_NCP_Snowdon_Towers_Sample_Structural.ifc",
-        "/Dynamo_NCP_Snowdon%20Towers%20Sample%20Structural.ifc"
+        `${cleanBase}Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc`,
+        "./Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc",
+        "/Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc"
       );
     } else {
       candidates.push("https://thatopen.github.io/engine_components/resources/frags/school_arq.frag");

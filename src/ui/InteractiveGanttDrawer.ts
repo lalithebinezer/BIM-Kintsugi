@@ -1,5 +1,5 @@
 import { ScheduleManager, type ScheduleTask } from "../modules/ScheduleManager";
-import { ruleBuilderFeature, scheduleParsersFeature } from "../modules/optionalFeatures";
+import { ruleBuilderFeature, scheduleParsersFeature, csvExportModalFeature } from "../modules/optionalFeatures";
 import { showToast } from "./ToastManager";
 
 export type GanttTimeScale = "month" | "week" | "day";
@@ -859,10 +859,8 @@ export class InteractiveGanttDrawer {
       this.triggerDownload(xer, "BIM_Kintsugi_Schedule.xer", "text/plain");
       showToast(`Exported ${tasks.length} tasks to Oracle Primavera P6 XER`, "success");
     } else if (format === "CSV") {
-      const csv = scheduleManager.exportScheduleTemplateCSV();
-      const dateStr = new Date().toISOString().split("T")[0];
-      this.triggerDownload(csv, `4D_Schedule_Cost_${dateStr}.csv`, "text/csv;charset=utf-8;");
-      showToast(`Exported ${tasks.length} tasks with itemized 5D costs to CSV`, "success");
+      const modal = await csvExportModalFeature.load();
+      await modal.open(scheduleManager);
     }
   }
 

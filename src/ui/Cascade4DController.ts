@@ -71,7 +71,6 @@ export class Cascade4DController {
       const next = !this.isCascadeMode;
       if (next) {
         this.callbacks?.onDisableVarianceMode();
-        await this.ensureDropdownOptionsPopulated();
       }
       await this.setCascadeMode(next);
       showToast(
