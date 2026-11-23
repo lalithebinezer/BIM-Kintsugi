@@ -400,7 +400,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-Cq6lEYYi.js"></script>
+  <script type="module" crossorigin src="./assets/index-Bys77w_x.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
   <link rel="modulepreload" crossorigin href="./assets/bvh-vendor-CWHnnbWa.js">
   <link rel="modulepreload" crossorigin href="./assets/thatopen-core-D3aHfhH4.js">
@@ -413,7 +413,7 @@
   <link rel="modulepreload" crossorigin href="./assets/IfcStepParser-D3vUCLmb.js">
   <link rel="modulepreload" crossorigin href="./assets/BimEngine-CwvQmZpT.js">
   <link rel="modulepreload" crossorigin href="./assets/BoqGenerator-Bm4aakJs.js">
-  <link rel="stylesheet" crossorigin href="./assets/index-HbOF7eil.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-CC8feMpe.css">
 </head>
 
 <body class="left-sidebar-collapsed right-sidebar-collapsed">
@@ -1378,7 +1378,9 @@
                   </svg>
                   <span>Dynamic Sequence Engine</span>
                 </div>
+                <button type="button" id="btn-toggle-sequence-box" class="btn-collapse-seq" aria-expanded="true" title="Collapse or expand Sequence Setup to give more space to tasks">▾ Hide Setup</button>
               </div>
+              <div class="sequence-box-body">
 
               <!-- Primary IFC Parameter Reader Trigger -->
               <button id="btn-open-param-reader" class="btn-param-reader-trigger" type="button" title="Open IFC Parameter Reader to inspect all model parameters and generate 4D sequence">
@@ -1474,6 +1476,40 @@
                   <span>EVM</span>
                 </button>
               </div>
+              </div>
+            </div>
+
+            <!-- Compact 4D Task Search, Status Filter & Auto-Follow Toolbar -->
+            <div class="schedule-list-toolbar" id="schedule-list-toolbar">
+              <div class="schedule-search-row">
+                <div class="schedule-search-wrap">
+                  <svg class="schedule-search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input
+                    type="text"
+                    id="schedule-task-search"
+                    class="schedule-search-input"
+                    placeholder="Search level, trade, or task..."
+                    aria-label="Filter 4D schedule tasks"
+                  />
+                  <span class="schedule-count-badge" id="schedule-tasks-count-badge" title="Visible tasks">0</span>
+                </div>
+                <button type="button" id="btn-schedule-autofollow" class="btn-sched-icon active" title="Auto-Scroll to Active Task: ON">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+                </button>
+                <button type="button" id="btn-schedule-camfollow" class="btn-sched-icon" title="4D Camera Auto-Follow: OFF (Fly to active zone)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                </button>
+              </div>
+              <div class="schedule-filter-pills" id="schedule-filter-pills">
+                <button type="button" class="sched-filter-pill active" data-filter="all">All</button>
+                <button type="button" class="sched-filter-pill" data-filter="active">Active</button>
+                <button type="button" class="sched-filter-pill" data-filter="completed">Done</button>
+                <button type="button" class="sched-filter-pill" data-filter="planned">Plan</button>
+                <button type="button" class="sched-filter-pill" data-filter="unlinked">Unlinked</button>
+              </div>
+              <button type="button" id="btn-schedule-jump-active" class="btn-schedule-jump-active hidden" title="Scroll back to the currently active task">
+                ↓ Jump to Active Task
+              </button>
             </div>
 
             <div class="panel-body thin-scrollbar" id="schedule-tasks-list">
@@ -3012,12 +3048,11 @@
           </div>
         </div>
 
-        <!-- Row 2: Centralized Timeline Controls Row -->
+        <!-- Row 2: Studio-Grade Grouped 4D Dock -->
         <div class="timeline-controls-row centralized-options-row">
-          <!-- Playback Velocity Cluster -->
+          <!-- Cluster 1: Playback Speed -->
           <div class="timeline-cluster cluster-speed">
-            <span class="speed-label">Speed:</span>
-            <div class="speed-pills-group" id="timeline-speed-pills">
+            <div class="speed-pills-group" id="timeline-speed-pills" title="4D Playback Speed">
               <button class="btn-speed-pill" data-speed="1">1x</button>
               <button class="btn-speed-pill active" data-speed="2">2x</button>
               <button class="btn-speed-pill" data-speed="5">5x</button>
@@ -3033,12 +3068,18 @@
 
           <div class="timeline-cluster-divider"></div>
 
-          <!-- Central Core 4D Workflows -->
-          <div class="timeline-cluster cluster-core">
+          <!-- Cluster 2: Schedule Data & Import -->
+          <div class="timeline-cluster timeline-seg-group cluster-import" role="group" aria-label="Schedule Import">
             <label class="btn-timeline-csv btn-timeline-primary" title="Import 4D Schedule (Excel .xlsx / .xls or CSV) with Itemized 5D Costs">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Import Schedule</span>
+              <span>Import</span>
               <input type="file" id="btn-import-4d-csv-input" aria-label="Import 4D Excel or CSV Schedule File" accept=".xlsx,.xls,.csv" style="display: none;" />
+            </label>
+
+            <label class="btn-timeline-csv" title="Import CSV with Interactive Column & Multi-Property Composite Key Mapper">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              <span>Map CSV</span>
+              <input type="file" id="btn-4d-csv-mapper-input" aria-label="Import CSV with Column Mapper" accept=".csv" style="display: none;" />
             </label>
 
             <label class="btn-timeline-csv" title="Import MS Project (.xml) or Primavera (.xer) Schedule">
@@ -3046,35 +3087,54 @@
               <span>MSP / P6</span>
               <input type="file" id="btn-import-schedule-advanced" aria-label="Import MS Project XML or Primavera P6 XER File" accept=".xml,.xer" style="display: none;" />
             </label>
+          </div>
 
+          <!-- Cluster 3: Views & 5D Analytics -->
+          <div class="timeline-cluster timeline-seg-group cluster-views" role="group" aria-label="Schedule Analytics">
             <button class="btn-timeline-csv" id="btn-4d-gantt-chart" title="Open Interactive Gantt Chart Drawer">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
-              <span>Gantt Chart</span>
+              <span>Gantt</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-timeline-cost-control" title="Open Unified 5D Project Cost Control Suite">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              <span>5D Cost Control</span>
+              <span>5D Cost</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-timeline-evm" title="Open Earned Value Management (EVM) Control Suite & S-Curve">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-              <span>EVM Control</span>
+              <span>EVM</span>
             </button>
+          </div>
 
+          <!-- Cluster 4: 3D Visual Lenses (Toggles) -->
+          <div class="timeline-cluster timeline-seg-group cluster-lenses" role="group" aria-label="3D Visual Lenses">
             <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
-              <span>Variance Mode</span>
+              <span>Variance</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-trade-profiles" title="Color-code active 4D elements by Trade / Task Prefix (FOU, COL, FLO, WALL, FRA, STR, MEP)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+              <span>Trades</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-cascade-toggle" title="Toggle CasCADe 12-Indicator ColorBrewer 4D Heatmap & 3D Dependency Vectors">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17.5h7M17.5 14v7"/></svg>
-              <span>CasCADe Lens</span>
+              <span>CasCADe</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-slf-toggle" title="Sync 3D Workspace Congestion (SLF) zone overlays live with 4D Timeline date">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
               <span id="timeline-slf-badge">4D SLF</span>
+            </button>
+          </div>
+
+          <!-- Cluster 5: QA Audit & Timelapse Export -->
+          <div class="timeline-cluster timeline-seg-group cluster-qa" role="group" aria-label="Audit and Export">
+            <button class="btn-timeline-csv" id="btn-4d-linkage-audit" title="Audit Matched, Resource & Unscheduled 3D Elements (with 1-click Isolate Unscheduled)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>Link Audit</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-timeline-audit-unassigned" title="Audit Unassigned 3D Elements (Heatmap glowing amber for unassigned, ghost assigned)">
@@ -3082,9 +3142,9 @@
               <span>Audit 3D</span>
             </button>
 
-            <button class="btn-timeline-csv" id="btn-timeline-export-video" title="Export 4D Client Presentation Video (Records 72-week simulation to WebM)">
+            <button class="btn-timeline-csv" id="btn-timeline-export-video" title="Export 4D Client Presentation Video (Records simulation + HUD overlay to WebM)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <span>Export Video</span>
+              <span>WebM</span>
             </button>
           </div>
 
@@ -3336,8 +3396,8 @@
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">4D Phasing, WBS Gantt, Rule Builder &amp; CasCADe Lens</div>
-                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, draggable splitter, SVG links, visual <strong>Rule Builder</strong> &amp; <strong>Rules XML</strong> Navisworks import) with full DAG CPM (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag). Scrub the timeline (<kbd>Space</kbd>) with Synchro <strong>Appearance Profiles</strong>, toggle <strong>4D SLF</strong> live congestion zones, or switch on <strong>CasCADe Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation &amp; 3D Bezier Dependency Arcs).</div>
+                  <div class="step-name">4D Phasing, CSV Mapper, Trade Colors, Floating HUD &amp; CasCADe Lens</div>
+                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Use the segmented 4D dock to <strong>Import</strong> or <strong>Map CSV</strong> (with single or composite keys like <code>Storey+Category</code>), run <strong>Link Audit</strong> to isolate unscheduled 3D elements, toggle <strong>Trade Colors</strong> or <strong>Variance</strong>, open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, SVG links, <strong>Rule Builder</strong> &amp; <strong>Rules XML</strong>), or record a <strong>WebM</strong> timelapse with HUD overlay. Drag the floating <strong>4D HUD</strong> anywhere (double-click to reset), filter/auto-follow tasks in the collapsible 4D Schedule panel, toggle <strong>4D SLF</strong>, or switch on <strong>CasCADe Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation &amp; 3D Bezier Dependency Arcs).</div>
                 </div>
               </div>
               <div class="step-item">
@@ -3411,8 +3471,8 @@
               <div class="tool-card">
                 <div class="tool-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
                 <div class="tool-info">
-                  <div class="tool-name">4D WBS Gantt, CasCADe Lens &amp; Search Sets</div>
-                  <div class="tool-desc">Full DAG CPM solver (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag), collapsible WBS Gantt (<code>M</code>/<code>W</code>/<code>D</code> zoom, splitter, SVG links), dynamic Navisworks <strong>Rules XML</strong> search sets, native IFC4 <code>IfcWorkSchedule</code> extraction, and <strong>CasCADe 4D Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation, and 3D Bezier Dependency Arcs).</div>
+                  <div class="tool-name">4D WBS Gantt, Trade Colors, CSV Mapper, Timelapse &amp; CasCADe Lens</div>
+                  <div class="tool-desc">Full DAG CPM solver (<code>FS</code>/<code>SS</code>/<code>FF</code>/<code>SF</code> + lag), bottom-up level-wise scheduler, interactive <strong>Map CSV</strong> (single &amp; composite <code>Storey+Category</code> keys), <strong>Link Audit</strong> (Matched / Resource / Unscheduled 3D isolation), <strong>Trade Colors</strong> (<code>FOU</code>/<code>COL</code>/<code>FLO</code>/<code>WALL</code>/<code>FRA</code>/<code>STR</code>/<code>MEP</code>), collapsible &amp; virtualized Schedule sidebar with Camera Auto-Follow and draggable <strong>4D HUD</strong>, <strong>WebM</strong> timelapse export, and <strong>CasCADe 4D Lens</strong>.</div>
                 </div>
               </div>
               <div class="tool-card">
@@ -5053,6 +5113,20 @@
 
     <!-- Toast Notification Feed -->
     <div id="bim-toast-container"></div>
+
+    <!-- Floating 4D Construction HUD Overlay (Viewport) -->
+  <div id="viewport-4d-hud" class="viewport-4d-hud hidden" aria-live="polite">
+    <div class="hud-4d-header">
+      <span class="hud-4d-date" id="hud-4d-date">--</span>
+      <span class="hud-4d-pct" id="hud-4d-pct">0%</span>
+      <button type="button" id="btn-4d-hud-close" class="hud-4d-close" title="Hide 4D Viewport HUD">✕</button>
+    </div>
+    <div class="hud-4d-active-tasks" id="hud-4d-active-tasks">Awaiting 4D Simulation</div>
+    <div class="hud-4d-progress-track">
+      <div class="hud-4d-progress-fill" id="hud-4d-progress-fill" style="width: 0%;"></div>
+    </div>
+    <div class="hud-4d-meta" id="hud-4d-meta">0/0 tasks complete</div>
+  </div>
 
 </body>
 
