@@ -3222,10 +3222,11 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 
 .timeline-controls-row {
   display: flex;
-  justify-content: center;
+  justify-content: safe center;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
+  column-gap: 0.3rem;
   padding-top: 0.35rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   min-width: 0;
@@ -3240,17 +3241,20 @@ body:not(.left-sidebar-collapsed) .bottom-toolbar.magic-dock {
 
 .centralized-options-row {
   display: flex;
-  justify-content: center;
+  justify-content: safe center;
   align-items: center;
-  gap: 0.35rem;
-  flex-wrap: nowrap;
+  row-gap: 0.3rem;
+  column-gap: 0.3rem;
+  flex-wrap: wrap;
 }
 
 .timeline-cluster {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+  flex-shrink: 1;
 }
 
 .timeline-cluster-divider {
@@ -5327,9 +5331,9 @@ body[data-theme="light"] {
   background: var(--accent-500);
   color: #000;
   border: 1px solid var(--accent-400);
-  border-radius: 4px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.75rem;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.67rem;
   font-weight: 700;
   cursor: pointer;
   transition: all var(--ease-fast);
@@ -12675,3 +12679,901 @@ body.light-theme #gis-panel .geo-val {
 }
 
 
+
+
+/* ============================================================
+   4D SCHEDULE UX UPGRADES: Collapsible Setup, Filter Toolbar,
+   Viewport 4D HUD, CSV Mapper & Linkage Audit Modals
+   ============================================================ */
+
+.btn-collapse-seq {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle, #232635);
+  color: var(--text-secondary, #cbd5e1);
+  border-radius: 5px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.16rem 0.45rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-collapse-seq:hover {
+  border-color: var(--accent-400, #d4ff3f);
+  color: var(--accent-400, #d4ff3f);
+}
+
+.sequence-generator-box.collapsed {
+  padding-bottom: 0.45rem !important;
+}
+
+.sequence-generator-box.collapsed .sequence-box-body {
+  display: none !important;
+}
+
+.schedule-list-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border-subtle, #232635);
+  flex-shrink: 0;
+}
+
+.schedule-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.schedule-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, #232635);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary, #f8fafc);
+  font-size: 0.72rem;
+}
+
+.schedule-search-input:focus {
+  outline: none;
+  border-color: var(--accent-400, #d4ff3f);
+}
+
+.schedule-count-badge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary, #cbd5e1);
+  white-space: nowrap;
+}
+
+.btn-sched-icon {
+  height: 28px;
+  width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, #232635);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-size: 0.75rem;
+  opacity: 0.65;
+  transition: all 0.15s ease;
+}
+
+.btn-sched-icon.active,
+.btn-sched-icon:hover {
+  opacity: 1;
+  border-color: var(--accent-400, #d4ff3f);
+  background: rgba(212, 255, 63, 0.12);
+}
+
+.schedule-filter-pills {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.sched-filter-pill {
+  flex: 1 1 auto;
+  padding: 0.18rem 0.38rem;
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle, #232635);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.64rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sched-filter-pill.active,
+.sched-filter-pill:hover {
+  color: var(--accent-400, #d4ff3f);
+  border-color: rgba(212, 255, 63, 0.45);
+  background: rgba(212, 255, 63, 0.1);
+}
+
+.btn-schedule-jump-active {
+  width: 100%;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 255, 63, 0.55);
+  background: rgba(212, 255, 63, 0.14);
+  color: var(--accent-400, #d4ff3f);
+  font-size: 0.69rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-schedule-jump-active.hidden {
+  display: none;
+}
+
+/* Floating Viewport 4D Construction HUD Overlay */
+.viewport-4d-hud {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 820;
+  min-width: 280px;
+  max-width: 420px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(12, 14, 20, 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 255, 63, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.viewport-4d-hud.hidden {
+  display: none !important;
+}
+
+.hud-4d-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.22rem;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.viewport-4d-hud.dragging {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(212, 255, 63, 0.55);
+}
+
+.viewport-4d-hud.dragging .hud-4d-header {
+  cursor: grabbing;
+}
+
+.hud-4d-date {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--accent-400, #d4ff3f);
+  letter-spacing: 0.02em;
+}
+
+.hud-4d-pct {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.hud-4d-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 0 0.2rem;
+}
+
+.hud-4d-close:hover {
+  color: #f8fafc;
+}
+
+.hud-4d-active-tasks {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.35rem;
+}
+
+.hud-4d-progress-track {
+  height: 5px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+
+.hud-4d-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #d4ff3f);
+  transition: width 0.2s ease;
+}
+
+.hud-4d-meta {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+/* CSV Column Mapper & Linkage Audit Modals */
+.csv-mapper-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.csv-mapper-select {
+  height: 30px;
+  font-size: 0.74rem;
+}
+
+.csv-mapper-preview-wrap {
+  max-height: 150px;
+  overflow: auto;
+  border: 1px solid var(--border-subtle, #232635);
+  border-radius: 6px;
+}
+
+.csv-mapper-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.csv-mapper-preview-table th,
+.csv-mapper-preview-table td {
+  padding: 0.3rem 0.45rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.csv-mapper-preview-table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-400, #d4ff3f);
+  font-weight: 700;
+}
+
+.audit-kpi-card {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle, #232635);
+  text-align: center;
+}
+
+.audit-kpi-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.audit-kpi-lbl {
+  font-size: 0.66rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.audit-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audit-cat-chip {
+  font-size: 0.69rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+
+
+/* ============================================================
+   STUDIO-GRADE 4D TIMELINE DOCK REDESIGN (Apple HIG / Linear)
+   Calm dark-glass hierarchy: primary CTA reserved for Play/Pause,
+   segmented pill groups, zero neon fatigue, tabular numerals.
+   ============================================================ */
+
+.unified-4d-top-row .timeline-date-badge,
+.unified-4d-top-row .gantt-badge,
+.unified-4d-top-row .evm-val,
+.unified-4d-top-row .gantt-prog-badge,
+.unified-4d-top-row .gantt-spi-badge,
+.unified-4d-top-row .timeline-bound-badge {
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-controls-row.centralized-options-row {
+  display: flex;
+  justify-content: safe center;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.38rem;
+  column-gap: 0.45rem;
+  padding: 0.5rem 0.55rem 0.35rem 0.55rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: visible;
+}
+
+.timeline-seg-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.timeline-controls-row .btn-timeline-csv,
+.timeline-controls-row label.btn-timeline-csv {
+  height: 26px;
+  padding: 0 0.54rem;
+  gap: 0.3rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #cbd5e1;
+  box-shadow: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.timeline-controls-row .btn-timeline-csv svg,
+.timeline-controls-row label.btn-timeline-csv svg {
+  opacity: 0.78;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.timeline-controls-row .btn-timeline-csv:hover,
+.timeline-controls-row label.btn-timeline-csv:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  transform: translateY(-0.5px);
+}
+
+.timeline-controls-row .btn-timeline-csv:hover svg,
+.timeline-controls-row label.btn-timeline-csv:hover svg {
+  opacity: 1;
+}
+
+/* Subtle accent highlight ONLY on primary Import action */
+.timeline-controls-row .btn-timeline-csv.btn-timeline-primary {
+  background: rgba(212, 255, 63, 0.11);
+  border-color: rgba(212, 255, 63, 0.32);
+  color: #d4ff3f;
+  font-weight: 700;
+}
+
+.timeline-controls-row .btn-timeline-csv.btn-timeline-primary:hover {
+  background: rgba(212, 255, 63, 0.2);
+  border-color: rgba(212, 255, 63, 0.6);
+  color: #ecff9e;
+}
+
+/* Unmistakable Active Lens / Mode Toggle State (crisp halo that never clips) */
+.timeline-controls-row .btn-timeline-csv.active,
+.timeline-controls-row #btn-4d-variance-toggle.active {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(56, 189, 248, 0.65) !important;
+  color: #e0f2fe !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.28), inset 0 0 10px rgba(56, 189, 248, 0.14) !important;
+  font-weight: 700 !important;
+  transform: none;
+}
+
+.timeline-controls-row #btn-4d-trade-profiles.active {
+  background: rgba(212, 255, 63, 0.18) !important;
+  border-color: rgba(212, 255, 63, 0.65) !important;
+  color: #d4ff3f !important;
+  box-shadow: 0 0 8px rgba(212, 255, 63, 0.24), inset 0 0 10px rgba(212, 255, 63, 0.12) !important;
+}
+
+.timeline-controls-row .btn-timeline-csv.active svg {
+  opacity: 1;
+  stroke: currentColor !important;
+}
+
+/* Light theme refinement */
+[data-theme="light"] .timeline-seg-group {
+  background: rgba(15, 23, 42, 0.045);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .timeline-controls-row .btn-timeline-csv,
+[data-theme="light"] .timeline-controls-row label.btn-timeline-csv {
+  color: #334155;
+  background: transparent;
+  border-color: transparent;
+}
+
+[data-theme="light"] .timeline-controls-row .btn-timeline-csv:hover,
+[data-theme="light"] .timeline-controls-row label.btn-timeline-csv:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+[data-theme="light"] .timeline-controls-row .btn-timeline-csv.btn-timeline-primary {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+
+/* ============================================================
+   STUDIO-GRADE REDESIGN: .panel.widget-panel.schedule-widget
+   Precision AEC 4D sidebar — calm dark glass, crisp hierarchy,
+   compact collapsible setup, refined timeline task cards.
+   ============================================================ */
+
+.panel.widget-panel.schedule-widget {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.schedule-widget > .panel-header {
+  padding: 0.6rem 0.75rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065) !important;
+  background: rgba(255, 255, 255, 0.015);
+  flex-shrink: 0;
+}
+
+.schedule-widget > .panel-header .header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f1f5f9;
+}
+
+.schedule-widget > .panel-header .header-title-group svg {
+  color: var(--accent-400, #d4ff3f);
+  opacity: 0.9;
+}
+
+/* Collapsible Sequence Setup Card */
+.schedule-widget .sequence-generator-box {
+  background: rgba(255, 255, 255, 0.028) !important;
+  border: 1px solid rgba(255, 255, 255, 0.075) !important;
+  border-radius: 10px !important;
+  padding: 0.5rem 0.65rem !important;
+  margin: 0.45rem 0.55rem 0.35rem 0.55rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+  gap: 0.38rem !important;
+}
+
+.schedule-widget .sequence-box-title {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding-bottom: 0.32rem !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.06em !important;
+  color: #e2e8f0 !important;
+}
+
+.schedule-widget .sequence-generator-box.collapsed .sequence-box-title {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+.schedule-widget .sequence-box-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.schedule-widget .btn-collapse-seq {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.16rem 0.48rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.schedule-widget .btn-collapse-seq:hover {
+  background: rgba(212, 255, 63, 0.1);
+  border-color: rgba(212, 255, 63, 0.45);
+  color: #d4ff3f;
+}
+
+.schedule-widget .btn-param-reader-trigger {
+  height: 30px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.schedule-widget .btn-param-reader-trigger:hover {
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.schedule-widget .sequence-input,
+.schedule-widget .sequence-prop-select {
+  background: rgba(8, 10, 16, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 6px !important;
+  color: #f1f5f9 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-widget .sequence-input:focus,
+.schedule-widget .sequence-prop-select:focus {
+  border-color: rgba(212, 255, 63, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(212, 255, 63, 0.12);
+}
+
+.schedule-widget .btn-calculate-seq {
+  height: 30px;
+  padding: 0 0.6rem !important;
+  border-radius: 7px !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  background: rgba(212, 255, 63, 0.13) !important;
+  border: 1px solid rgba(212, 255, 63, 0.45) !important;
+  color: #d4ff3f !important;
+}
+
+.schedule-widget .btn-calculate-seq:hover {
+  background: #d4ff3f !important;
+  color: #0b0d13 !important;
+  box-shadow: 0 4px 14px rgba(212, 255, 63, 0.25) !important;
+}
+
+.schedule-widget .schedule-export-actions {
+  background: rgba(0, 0, 0, 0.24);
+  padding: 2px !important;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  gap: 2px !important;
+}
+
+.schedule-widget .schedule-export-actions .btn-gantt-drawer-action {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 5px !important;
+  color: #cbd5e1 !important;
+  font-size: 0.64rem !important;
+  font-weight: 600 !important;
+  padding: 0.24rem 0.3rem !important;
+}
+
+.schedule-widget .schedule-export-actions .btn-gantt-drawer-action:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+  color: #f8fafc !important;
+}
+
+/* Search, Filter & Follow Toolbar */
+.schedule-widget .schedule-list-toolbar {
+  padding: 0.4rem 0.55rem 0.45rem 0.55rem;
+  gap: 0.38rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.schedule-search-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.schedule-search-icon {
+  position: absolute;
+  left: 0.55rem;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.schedule-widget .schedule-search-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 2.4rem 0 1.7rem;
+  border-radius: 7px;
+  background: rgba(8, 10, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  color: #f1f5f9;
+  font-size: 0.71rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.schedule-widget .schedule-search-input::placeholder {
+  color: #64748b;
+}
+
+.schedule-widget .schedule-search-input:focus {
+  border-color: rgba(212, 255, 63, 0.55);
+  box-shadow: 0 0 0 2px rgba(212, 255, 63, 0.1);
+}
+
+.schedule-widget .schedule-count-badge {
+  position: absolute;
+  right: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.08rem 0.38rem;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.schedule-widget .btn-sched-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.schedule-widget .btn-sched-icon:hover {
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+}
+
+.schedule-widget .btn-sched-icon.active {
+  background: rgba(212, 255, 63, 0.13);
+  border-color: rgba(212, 255, 63, 0.45);
+  color: #d4ff3f;
+}
+
+.schedule-widget .schedule-filter-pills {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.schedule-widget .sched-filter-pill {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 0.22rem 0.2rem;
+  font-size: 0.63rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.schedule-widget .sched-filter-pill:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.schedule-widget .sched-filter-pill.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #d4ff3f;
+  font-weight: 700;
+}
+
+/* Precision Task Timeline Cards (generous padding so active glow never clips) */
+.schedule-widget #schedule-tasks-list {
+  padding: 0.65rem 0.8rem 1.35rem 0.8rem !important;
+  gap: 0.5rem !important;
+}
+
+.schedule-widget .schedule-task-item {
+  background: rgba(255, 255, 255, 0.026) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 9px !important;
+  padding: 0.58rem 0.72rem 0.58rem 0.85rem !important;
+  gap: 0.34rem !important;
+  min-height: 62px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.14s ease, box-shadow 0.16s ease;
+}
+
+/* Subtle left status rail */
+.schedule-widget .schedule-task-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: rgba(148, 163, 184, 0.28);
+  transition: background 0.18s ease, top 0.18s ease, bottom 0.18s ease;
+}
+
+.schedule-widget .schedule-task-item[data-status="completed"] {
+  opacity: 0.84;
+}
+
+.schedule-widget .schedule-task-item[data-status="completed"]:hover {
+  opacity: 1;
+}
+
+.schedule-widget .schedule-task-item[data-status="completed"]::before {
+  background: rgba(16, 185, 129, 0.75);
+}
+
+.schedule-widget .schedule-task-item:hover {
+  background: rgba(255, 255, 255, 0.058) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  transform: translateY(-1px);
+}
+
+.schedule-widget .schedule-task-item.active-task {
+  opacity: 1 !important;
+  background: linear-gradient(135deg, rgba(212, 255, 63, 0.095) 0%, rgba(212, 255, 63, 0.025) 100%) !important;
+  border-color: rgba(212, 255, 63, 0.58) !important;
+  box-shadow: 0 0 0 1px rgba(212, 255, 63, 0.2), 0 4px 10px rgba(0, 0, 0, 0.28), inset 0 0 16px rgba(212, 255, 63, 0.06) !important;
+}
+
+.schedule-widget .schedule-task-item.active-task::before {
+  top: 0;
+  bottom: 0;
+  width: 3.5px;
+  border-radius: 0;
+  background: #d4ff3f !important;
+  box-shadow: 0 0 10px rgba(212, 255, 63, 0.65);
+}
+
+.schedule-widget .task-title {
+  font-size: 0.74rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.005em;
+  color: #f1f5f9 !important;
+}
+
+.schedule-widget .schedule-task-item.active-task .task-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.schedule-widget .task-status-badge {
+  font-size: 0.57rem !important;
+  font-weight: 700 !important;
+  padding: 0.12rem 0.42rem !important;
+  border-radius: 999px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-widget .task-date-info {
+  font-size: 0.63rem !important;
+  color: #94a3b8 !important;
+  font-variant-numeric: tabular-nums;
+  gap: 0.4rem;
+}
+
+.schedule-widget .task-date-arrow {
+  color: #64748b;
+  margin: 0 0.12rem;
+}
+
+.schedule-widget .task-progress-text {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.schedule-widget .task-progress-bar {
+  height: 4px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  overflow: hidden;
+  width: 100%;
+}
+
+.schedule-widget .task-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #d4ff3f) !important;
+  transition: width 0.22s ease;
+}
+
+.schedule-widget .schedule-task-item[data-status="completed"] .task-progress-fill {
+  background: #10b981 !important;
+}
+
+/* Light Theme Parity for .schedule-widget */
+[data-theme="light"] .schedule-widget > .panel-header {
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(15, 23, 42, 0.02);
+}
+
+[data-theme="light"] .schedule-widget > .panel-header .header-title-group {
+  color: #0f172a;
+}
+
+[data-theme="light"] .schedule-widget .sequence-generator-box {
+  background: rgba(15, 23, 42, 0.025) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-search-input,
+[data-theme="light"] .schedule-widget .sequence-input,
+[data-theme="light"] .schedule-widget .sequence-prop-select {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-filter-pills {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.09);
+}
+
+[data-theme="light"] .schedule-widget .sched-filter-pill.active {
+  background: #ffffff;
+  color: #047857;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .schedule-widget .schedule-task-item {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-task-item.active-task {
+  background: rgba(16, 185, 129, 0.07) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+}
+
+[data-theme="light"] .schedule-widget .task-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget .task-progress-text {
+  color: #334155;
+}

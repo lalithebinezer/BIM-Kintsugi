@@ -4,6 +4,7 @@ import './styles/selection-and-metadata.css';
 import './styles/option1-ux.css';
 import './responsive.css';
 import './theme.css';
+import './styles/studio-design-system.css';
 import { initResponsiveToolbar } from "./ui/ResponsiveToolbar";
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
@@ -27,6 +28,9 @@ import { BcfIssueManager } from "./modules/BcfIssueManager";
 import { BimAiCopilot } from "./modules/BimAiCopilot";
 import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
+import { ScheduleTimelineController, type ScheduleTaskWidgetStats } from "./ui/ScheduleTimelineController";
+import { TradeAppearanceEngine } from "./modules/TradeAppearanceEngine";
+import { export4DTimelapseVideo } from "./modules/TimelapseExporter";
 
 import { CameraSpeedController } from "./core/CameraSpeedController";
 import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
@@ -3245,12 +3249,10 @@ export async function toggleUnassignedAudit(forceState?: boolean): Promise<boole
 (window as any).toggleUnassignedAudit = toggleUnassignedAudit;
 
 export async function recordFull4DSimulation(): Promise<void> {
-  let rec;
-  try { rec = await recorder.load(); } catch { return; }
-  if (rec.isRecording()) {
-    rec.stopRecording();
-    stopTimelinePlayback();
-    showToast("4D Video recording stopped. Generating video file...", "info");
+  if (activeTimelapseAbort) {
+    activeTimelapseAbort.abort();
+    activeTimelapseAbort = null;
+    showToast("4D Timelapse recording cancelled.", "info");
     return;
   }
 
@@ -3259,17 +3261,61 @@ export async function recordFull4DSimulation(): Promise<void> {
     return;
   }
 
-  // Rewind timeline to start date
-  currentTimelineDate = new Date(timelineMinDate);
-  if (timelineSlider) timelineSlider.value = "0";
-  updateTimelineDateUI();
-  updateTimelineVisualState(true);
+  const canvas = world.renderer?.three?.domElement;
+  if (!canvas) {
+    showToast("3D WebGL canvas not ready for timelapse export.", "warning");
+    return;
+  }
 
-  // Start video capture
-  const started = rec.startRecording(30);
-  if (started) {
-    showToast("🎬 Recording 4D presentation simulation... Video will download automatically upon completion.", "info");
-    startTimelinePlayback();
+  stopTimelinePlayback();
+  const totalDays = Math.max(
+    1,
+    Math.round((timelineMaxDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24))
+  );
+  const btn = document.getElementById("btn-timeline-export-video");
+  const prevBtnHtml = btn?.innerHTML ?? "";
+  activeTimelapseAbort = new AbortController();
+
+  showToast("🎬 Recording 4D Timelapse WebM with HUD overlay (click again to cancel)...", "info");
+
+  try {
+    const res = await export4DTimelapseVideo({
+      sourceCanvas: canvas,
+      totalSteps: totalDays,
+      durationSeconds: 10,
+      fps: 24,
+      signal: activeTimelapseAbort.signal,
+      onStep: async (stepDay, ratio) => {
+        currentTimelineDate = new Date(timelineMinDate!.getTime() + stepDay * 24 * 60 * 60 * 1000);
+        if (timelineSlider) timelineSlider.value = String(stepDay);
+        updateTimelineDateUI();
+        await updateTimelineVisualState(true);
+        const dateLabel = currentTimelineDate.toISOString().slice(0, 10);
+        const activeLabel =
+          document.getElementById("hud-4d-active-tasks")?.textContent?.trim() ||
+          "4D Construction Simulation";
+        return {
+          dateLabel,
+          activeTaskLabel: activeLabel,
+          progressPct: Math.round(ratio * 100),
+          projectTitle: "BIM Kintsugi 4D",
+        };
+      },
+      onProgress: (frame, total) => {
+        if (btn) {
+          btn.textContent = `⏹ Rec ${Math.round((frame / total) * 100)}%`;
+        }
+      },
+    });
+    if (!activeTimelapseAbort?.signal.aborted) {
+      showToast(`✓ Exported 4D Timelapse (${res.framesRecorded} frames) → ${res.filename}`, "success");
+    }
+  } catch (err: any) {
+    console.warn("4D Timelapse WebM export failed:", err);
+    showToast(`Timelapse export failed: ${err?.message || "Unsupported browser codec"}`, "error");
+  } finally {
+    activeTimelapseAbort = null;
+    if (btn && prevBtnHtml) btn.innerHTML = prevBtnHtml;
   }
 }
 (window as any).recordFull4DSimulation = recordFull4DSimulation;
@@ -3367,7 +3413,7 @@ document.getElementById("btn-selection-hud-link-4d")?.addEventListener("click", 
   showToast(`✓ Linked ${linked} 3D elements to task "${task?.name || activeTaskId}"!`, "success");
 });
 
-// Audit Unassigned & Video Export Buttons
+// Audit Unassigned, Trade Colors, Linkage Audit, CSV Mapper & Video Export Buttons
 document.getElementById("btn-timeline-audit-unassigned")?.addEventListener("click", () => {
   toggleUnassignedAudit();
 });
@@ -3380,6 +3426,110 @@ document.getElementById("btn-timeline-export-video")?.addEventListener("click", 
 document.getElementById("btn-timeline-export-video-modal")?.addEventListener("click", () => {
   recordFull4DSimulation();
 });
+
+document.getElementById("btn-4d-trade-profiles")?.addEventListener("click", async (ev) => {
+  tradeAppearanceEngine.enabled = !tradeAppearanceEngine.enabled;
+  (ev.currentTarget as HTMLElement)?.classList.toggle("active", tradeAppearanceEngine.enabled);
+  showToast(
+    tradeAppearanceEngine.enabled
+      ? "Trade Color Profiles ON (FOU / COL / FLO / WALL / FRA / STR / MEP)"
+      : "Trade Color Profiles OFF",
+    "info"
+  );
+  if (currentTimelineDate) await updateTimelineVisualState(true);
+});
+
+document.getElementById("btn-4d-linkage-audit")?.addEventListener("click", async () => {
+  const activeModels = Array.from(fragments.list.entries());
+  if (activeModels.length === 0) {
+    showToast("Load a 3D IFC model first to run Schedule Linkage Audit.", "warning");
+    return;
+  }
+  const { collectLoadedModelElements, auditScheduleLinkage } = await import("./modules/CsvSchedulePropertyLinker");
+  const { openScheduleAuditModal } = await import("./ui/CsvReconciliationModal");
+  const elements = await collectLoadedModelElements(activeModels);
+  const report = auditScheduleLinkage(scheduleManager.getTasksSorted(), elements, explicitResourceTaskIds);
+  openScheduleAuditModal({
+    report,
+    onIsolateUnscheduled: async (modelIdMaps) => {
+      const hider = components.get(OBC.Hider);
+      await hider.set(false);
+      await hider.set(true, modelIdMaps);
+      await highlighter.highlightByID("select", modelIdMaps, true, false);
+      showToast(`Isolated ${report.unscheduledElementCount} unscheduled 3D elements.`, "info");
+    },
+    onResetIsolation: async () => {
+      const hider = components.get(OBC.Hider);
+      await hider.set(true);
+      await highlighter.clear("select");
+    },
+    onMarkResourceTask: (taskId) => {
+      explicitResourceTaskIds.add(taskId);
+      showToast(`Marked task ${taskId} as non-geometric resource task.`, "success");
+    },
+  });
+});
+
+(document.getElementById("btn-4d-csv-mapper-input") as HTMLInputElement | null)?.addEventListener(
+  "change",
+  async (ev) => {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const csvText = await file.text();
+    input.value = "";
+
+    const activeModels = Array.from(fragments.list.entries());
+    const {
+      collectLoadedModelElements,
+      discoverModelMetaProperties,
+      linkScheduleTasksToLoadedModels,
+    } = await import("./modules/CsvSchedulePropertyLinker");
+    const { openCsvColumnMapperModal } = await import("./ui/CsvReconciliationModal");
+
+    const elements = activeModels.length > 0 ? await collectLoadedModelElements(activeModels) : [];
+    const availableProperties = discoverModelMetaProperties(elements);
+
+    const mapped = await openCsvColumnMapperModal({
+      filename: file.name,
+      csvText,
+      availableProperties,
+    });
+    if (!mapped) return;
+
+    const count = scheduleManager.importScheduleFromCSV(mapped.remappedCsv);
+    if (count > 0) {
+      const linkReport = await linkScheduleTasksToLoadedModels(
+        scheduleManager,
+        activeModels,
+        mapped.mapping.compositeProperties
+          ? {
+              properties: mapped.mapping.compositeProperties,
+              separator: mapped.mapping.compositeSeparator,
+            }
+          : undefined
+      );
+      await syncImportedScheduleWithActiveModels();
+      updateDashboardMetrics();
+      calculateTimelineBounds();
+      updateCumulative5DCost();
+      if (timelineMinDate) {
+        currentTimelineDate = new Date(timelineMinDate);
+        if (timelineSlider) timelineSlider.value = "0";
+        updateTimelineDateUI();
+      }
+      updateScheduleWidgetUI();
+      InteractiveGanttDrawer.getInstance().render();
+      if (currentTimelineDate) await updateTimelineVisualState(true);
+      showToast(
+        `✓ Mapped & imported ${count} tasks (${linkReport.linkedTasks} linked to ${linkReport.totalLinkedElements} elements)`,
+        "success"
+      );
+    } else {
+      showToast("No valid schedule rows found after column mapping.", "warning");
+    }
+  }
+);
 
 document.getElementById("drawer-btn-demo-schedule")?.addEventListener("click", () => {
   loadSampleCapeStoneSchedule();
@@ -8339,32 +8489,65 @@ async function renderTimelineVisualFrame(force: boolean = false) {
 
     if (scheduleManager && scheduleManager.tasks && scheduleManager.tasks.size > 0) {
       const tasksList = scheduleManager.getTasksSorted();
-      const profileEval = profileEngine.evaluateTimelineFrame(dateMs, tasksList, fragments.list);
-
-      await profileEngine.applyEvaluationResult(profileEval, {
-        renderer: world.renderer?.three,
-        hider,
-        highlighter,
-        models: fragments.list,
-      });
-      if (!is4dMode) return;
-
-      for (let i = 0; i < profileEval.buckets.activeColorOverrides.size; i++) {
-        keepStyles.add(`appearance-profile-${i}`);
-      }
-
-      // Highlight completed elements atomically without blanking first
-      const completedMap: Record<string, Set<number>> = {};
-      for (const [, state] of profileEval.elements) {
-        if (state.visible && state.progress >= 1.0) {
-          (completedMap[state.modelId] ??= new Set<number>()).add(state.expressId);
+      if (tradeAppearanceEngine.enabled) {
+        const tradeEval = tradeAppearanceEngine.buildActiveTradeBuckets(dateMs, tasksList);
+        if (Object.keys(tradeEval.planned).length > 0) {
+          await hider.set(false, tradeEval.planned);
         }
+        if (Object.keys(tradeEval.completed).length > 0) {
+          keepStyles.add("timeline-completed");
+          await hider.set(true, tradeEval.completed);
+          await highlighter.highlightByID("timeline-completed", tradeEval.completed, true, false);
+        }
+        for (const bucket of tradeEval.tradeBuckets) {
+          if (!highlighter.styles.has(bucket.styleName)) {
+            highlighter.styles.set(bucket.styleName, {
+              color: new THREE.Color(bucket.profile.color),
+              opacity: bucket.profile.opacity,
+              transparent: bucket.profile.opacity < 1,
+              renderedFaces: 0,
+            });
+          } else {
+            highlighter.styles.get(bucket.styleName)?.color.set(bucket.profile.color);
+          }
+          keepStyles.add(bucket.styleName);
+          await hider.set(true, bucket.modelIdMaps);
+          await highlighter.highlightByID(bucket.styleName, bucket.modelIdMaps, true, false);
+        }
+        if (Object.keys(tradeEval.defaultInProgress).length > 0) {
+          keepStyles.add("timeline-inprogress");
+          await hider.set(true, tradeEval.defaultInProgress);
+          await highlighter.highlightByID("timeline-inprogress", tradeEval.defaultInProgress, true, false);
+        }
+        await clearAll4DHighlights(keepStyles);
+      } else {
+        const profileEval = profileEngine.evaluateTimelineFrame(dateMs, tasksList, fragments.list);
+
+        await profileEngine.applyEvaluationResult(profileEval, {
+          renderer: world.renderer?.three,
+          hider,
+          highlighter,
+          models: fragments.list,
+        });
+        if (!is4dMode) return;
+
+        for (let i = 0; i < profileEval.buckets.activeColorOverrides.size; i++) {
+          keepStyles.add(`appearance-profile-${i}`);
+        }
+
+        // Highlight completed elements atomically without blanking first
+        const completedMap: Record<string, Set<number>> = {};
+        for (const [, state] of profileEval.elements) {
+          if (state.visible && state.progress >= 1.0) {
+            (completedMap[state.modelId] ??= new Set<number>()).add(state.expressId);
+          }
+        }
+        if (Object.keys(completedMap).length > 0) {
+          keepStyles.add("timeline-completed");
+          await highlighter.highlightByID("timeline-completed", completedMap, true, false);
+        }
+        await clearAll4DHighlights(keepStyles);
       }
-      if (Object.keys(completedMap).length > 0) {
-        keepStyles.add("timeline-completed");
-        await highlighter.highlightByID("timeline-completed", completedMap, true, false);
-      }
-      await clearAll4DHighlights(keepStyles);
     } else {
       const buckets = schedule4DEngine.getStatusBuckets(dateMs);
 
@@ -8414,25 +8597,84 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   fragments.core.update(true);
 }
 
+const tradeAppearanceEngine = new TradeAppearanceEngine();
+const explicitResourceTaskIds = new Set<string>();
+let activeTimelapseAbort: AbortController | null = null;
+
+const scheduleTimelineController = new ScheduleTimelineController({
+  onTaskClick: async (_taskKey, latestStats) => {
+    if (timelineMinDate) {
+      const taskStart = new Date(latestStats.startDate);
+      currentTimelineDate = new Date(taskStart);
+      const diffMs = currentTimelineDate.getTime() - timelineMinDate.getTime();
+      const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      if (timelineSlider) {
+        timelineSlider.value = String(diffDays);
+      }
+      updateTimelineDateUI();
+      await updateTimelineVisualState(true);
+    }
+
+    if (Object.keys(latestStats.modelIdMaps).length > 0) {
+      await highlighter.highlightByID("select", latestStats.modelIdMaps, true, false);
+      try {
+        const boundingBoxer = components.get(OBC.BoundingBoxer);
+        boundingBoxer.list.clear();
+        await boundingBoxer.addFromModelIdMap(latestStats.modelIdMaps);
+        const box = boundingBoxer.get();
+        if (!box.isEmpty()) {
+          await world.camera.controls.fitToBox(box, true);
+        }
+        boundingBoxer.list.clear();
+      } catch (err) {
+        console.warn("Fit to task elements failed:", err);
+      }
+    }
+
+    if (window.innerWidth <= 1080) {
+      if (typeof (window as any).closeAllSidebars === "function") {
+        (window as any).closeAllSidebars();
+      }
+    }
+  },
+  onCameraFollowTask: async (_taskKey, stats) => {
+    if (Object.keys(stats.modelIdMaps).length === 0) return;
+    try {
+      const boundingBoxer = components.get(OBC.BoundingBoxer);
+      boundingBoxer.list.clear();
+      await boundingBoxer.addFromModelIdMap(stats.modelIdMaps);
+      const box = boundingBoxer.get();
+      if (!box.isEmpty()) {
+        await world.camera.controls.fitToBox(box, true);
+      }
+      boundingBoxer.list.clear();
+    } catch {
+      // Ignore camera follow errors on non-geometric tasks
+    }
+  },
+  onRequestRender: () => updateScheduleWidgetUI(),
+});
+
 function updateScheduleWidgetUI() {
   const container = document.getElementById("schedule-tasks-list");
   if (!container) return;
 
   if (fragments.list.size === 0) {
+    scheduleTimelineController.reset();
+    scheduleTimelineController.updateViewportHud({
+      is4dMode: false,
+      dateLabel: "--",
+      progressPct: 0,
+      activeEntries: [],
+      totalTasks: 0,
+      completedTasks: 0,
+    });
     container.innerHTML = `<div class="empty-state">Load a model to view the construction schedule.</div>`;
     return;
   }
 
   // Aggregate stats per task
-  const taskStats: Record<string, {
-    startDate: string;
-    endDate: string;
-    totalCount: number;
-    completedCount: number;
-    pctOverride?: number;
-    statusOverride?: "Planned" | "In Progress" | "Completed";
-    modelIdMaps: Record<string, Set<number>>;
-  }> = {};
+  const taskStats: Record<string, ScheduleTaskWidgetStats> = {};
 
   if (scheduleManager && scheduleManager.tasks.size > 0) {
     const simMs = currentTimelineDate?.getTime();
@@ -8471,6 +8713,7 @@ function updateScheduleWidgetUI() {
         completedCount,
         pctOverride: pct,
         statusOverride: status,
+        isSummary: Boolean(task.isSummary),
         modelIdMaps,
       };
     }
@@ -8522,103 +8765,11 @@ function updateScheduleWidgetUI() {
     }
   }
 
-  container.innerHTML = "";
-
-  // Sort tasks by start date
   const sortedTasks = Object.entries(taskStats).sort((a, b) => {
     return new Date(a[1].startDate).getTime() - new Date(b[1].startDate).getTime();
   });
 
-  for (const [taskKey, stats] of sortedTasks) {
-    const taskName = taskKey.includes("::") ? taskKey.split("::").slice(1).join("::") : taskKey;
-    const item = document.createElement("div");
-    item.className = "schedule-task-item";
-
-    // Determine overall task status
-    let taskStatus: "Planned" | "In Progress" | "Completed" = stats.statusOverride ?? "Planned";
-    if (!stats.statusOverride) {
-      if (stats.totalCount > 0 && stats.completedCount === stats.totalCount) {
-        taskStatus = "Completed";
-      } else if (stats.completedCount > 0) {
-        taskStatus = "In Progress";
-      }
-    }
-
-    // Check if the current timeline date is within this task's date range
-    if (currentTimelineDate) {
-      const currentMs = currentTimelineDate.getTime();
-      const startMs = new Date(stats.startDate).getTime();
-      const endMs = new Date(stats.endDate).getTime();
-      if (currentMs >= startMs && currentMs <= endMs) {
-        item.classList.add("active-task");
-      }
-    }
-
-    const pct = stats.pctOverride ?? (stats.totalCount > 0 ? Math.round((stats.completedCount / stats.totalCount) * 100) : 0);
-    const badgeClass = taskStatus === "Completed" ? "task-badge-complete" : (taskStatus === "In Progress" ? "task-badge-active" : "task-badge-planned");
-
-    // Clean task title so redundant parameter prefixes (e.g. Text.SIMULATION:) are stripped
-    const cleanDisplayTitle = taskName
-      .replace(/^(Text\.[A-Za-z0-9_]+|SIMULATION|Reference|Pset_[A-Za-z0-9_]+):\s*/i, "")
-      .trim() || taskName;
-
-    item.innerHTML = `
-      <div class="task-header-row">
-        <span class="task-title" title="${taskName}">${cleanDisplayTitle}</span>
-        <span class="task-status-badge ${badgeClass}">${taskStatus}</span>
-      </div>
-      <div class="task-date-info">
-        <span>Start: ${stats.startDate}</span>
-        <span>End: ${stats.endDate}</span>
-      </div>
-      <div class="task-progress-row">
-        <div class="task-progress-bar">
-          <div class="task-progress-fill" style="width: ${pct}%"></div>
-        </div>
-        <span>${pct}% (${stats.completedCount}/${stats.totalCount})</span>
-      </div>
-    `;
-
-    // Click event to jump scrubber/timeline to task start date, apply 4D phasing, highlight task elements, and focus camera
-    item.addEventListener("click", async () => {
-      if (timelineMinDate) {
-        const taskStart = new Date(stats.startDate);
-        currentTimelineDate = new Date(taskStart);
-        const diffMs = currentTimelineDate.getTime() - timelineMinDate.getTime();
-        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-        if (timelineSlider) {
-          timelineSlider.value = String(diffDays);
-        }
-        updateTimelineDateUI();
-        await updateTimelineVisualState(true);
-      }
-
-      if (Object.keys(stats.modelIdMaps).length > 0) {
-        await highlighter.highlightByID("select", stats.modelIdMaps, true, false);
-        try {
-          const boundingBoxer = components.get(OBC.BoundingBoxer);
-          boundingBoxer.list.clear();
-          await boundingBoxer.addFromModelIdMap(stats.modelIdMaps);
-          const box = boundingBoxer.get();
-          if (!box.isEmpty()) {
-            await world.camera.controls.fitToBox(box, true);
-          }
-          boundingBoxer.list.clear();
-        } catch (err) {
-          console.warn("Fit to task elements failed:", err);
-        }
-      }
-
-      // Auto-collapse sidebar drawer on mobile for direct viewport visibility
-      if (window.innerWidth <= 1080) {
-        if (typeof (window as any).closeAllSidebars === 'function') {
-          (window as any).closeAllSidebars();
-        }
-      }
-    });
-
-    container.appendChild(item);
-  }
+  scheduleTimelineController.render(sortedTasks, currentTimelineDate, is4dMode);
 
   const evmPanel = document.getElementById("evm-panel");
   if (evmPanel && !evmPanel.classList.contains("hidden")) {

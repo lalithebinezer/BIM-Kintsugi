@@ -1,0 +1,810 @@
+/* ==========================================================================
+   BIM-KINTSUGI — UNIFIED STUDIO DESIGN SYSTEM (App-Wide)
+   Linear / Apple HIG / Autodesk Forma aesthetic:
+   - Calm frosted obsidian glass surfaces with crisp 1px hairlines
+   - Strict visual hierarchy (accent reserved for primary CTAs & active states)
+   - Tabular numerals on all telemetry, dates, costs, and KPIs
+   - Full dark & light theme parity with zero layout regressions
+   ========================================================================== */
+
+:root,
+[data-theme] {
+  --studio-glass-bg: rgba(12, 14, 21, 0.84);
+  --studio-glass-elevated: rgba(17, 20, 30, 0.9);
+  --studio-surface-1: rgba(255, 255, 255, 0.028);
+  --studio-surface-2: rgba(255, 255, 255, 0.055);
+  --studio-surface-3: rgba(255, 255, 255, 0.09);
+  --studio-recessed: rgba(6, 8, 13, 0.58);
+  --studio-hairline: rgba(255, 255, 255, 0.075);
+  --studio-hairline-strong: rgba(255, 255, 255, 0.16);
+  --studio-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --studio-shadow-dock: 0 18px 48px rgba(0, 0, 0, 0.48), 0 2px 8px rgba(0, 0, 0, 0.28);
+  --studio-shadow-modal: 0 28px 80px rgba(0, 0, 0, 0.62), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --studio-radius-sm: 6px;
+  --studio-radius-md: 9px;
+  --studio-radius-lg: 12px;
+}
+
+[data-theme="light"],
+[data-theme="light-studio"] {
+  --studio-glass-bg: rgba(248, 250, 252, 0.88);
+  --studio-glass-elevated: rgba(255, 255, 255, 0.95);
+  --studio-surface-1: rgba(15, 23, 42, 0.028);
+  --studio-surface-2: rgba(15, 23, 42, 0.055);
+  --studio-surface-3: rgba(15, 23, 42, 0.09);
+  --studio-recessed: rgba(15, 23, 42, 0.045);
+  --studio-hairline: rgba(15, 23, 42, 0.09);
+  --studio-hairline-strong: rgba(15, 23, 42, 0.18);
+  --studio-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --studio-shadow-dock: 0 14px 36px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --studio-shadow-modal: 0 24px 64px rgba(15, 23, 42, 0.22), 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+/* ─── Typography & Tabular Telemetry ─── */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.kpi-value,
+.stat-value,
+.badge,
+.sidebar-tab-badge,
+.param-count-badge,
+.evm-val,
+.gantt-badge,
+.gantt-prog-badge,
+.gantt-spi-badge,
+.timeline-date-badge,
+.timeline-bound-badge,
+.hud-4d-date,
+.hud-4d-pct,
+.audit-kpi-val,
+input[type="number"],
+input[type="date"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Global Shell: Header, Sidebars & Floating Docks ─── */
+header,
+.top-header,
+.app-header {
+  background: var(--studio-glass-bg);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid var(--studio-hairline);
+  box-shadow: var(--studio-sheen);
+}
+
+.left-sidebar,
+.right-sidebar {
+  background: var(--studio-glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(155%);
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
+  border-color: var(--studio-hairline) !important;
+  box-shadow: var(--studio-sheen), var(--studio-shadow-dock);
+}
+
+#bottom-toolbar.magic-dock,
+.bottom-toolbar.magic-dock {
+  background: var(--studio-glass-elevated) !important;
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  border: 1px solid var(--studio-hairline-strong) !important;
+  box-shadow: var(--studio-sheen), var(--studio-shadow-dock) !important;
+  padding: 0.45rem 0.65rem;
+}
+
+#bottom-toolbar.magic-dock .dock-icon.btn-tool {
+  border-radius: 9px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+#bottom-toolbar.magic-dock .dock-icon.btn-tool:hover {
+  background: var(--studio-surface-2);
+  border-color: var(--studio-hairline);
+  transform: translateY(-1px);
+}
+
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active {
+  background: color-mix(in srgb, var(--accent-500) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-500) 55%, transparent);
+  color: var(--accent-400, var(--accent-500));
+  box-shadow: 0 0 9px color-mix(in srgb, var(--accent-500) 24%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent-500) 12%, transparent);
+}
+
+/* ─── Unified Sidebar Segmented Tab Bars ─── */
+.sidebar-tab-bar {
+  padding: 0.45rem 0.55rem;
+  gap: 4px;
+  background: var(--studio-recessed);
+  border-bottom: 1px solid var(--studio-hairline);
+}
+
+.sidebar-tab-btn {
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-tab-btn:hover {
+  background: var(--studio-surface-2);
+  color: var(--text-primary);
+}
+
+.sidebar-tab-btn.active {
+  background: var(--studio-surface-3);
+  border-color: var(--studio-hairline-strong);
+  color: var(--accent-400, var(--accent-500));
+  box-shadow: var(--studio-sheen);
+  font-weight: 700;
+}
+
+.sidebar-tab-btn .tab-key-badge {
+  font-size: 0.56rem;
+  font-weight: 700;
+  opacity: 0.65;
+  border-radius: 4px;
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline);
+}
+
+.sidebar-tab-btn.active .tab-key-badge {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--accent-500) 45%, transparent);
+  color: var(--accent-400, var(--accent-500));
+}
+
+/* ─── Unified Panel Headers ─── */
+.panel > .panel-header {
+  padding: 0.58rem 0.75rem;
+  border-bottom: 1px solid var(--studio-hairline);
+  background: var(--studio-surface-1);
+}
+
+.panel > .panel-header .header-title-group {
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ─── Unified Cards & List Items Across All Sidebars ─── */
+.query-item,
+.model-item,
+.storey-item,
+.inspector-card,
+.control-card,
+.tool-section-card,
+.metadata-group-card,
+.enterprise-card {
+  background: var(--studio-surface-1);
+  border: 1px solid var(--studio-hairline);
+  border-radius: var(--studio-radius-md);
+  box-shadow: var(--studio-sheen);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.query-item:hover,
+.model-item:hover,
+.storey-item:hover {
+  background: var(--studio-surface-2);
+  border-color: var(--studio-hairline-strong);
+}
+
+/* ─── Unified Calm Button Hierarchy ─── */
+.btn-secondary {
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline-strong);
+  color: var(--text-primary);
+  border-radius: var(--studio-radius-sm);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--studio-surface-3);
+  border-color: color-mix(in srgb, var(--text-primary) 28%, transparent);
+  transform: translateY(-0.5px);
+}
+
+.btn-primary {
+  border-radius: var(--studio-radius-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-0.5px);
+}
+
+/* Replace harsh solid-lime execute buttons in Items Finder with refined accent-tinted glass */
+.btn-query-execute {
+  background: color-mix(in srgb, var(--accent-500) 13%, transparent) !important;
+  color: var(--accent-400, var(--accent-500)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-500) 42%, transparent) !important;
+  border-radius: var(--studio-radius-sm) !important;
+  padding: 0.28rem 0.62rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+
+/* ─── Glow-Safe Scroll & Panel Padding (prevents clipped card/button halos) ─── */
+.panel > .panel-body {
+  padding: 0.65rem 0.78rem;
+}
+
+.schedule-widget .sequence-generator-box {
+  padding: 0.62rem 0.78rem !important;
+}
+
+.schedule-widget .btn-calculate-seq:hover {
+  box-shadow: 0 3px 10px rgba(212, 255, 63, 0.24) !important;
+}
+
+.btn-query-execute:hover {
+  background: var(--accent-500) !important;
+  color: var(--accent-btn-text, #0b0d13) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-500) 26%, transparent);
+}
+
+/* ─── Unified Form Inputs & Selects ─── */
+.sidebar input[type="text"],
+.sidebar input[type="search"],
+.sidebar input[type="number"],
+.sidebar input[type="date"],
+.sidebar select,
+.sidebar textarea,
+.modal-overlay input[type="text"],
+.modal-overlay input[type="number"],
+.modal-overlay input[type="date"],
+.modal-overlay select {
+  background: var(--studio-recessed);
+  border: 1px solid var(--studio-hairline);
+  border-radius: var(--studio-radius-sm);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.sidebar input:focus,
+.sidebar select:focus,
+.sidebar textarea:focus,
+.modal-overlay input:focus,
+.modal-overlay select:focus {
+  border-color: color-mix(in srgb, var(--accent-500) 65%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-500) 14%, transparent);
+  outline: none;
+}
+
+/* ─── Unified Modals, Drawers & Floating Suites ─── */
+.modal-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-content,
+.modal-dialog,
+.enterprise-drawer,
+.interactive-gantt-drawer,
+#cascade-4d-panel,
+#evm-panel {
+  background: var(--studio-glass-elevated);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--studio-hairline-strong);
+  box-shadow: var(--studio-sheen), var(--studio-shadow-modal);
+}
+
+.modal-content,
+.modal-dialog {
+  border-radius: var(--studio-radius-lg);
+}
+
+/* ─── Unified Toasts ─── */
+#bim-toast-container .bim-toast,
+.bim-toast-container .bim-toast {
+  background: var(--studio-glass-elevated);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--studio-hairline-strong);
+  border-radius: 10px;
+  box-shadow: var(--studio-sheen), var(--studio-shadow-dock);
+}
+
+/* ─── Unified Precision Thin Scrollbars ─── */
+.thin-scrollbar::-webkit-scrollbar,
+.sidebar ::-webkit-scrollbar,
+.modal-overlay ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track,
+.sidebar ::-webkit-scrollbar-track,
+.modal-overlay ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb,
+.sidebar ::-webkit-scrollbar-thumb,
+.modal-overlay ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover,
+.sidebar ::-webkit-scrollbar-thumb:hover,
+.modal-overlay ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+
+/* ==========================================================================
+   STUDIO-GRADE REDESIGN: .sidebar.left-sidebar (Files, Finder & 4D Schedule)
+   Floating obsidian-glass dock with glow-safe padding and crisp hierarchy
+   ========================================================================== */
+
+.sidebar.left-sidebar {
+  border-radius: 14px !important;
+  border: 1px solid var(--studio-hairline-strong) !important;
+  box-shadow: var(--studio-sheen), var(--studio-shadow-dock) !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Segmented Left Tab Header */
+.sidebar.left-sidebar #left-tab-bar {
+  margin: 0.6rem 0.65rem 0.35rem 0.65rem !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  border-radius: 10px !important;
+  background: var(--studio-recessed) !important;
+  border: 1px solid var(--studio-hairline) !important;
+}
+
+.sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn {
+  padding: 6px 5px !important;
+  gap: 0.28rem !important;
+  font-size: 0.62rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.03em !important;
+  border-radius: 7px !important;
+  color: var(--text-muted);
+}
+
+.sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn.active {
+  background: var(--studio-surface-3) !important;
+  border-color: var(--studio-hairline-strong) !important;
+  color: var(--accent-400, var(--accent-500)) !important;
+  box-shadow: var(--studio-sheen), 0 2px 6px rgba(0, 0, 0, 0.24) !important;
+  font-weight: 700 !important;
+}
+
+.sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn .tab-key-badge {
+  width: 14px;
+  height: 14px;
+  font-size: 0.52rem;
+  border-radius: 4px;
+}
+
+.sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn .sidebar-tab-badge {
+  font-size: 0.56rem;
+  padding: 1px 4px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tab 1: Project Files Panel */
+.sidebar.left-sidebar #tab-left-files .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.65rem 0.78rem 0.8rem 0.78rem !important;
+}
+
+.sidebar.left-sidebar #tab-left-files .search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.6rem;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--studio-recessed);
+  border: 1px solid var(--studio-hairline);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar.left-sidebar #tab-left-files .search-box:focus-within {
+  border-color: color-mix(in srgb, var(--accent-500) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-500) 12%, transparent);
+}
+
+.sidebar.left-sidebar #tab-left-files .search-box input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 0.73rem;
+  width: 100%;
+}
+
+.sidebar.left-sidebar #file-list {
+  padding: 0.35rem 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+
+.sidebar.left-sidebar #file-list .file-list-empty {
+  padding: 1.15rem 0.85rem;
+  border-radius: 10px;
+  border: 1px dashed var(--studio-hairline-strong);
+  background: var(--studio-surface-1);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.sidebar.left-sidebar .file-actions-row {
+  padding: 0.55rem;
+  border-radius: 10px;
+  background: var(--studio-surface-1);
+  border: 1px solid var(--studio-hairline);
+  box-shadow: var(--studio-sheen);
+}
+
+.sidebar.left-sidebar #sample-model-select {
+  height: 32px !important;
+  border-radius: 7px !important;
+  background: var(--studio-recessed) !important;
+  border: 1px solid var(--studio-hairline) !important;
+  font-size: 0.71rem !important;
+}
+
+.sidebar.left-sidebar #load-sample-btn {
+  height: 32px !important;
+  border-radius: 7px !important;
+  background: var(--studio-surface-2) !important;
+  border: 1px solid var(--studio-hairline-strong) !important;
+  color: var(--text-primary) !important;
+  padding: 0 0.72rem !important;
+}
+
+.sidebar.left-sidebar #load-sample-btn:hover {
+  background: var(--studio-surface-3) !important;
+  border-color: color-mix(in srgb, var(--accent-500) 50%, transparent) !important;
+  color: var(--accent-400, var(--accent-500)) !important;
+}
+
+.sidebar.left-sidebar .btn-file-upload {
+  height: 34px !important;
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--accent-500) 13%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-500) 45%, transparent) !important;
+  color: var(--accent-400, var(--accent-500)) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.sidebar.left-sidebar .btn-file-upload:hover {
+  background: var(--accent-500) !important;
+  color: var(--accent-btn-text, #0b0d13) !important;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent-500) 26%, transparent) !important;
+  transform: translateY(-0.5px);
+}
+
+.sidebar.left-sidebar #btn-trigger-model-diff {
+  margin-top: 0.2rem !important;
+  height: 32px;
+  border-radius: 8px !important;
+  background: var(--studio-surface-1) !important;
+  border: 1px dashed var(--studio-hairline-strong) !important;
+  color: var(--text-secondary, var(--text-muted)) !important;
+  font-size: 0.69rem !important;
+  font-weight: 650 !important;
+  transition: all 0.15s ease;
+}
+
+.sidebar.left-sidebar #btn-trigger-model-diff:hover {
+  background: var(--studio-surface-2) !important;
+  border-style: solid !important;
+  border-color: var(--studio-hairline-strong) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Tab 2: Items Finder Panel */
+.sidebar.left-sidebar .saved-sets-section {
+  margin: 0.55rem 0.7rem 0.25rem 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: var(--studio-surface-1);
+  border: 1px solid var(--studio-hairline);
+  box-shadow: var(--studio-sheen);
+}
+
+.sidebar.left-sidebar .saved-sets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.sidebar.left-sidebar .saved-sets-title {
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, var(--text-muted));
+}
+
+.sidebar.left-sidebar #finder-queries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  padding: 0.55rem 0.75rem 1.25rem 0.75rem !important;
+}
+
+.sidebar.left-sidebar #finder-queries-list .query-item {
+  padding: 0.62rem 0.72rem;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.sidebar.left-sidebar #finder-queries-list .query-name {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.12rem;
+}
+
+.sidebar.left-sidebar #finder-queries-list .query-desc {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Light theme parity for left-sidebar */
+[data-theme="light"] .sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn.active,
+[data-theme="light-studio"] .sidebar.left-sidebar #left-tab-bar .sidebar-tab-btn.active {
+  background: #ffffff !important;
+  color: #047857 !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1) !important;
+}
+
+
+/* ==========================================================================
+   STUDIO-GRADE REDESIGN: .sidebar.right-sidebar
+   Precision twin of left-sidebar across Scene, Meta, Inspector, Controls & Tools
+   ========================================================================== */
+
+.sidebar.right-sidebar {
+  border-radius: 14px !important;
+  border: 1px solid var(--studio-hairline-strong) !important;
+  box-shadow: var(--studio-sheen), var(--studio-shadow-dock) !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Segmented 5-Tab Right Header */
+.sidebar.right-sidebar #right-tab-bar {
+  margin: 0.6rem 0.65rem 0.35rem 0.65rem !important;
+  padding: 4px !important;
+  gap: 3px !important;
+  border-radius: 10px !important;
+  background: var(--studio-recessed) !important;
+  border: 1px solid var(--studio-hairline) !important;
+}
+
+.sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn {
+  padding: 6px 3px 5px 3px !important;
+  gap: 3px !important;
+  border-radius: 7px !important;
+  font-size: 0.54rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--text-muted);
+}
+
+.sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.8;
+}
+
+.sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn.active {
+  background: var(--studio-surface-3) !important;
+  border-color: var(--studio-hairline-strong) !important;
+  color: var(--accent-400, var(--accent-500)) !important;
+  box-shadow: var(--studio-sheen), 0 2px 6px rgba(0, 0, 0, 0.24) !important;
+  font-weight: 700 !important;
+}
+
+.sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn.active svg {
+  opacity: 1;
+}
+
+/* Glow-Safe Scroll Body Across All 5 Right Tabs */
+.sidebar.right-sidebar .panel > .panel-body {
+  padding: 0.65rem 0.78rem 1.25rem 0.78rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+}
+
+/* Collapsible Sections / Details Cards inside Scene, Inspector, Controls, Tools */
+.sidebar.right-sidebar details,
+.sidebar.right-sidebar .collapsible-section,
+.sidebar.right-sidebar .control-section,
+.sidebar.right-sidebar .inspector-group,
+.sidebar.right-sidebar .tool-group-card {
+  background: var(--studio-surface-1);
+  border: 1px solid var(--studio-hairline);
+  border-radius: 10px;
+  box-shadow: var(--studio-sheen);
+  overflow: hidden;
+}
+
+.sidebar.right-sidebar details > summary {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  background: var(--studio-surface-1);
+  transition: background 0.15s ease;
+}
+
+.sidebar.right-sidebar details > summary:hover {
+  background: var(--studio-surface-2);
+}
+
+.sidebar.right-sidebar details[open] > summary {
+  border-bottom: 1px solid var(--studio-hairline);
+}
+
+/* Tab 1: Scene Controls Grid & Classification Tree */
+.sidebar.right-sidebar .scene-controls-grid {
+  gap: 0.45rem;
+  padding: 0.55rem;
+}
+
+.sidebar.right-sidebar .scene-control-item {
+  background: var(--studio-recessed);
+  border: 1px solid var(--studio-hairline);
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.sidebar.right-sidebar .scene-control-item:hover {
+  border-color: var(--studio-hairline-strong);
+}
+
+.sidebar.right-sidebar .scene-control-label {
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: var(--text-secondary, var(--text-muted));
+}
+
+.sidebar.right-sidebar .scene-tree {
+  padding: 0.35rem 0.25rem;
+  gap: 0.25rem;
+}
+
+/* Tab 2: BIM Element Metadata Hero & Property Cards */
+.sidebar.right-sidebar .meta-hero-card {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--accent-500) 8%, transparent) 0%,
+    var(--studio-surface-1) 65%
+  );
+  border: 1px solid var(--studio-hairline-strong);
+  border-radius: 10px;
+  padding: 0.7rem 0.78rem;
+  box-shadow: var(--studio-sheen);
+}
+
+.sidebar.right-sidebar .meta-entity-pill {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.14rem 0.46rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-500) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-500) 40%, transparent);
+  color: var(--accent-400, var(--accent-500));
+}
+
+.sidebar.right-sidebar .meta-storey-pill {
+  font-size: 0.6rem;
+  font-weight: 650;
+  padding: 0.14rem 0.46rem;
+  border-radius: 999px;
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline);
+  color: var(--text-secondary, var(--text-muted));
+}
+
+.sidebar.right-sidebar .meta-hero-name {
+  font-size: 0.84rem;
+  font-weight: 750;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.sidebar.right-sidebar .meta-hero-id,
+.sidebar.right-sidebar .meta-hero-guid {
+  font-family: var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.63rem;
+  color: var(--text-muted);
+}
+
+/* Tab 3, 4 & 5: Inspector, Controls & Tools Buttons / Cards / Keycaps */
+.sidebar.right-sidebar kbd {
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0.1rem 0.38rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sidebar.right-sidebar .btn-tool,
+.sidebar.right-sidebar .tool-action-btn,
+.sidebar.right-sidebar .measure-btn,
+.sidebar.right-sidebar .btn-meta-mini {
+  border-radius: 7px;
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline);
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar.right-sidebar .btn-tool:hover,
+.sidebar.right-sidebar .tool-action-btn:hover,
+.sidebar.right-sidebar .measure-btn:hover,
+.sidebar.right-sidebar .btn-meta-mini:hover {
+  background: var(--studio-surface-3);
+  border-color: var(--studio-hairline-strong);
+}
+
+.sidebar.right-sidebar .btn-tool.active,
+.sidebar.right-sidebar .tool-action-btn.active,
+.sidebar.right-sidebar .measure-btn.active,
+.sidebar.right-sidebar .btn-meta-mini.accent {
+  background: color-mix(in srgb, var(--accent-500) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent-500) 50%, transparent);
+  color: var(--accent-400, var(--accent-500));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-500) 20%, transparent), inset 0 0 8px color-mix(in srgb, var(--accent-500) 10%, transparent);
+}
+
+/* Light theme parity for right-sidebar */
+[data-theme="light"] .sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn.active,
+[data-theme="light-studio"] .sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn.active {
+  background: #ffffff !important;
+  color: #047857 !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1) !important;
+}

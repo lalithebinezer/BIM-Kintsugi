@@ -627,13 +627,351 @@ export function buildCsvGroupedByMetaProperty(options: ExportCsvByPropertyOption
   };
 }
 
+export interface CompositeKeyOptions {
+  /** Ordered list of property keys to combine, e.g. ["Storey", "Category"] */
+  properties: string[];
+  /** Separator between composite parts (default: " — ") */
+  separator?: string;
+}
+
+export interface ScheduleLinkageAuditReport {
+  totalTasks: number;
+  matchedTasks: Array<{ taskId: string; taskName: string; elementCount: number; matchedProperty: string }>;
+  resourceTasks: Array<{ taskId: string; taskName: string; reason: string }>;
+  unmatchedTasks: Array<{ taskId: string; taskName: string; matchProperty?: string }>;
+  totalModelElements: number;
+  scheduledElementCount: number;
+  unscheduledElementCount: number;
+  unscheduledModelIdMaps: Record<string, Set<number>>;
+  unscheduledByCategory: Array<{ category: string; count: number }>;
+}
+
+export interface CsvColumnMapping {
+  taskName: string;
+  startDate?: string;
+  endDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  status?: string;
+  totalCost?: string;
+  unitCost?: string;
+  matchProperty?: string;
+  matchValue?: string;
+  /** Optional composite property keys like ["Storey", "Category"] */
+  compositeProperties?: string[];
+  compositeSeparator?: string;
+}
+
+const RESOURCE_TASK_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /^(EQ_|EQUIP|CRANE|PUMP|HOIST)/i, label: "Equipment / Plant" },
+  { re: /^(LAB_|CREW|LABOR|LABOUR|MANPOWER)/i, label: "Labor / Crew" },
+  { re: /^(MAT_|SUPPLY|PROCURE|SHUTTER|DELIVERY|YARD)/i, label: "Material / Logistics" },
+  { re: /(MOBILIZ|DEMOBILIZ|PERMIT|INSPECT|APPROVAL|COMMISSION|HANDOVER|MILESTONE)/i, label: "Milestone / Admin" },
+];
+
+export function detectResourceTaskReason(taskName: string): string | null {
+  const clean = (taskName || "").trim();
+  if (!clean) return null;
+  for (const p of RESOURCE_TASK_PATTERNS) {
+    if (p.re.test(clean)) return p.label;
+  }
+  return null;
+}
+
+function getElementPropertyValue(el: IndexableModelElement, propName: string): string {
+  const wantLower = normKey(propName);
+  const wantBare = wantLower.includes(".") ? wantLower.slice(wantLower.lastIndexOf(".") + 1) : wantLower;
+  for (const [k, v] of Object.entries(el.properties)) {
+    const kl = normKey(k);
+    const kb = kl.includes(".") ? kl.slice(kl.lastIndexOf(".") + 1) : kl;
+    if (kl === wantLower || kb === wantBare) {
+      const s = normVal(v);
+      if (s) return s;
+    }
+  }
+  return "";
+}
+
+/**
+ * Adds composite multi-property keys (e.g. `Storey+Category` -> `"level 1 — ifccolumn"`)
+ * into an existing PropertyMatchIndex so CSV tasks can link on combined attributes
+ * when a single Revit SIMULATION parameter isn't present.
+ */
+export function addCompositeKeysToIndex(
+  index: PropertyMatchIndex,
+  elements: IndexableModelElement[],
+  options: CompositeKeyOptions
+): string {
+  const props = options.properties.map((p) => p.trim()).filter(Boolean);
+  if (props.length < 2) return props[0] ?? "";
+  const sep = options.separator ?? " — ";
+  const compositePropName = props.join("+");
+  const compositePropKey = normKey(compositePropName);
+
+  let propMap = index.byPropAndValue.get(compositePropKey);
+  if (!propMap) {
+    propMap = new Map();
+    index.byPropAndValue.set(compositePropKey, propMap);
+  }
+
+  // Also index common separator variants (" — ", " - ", "_", " | ", " / ")
+  const altSeparators = Array.from(new Set([sep, " — ", " - ", "_", " | ", " / ", " "]));
+
+  for (const el of elements) {
+    const parts = props.map((p) => getElementPropertyValue(el, p));
+    if (parts.some((p) => !p)) continue;
+
+    const hit: PropertyMatchHit = {
+      modelId: el.modelId,
+      expressId: el.expressId,
+      matchedProperty: compositePropName,
+    };
+
+    for (const s of altSeparators) {
+      const compositeVal = normKey(parts.join(s));
+      let arr = propMap.get(compositeVal);
+      if (!arr) {
+        arr = [];
+        propMap.set(compositeVal, arr);
+      }
+      arr.push(hit);
+
+      let anyArr = index.byAnyValue.get(compositeVal);
+      if (!anyArr) {
+        anyArr = [];
+        index.byAnyValue.set(compositeVal, anyArr);
+      }
+      anyArr.push(hit);
+    }
+  }
+
+  return compositePropName;
+}
+
+/**
+ * Audits schedule-to-3D linkage, classifying matched tasks, non-geometric resource tasks
+ * (e.g. EQ_*, LAB_*, MAT_*), unmatched geometric tasks, and unscheduled 3D elements.
+ */
+export function auditScheduleLinkage(
+  tasks: ScheduleTask[],
+  elements: IndexableModelElement[],
+  explicitResourceTaskIds?: Set<string>
+): ScheduleLinkageAuditReport {
+  const matchedTasks: ScheduleLinkageAuditReport["matchedTasks"] = [];
+  const resourceTasks: ScheduleLinkageAuditReport["resourceTasks"] = [];
+  const unmatchedTasks: ScheduleLinkageAuditReport["unmatchedTasks"] = [];
+
+  const scheduledKeys = new Set<string>();
+  const scheduledExpressFallback = new Set<number>();
+
+  for (const task of tasks) {
+    if (task.elementIds && task.elementIds.size > 0) {
+      matchedTasks.push({
+        taskId: task.id,
+        taskName: task.name,
+        elementCount: task.elementIds.size,
+        matchedProperty: task.matchedProperty || task.matchProperty || "ExpressID",
+      });
+      for (const eid of task.elementIds) {
+        if (task.modelId) scheduledKeys.add(`${task.modelId}:${eid}`);
+        scheduledExpressFallback.add(eid);
+      }
+      continue;
+    }
+
+    if (explicitResourceTaskIds?.has(task.id)) {
+      resourceTasks.push({ taskId: task.id, taskName: task.name, reason: "Marked as Resource Task" });
+      continue;
+    }
+
+    const detectedReason = detectResourceTaskReason(task.name);
+    if (detectedReason) {
+      resourceTasks.push({ taskId: task.id, taskName: task.name, reason: detectedReason });
+    } else {
+      unmatchedTasks.push({
+        taskId: task.id,
+        taskName: task.name,
+        matchProperty: task.matchProperty,
+      });
+    }
+  }
+
+  const unscheduledModelIdMaps: Record<string, Set<number>> = {};
+  const unscheduledCatCounts = new Map<string, number>();
+  let scheduledElementCount = 0;
+  let unscheduledElementCount = 0;
+
+  for (const el of elements) {
+    const key = `${el.modelId}:${el.expressId}`;
+    const isScheduled = scheduledKeys.has(key) || (scheduledKeys.size === 0 && scheduledExpressFallback.has(el.expressId));
+    if (isScheduled) {
+      scheduledElementCount++;
+    } else {
+      unscheduledElementCount++;
+      (unscheduledModelIdMaps[el.modelId] ??= new Set<number>()).add(el.expressId);
+      const cat = String(el.properties["Category"] ?? "Unknown").trim() || "Unknown";
+      unscheduledCatCounts.set(cat, (unscheduledCatCounts.get(cat) ?? 0) + 1);
+    }
+  }
+
+  const unscheduledByCategory = Array.from(unscheduledCatCounts.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    totalTasks: tasks.length,
+    matchedTasks,
+    resourceTasks,
+    unmatchedTasks,
+    totalModelElements: elements.length,
+    scheduledElementCount,
+    unscheduledElementCount,
+    unscheduledModelIdMaps,
+    unscheduledByCategory,
+  };
+}
+
+/**
+ * Parses CSV headers and first N preview rows for the interactive CSV Column Mapper modal.
+ */
+export function parseCsvHeadersAndPreview(
+  csvText: string,
+  previewLimit = 5
+): { headers: string[]; previewRows: string[][] } {
+  const lines = csvText
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return { headers: [], previewRows: [] };
+
+  const parseLine = (line: string): string[] => {
+    const out: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        out.push(cur.trim());
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur.trim());
+    return out;
+  };
+
+  const headers = parseLine(lines[0]);
+  const previewRows = lines.slice(1, 1 + previewLimit).map(parseLine);
+  return { headers, previewRows };
+}
+
+/**
+ * Remaps arbitrary user CSV headers into BIM-Kintsugi's canonical 4D/5D CSV schema,
+ * optionally injecting a MatchProperty (single or composite like `Storey+Category`).
+ */
+export function remapCsvColumns(csvText: string, mapping: CsvColumnMapping): string {
+  const lines = csvText
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return csvText;
+
+  const parseLine = (line: string): string[] => {
+    const out: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        out.push(cur.trim());
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur.trim());
+    return out;
+  };
+
+  const headers = parseLine(lines[0]);
+  const colIdx = (name?: string): number => (name ? headers.findIndex((h) => h === name) : -1);
+
+  const idxName = colIdx(mapping.taskName);
+  const idxStart = colIdx(mapping.startDate);
+  const idxEnd = colIdx(mapping.endDate);
+  const idxActStart = colIdx(mapping.actualStartDate);
+  const idxActEnd = colIdx(mapping.actualEndDate);
+  const idxStatus = colIdx(mapping.status);
+  const idxTotalCost = colIdx(mapping.totalCost);
+  const idxUnitCost = colIdx(mapping.unitCost);
+  const idxMatchVal = colIdx(mapping.matchValue);
+
+  const compositePropStr =
+    mapping.compositeProperties && mapping.compositeProperties.length >= 2
+      ? mapping.compositeProperties.join("+")
+      : mapping.matchProperty || "";
+
+  const outRows: string[] = [
+    "TaskID,TaskName,StartDate,EndDate,ActualStartDate,ActualEndDate,Status,UnitCost,TotalCost,MatchProperty,MatchValue",
+  ];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseLine(lines[i]);
+    const taskName = idxName >= 0 ? cols[idxName] || "" : cols[0] || "";
+    if (!taskName) continue;
+    const startDate = idxStart >= 0 ? cols[idxStart] || "" : "";
+    const endDate = idxEnd >= 0 ? cols[idxEnd] || "" : "";
+    const actStart = idxActStart >= 0 ? cols[idxActStart] || "" : "";
+    const actEnd = idxActEnd >= 0 ? cols[idxActEnd] || "" : "";
+    const status = idxStatus >= 0 ? cols[idxStatus] || "Planned" : "Planned";
+    const unitCost = idxUnitCost >= 0 ? cols[idxUnitCost] || "" : "";
+    const totalCost = idxTotalCost >= 0 ? cols[idxTotalCost] || "" : "";
+    const matchVal = idxMatchVal >= 0 ? cols[idxMatchVal] || taskName : taskName;
+
+    outRows.push(
+      [
+        `CSV-${String(i).padStart(3, "0")}`,
+        csvEscape(taskName),
+        csvEscape(startDate),
+        csvEscape(endDate),
+        csvEscape(actStart),
+        csvEscape(actEnd),
+        csvEscape(status),
+        csvEscape(unitCost),
+        csvEscape(totalCost),
+        csvEscape(compositePropStr),
+        csvEscape(matchVal),
+      ].join(",")
+    );
+  }
+
+  return outRows.join("\n");
+}
+
 /**
  * Extracts all element properties from active Fragment models (via FragmentIndexer +
- * IfcParameterReader + model.properties) and exact-matches all ScheduleManager tasks.
+ * IfcParameterReader + model.properties) and exact-matches all ScheduleManager tasks,
+ * including automatic composite-key indexing when tasks specify `PropA+PropB`.
  */
 export async function linkScheduleTasksToLoadedModels(
   scheduleManager: ScheduleManager,
-  activeModels: Array<[string, any]>
+  activeModels: Array<[string, any]>,
+  compositeOptions?: CompositeKeyOptions
 ): Promise<CsvLinkReport> {
   const tasks = Array.from(scheduleManager.tasks.values());
   if (tasks.length === 0 || activeModels.length === 0) {
@@ -649,6 +987,27 @@ export async function linkScheduleTasksToLoadedModels(
 
   const elements = await collectLoadedModelElements(activeModels);
   const index = buildPropertyMatchIndex(elements);
+
+  // Automatically build composite indexes for any task specifying `PropA+PropB` or explicit options
+  const compositeSpecs = new Set<string>();
+  if (compositeOptions && compositeOptions.properties.length >= 2) {
+    compositeSpecs.add(compositeOptions.properties.join("+"));
+  }
+  for (const t of tasks) {
+    if (t.matchProperty && t.matchProperty.includes("+")) {
+      compositeSpecs.add(t.matchProperty);
+    }
+  }
+  for (const spec of compositeSpecs) {
+    const props = spec.split("+").map((p) => p.trim()).filter(Boolean);
+    if (props.length >= 2) {
+      addCompositeKeysToIndex(index, elements, {
+        properties: props,
+        separator: compositeOptions?.separator,
+      });
+    }
+  }
+
   const report = linkTasksToPropertyIndex(tasks, index);
   scheduleManager.recomputeCpmAndRollups();
   return report;
