@@ -1,0 +1,38 @@
+import{t as e}from"./formatters-Cb-tA797.js";var t=[{id:`iso-19650-naming`,title:`ISO 19650 Naming & GlobalId Hygiene`,standard:`ISO 19650-2`,description:`Every physical element must have a valid 22-char IFC GlobalId and a descriptive non-generic Name.`,fixSuggestion:`Assign structured Type/Mark naming in authoring BIM tool (Revit/Archicad) and enable 'Store IFC GUID' on export.`},{id:`4d-simulation-ready`,title:`4D SIMULATION Parameter Completeness`,standard:`4D OpenBIM / Synchro`,description:`Checks that every physical element exposes a non-empty SIMULATION / Task / Phase parameter for deterministic 4D linking.`,fixSuggestion:`Run the bottom-up Level-Wise Sequence Generator or map Storey+Category composite keys in Map CSV.`},{id:`5d-qto-ready`,title:`5D Qto_* Quantity Readiness`,standard:`buildingSMART Qto / DIN 276`,description:`Verifies physical elements carry base quantities (Volume, Area, Length, or Width) needed for automated 5D BOQ takeoff.`,fixSuggestion:`Enable 'Export base quantities' in Revit IFC Export Options (Property Sets tab) or switch QTO Provenance to Bounding Box fallback.`},{id:`spatial-storey-containment`,title:`Spatial Containment & Storey Assignment`,standard:`IFC4 Spatial Schema`,description:`Ensures elements are assigned to a named IfcBuildingStorey rather than floating unassigned at site root.`,fixSuggestion:`Re-host orphan elements to their correct Building Storey level in the authoring model before federating.`}];function n(e,t){for(let[n,r]of Object.entries(e.properties)){if(r==null)continue;let e=String(r).trim();if(!(!e||e.toLowerCase()===`unassigned`||e.toLowerCase()===`unknown`)&&t.some(e=>e.test(n)))return!0}return!1}function r(e,t){switch(t){case`iso-19650-naming`:{let t=String(e.properties.Name??``).trim(),n=String(e.properties.GlobalId??``).trim();return!t||/^(unnamed|element|object|default|\d+)$/i.test(t)?{pass:!1,reason:`Missing or generic Name`}:n&&n.length<16?{pass:!1,reason:`Malformed GlobalId`}:{pass:!0}}case`4d-simulation-ready`:return n(e,[/simulation/i,/4d/i,/task/i,/schedule/i,/phase/i,/work.?package/i])?{pass:!0}:{pass:!1,reason:`Missing SIMULATION / 4D Task parameter`};case`5d-qto-ready`:return n(e,[/qto_/i,/volume/i,/area/i,/length/i,/perimeter/i,/weight/i])?{pass:!0}:{pass:!1,reason:`Missing Qto_* base quantity`};case`spatial-storey-containment`:{let t=String(e.properties.Storey??``).trim();return!t||/^(unassigned|unknown|none|all storeys|default)$/i.test(t)?{pass:!1,reason:`Not assigned to an IfcBuildingStorey`}:{pass:!0}}}}function i(e,n){let i=t.find(t=>t.id===e)??t[0],a=0,o=0,s={},c=new Map,l=new Set;for(let e of n){let t=r(e,i.id);if(t.pass)a++;else{o++,(s[e.modelId]??=new Set).add(e.expressId);let n=String(e.properties.Category??`Unknown`).trim()||`Unknown`;c.set(n,(c.get(n)??0)+1),t.reason&&l.size<4&&l.add(t.reason)}}let u=n.length,d=u>0?Math.round(a/u*1e3)/10:100,f=d>=95?`pass`:d>=70?`warn`:`fail`,p=Array.from(c.entries()).map(([e,t])=>({category:e,count:t})).sort((e,t)=>t.count-e.count);return{preset:i,totalElements:u,passedCount:a,failedCount:o,compliancePct:d,status:f,failingModelIdMaps:s,failingByCategory:p,sampleMissingReasons:Array.from(l)}}function a(e){return t.map(t=>i(t.id,e))}function o(t){document.getElementById(`ids-presets-audit-modal`)?.remove();let n=document.createElement(`div`);n.id=`ids-presets-audit-modal`,n.className=`modal-overlay open`,n.style.cssText=`position:fixed;inset:0;z-index:10060;background:rgba(5,7,12,0.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;`,n.innerHTML=`
+    <div style="background:var(--bg-panel,#12141c);border:1px solid var(--border-strong,#2e3346);border-radius:12px;width:min(780px,96vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 28px 72px rgba(0,0,0,0.65);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div>
+          <div style="font-weight:750;font-size:0.95rem;color:#f8fafc;">OpenBIM IDS &amp; QA Compliance Presets</div>
+          <div style="font-size:0.73rem;color:#94a3b8;">ISO 19650 · 4D SIMULATION · 5D QTO · IFC4 Spatial Containment</div>
+        </div>
+        <div style="display:flex;gap:0.4rem;">
+          <button type="button" id="ids-presets-reset" class="btn-secondary" style="font-size:0.72rem;padding:0.25rem 0.6rem;">Reset 3D View</button>
+          <button type="button" id="ids-presets-close" class="btn-secondary" style="padding:0.25rem 0.6rem;">✕</button>
+        </div>
+      </div>
+      <div class="thin-scrollbar" style="padding:1rem 1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:0.75rem;">
+        ${t.results.map(t=>{let n=t.status===`pass`?`#10b981`:t.status===`warn`?`#f59e0b`:`#f43f5e`,r=t.failingByCategory.slice(0,5).map(t=>`<span class="audit-cat-chip">${e(t.category)}: <strong>${t.count}</strong></span>`).join(``);return`
+        <div class="ids-preset-card" style="padding:0.85rem;border-radius:10px;background:var(--studio-surface-1,rgba(255,255,255,0.03));border:1px solid var(--studio-hairline,rgba(255,255,255,0.08));display:flex;flex-direction:column;gap:0.45rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary,#f8fafc);">${e(t.preset.title)}</div>
+              <div style="font-size:0.68rem;color:var(--text-muted,#94a3b8);">${e(t.preset.standard)} • ${t.passedCount.toLocaleString()}/${t.totalElements.toLocaleString()} passed</div>
+            </div>
+            <span style="font-size:0.85rem;font-weight:800;font-variant-numeric:tabular-nums;color:${n};">${t.compliancePct}%</span>
+          </div>
+          <div style="height:5px;border-radius:999px;background:var(--studio-surface-2,rgba(255,255,255,0.08));overflow:hidden;">
+            <div style="height:100%;width:${t.compliancePct}%;background:${n};"></div>
+          </div>
+          <div style="font-size:0.71rem;color:var(--text-secondary,#cbd5e1);">${e(t.preset.description)}</div>
+          <div style="font-size:0.69rem;color:var(--color-info,#38bdf8);background:var(--color-info-subtle,rgba(56,189,248,0.08));border:1px solid var(--color-info-border,rgba(56,189,248,0.22));padding:0.38rem 0.55rem;border-radius:6px;">
+            <strong>1-Click Fix Guidance:</strong> ${e(t.preset.fixSuggestion)}
+          </div>
+          ${r?`<div style="display:flex;flex-wrap:wrap;gap:0.3rem;">${r}</div>`:``}
+          <div style="display:flex;justify-content:flex-end;gap:0.4rem;margin-top:0.15rem;">
+            ${t.failedCount>0?`<button type="button" class="btn-primary btn-ids-isolate" data-preset-id="${e(t.preset.id)}" style="font-size:0.7rem;padding:0.28rem 0.65rem;">Highlight ${t.failedCount.toLocaleString()} Failing in 3D</button>`:`<span style="font-size:0.7rem;font-weight:700;color:var(--color-success,#10b981);">✓ Fully Compliant</span>`}
+          </div>
+        </div>
+      `}).join(``)}
+      </div>
+    </div>
+  `,document.body.appendChild(n);let r=()=>n.remove();n.querySelector(`#ids-presets-close`)?.addEventListener(`click`,r),n.addEventListener(`click`,e=>{e.target===n&&r()}),n.querySelector(`#ids-presets-reset`)?.addEventListener(`click`,async()=>{await t.onResetView?.(),r()}),n.querySelectorAll(`.btn-ids-isolate`).forEach(e=>{e.addEventListener(`click`,async()=>{let n=e.dataset.presetId,i=t.results.find(e=>e.preset.id===n);i&&(await t.onIsolateFailing(i.preset.title,i.failingModelIdMaps,i.failedCount),r())})})}export{t as IDS_RULE_PRESETS,a as evaluateAllIdsPresets,i as evaluateIdsPreset,o as openIdsPresetsModal};
