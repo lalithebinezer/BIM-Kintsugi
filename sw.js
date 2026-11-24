@@ -6,7 +6,7 @@
  * to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v10";
+const CACHE_NAME = "bim-kintsugi-cache-v11";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
