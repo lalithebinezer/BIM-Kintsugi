@@ -6,7 +6,7 @@ import { EditHistoryManager } from "../../core/EditHistoryManager";
 import { GpuPerformanceMonitor } from "../../core/GpuPerformanceMonitor";
 import { WorkspacePersonaManager } from "../../ui/WorkspacePersonaManager";
 import { computeLookaheadReport, exportLookaheadCsv } from "../LookaheadEngine";
-import { simulateTaskDelayScenario } from "../WhatIfScenarioEngine";
+import { simulateTaskDelayScenario, openWhatIfSandboxModal } from "../WhatIfScenarioEngine";
 import { EquipmentEnvelopeSimulator } from "../EquipmentEnvelopeSimulator";
 import { searchOfflineBsddCatalog, searchBsddClasses } from "../BsddClient";
 import { parsePromptToToolCall, executeGroundedToolCall } from "../AiToolCallEngine";
@@ -106,7 +106,7 @@ describe("Enterprise Standards Suite — Reactive State, Undo/Redo, GPU, Persona
     expect(csv).toContain("NEXT_3_WEEKS,3,FLO_LL1");
   });
 
-  it("simulates cascading What-If delay slippage and cost delta without mutating baseline", () => {
+  it("simulates cascading What-If delay slippage and cost delta without mutating baseline", async () => {
     const tasks = [
       makeTask({ id: "A", name: "FOU_EPit", startDate: "2026-06-01", endDate: "2026-06-10", totalCost: 50000 }),
       makeTask({
@@ -126,9 +126,31 @@ describe("Enterprise Standards Suite — Reactive State, Undo/Redo, GPU, Persona
     expect(sim.simulatedEndDate).toBe("2026-07-04");
     // Baseline tasks must remain unmutated
     expect(tasks[0].actualEndDate).toBeUndefined();
+
+    // Verify modal Apply Scenario (Undoable) button invokes callback and closes modal cleanly
+    let acceptedSlip = -1;
+    openWhatIfSandboxModal({
+      tasks,
+      evalDateMs: new Date("2026-06-15").getTime(),
+      onAcceptScenario: (res) => {
+        acceptedSlip = res.projectSlipDays;
+      },
+    });
+    const slider = document.getElementById("wi-delay-slider") as HTMLInputElement;
+    expect(slider).not.toBeNull();
+    slider.value = "21";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    // Slider element itself must persist across input updates (no mid-drag DOM wipe)
+    expect(document.getElementById("wi-delay-slider")).toBe(slider);
+    const acceptBtn = document.getElementById("wi-accept") as HTMLButtonElement;
+    acceptBtn.click();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(acceptedSlip).toBe(21);
+    expect(document.getElementById("whatif-sandbox-modal")).toBeNull();
   });
 
   it("mounts, slews, checks clearance, and cleanly disposes 4D Tower Crane Safety Envelope", () => {
+    localStorage.removeItem("bim_kintsugi_crane_transform_v1");
     const scene = new THREE.Scene();
     const crane = EquipmentEnvelopeSimulator.getInstance();
     const bounds = new THREE.Box3(new THREE.Vector3(-10, 0, -10), new THREE.Vector3(10, 20, 10));
@@ -144,9 +166,47 @@ describe("Enterprise Standards Suite — Reactive State, Undo/Redo, GPU, Persona
     const clashStatus = crane.updateForTimelineRatio(0.25, 31);
     expect(clashStatus.clearanceOk).toBe(false);
 
+    // Transform X and Y (plan) + Elevation + Corner Presets + Transform HUD panel + Reopen pill
+    crane.setPlanPosition(12.5, -18.5);
+    expect(crane.getTransform().x).toBe(12.5);
+    expect(crane.getTransform().y).toBe(-18.5);
+    expect(scene.children[0].position.x).toBe(12.5);
+    expect(scene.children[0].position.z).toBe(-18.5);
+
+    crane.nudgePlanPosition(-2.5, 8.5);
+    expect(crane.getTransform().x).toBe(10);
+    expect(crane.getTransform().y).toBe(-10);
+
+    crane.setElevation(4.5);
+    expect(scene.children[0].position.y).toBe(4.5);
+
+    crane.openTransformPanel();
+    const xInput = document.getElementById("crane-input-x") as HTMLInputElement;
+    const yInput = document.getElementById("crane-input-y") as HTMLInputElement;
+    expect(xInput).not.toBeNull();
+    expect(yInput).not.toBeNull();
+    xInput.value = "25";
+    xInput.dispatchEvent(new Event("input", { bubbles: true }));
+    yInput.value = "15";
+    yInput.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(crane.getTransform().x).toBe(25);
+    expect(crane.getTransform().y).toBe(15);
+
+    crane.applyCornerPreset("CENTER");
+    expect(crane.getTransform().x).toBe(0);
+    expect(crane.getTransform().y).toBe(0);
+
+    // Minimizing HUD while active keeps reopen pill; dispose removes both
+    const closeBtn = document.getElementById("btn-crane-hud-close") as HTMLButtonElement;
+    closeBtn.click();
+    expect(document.getElementById("crane-transform-hud")).toBeNull();
+    expect(document.getElementById("crane-hud-reopen-pill")).not.toBeNull();
+
     crane.dispose(scene);
     expect(crane.isActive()).toBe(false);
     expect(scene.children.length).toBe(0);
+    expect(document.getElementById("crane-transform-hud")).toBeNull();
+    expect(document.getElementById("crane-hud-reopen-pill")).toBeNull();
   });
 
   it("queries offline IFC 4.3 bSDD catalog and handles non-network lookup cleanly", async () => {

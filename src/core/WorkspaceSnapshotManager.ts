@@ -12,21 +12,29 @@ import type { ScheduleTask } from "../modules/ScheduleManager";
 export interface SerializedScheduleTask {
   id: string;
   name: string;
+  category: string;
   startDate: string;
   endDate: string;
   actualStartDate?: string;
   actualEndDate?: string;
+  baselineStartDate?: string;
+  baselineEndDate?: string;
   status: "Planned" | "In Progress" | "Completed";
   modelId: string;
   elementIds: number[];
   unitCost: number;
   totalCost: number;
+  actualCost?: number;
+  delayDays?: number;
+  costImpact?: number;
   quantity: number;
   wbsCode?: string;
   parentId?: string;
   isSummary?: boolean;
   matchProperty?: string;
   matchValue?: string;
+  simulationKey?: string;
+  appearanceProfileId?: string;
 }
 
 export interface WorkspaceCameraPose {
@@ -62,21 +70,29 @@ export function serializeScheduleTasks(tasks: Iterable<ScheduleTask>): Serialize
     out.push({
       id: t.id,
       name: t.name,
+      category: t.category || "General",
       startDate: t.startDate,
       endDate: t.endDate,
       actualStartDate: t.actualStartDate,
       actualEndDate: t.actualEndDate,
+      baselineStartDate: t.baselineStartDate,
+      baselineEndDate: t.baselineEndDate,
       status: t.status,
       modelId: t.modelId || "",
       elementIds: Array.from(t.elementIds || []),
       unitCost: t.unitCost || 0,
       totalCost: t.totalCost || 0,
+      actualCost: t.actualCost,
+      delayDays: t.delayDays,
+      costImpact: t.costImpact,
       quantity: t.quantity || 0,
       wbsCode: t.wbsCode,
       parentId: t.parentId,
       isSummary: t.isSummary,
       matchProperty: t.matchProperty,
       matchValue: t.matchValue,
+      simulationKey: t.simulationKey,
+      appearanceProfileId: t.appearanceProfileId,
     });
   }
   return out;
@@ -88,21 +104,29 @@ export function deserializeScheduleTasks(serialized: SerializedScheduleTask[]): 
       ({
         id: s.id,
         name: s.name,
+        category: s.category || "General",
         startDate: s.startDate,
         endDate: s.endDate,
         actualStartDate: s.actualStartDate,
         actualEndDate: s.actualEndDate,
+        baselineStartDate: s.baselineStartDate,
+        baselineEndDate: s.baselineEndDate,
         status: s.status,
         modelId: s.modelId,
         elementIds: new Set<number>(s.elementIds || []),
         unitCost: s.unitCost,
         totalCost: s.totalCost,
+        actualCost: s.actualCost,
+        delayDays: s.delayDays,
+        costImpact: s.costImpact,
         quantity: s.quantity,
         wbsCode: s.wbsCode,
         parentId: s.parentId,
         isSummary: s.isSummary,
         matchProperty: s.matchProperty,
         matchValue: s.matchValue,
+        simulationKey: s.simulationKey,
+        appearanceProfileId: s.appearanceProfileId,
       }) as ScheduleTask
   );
 }

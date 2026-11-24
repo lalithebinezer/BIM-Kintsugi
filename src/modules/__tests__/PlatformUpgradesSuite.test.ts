@@ -16,7 +16,10 @@ import {
   renderShortcutRegistryHtml,
 } from "../../core/ShortcutRegistry";
 import { evaluateAllIdsPresets } from "../IdsPresetEngine";
-import { buildCashFlowHistogramBuckets } from "../../ui/CashFlowHistogramDrawer";
+import {
+  buildCashFlowHistogramBuckets,
+  CashFlowHistogramDrawer,
+} from "../../ui/CashFlowHistogramDrawer";
 import { SplitScreenComparisonController } from "../../ui/SplitScreenComparisonController";
 import { JobsiteTouchMode } from "../../ui/JobsiteTouchMode";
 import { TimelinePlaybackController } from "../../ui/TimelinePlaybackController";
@@ -158,6 +161,36 @@ describe("Platform Upgrades Suite — Snapshots, Deep-Links, Shortcuts, IDS Pres
     expect(monthly).toHaveLength(2);
     expect(monthly[1].cumulativeCost).toBeGreaterThan(100000);
     expect(monthly[0].equipmentCount).toBe(1);
+
+    // Verify floating window drag position, resize, collapse, reset, and close callback
+    localStorage.removeItem("bim_kintsugi_cfh_float_v1");
+    const drawer = CashFlowHistogramDrawer.getInstance();
+    let closedCount = 0;
+    drawer.open(tasks, new Date("2026-06-15").getTime(), () => {}, () => {
+      closedCount++;
+    });
+    expect(drawer.isOpen()).toBe(true);
+    const el = document.getElementById("cashflow-histogram-drawer");
+    expect(el?.classList.contains("floating-window")).toBe(true);
+    expect(document.getElementById("cfh-resize-handle")).not.toBeNull();
+
+    drawer.setFloatingPosition(120, 96);
+    expect(drawer.getFloatingGeometry().left).toBe(120);
+    expect(drawer.getFloatingGeometry().top).toBe(96);
+
+    drawer.setFloatingSize(540, 280);
+    expect(drawer.getFloatingGeometry().width).toBe(540);
+    expect(drawer.getFloatingGeometry().height).toBe(280);
+
+    drawer.setCollapsed(true);
+    expect(el?.classList.contains("collapsed")).toBe(true);
+
+    drawer.resetFloatingPosition();
+    expect(drawer.getFloatingGeometry().collapsed).toBe(false);
+
+    (document.getElementById("cfh-close-btn") as HTMLButtonElement).click();
+    expect(drawer.isOpen()).toBe(false);
+    expect(closedCount).toBe(1);
     expect(monthly[0].tradeTaskCount).toBe(1);
     expect(monthly[1].laborCount).toBe(1);
     expect(monthly[1].materialCount).toBe(1);

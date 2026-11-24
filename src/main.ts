@@ -8224,6 +8224,20 @@ function syncScheduleEngine() {
     maxMs = elementBounds.max.getTime();
   }
 
+  // Extend timeline range if any task carries shifted Actual dates (e.g. What-If Delay Sandbox)
+  if (hasSchedule && minMs !== null && maxMs !== null) {
+    for (const [, t] of scheduleManager.tasks) {
+      if (t.actualStartDate) {
+        const as = new Date(t.actualStartDate).getTime();
+        if (Number.isFinite(as) && as < minMs) minMs = as;
+      }
+      if (t.actualEndDate) {
+        const ae = new Date(t.actualEndDate).getTime();
+        if (Number.isFinite(ae) && ae > maxMs) maxMs = ae;
+      }
+    }
+  }
+
   if (minMs !== null && maxMs !== null && maxMs >= minMs) {
     timelineMinDate = new Date(minMs);
     timelineMaxDate = new Date(maxMs);
@@ -10444,17 +10458,24 @@ async function toggleCashFlowHistogram() {
   const drawer = await cashFlowHistogramFeature.load();
   const tasks = scheduleManager?.getTasksSorted() ?? [];
   const btn = document.getElementById("btn-4d-cashflow-histogram");
-  drawer.toggle(tasks, currentTimelineDate?.getTime(), async (targetMs) => {
-    if (!timelineMinDate) return;
-    currentTimelineDate = new Date(targetMs);
-    const diffDays = Math.max(
-      0,
-      Math.round((targetMs - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24))
-    );
-    if (timelineSlider) timelineSlider.value = String(diffDays);
-    updateTimelineDateUI();
-    await updateTimelineVisualState(true);
-  });
+  drawer.toggle(
+    tasks,
+    currentTimelineDate?.getTime(),
+    async (targetMs) => {
+      if (!timelineMinDate) return;
+      currentTimelineDate = new Date(targetMs);
+      const diffDays = Math.max(
+        0,
+        Math.round((targetMs - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24))
+      );
+      if (timelineSlider) timelineSlider.value = String(diffDays);
+      updateTimelineDateUI();
+      await updateTimelineVisualState(true);
+    },
+    () => {
+      btn?.classList.remove("active");
+    }
+  );
   btn?.classList.toggle("active", drawer.isOpen());
 }
 (window as any).toggleCashFlowHistogram = toggleCashFlowHistogram;
@@ -10826,49 +10847,87 @@ async function open4DLookaheadModal() {
 (window as any).open4DLookaheadModal = open4DLookaheadModal;
 document.getElementById("btn-4d-lookahead")?.addEventListener("click", () => open4DLookaheadModal());
 
-// 5. Live 4D/5D What-If Delay Scenario Sandbox (with Undo/Redo integration)
+// 5. Live 4D/5D What-If Delay Scenario Sandbox (with Undo/Redo integration & live Variance feedback)
+function showWhatIfUndoBanner(label: string) {
+  document.getElementById("whatif-undo-pill")?.remove();
+  const pill = document.createElement("div");
+  pill.id = "whatif-undo-pill";
+  pill.style.cssText =
+    "position:fixed;bottom:142px;right:18px;z-index:920;display:flex;align-items:center;gap:0.55rem;padding:0.48rem 0.78rem;border-radius:10px;background:var(--studio-glass-elevated,#12141c);border:1px solid var(--color-warning,#f59e0b);color:var(--text-primary,#f8fafc);box-shadow:0 10px 28px rgba(0,0,0,0.4);font-size:0.72rem;font-weight:650;";
+  pill.innerHTML = `
+    <span style="color:var(--color-warning,#f59e0b);">⚡ Scenario Active:</span>
+    <span>${escapeHtml(label)}</span>
+    <button type="button" id="btn-whatif-undo-now" class="btn-primary" style="font-size:0.68rem;padding:0.2rem 0.55rem;">↩ Undo</button>
+    <button type="button" id="btn-whatif-banner-close" class="btn-secondary" style="font-size:0.68rem;padding:0.18rem 0.42rem;">✕</button>
+  `;
+  document.body.appendChild(pill);
+  pill.querySelector("#btn-whatif-undo-now")?.addEventListener("click", async () => {
+    await undoWorkspaceEdit();
+    pill.remove();
+  });
+  pill.querySelector("#btn-whatif-banner-close")?.addEventListener("click", () => pill.remove());
+}
+
 async function open4DWhatIfSandbox() {
   const tasks = scheduleManager?.getTasksSorted() ?? [];
   if (tasks.length === 0) {
     showToast("Load a 4D schedule first to run What-If Delay Sandbox.", "warning");
     return;
   }
-  const { openWhatIfSandboxModal } = await whatIfSandboxFeature.load();
+  const { openWhatIfSandboxModal, cloneScheduleTask } = await whatIfSandboxFeature.load();
   const evalDateMs = currentTimelineDate?.getTime() ?? Date.now();
   openWhatIfSandboxModal({
     tasks,
     evalDateMs,
     onAcceptScenario: async (result) => {
-      const beforeSnapshot = serializeScheduleTasks(scheduleManager.tasks.values());
-      const afterSnapshot = serializeScheduleTasks(result.simulatedTasks);
+      const beforeClones = Array.from(scheduleManager.tasks.values()).map(cloneScheduleTask);
+      const afterClones = result.simulatedTasks.map(cloneScheduleTask);
+      const prevVarianceMode = isVarianceMode;
+
+      const applyTaskSet = async (list: ScheduleTask[], enableVariance: boolean) => {
+        scheduleManager.tasks.clear();
+        for (const t of list) {
+          scheduleManager.tasks.set(t.id, cloneScheduleTask(t));
+        }
+        try {
+          scheduleManager.recomputeCpmAndRollups();
+        } catch (err) {
+          console.warn("CPM rollup after What-If:", err);
+        }
+        isVarianceMode = enableVariance;
+        document.getElementById("btn-4d-variance-toggle")?.classList.toggle("active", enableVariance);
+        document.getElementById("btn-4d-whatif-sandbox")?.classList.toggle("active", enableVariance && !prevVarianceMode);
+        calculateTimelineBounds();
+        updateCumulative5DCost();
+        updateTimelineDateUI();
+        updateScheduleWidgetUI();
+        try {
+          InteractiveGanttDrawer.getInstance().render();
+        } catch (err) {
+          console.warn("Gantt re-render after What-If:", err);
+        }
+        if (currentTimelineDate) {
+          await updateTimelineVisualState(true);
+        }
+      };
+
+      const scenarioLabel = `${result.delayDays >= 0 ? "+" : ""}${result.delayDays}d on ${result.targetTaskName}`;
       await EditHistoryManager.getInstance().execute({
         id: `whatif-${Date.now()}`,
-        label: `What-If Delay (${result.delayDays >= 0 ? "+" : ""}${result.delayDays}d on ${result.targetTaskName})`,
+        label: `What-If Delay (${scenarioLabel})`,
         apply: async () => {
-          scheduleManager.tasks.clear();
-          for (const t of deserializeScheduleTasks(afterSnapshot)) {
-            scheduleManager.tasks.set(t.id, t);
-          }
-          calculateTimelineBounds();
-          updateCumulative5DCost();
-          updateScheduleWidgetUI();
-          InteractiveGanttDrawer.getInstance().render();
-          if (currentTimelineDate) await updateTimelineVisualState(true);
+          await applyTaskSet(afterClones, true);
         },
         revert: async () => {
-          scheduleManager.tasks.clear();
-          for (const t of deserializeScheduleTasks(beforeSnapshot)) {
-            scheduleManager.tasks.set(t.id, t);
-          }
-          calculateTimelineBounds();
-          updateCumulative5DCost();
-          updateScheduleWidgetUI();
-          InteractiveGanttDrawer.getInstance().render();
-          if (currentTimelineDate) await updateTimelineVisualState(true);
+          await applyTaskSet(beforeClones, prevVarianceMode);
+          document.getElementById("btn-4d-whatif-sandbox")?.classList.remove("active");
+          document.getElementById("whatif-undo-pill")?.remove();
         },
       });
+
+      showWhatIfUndoBanner(scenarioLabel);
       showToast(
-        `Applied What-If scenario (+${result.projectSlipDays}d slip, Δ $${result.deltaCostImpact.toLocaleString()}) — Undo anytime via Ctrl+K → Undo`,
+        `Applied What-If scenario (${result.projectSlipDays >= 0 ? "+" : ""}${result.projectSlipDays}d slip, Δ $${result.deltaCostImpact.toLocaleString()}) — Variance Mode enabled`,
         "success"
       );
     },
@@ -10877,7 +10936,10 @@ async function open4DWhatIfSandbox() {
 (window as any).open4DWhatIfSandbox = open4DWhatIfSandbox;
 document.getElementById("btn-4d-whatif-sandbox")?.addEventListener("click", () => open4DWhatIfSandbox());
 
-// 6. 4D Tower Crane & Swing-Radius Safety Envelope Simulator
+// 6. 4D Tower Crane & Swing-Radius Safety Envelope Simulator (with X/Y Transform & Click-to-Place)
+let cranePickDownListener: ((ev: PointerEvent) => void) | null = null;
+let cranePickClickListener: ((ev: MouseEvent) => void) | null = null;
+
 async function toggle4DCraneEnvelope() {
   const crane = await craneEnvelopeFeature.load();
   let box: THREE.Box3 | null = null;
@@ -10890,11 +10952,70 @@ async function toggle4DCraneEnvelope() {
   } catch {
     box = null;
   }
-  const status = crane.toggle(world.scene.three, box);
+
+  const detachCranePicker = () => {
+    const dom = world.renderer?.three?.domElement;
+    if (dom) {
+      if (cranePickDownListener) {
+        dom.removeEventListener("pointerdown", cranePickDownListener, true);
+        cranePickDownListener = null;
+      }
+      if (cranePickClickListener) {
+        dom.removeEventListener("click", cranePickClickListener, true);
+        cranePickClickListener = null;
+      }
+      dom.style.cursor = "";
+    }
+  };
+
+  const status = crane.toggle(world.scene.three, box, {
+    onRequestRender: () => {
+      fragments.core.update(true);
+    },
+    onPickModeToggle: (enabled) => {
+      detachCranePicker();
+      const dom = world.renderer?.three?.domElement;
+      if (!enabled || !dom) return;
+      dom.style.cursor = "crosshair";
+      let downX = 0;
+      let downY = 0;
+      cranePickDownListener = (ev: PointerEvent) => {
+        downX = ev.clientX;
+        downY = ev.clientY;
+      };
+      cranePickClickListener = (ev: MouseEvent) => {
+        // Ignore camera orbit drags (> 6px movement between pointerdown and click)
+        if (Math.hypot(ev.clientX - downX, ev.clientY - downY) > 6) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const rect = dom.getBoundingClientRect();
+        const ndc = new THREE.Vector2(
+          ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+          -((ev.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(ndc, world.camera.three);
+        const planeY = crane.getTransform().elevation;
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -planeY);
+        const hit = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(groundPlane, hit)) {
+          crane.setPlanPosition(hit.x, hit.z);
+          showToast(`Tower Crane moved to X=${hit.x.toFixed(1)}m, Y=${hit.z.toFixed(1)}m`, "success");
+        }
+        crane.setPickModeActive(false);
+        detachCranePicker();
+      };
+      dom.addEventListener("pointerdown", cranePickDownListener, true);
+      dom.addEventListener("click", cranePickClickListener, true);
+      showToast("Click anywhere on the 3D site to place the Tower Crane (X / Y). Press Esc to cancel.", "info");
+    },
+  });
+
+  if (!status.active) detachCranePicker();
   document.getElementById("btn-4d-crane-envelope")?.classList.toggle("active", status.active);
   showToast(
     status.active
-      ? `Tower Crane Safety Envelope ON (Radius ${status.jibRadiusMeters}m · Hook ${status.hookHeightMeters}m · Clearance ${status.clearanceOk ? "OK" : "CHECK"})`
+      ? `Tower Crane ON (X=${status.transform.x}m, Y=${status.transform.y}m · Radius ${status.jibRadiusMeters}m) — Use Transform HUD to reposition`
       : "Tower Crane Safety Envelope OFF",
     "info"
   );

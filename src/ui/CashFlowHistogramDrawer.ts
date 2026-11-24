@@ -1,13 +1,14 @@
 /**
- * CashFlowHistogramDrawer — Interactive 4D Cash-Flow & Resource Load Histogram
+ * CashFlowHistogramDrawer — Floating Draggable & Resizable 4D Cash-Flow & Resource Load Histogram
  *
  * Aggregates ScheduleManager tasks into weekly or monthly buckets, plotting:
  *  - Cash Flow mode: period spend bars ($) + cumulative spend S-Curve
  *  - Resource mode: stacked Labor (LAB_*), Equipment (EQ_*), Material (MAT_*),
  *    and Trade Crew counts active per period
  *
- * Synced live to the 4D timeline playhead; clicking any bar scrubs the 4D simulation
- * directly to that period's start date.
+ * Floats freely above the 3D viewport with header drag, corner resize, collapse/expand,
+ * reset-position, viewport clamping, localStorage persistence, and theme-aware SVG colors.
+ * Synced live to the 4D timeline playhead; clicking any bar scrubs the 4D simulation date.
  */
 
 import type { ScheduleTask } from "../modules/ScheduleManager";
@@ -29,7 +30,22 @@ export interface HistogramPeriodBucket {
   totalActiveTasks: number;
 }
 
+export interface FloatingHistogramGeometry {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  collapsed: boolean;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FLOAT_STORAGE_KEY = "bim_kintsugi_cfh_float_v1";
+const MIN_FLOAT_WIDTH = 360;
+const MAX_FLOAT_WIDTH = 1120;
+const MIN_FLOAT_HEIGHT = 200;
+const MAX_FLOAT_HEIGHT = 560;
+const DEFAULT_FLOAT_WIDTH = 660;
+const DEFAULT_FLOAT_HEIGHT = 258;
 
 function formatPeriodLabel(d: Date, granularity: HistogramGranularity): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -149,10 +165,125 @@ export class CashFlowHistogramDrawer {
   private lastTasks: ScheduleTask[] = [];
   private lastDateMs: number | undefined;
   private onScrubDate: ((dateMs: number) => void) | null = null;
+  private onCloseCallback: (() => void) | null = null;
+  private geometry: FloatingHistogramGeometry;
+  private resizeListenerAttached = false;
+
+  private constructor() {
+    this.geometry = this.computeDefaultGeometry();
+  }
 
   public static getInstance(): CashFlowHistogramDrawer {
     if (!this.instance) this.instance = new CashFlowHistogramDrawer();
     return this.instance;
+  }
+
+  private getViewportSize(): { vw: number; vh: number } {
+    const vw = typeof window !== "undefined" && window.innerWidth > 0 ? window.innerWidth : 1280;
+    const vh = typeof window !== "undefined" && window.innerHeight > 0 ? window.innerHeight : 800;
+    return { vw, vh };
+  }
+
+  private computeDefaultGeometry(): FloatingHistogramGeometry {
+    const { vw, vh } = this.getViewportSize();
+    const width = Math.max(MIN_FLOAT_WIDTH, Math.min(DEFAULT_FLOAT_WIDTH, vw - 32));
+    const height = Math.max(MIN_FLOAT_HEIGHT, Math.min(DEFAULT_FLOAT_HEIGHT, vh - 180));
+    const left = Math.max(16, vw - width - 24);
+    const top = Math.max(68, Math.min(82, vh - height - 150));
+    return { left, top, width, height, collapsed: false };
+  }
+
+  private clampGeometry(geom: FloatingHistogramGeometry): FloatingHistogramGeometry {
+    const { vw, vh } = this.getViewportSize();
+    const maxW = Math.max(MIN_FLOAT_WIDTH, Math.min(MAX_FLOAT_WIDTH, vw - 24));
+    const maxH = Math.max(MIN_FLOAT_HEIGHT, Math.min(MAX_FLOAT_HEIGHT, vh - 88));
+    const width = Math.round(Math.max(MIN_FLOAT_WIDTH, Math.min(maxW, geom.width)));
+    const height = Math.round(Math.max(MIN_FLOAT_HEIGHT, Math.min(maxH, geom.height)));
+    const effectiveH = geom.collapsed ? 48 : height;
+    const left = Math.round(Math.max(12, Math.min(Math.max(12, vw - width - 12), geom.left)));
+    const top = Math.round(Math.max(58, Math.min(Math.max(58, vh - effectiveH - 12), geom.top)));
+    return { left, top, width, height, collapsed: Boolean(geom.collapsed) };
+  }
+
+  private loadPersistedGeometry(): FloatingHistogramGeometry {
+    const fallback = this.computeDefaultGeometry();
+    try {
+      const raw = localStorage.getItem(FLOAT_STORAGE_KEY);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw) as Partial<FloatingHistogramGeometry>;
+      if (
+        typeof parsed.left === "number" &&
+        typeof parsed.top === "number" &&
+        typeof parsed.width === "number" &&
+        typeof parsed.height === "number"
+      ) {
+        return this.clampGeometry({
+          left: parsed.left,
+          top: parsed.top,
+          width: parsed.width,
+          height: parsed.height,
+          collapsed: Boolean(parsed.collapsed),
+        });
+      }
+    } catch {
+      // Ignore invalid persisted layout
+    }
+    return fallback;
+  }
+
+  private persistGeometry(): void {
+    try {
+      localStorage.setItem(FLOAT_STORAGE_KEY, JSON.stringify(this.geometry));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }
+
+  private applyGeometryToDom(): void {
+    if (!this.el) return;
+    this.geometry = this.clampGeometry(this.geometry);
+    this.el.style.left = `${this.geometry.left}px`;
+    this.el.style.top = `${this.geometry.top}px`;
+    this.el.style.width = `${this.geometry.width}px`;
+    this.el.style.height = this.geometry.collapsed ? "auto" : `${this.geometry.height}px`;
+    this.el.classList.toggle("collapsed", this.geometry.collapsed);
+    const collapseBtn = this.el.querySelector<HTMLButtonElement>("#cfh-collapse-btn");
+    if (collapseBtn) {
+      collapseBtn.textContent = this.geometry.collapsed ? "▢" : "—";
+      collapseBtn.title = this.geometry.collapsed
+        ? "Expand Cash-Flow Histogram"
+        : "Minimize to Floating Bar";
+    }
+  }
+
+  public getFloatingGeometry(): FloatingHistogramGeometry {
+    return { ...this.geometry };
+  }
+
+  public setFloatingPosition(left: number, top: number): void {
+    this.geometry = this.clampGeometry({ ...this.geometry, left, top });
+    this.applyGeometryToDom();
+    this.persistGeometry();
+  }
+
+  public setFloatingSize(width: number, height: number): void {
+    this.geometry = this.clampGeometry({ ...this.geometry, width, height, collapsed: false });
+    this.applyGeometryToDom();
+    this.persistGeometry();
+    if (this.isOpen()) this.render(this.lastTasks, this.lastDateMs);
+  }
+
+  public setCollapsed(collapsed: boolean): void {
+    this.geometry = this.clampGeometry({ ...this.geometry, collapsed });
+    this.applyGeometryToDom();
+    this.persistGeometry();
+  }
+
+  public resetFloatingPosition(): void {
+    this.geometry = this.computeDefaultGeometry();
+    this.applyGeometryToDom();
+    this.persistGeometry();
+    if (this.isOpen()) this.render(this.lastTasks, this.lastDateMs);
   }
 
   public isOpen(): boolean {
@@ -162,61 +293,85 @@ export class CashFlowHistogramDrawer {
   public toggle(
     tasks: ScheduleTask[],
     currentDateMs: number | undefined,
-    onScrubDate: (dateMs: number) => void
+    onScrubDate: (dateMs: number) => void,
+    onClose?: () => void
   ): void {
     this.onScrubDate = onScrubDate;
+    if (onClose !== undefined) this.onCloseCallback = onClose;
     if (this.isOpen()) {
       this.close();
     } else {
-      this.open(tasks, currentDateMs, onScrubDate);
+      this.open(tasks, currentDateMs, onScrubDate, onClose);
     }
   }
 
   public open(
     tasks: ScheduleTask[],
     currentDateMs: number | undefined,
-    onScrubDate: (dateMs: number) => void
+    onScrubDate: (dateMs: number) => void,
+    onClose?: () => void
   ): void {
     this.onScrubDate = onScrubDate;
+    if (onClose !== undefined) this.onCloseCallback = onClose;
     this.ensureDom();
+    this.applyGeometryToDom();
     this.el?.classList.remove("hidden");
     this.render(tasks, currentDateMs);
   }
 
   public close(): void {
-    this.el?.classList.add("hidden");
+    if (!this.el || this.el.classList.contains("hidden")) return;
+    this.el.classList.add("hidden");
+    this.onCloseCallback?.();
   }
 
   private ensureDom(): void {
     if (this.el) return;
+    this.geometry = this.loadPersistedGeometry();
+
     const div = document.createElement("div");
     div.id = "cashflow-histogram-drawer";
-    div.className = "cashflow-histogram-drawer hidden";
+    div.className = "cashflow-histogram-drawer floating-window hidden";
+    div.setAttribute("role", "dialog");
+    div.setAttribute("aria-label", "4D Cash-Flow and Resource Histogram");
     div.innerHTML = `
-      <div class="cfh-header">
+      <div class="cfh-header" id="cfh-drag-header" title="Drag to move floating Cash-Flow Histogram">
         <div class="cfh-title-group">
+          <span class="cfh-drag-grip" aria-hidden="true">⋮⋮</span>
           <span class="cfh-title">4D Cash-Flow &amp; Resource Histogram</span>
           <span class="cfh-summary" id="cfh-summary-pill">--</span>
         </div>
         <div class="cfh-controls">
           <div class="timeline-seg-group">
             <button type="button" class="btn-timeline-csv active" data-cfh-mode="cashflow">Cash Flow ($)</button>
-            <button type="button" class="btn-timeline-csv" data-cfh-mode="resources">Resources (LAB/EQ/MAT)</button>
+            <button type="button" class="btn-timeline-csv" data-cfh-mode="resources">Resources</button>
           </div>
           <div class="timeline-seg-group">
             <button type="button" class="btn-timeline-csv active" data-cfh-gran="month">Monthly</button>
             <button type="button" class="btn-timeline-csv" data-cfh-gran="week">Weekly</button>
           </div>
-          <button type="button" id="cfh-close-btn" class="btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.72rem;">✕</button>
+          <button type="button" id="cfh-reset-pos-btn" class="btn-secondary cfh-win-btn" title="Reset Floating Position &amp; Size">⌖</button>
+          <button type="button" id="cfh-collapse-btn" class="btn-secondary cfh-win-btn" title="Minimize to Floating Bar">—</button>
+          <button type="button" id="cfh-close-btn" class="btn-secondary cfh-win-btn" title="Close Cash-Flow Histogram">✕</button>
         </div>
       </div>
       <div class="cfh-body" id="cfh-chart-body"></div>
       <div class="cfh-footer" id="cfh-footer-legend">Click any period bar to jump the 4D simulation date.</div>
+      <div class="cfh-resize-handle" id="cfh-resize-handle" title="Drag to resize window" aria-hidden="true"></div>
     `;
     document.body.appendChild(div);
     this.el = div;
+    this.applyGeometryToDom();
 
+    // Header buttons
     div.querySelector("#cfh-close-btn")?.addEventListener("click", () => this.close());
+    div.querySelector("#cfh-collapse-btn")?.addEventListener("click", () => {
+      this.setCollapsed(!this.geometry.collapsed);
+    });
+    div.querySelector("#cfh-reset-pos-btn")?.addEventListener("click", () => {
+      this.resetFloatingPosition();
+    });
+
     div.querySelectorAll<HTMLButtonElement>("[data-cfh-mode]").forEach((btn) => {
       btn.addEventListener("click", () => {
         this.mode = btn.dataset.cfhMode as HistogramViewMode;
@@ -231,6 +386,106 @@ export class CashFlowHistogramDrawer {
         this.render(this.lastTasks, this.lastDateMs);
       });
     });
+
+    // Drag floating window by header
+    const dragHeader = div.querySelector<HTMLElement>("#cfh-drag-header");
+    if (dragHeader) {
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let originLeft = 0;
+      let originTop = 0;
+
+      dragHeader.addEventListener("pointerdown", (ev: PointerEvent) => {
+        if ((ev.target as HTMLElement)?.closest("button")) return;
+        dragging = true;
+        originLeft = this.geometry.left;
+        originTop = this.geometry.top;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        div.classList.add("dragging");
+        dragHeader.setPointerCapture?.(ev.pointerId);
+        ev.preventDefault();
+      });
+
+      dragHeader.addEventListener("pointermove", (ev: PointerEvent) => {
+        if (!dragging) return;
+        this.geometry = this.clampGeometry({
+          ...this.geometry,
+          left: originLeft + (ev.clientX - startX),
+          top: originTop + (ev.clientY - startY),
+        });
+        this.applyGeometryToDom();
+      });
+
+      const endDrag = (ev: PointerEvent) => {
+        if (!dragging) return;
+        dragging = false;
+        div.classList.remove("dragging");
+        dragHeader.releasePointerCapture?.(ev.pointerId);
+        this.persistGeometry();
+      };
+      dragHeader.addEventListener("pointerup", endDrag);
+      dragHeader.addEventListener("pointercancel", endDrag);
+
+      // Double-click header toggles collapse/expand
+      dragHeader.addEventListener("dblclick", (ev: MouseEvent) => {
+        if ((ev.target as HTMLElement)?.closest("button")) return;
+        this.setCollapsed(!this.geometry.collapsed);
+      });
+    }
+
+    // Resize floating window from bottom-right corner handle
+    const resizeHandle = div.querySelector<HTMLElement>("#cfh-resize-handle");
+    if (resizeHandle) {
+      let resizing = false;
+      let startX = 0;
+      let startY = 0;
+      let originW = 0;
+      let originH = 0;
+
+      resizeHandle.addEventListener("pointerdown", (ev: PointerEvent) => {
+        resizing = true;
+        originW = this.geometry.width;
+        originH = this.geometry.height;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        div.classList.add("resizing");
+        resizeHandle.setPointerCapture?.(ev.pointerId);
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+
+      resizeHandle.addEventListener("pointermove", (ev: PointerEvent) => {
+        if (!resizing) return;
+        this.geometry = this.clampGeometry({
+          ...this.geometry,
+          width: originW + (ev.clientX - startX),
+          height: originH + (ev.clientY - startY),
+          collapsed: false,
+        });
+        this.applyGeometryToDom();
+      });
+
+      const endResize = (ev: PointerEvent) => {
+        if (!resizing) return;
+        resizing = false;
+        div.classList.remove("resizing");
+        resizeHandle.releasePointerCapture?.(ev.pointerId);
+        this.persistGeometry();
+        if (this.isOpen()) this.render(this.lastTasks, this.lastDateMs);
+      };
+      resizeHandle.addEventListener("pointerup", endResize);
+      resizeHandle.addEventListener("pointercancel", endResize);
+    }
+
+    // Clamp window into viewport on browser resize
+    if (!this.resizeListenerAttached && typeof window !== "undefined") {
+      this.resizeListenerAttached = true;
+      window.addEventListener("resize", () => {
+        if (this.el) this.applyGeometryToDom();
+      });
+    }
   }
 
   public render(tasks: ScheduleTask[], currentDateMs?: number): void {
@@ -245,7 +500,7 @@ export class CashFlowHistogramDrawer {
 
     const buckets = buildCashFlowHistogramBuckets(tasks, this.granularity);
     if (buckets.length === 0) {
-      body.innerHTML = `<div style="padding:1.5rem;text-align:center;color:#94a3b8;font-size:0.76rem;">No scheduled tasks with valid dates available.</div>`;
+      body.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--text-muted,#94a3b8);font-size:0.76rem;">No scheduled tasks with valid dates available.</div>`;
       return;
     }
 
@@ -256,12 +511,13 @@ export class CashFlowHistogramDrawer {
     if (summary) {
       summary.textContent =
         this.mode === "cashflow"
-          ? `Total: $${totalBudget.toLocaleString("en-US")} • ${buckets.length} ${this.granularity === "month" ? "months" : "weeks"}`
-          : `Peak Active: ${peakTasks} tasks/period • ${buckets.length} periods`;
+          ? `Total: $${totalBudget.toLocaleString("en-US")} • ${buckets.length} ${this.granularity === "month" ? "mo" : "wk"}`
+          : `Peak: ${peakTasks} active • ${buckets.length} periods`;
     }
 
-    const svgW = Math.max(640, buckets.length * 42);
-    const svgH = 160;
+    const availableW = Math.max(320, this.geometry.width - 36);
+    const svgW = Math.max(availableW, buckets.length * 40);
+    const svgH = Math.max(120, this.geometry.height - 96);
     const padL = 44;
     const padR = 16;
     const padT = 14;
@@ -289,7 +545,7 @@ export class CashFlowHistogramDrawer {
       if (this.mode === "cashflow") {
         const h = Math.max(2, (b.periodCost / maxCost) * plotH);
         const y = padT + plotH - h;
-        const fill = isCurrent ? "#d4ff3f" : "rgba(56, 189, 248, 0.72)";
+        const fill = isCurrent ? "var(--cfh-accent, #d4ff3f)" : "var(--cfh-bar, rgba(56, 189, 248, 0.78))";
         barsSvg += `<rect class="cfh-bar" data-ms="${b.startMs}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}"><title>${b.label}: $${b.periodCost.toLocaleString()} (Cum: $${b.cumulativeCost.toLocaleString()})</title></rect>`;
 
         const cy =
@@ -300,10 +556,10 @@ export class CashFlowHistogramDrawer {
       } else {
         let curY = padT + plotH;
         const segments = [
-          { count: b.tradeTaskCount, color: "#38bdf8", name: "Trade" },
+          { count: b.tradeTaskCount, color: "#0ea5e9", name: "Trade" },
           { count: b.laborCount, color: "#10b981", name: "Labor" },
           { count: b.equipmentCount, color: "#f59e0b", name: "Equipment" },
-          { count: b.materialCount, color: "#a855f7", name: "Material" },
+          { count: b.materialCount, color: "#9333ea", name: "Material" },
         ];
         for (const seg of segments) {
           if (seg.count <= 0) continue;
@@ -313,20 +569,19 @@ export class CashFlowHistogramDrawer {
         }
       }
 
-      // X-axis label (thin out if many buckets)
       const labelStep = buckets.length > 24 ? 3 : buckets.length > 14 ? 2 : 1;
       if (i % labelStep === 0 || isCurrent) {
-        barsSvg += `<text x="${cx.toFixed(1)}" y="${svgH - 7}" text-anchor="middle" fill="${isCurrent ? "#d4ff3f" : "#94a3b8"}" font-size="9.5" font-weight="${isCurrent ? "700" : "500"}">${b.label}</text>`;
+        barsSvg += `<text x="${cx.toFixed(1)}" y="${svgH - 7}" text-anchor="middle" fill="${isCurrent ? "var(--cfh-accent, #d4ff3f)" : "var(--cfh-label, #94a3b8)"}" font-size="9.5" font-weight="${isCurrent ? "700" : "500"}">${b.label}</text>`;
       }
     }
 
     const sCurveSvg =
       this.mode === "cashflow" && curvePoints.length > 1
-        ? `<polyline fill="none" stroke="#d4ff3f" stroke-width="2" points="${curvePoints.join(" ")}" />`
+        ? `<polyline fill="none" stroke="var(--cfh-accent, #d4ff3f)" stroke-width="2" points="${curvePoints.join(" ")}" />`
         : "";
     const playheadSvg =
       playheadX !== null
-        ? `<line x1="${playheadX.toFixed(1)}" y1="${padT}" x2="${playheadX.toFixed(1)}" y2="${padT + plotH}" stroke="#f43f5e" stroke-width="2" stroke-dasharray="3 2" />`
+        ? `<line x1="${playheadX.toFixed(1)}" y1="${padT}" x2="${playheadX.toFixed(1)}" y2="${padT + plotH}" stroke="var(--cfh-playhead, #f43f5e)" stroke-width="2" stroke-dasharray="3 2" />`
         : "";
 
     const topTick =
@@ -335,12 +590,12 @@ export class CashFlowHistogramDrawer {
         : `${peakTasks}`;
 
     body.innerHTML = `
-      <div class="thin-scrollbar" style="overflow-x:auto;width:100%;">
-        <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="${svgH}" style="min-width:${Math.min(svgW, 640)}px;display:block;">
-          <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="rgba(255,255,255,0.12)" />
-          <line x1="${padL}" y1="${padT + plotH}" x2="${svgW - padR}" y2="${padT + plotH}" stroke="rgba(255,255,255,0.12)" />
-          <text x="${padL - 6}" y="${padT + 8}" text-anchor="end" fill="#64748b" font-size="9">${topTick}</text>
-          <text x="${padL - 6}" y="${padT + plotH}" text-anchor="end" fill="#64748b" font-size="9">0</text>
+      <div class="thin-scrollbar" style="overflow-x:auto;width:100%;height:100%;">
+        <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="${svgH}" style="min-width:${Math.min(svgW, availableW)}px;display:block;">
+          <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="var(--cfh-axis, rgba(255,255,255,0.15))" />
+          <line x1="${padL}" y1="${padT + plotH}" x2="${svgW - padR}" y2="${padT + plotH}" stroke="var(--cfh-axis, rgba(255,255,255,0.15))" />
+          <text x="${padL - 6}" y="${padT + 8}" text-anchor="end" fill="var(--cfh-label, #64748b)" font-size="9">${topTick}</text>
+          <text x="${padL - 6}" y="${padT + plotH}" text-anchor="end" fill="var(--cfh-label, #64748b)" font-size="9">0</text>
           ${barsSvg}
           ${sCurveSvg}
           ${playheadSvg}
@@ -351,8 +606,8 @@ export class CashFlowHistogramDrawer {
     if (legend) {
       legend.innerHTML =
         this.mode === "cashflow"
-          ? `<span><strong style="color:#38bdf8;">■</strong> Period Spend</span> · <span><strong style="color:#d4ff3f;">━</strong> Cumulative S-Curve</span> · <span><strong style="color:#f43f5e;">┆</strong> Live 4D Date</span> · <em>Click any bar to jump</em>`
-          : `<span><strong style="color:#38bdf8;">■</strong> Trade</span> · <span><strong style="color:#10b981;">■</strong> Labor (LAB)</span> · <span><strong style="color:#f59e0b;">■</strong> Equipment (EQ)</span> · <span><strong style="color:#a855f7;">■</strong> Material (MAT)</span> · <em>Click any bar to jump</em>`;
+          ? `<span><strong style="color:var(--cfh-bar,#38bdf8);">■</strong> Period Spend</span> · <span><strong style="color:var(--cfh-accent,#d4ff3f);">━</strong> Cumulative S-Curve</span> · <span><strong style="color:var(--cfh-playhead,#f43f5e);">┆</strong> Live 4D Date</span> · <em>Click bar to jump · Drag header to float</em>`
+          : `<span><strong style="color:#0ea5e9;">■</strong> Trade</span> · <span><strong style="color:#10b981;">■</strong> Labor</span> · <span><strong style="color:#f59e0b;">■</strong> Equipment</span> · <span><strong style="color:#9333ea;">■</strong> Material</span> · <em>Click bar to jump · Drag header to float</em>`;
     }
 
     body.querySelectorAll<SVGRectElement>(".cfh-bar").forEach((bar) => {
