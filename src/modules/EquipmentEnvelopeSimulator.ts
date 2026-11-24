@@ -9,6 +9,7 @@
 
 import * as THREE from "three";
 import { GpuPerformanceMonitor } from "../core/GpuPerformanceMonitor";
+import { createFloatingWindow, type BkFloatingWindow } from "../ui/UiPlatform";
 
 export interface CraneTransform {
   /** Plan X coordinate in meters (Three.js X — East/West) */
@@ -63,8 +64,7 @@ export class EquipmentEnvelopeSimulator {
 
   private transform: CraneTransform = { ...this.defaultTransform };
   private timelineSlewRad = 0;
-  private panelEl: HTMLDivElement | null = null;
-  private reopenPillEl: HTMLButtonElement | null = null;
+  private floatWin: BkFloatingWindow | null = null;
   private onPickModeToggle: ((enabled: boolean) => void) | null = null;
   private onRequestRender: (() => void) | null = null;
   private pickModeActive = false;
@@ -85,9 +85,10 @@ export class EquipmentEnvelopeSimulator {
 
   public setPickModeActive(next: boolean): void {
     this.pickModeActive = next;
-    const btn = this.panelEl?.querySelector<HTMLButtonElement>("#btn-crane-pick-ground");
+    const btn = this.floatWin?.el.querySelector<HTMLButtonElement>("#btn-crane-pick-ground");
     if (btn) {
       btn.classList.toggle("active", next);
+      btn.classList.toggle("is-active", next);
       btn.textContent = next ? "🎯 Click 3D to Place (Esc to cancel)" : "🎯 Pick in 3D";
     }
     if (typeof window !== "undefined") {
@@ -410,8 +411,11 @@ export class EquipmentEnvelopeSimulator {
 
   public openTransformPanel(): void {
     if (typeof document === "undefined") return;
-    this.removeReopenPill();
-    this.closeTransformPanel(false);
+    if (this.floatWin && document.body.contains(this.floatWin.el)) {
+      this.floatWin.open();
+      this.syncPanelInputs();
+      return;
+    }
 
     const span = Math.max(80, Math.round(Math.max(this.modelSize.x, this.modelSize.z) * 1.6));
     const minX = Math.min(Math.round(this.modelCenter.x - span), Math.floor(this.transform.x - 10));
@@ -419,177 +423,75 @@ export class EquipmentEnvelopeSimulator {
     const minY = Math.min(Math.round(this.modelCenter.z - span), Math.floor(this.transform.y - 10));
     const maxY = Math.max(Math.round(this.modelCenter.z + span), Math.ceil(this.transform.y + 10));
 
-    const vw = typeof window !== "undefined" && window.innerWidth > 0 ? window.innerWidth : 1280;
-    const vh = typeof window !== "undefined" && window.innerHeight > 0 ? window.innerHeight : 800;
-    const hdrBottom = Math.ceil(document.querySelector("header")?.getBoundingClientRect().bottom || 56);
-    const topLeftRect = document.querySelector(".hud-anchor-top-left")?.getBoundingClientRect();
-    const viewCubeRect = document.querySelector(".view-cube-layer")?.getBoundingClientRect();
-    const dockEl =
-      document.querySelector(".timeline-panel") &&
-      getComputedStyle(document.querySelector(".timeline-panel")!).display !== "none"
-        ? document.querySelector(".timeline-panel")
-        : document.querySelector("#bottom-toolbar");
-    const dockTop = Math.floor(dockEl?.getBoundingClientRect().top || vh - 96);
-
-    const hudWidth = Math.min(276, Math.max(240, vw - 16));
-    let initialTop = Math.max(hdrBottom + 10, Math.ceil(topLeftRect?.bottom || 124) + 10);
-    let posStyle = "";
-
-    if (vw >= 960) {
-      // Wide screens: anchor left below Quick-Views bar, respecting open desktop sidebar and Cash-Flow Histogram
-      const leftSidebar = document.querySelector(".left-sidebar");
-      const leftCollapsed = document.body.classList.contains("left-sidebar-collapsed");
-      const leftOpen =
-        Boolean(leftSidebar) &&
-        (!leftCollapsed || leftSidebar!.classList.contains("open"));
-      const leftW = leftOpen ? Math.max(250, Math.ceil(leftSidebar!.getBoundingClientRect().width || 280)) : 0;
-      const initialLeft = leftOpen ? leftW + 24 : 16;
-
-      // Avoid colliding with an already-open Cash-Flow Histogram if horizontal tracks overlap
-      const cfhEl = document.getElementById("cashflow-histogram-drawer");
-      if (cfhEl && !cfhEl.classList.contains("hidden")) {
-        const cfhRect = cfhEl.getBoundingClientRect();
-        const horizOverlap = initialLeft < cfhRect.right + 8 && initialLeft + hudWidth > cfhRect.left - 8;
-        if (horizOverlap && cfhRect.left - 12 >= initialLeft + hudWidth) {
-          // Fits left of histogram cleanly
-        } else if (horizOverlap && vw - cfhRect.right >= hudWidth + 24) {
-          // Place cleanly to the right of histogram below ViewCube
-          const rightTop = Math.max(hdrBottom + 10, Math.ceil(viewCubeRect?.bottom || hdrBottom + 64) + 10);
-          const minimapEl = document.querySelector(".hud-anchor-bottom-right");
-          const mmTop =
-            minimapEl && getComputedStyle(minimapEl).display !== "none"
-              ? Math.floor(minimapEl.getBoundingClientRect().top)
-              : dockTop;
-          const rightMaxH = Math.max(170, Math.min(400, Math.min(mmTop, dockTop) - rightTop - 12));
-          posStyle = `top:${rightTop}px;left:${Math.ceil(cfhRect.right) + 12}px;max-height:${rightMaxH}px;`;
-        } else if (horizOverlap && cfhRect.top - initialTop >= 180) {
-          const maxH = Math.max(160, Math.floor(cfhRect.top - initialTop - 10));
-          posStyle = `top:${initialTop}px;left:${initialLeft}px;max-height:${maxH}px;`;
-        }
-      }
-      if (!posStyle) {
-        const maxH = Math.max(180, Math.min(400, Math.floor(dockTop - initialTop - 12)));
-        posStyle = `top:${initialTop}px;left:${initialLeft}px;max-height:${maxH}px;`;
-      }
-    } else {
-      // Compact / mobile screens: stay cleanly below top controls & above bottom dock with internal scroll
-      const topClear = Math.max(
-        hdrBottom + 8,
-        Math.ceil(topLeftRect?.bottom || hdrBottom + 44) + 8,
-        Math.ceil(viewCubeRect?.bottom || hdrBottom + 50) + 8
-      );
-      initialTop = vh <= 500 ? hdrBottom + 6 : Math.min(topClear, Math.max(hdrBottom + 8, dockTop - 200));
-      const maxH = Math.max(140, Math.floor(Math.min(dockTop - initialTop - 10, vh - initialTop - 14)));
-      posStyle = `top:${initialTop}px;right:8px;max-height:${maxH}px;`;
-    }
-
-    const panel = document.createElement("div");
-    panel.id = "crane-transform-hud";
-    panel.style.cssText =
-      `position:fixed;${posStyle}z-index:890;width:${hudWidth}px;overflow-y:auto;overscroll-behavior:contain;padding:0.72rem 0.82rem;border-radius:12px;background:var(--studio-glass-elevated,#12141c);backdrop-filter:blur(18px);border:1px solid var(--studio-hairline-strong,rgba(255,255,255,0.16));color:var(--text-primary,#f8fafc);box-shadow:0 16px 40px rgba(0,0,0,0.45);display:flex;flex-direction:column;gap:0.52rem;font-size:0.72rem;`;
-
-    panel.innerHTML = `
-      <div id="crane-hud-header" style="display:flex;align-items:center;justify-content:space-between;cursor:grab;user-select:none;padding-bottom:0.35rem;border-bottom:1px solid var(--studio-hairline,rgba(255,255,255,0.08));">
-        <strong style="font-size:0.75rem;letter-spacing:0.03em;text-transform:uppercase;">Tower Crane Transform</strong>
-        <div style="display:flex;gap:0.25rem;align-items:center;">
-          <span id="crane-clearance-badge" class="crane-badge-ok" style="font-size:0.62rem;font-weight:700;padding:0.1rem 0.42rem;border-radius:999px;">OK</span>
-          <button type="button" id="btn-crane-hud-close" class="btn-secondary" title="Minimize Transform HUD (crane stays visible)" style="padding:0.12rem 0.42rem;font-size:0.68rem;">✕</button>
+    this.floatWin = createFloatingWindow({
+      id: "crane-transform-hud",
+      title: "Tower Crane Transform",
+      size: "sm",
+      preferredSlot: "left",
+      minimizeMode: "pill",
+      pillId: "crane-hud-reopen-pill",
+      pillLabel: "🏗️ Crane Transform",
+      closeButtonId: "btn-crane-hud-close",
+      autoHeight: true,
+      headerBadgeHtml: `<span id="crane-clearance-badge" class="bk-badge bk-badge--success crane-badge-ok">OK</span>`,
+      bodyHtml: `
+        <div class="bk-field">
+          <div class="bk-field__label">
+            <label for="crane-input-x" style="display:inline-flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:#ef4444;display:inline-block;"></span>Position X (East / West)</label>
+            <input type="number" id="crane-num-x" class="bk-input bk-input--xs bk-input--num" step="0.5" value="${this.transform.x}" style="width:72px;" />
+          </div>
+          <input type="range" id="crane-input-x" class="bk-range" min="${minX}" max="${maxX}" step="0.5" value="${this.transform.x}" />
         </div>
-      </div>
 
-      <div style="display:flex;flex-direction:column;gap:0.22rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <label for="crane-input-x" style="font-weight:650;color:var(--text-muted);display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:7px;height:7px;border-radius:999px;background:#ef4444;display:inline-block;"></span>Position X (East / West)</label>
-          <input type="number" id="crane-num-x" step="0.5" value="${this.transform.x}" style="width:70px;height:24px;padding:0 0.35rem;font-size:0.7rem;text-align:right;" />
+        <div class="bk-field">
+          <div class="bk-field__label">
+            <label for="crane-input-y" style="display:inline-flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:#38bdf8;display:inline-block;"></span>Position Y (North / South)</label>
+            <input type="number" id="crane-num-y" class="bk-input bk-input--xs bk-input--num" step="0.5" value="${this.transform.y}" style="width:72px;" />
+          </div>
+          <input type="range" id="crane-input-y" class="bk-range" min="${minY}" max="${maxY}" step="0.5" value="${this.transform.y}" />
         </div>
-        <input type="range" id="crane-input-x" min="${minX}" max="${maxX}" step="0.5" value="${this.transform.x}" />
-      </div>
 
-      <div style="display:flex;flex-direction:column;gap:0.22rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <label for="crane-input-y" style="font-weight:650;color:var(--text-muted);display:inline-flex;align-items:center;gap:0.3rem;"><span style="width:7px;height:7px;border-radius:999px;background:#38bdf8;display:inline-block;"></span>Position Y (North / South)</label>
-          <input type="number" id="crane-num-y" step="0.5" value="${this.transform.y}" style="width:70px;height:24px;padding:0 0.35rem;font-size:0.7rem;text-align:right;" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label class="bk-field">
+            <span class="bk-field__label">Elevation Z (m)</span>
+            <input type="number" id="crane-num-elev" class="bk-input bk-input--xs bk-input--num" step="0.5" value="${this.transform.elevation}" />
+          </label>
+          <label class="bk-field">
+            <span class="bk-field__label">Jib Radius (m)</span>
+            <input type="number" id="crane-num-radius" class="bk-input bk-input--xs bk-input--num" min="12" max="90" step="1" value="${this.transform.jibRadius}" />
+          </label>
         </div>
-        <input type="range" id="crane-input-y" min="${minY}" max="${maxY}" step="0.5" value="${this.transform.y}" />
-      </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;">
-        <label style="display:flex;flex-direction:column;gap:0.18rem;font-size:0.66rem;color:var(--text-muted);">
-          <span>Elevation Z (m)</span>
-          <input type="number" id="crane-num-elev" step="0.5" value="${this.transform.elevation}" style="height:26px;padding:0 0.4rem;font-size:0.7rem;" />
-        </label>
-        <label style="display:flex;flex-direction:column;gap:0.18rem;font-size:0.66rem;color:var(--text-muted);">
-          <span>Jib Radius (m)</span>
-          <input type="number" id="crane-num-radius" min="12" max="90" step="1" value="${this.transform.jibRadius}" style="height:26px;padding:0 0.4rem;font-size:0.7rem;" />
-        </label>
-      </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label class="bk-field">
+            <span class="bk-field__label">Mast Height (m)</span>
+            <input type="number" id="crane-num-mast" class="bk-input bk-input--xs bk-input--num" min="10" max="140" step="1" value="${this.transform.mastHeight}" />
+          </label>
+          <label class="bk-field">
+            <span class="bk-field__label">Jib Angle (°)</span>
+            <input type="number" id="crane-num-slew" class="bk-input bk-input--xs bk-input--num" min="0" max="360" step="5" value="${this.transform.slewOffsetDeg}" />
+          </label>
+        </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;">
-        <label style="display:flex;flex-direction:column;gap:0.18rem;font-size:0.66rem;color:var(--text-muted);">
-          <span>Mast Height (m)</span>
-          <input type="number" id="crane-num-mast" min="10" max="140" step="1" value="${this.transform.mastHeight}" style="height:26px;padding:0 0.4rem;font-size:0.7rem;" />
-        </label>
-        <label style="display:flex;flex-direction:column;gap:0.18rem;font-size:0.66rem;color:var(--text-muted);">
-          <span>Jib Angle (°)</span>
-          <input type="number" id="crane-num-slew" min="0" max="360" step="5" value="${this.transform.slewOffsetDeg}" style="height:26px;padding:0 0.4rem;font-size:0.7rem;" />
-        </label>
-      </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;">
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="NW" style="padding:0;">NW</button>
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="NE" style="padding:0;">NE</button>
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="SW" style="padding:0;">SW</button>
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="SE" style="padding:0;">SE</button>
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="CENTER" style="padding:0;">CTR</button>
+          <button type="button" class="bk-btn bk-btn--secondary bk-btn--xs btn-crane-preset" data-preset="RESET" style="padding:0;">RST</button>
+        </div>
 
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="NW" style="font-size:0.62rem;padding:0.22rem 0;">NW</button>
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="NE" style="font-size:0.62rem;padding:0.22rem 0;">NE</button>
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="SW" style="font-size:0.62rem;padding:0.22rem 0;">SW</button>
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="SE" style="font-size:0.62rem;padding:0.22rem 0;">SE</button>
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="CENTER" style="font-size:0.62rem;padding:0.22rem 0;">CTR</button>
-        <button type="button" class="btn-secondary btn-crane-preset" data-preset="RESET" style="font-size:0.62rem;padding:0.22rem 0;">RST</button>
-      </div>
-
-      <div style="display:flex;gap:0.35rem;">
-        <button type="button" id="btn-crane-pick-ground" class="btn-secondary" style="flex:1;font-size:0.68rem;padding:0.3rem 0.45rem;" title="Click anywhere in the 3D scene to reposition the crane X/Y">🎯 Pick in 3D</button>
-      </div>
-    `;
-
-    document.body.appendChild(panel);
-    this.panelEl = panel;
-    this.syncPanelInputs();
-
-    // Drag panel by header
-    const header = panel.querySelector<HTMLElement>("#crane-hud-header");
-    if (header) {
-      let dragging = false;
-      let sx = 0;
-      let sy = 0;
-      let ol = 0;
-      let ot = 0;
-      header.addEventListener("pointerdown", (ev: PointerEvent) => {
-        if ((ev.target as HTMLElement)?.closest("button")) return;
-        dragging = true;
-        const r = panel.getBoundingClientRect();
-        ol = r.left;
-        ot = r.top;
-        sx = ev.clientX;
-        sy = ev.clientY;
-        header.setPointerCapture?.(ev.pointerId);
-        ev.preventDefault();
-      });
-      header.addEventListener("pointermove", (ev: PointerEvent) => {
-        if (!dragging) return;
-        panel.style.left = `${Math.max(8, Math.min(window.innerWidth - 286, ol + (ev.clientX - sx)))}px`;
-        panel.style.top = `${Math.max(8, Math.min(window.innerHeight - 120, ot + (ev.clientY - sy)))}px`;
-        panel.style.right = "auto";
-      });
-      const end = (ev: PointerEvent) => {
-        if (!dragging) return;
-        dragging = false;
-        header.releasePointerCapture?.(ev.pointerId);
-      };
-      header.addEventListener("pointerup", end);
-      header.addEventListener("pointercancel", end);
-    }
-
-    panel.querySelector("#btn-crane-hud-close")?.addEventListener("click", () => {
-      this.closeTransformPanel(true);
+        <button type="button" id="btn-crane-pick-ground" class="bk-btn bk-btn--secondary bk-btn--sm" style="width:100%;" title="Click anywhere in the 3D scene to reposition the crane X/Y">🎯 Pick in 3D</button>
+      `,
+      onClose: () => {
+        this.setPickModeActive(false);
+      },
     });
+
+    const panel = this.floatWin.el;
+    this.floatWin.open();
+    this.syncPanelInputs();
 
     panel.querySelector<HTMLInputElement>("#crane-input-x")?.addEventListener("input", (ev) => {
       this.setPlanPosition(Number((ev.target as HTMLInputElement).value), this.transform.y);
@@ -637,9 +539,10 @@ export class EquipmentEnvelopeSimulator {
   }
 
   private syncPanelInputs(): void {
-    if (!this.panelEl) return;
+    const panel = this.floatWin?.el;
+    if (!panel) return;
     const setRangeVal = (sel: string, val: number) => {
-      const el = this.panelEl?.querySelector<HTMLInputElement>(sel);
+      const el = panel.querySelector<HTMLInputElement>(sel);
       if (!el) return;
       const curMin = Number(el.min);
       const curMax = Number(el.max);
@@ -648,7 +551,7 @@ export class EquipmentEnvelopeSimulator {
       if (document.activeElement !== el) el.value = String(val);
     };
     const setVal = (sel: string, val: number) => {
-      const el = this.panelEl?.querySelector<HTMLInputElement>(sel);
+      const el = panel.querySelector<HTMLInputElement>(sel);
       if (el && document.activeElement !== el) el.value = String(val);
     };
     setRangeVal("#crane-input-x", this.transform.x);
@@ -660,43 +563,24 @@ export class EquipmentEnvelopeSimulator {
     setVal("#crane-num-mast", this.transform.mastHeight);
     setVal("#crane-num-slew", this.transform.slewOffsetDeg);
 
-    const badge = this.panelEl.querySelector<HTMLElement>("#crane-clearance-badge");
+    const badge = panel.querySelector<HTMLElement>("#crane-clearance-badge");
     if (badge) {
       const st = this.getStatus(this.modelTopY);
       badge.textContent = st.clearanceOk ? `+${st.clearanceMeters}m OK` : `${st.clearanceMeters}m CLASH`;
       badge.classList.toggle("crane-badge-ok", st.clearanceOk);
+      badge.classList.toggle("bk-badge--success", st.clearanceOk);
       badge.classList.toggle("crane-badge-clash", !st.clearanceOk);
+      badge.classList.toggle("bk-badge--danger", !st.clearanceOk);
     }
-  }
-
-  private showReopenPill(): void {
-    if (typeof document === "undefined" || !this.active) return;
-    this.removeReopenPill();
-    const pill = document.createElement("button");
-    pill.id = "crane-hud-reopen-pill";
-    pill.type = "button";
-    pill.textContent = "🏗️ Crane Transform";
-    pill.title = "Reopen Tower Crane X/Y Transform HUD";
-    pill.style.cssText =
-      "position:fixed;top:138px;right:18px;z-index:890;padding:0.38rem 0.72rem;border-radius:999px;background:var(--studio-glass-elevated,#12141c);backdrop-filter:blur(16px);border:1px solid var(--studio-hairline-strong,rgba(255,255,255,0.18));color:var(--text-primary,#f8fafc);font-size:0.72rem;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.35);";
-    pill.addEventListener("click", () => this.openTransformPanel());
-    document.body.appendChild(pill);
-    this.reopenPillEl = pill;
-  }
-
-  private removeReopenPill(): void {
-    this.reopenPillEl?.remove();
-    this.reopenPillEl = null;
   }
 
   public closeTransformPanel(showReopen = false): void {
     this.setPickModeActive(false);
-    this.panelEl?.remove();
-    this.panelEl = null;
     if (showReopen && this.active) {
-      this.showReopenPill();
+      this.floatWin?.close(true);
     } else {
-      this.removeReopenPill();
+      this.floatWin?.destroy();
+      this.floatWin = null;
     }
   }
 

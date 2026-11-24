@@ -21,7 +21,7 @@
 /* ─── C2: Guard floating 4D overlays against narrow/short viewport clipping ─── */
 #crane-transform-hud {
   max-width: calc(100vw - 16px) !important;
-  max-height: calc(100dvh - var(--header-bottom, 64px) - 20px) !important;
+  max-height: calc(100dvh - var(--header-bottom, 64px) - 20px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }

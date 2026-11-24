@@ -196,11 +196,14 @@ describe("Enterprise Standards Suite — Reactive State, Undo/Redo, GPU, Persona
     expect(crane.getTransform().x).toBe(0);
     expect(crane.getTransform().y).toBe(0);
 
-    // Minimizing HUD while active keeps reopen pill; dispose removes both
+    // Minimizing HUD while active hides window into reopen pill; dispose destroys both
     const closeBtn = document.getElementById("btn-crane-hud-close") as HTMLButtonElement;
     closeBtn.click();
-    expect(document.getElementById("crane-transform-hud")).toBeNull();
-    expect(document.getElementById("crane-hud-reopen-pill")).not.toBeNull();
+    expect(document.getElementById("crane-transform-hud")?.classList.contains("hidden")).toBe(true);
+    const pill = document.getElementById("crane-hud-reopen-pill") as HTMLButtonElement;
+    expect(pill).not.toBeNull();
+    pill.click();
+    expect(document.getElementById("crane-transform-hud")?.classList.contains("hidden")).toBe(false);
 
     crane.dispose(scene);
     expect(crane.isActive()).toBe(false);

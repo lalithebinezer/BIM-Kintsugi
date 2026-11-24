@@ -8,6 +8,7 @@
  */
 
 import { escapeHtml } from "../utils/formatters";
+import { createBkModal } from "../ui/UiPlatform";
 
 export interface BsddClassMatch {
   code: string;
@@ -146,54 +147,43 @@ export async function searchBsddClasses(
 }
 
 export function openBsddValidatorModal(initialQuery = ""): void {
-  document.getElementById("bsdd-validator-modal")?.remove();
-
-  const overlay = document.createElement("div");
-  overlay.id = "bsdd-validator-modal";
-  overlay.className = "modal-overlay open";
-  overlay.style.cssText =
-    "position:fixed;inset:0;z-index:10065;background:rgba(5,7,12,0.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;";
-
-  overlay.innerHTML = `
-    <div style="width:min(700px,96vw);max-height:85vh;border-radius:12px;border:1px solid var(--border-strong);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;border-bottom:1px solid var(--studio-hairline);">
-        <div>
-          <div style="font-weight:750;font-size:0.95rem;">buildingSMART Data Dictionary (bSDD) &amp; IFC 4.3 Lookup</div>
-          <div style="font-size:0.72rem;color:var(--text-muted);">ISO 16739-1:2024 / ISO 12006-3 live API with air-gapped IFC 4.3 fallback</div>
-        </div>
-        <button type="button" id="bsdd-close" class="btn-secondary" style="padding:0.22rem 0.55rem;">✕</button>
+  const modal = createBkModal({
+    id: "bsdd-validator-modal",
+    title: "buildingSMART Data Dictionary (bSDD) &amp; IFC 4.3 Lookup",
+    subtitle: "ISO 16739-1:2024 / ISO 12006-3 live API with air-gapped IFC 4.3 fallback",
+    size: "md",
+    closeButtonId: "bsdd-close",
+    bodyHtml: `
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="bsdd-search-input" class="bk-input" value="${escapeHtml(initialQuery)}" placeholder="Search IFC class or property (e.g. IfcColumn, IfcWall, Footing)..." style="flex:1;" />
+        <button type="button" id="bsdd-search-btn" class="bk-btn bk-btn--primary">Query bSDD</button>
       </div>
-      <div style="padding:0.85rem 1.1rem;display:flex;gap:0.5rem;border-bottom:1px solid var(--studio-hairline);">
-        <input type="text" id="bsdd-search-input" value="${escapeHtml(initialQuery)}" placeholder="Search IFC class or property (e.g. IfcColumn, IfcWall, Footing)..." style="flex:1;height:32px;padding:0 0.65rem;font-size:0.76rem;" />
-        <button type="button" id="bsdd-search-btn" class="btn-primary" style="height:32px;padding:0 0.9rem;font-size:0.74rem;">Query bSDD</button>
-      </div>
-      <div id="bsdd-results-list" class="thin-scrollbar" style="padding:0.85rem 1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:0.55rem;"></div>
-    </div>
-  `;
+      <div id="bsdd-results-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    `,
+  });
 
-  document.body.appendChild(overlay);
-  const input = overlay.querySelector<HTMLInputElement>("#bsdd-search-input")!;
-  const listEl = overlay.querySelector<HTMLElement>("#bsdd-results-list")!;
+  const input = modal.overlay.querySelector<HTMLInputElement>("#bsdd-search-input")!;
+  const listEl = modal.overlay.querySelector<HTMLElement>("#bsdd-results-list")!;
 
   const runSearch = async () => {
-    listEl.innerHTML = `<div style="font-size:0.75rem;color:var(--text-muted);">Querying buildingSMART Data Dictionary...</div>`;
+    listEl.innerHTML = `<div style="font-size:var(--bk-text-sm);color:var(--bk-text-muted);">Querying buildingSMART Data Dictionary...</div>`;
     const matches = await searchBsddClasses(input.value);
     if (matches.length === 0) {
-      listEl.innerHTML = `<div style="font-size:0.75rem;color:var(--text-muted);">No matching bSDD / IFC 4.3 classes found.</div>`;
+      listEl.innerHTML = `<div style="font-size:var(--bk-text-sm);color:var(--bk-text-muted);">No matching bSDD / IFC 4.3 classes found.</div>`;
       return;
     }
     listEl.innerHTML = matches
       .map(
         (m) => `
-      <div style="padding:0.65rem 0.78rem;border-radius:9px;background:var(--studio-surface-1);border:1px solid var(--studio-hairline);display:flex;flex-direction:column;gap:0.28rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-          <strong style="font-size:0.8rem;">${escapeHtml(m.code)} — ${escapeHtml(m.name)}</strong>
-          <span style="font-size:0.62rem;padding:0.12rem 0.45rem;border-radius:999px;background:var(--studio-surface-2);color:var(--accent-500);">${escapeHtml(m.source === "bsdd-live" ? "Live bSDD" : "IFC 4.3 Standard")}</span>
+      <div class="bk-card" style="display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <strong style="font-size:var(--bk-text-base);">${escapeHtml(m.code)} — ${escapeHtml(m.name)}</strong>
+          <span class="bk-badge bk-badge--accent">${escapeHtml(m.source === "bsdd-live" ? "Live bSDD" : "IFC 4.3 Standard")}</span>
         </div>
-        <div style="font-size:0.68rem;color:var(--text-muted);">${escapeHtml(m.standard)}</div>
+        <div style="font-size:var(--bk-text-xs);color:var(--bk-text-muted);">${escapeHtml(m.standard)}</div>
         ${
           m.recommendedPsets.length > 0
-            ? `<div style="font-size:0.68rem;color:var(--color-info);">Required Psets: ${m.recommendedPsets.map((p) => `<code>${escapeHtml(p)}</code>`).join(", ")}</div>`
+            ? `<div style="font-size:var(--bk-text-xs);color:var(--bk-info);">Required Psets: ${m.recommendedPsets.map((p) => `<code>${escapeHtml(p)}</code>`).join(", ")}</div>`
             : ""
         }
       </div>`
@@ -201,11 +191,7 @@ export function openBsddValidatorModal(initialQuery = ""): void {
       .join("");
   };
 
-  overlay.querySelector("#bsdd-close")?.addEventListener("click", () => overlay.remove());
-  overlay.addEventListener("click", (ev) => {
-    if (ev.target === overlay) overlay.remove();
-  });
-  overlay.querySelector("#bsdd-search-btn")?.addEventListener("click", runSearch);
+  modal.overlay.querySelector("#bsdd-search-btn")?.addEventListener("click", runSearch);
   input.addEventListener("keydown", (ev) => {
     if (ev.key === "Enter") runSearch();
   });

@@ -10,6 +10,7 @@
 import type { ScheduleTask } from "./ScheduleManager";
 import { DelayImpactEngine } from "./DelayImpactEngine";
 import { escapeHtml } from "../utils/formatters";
+import { createBkModal } from "../ui/UiPlatform";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -172,12 +173,6 @@ export function openWhatIfSandboxModal(options: {
   let delayDays = 14;
   let cascade = true;
 
-  const overlay = document.createElement("div");
-  overlay.id = "whatif-sandbox-modal";
-  overlay.className = "modal-overlay open";
-  overlay.style.cssText =
-    "position:fixed;inset:0;z-index:10065;background:rgba(5,7,12,0.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;";
-
   const taskOptions = leafTasks
     .map(
       (t) =>
@@ -185,65 +180,59 @@ export function openWhatIfSandboxModal(options: {
     )
     .join("");
 
-  overlay.innerHTML = `
-    <div style="width:min(680px,96vw);border-radius:12px;border:1px solid var(--border-strong);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;border-bottom:1px solid var(--studio-hairline);">
-        <div>
-          <div style="font-weight:750;font-size:0.95rem;">Live 4D/5D What-If Delay Scenario Sandbox</div>
-          <div style="font-size:0.73rem;color:var(--text-muted);">Simulate schedule slip, CPM cascade, liquidated damages &amp; SPI impact (Undoable)</div>
-        </div>
-        <button type="button" id="wi-close" class="btn-secondary" style="padding:0.22rem 0.55rem;">✕</button>
-      </div>
-
-      <div style="padding:1rem 1.1rem;display:flex;flex-direction:column;gap:0.85rem;">
-        <div style="display:grid;grid-template-columns:1fr 165px;gap:0.65rem;">
-          <label class="csv-mapper-field">
-            <span>Target Activity</span>
-            <select id="wi-task-select" class="custom-select csv-mapper-select">${taskOptions}</select>
-          </label>
-          <label class="csv-mapper-field">
-            <span>Delay Shift: <strong id="wi-delay-label">+14d</strong></span>
-            <input type="range" id="wi-delay-slider" min="-14" max="60" value="${delayDays}" />
-          </label>
-        </div>
-
-        <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.74rem;cursor:pointer;">
-          <input type="checkbox" id="wi-cascade-check" ${cascade ? "checked" : ""} />
-          <span>Cascade delay to downstream successor activities</span>
+  const modal = createBkModal({
+    id: "whatif-sandbox-modal",
+    title: "Live 4D/5D What-If Delay Scenario Sandbox",
+    subtitle: "Simulate schedule slip, CPM cascade, liquidated damages &amp; SPI impact (Undoable)",
+    size: "md",
+    closeButtonId: "wi-close",
+    bodyHtml: `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+        <label class="bk-field">
+          <span class="bk-field__label">Target Activity</span>
+          <select id="wi-task-select" class="bk-select">${taskOptions}</select>
         </label>
+        <label class="bk-field">
+          <span class="bk-field__label"><span>Delay Shift</span><strong id="wi-delay-label">+14d</strong></span>
+          <input type="range" id="wi-delay-slider" class="bk-range" min="-14" max="60" value="${delayDays}" />
+        </label>
+      </div>
 
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
-          <div class="audit-kpi-card">
-            <div class="audit-kpi-val" id="wi-kpi-slip">+0d</div>
-            <div class="audit-kpi-lbl">Completion Slip</div>
-          </div>
-          <div class="audit-kpi-card">
-            <div class="audit-kpi-val" id="wi-kpi-affected" style="color:var(--color-warning);">0</div>
-            <div class="audit-kpi-lbl">Affected Tasks</div>
-          </div>
-          <div class="audit-kpi-card">
-            <div class="audit-kpi-val" id="wi-kpi-cost">$0</div>
-            <div class="audit-kpi-lbl">Cost Impact Δ</div>
-          </div>
-          <div class="audit-kpi-card">
-            <div class="audit-kpi-val" id="wi-kpi-spi" style="color:var(--color-info);">1.00 → 1.00</div>
-            <div class="audit-kpi-lbl">SPI Forecast</div>
-          </div>
+      <label class="bk-checkbox-row">
+        <input type="checkbox" id="wi-cascade-check" ${cascade ? "checked" : ""} />
+        <span>Cascade delay to downstream successor activities</span>
+      </label>
+
+      <div class="bk-kpi-grid">
+        <div class="audit-kpi-card">
+          <div class="audit-kpi-val" id="wi-kpi-slip">+0d</div>
+          <div class="audit-kpi-lbl">Completion Slip</div>
         </div>
-
-        <div id="wi-finish-summary" style="font-size:0.74rem;color:var(--text-muted);font-variant-numeric:tabular-nums;padding:0.5rem 0.65rem;border-radius:8px;background:var(--studio-surface-1);border:1px solid var(--studio-hairline);">
-          Baseline Finish: <strong>--</strong> → Simulated Finish: <strong>--</strong>
+        <div class="audit-kpi-card">
+          <div class="audit-kpi-val" id="wi-kpi-affected" style="color:var(--bk-warning);">0</div>
+          <div class="audit-kpi-lbl">Affected Tasks</div>
+        </div>
+        <div class="audit-kpi-card">
+          <div class="audit-kpi-val" id="wi-kpi-cost">$0</div>
+          <div class="audit-kpi-lbl">Cost Impact Δ</div>
+        </div>
+        <div class="audit-kpi-card">
+          <div class="audit-kpi-val" id="wi-kpi-spi" style="color:var(--bk-info);">1.00 → 1.00</div>
+          <div class="audit-kpi-lbl">SPI Forecast</div>
         </div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding:0.8rem 1.1rem;border-top:1px solid var(--studio-hairline);">
-        <button type="button" id="wi-revert" class="btn-secondary">Cancel / Revert</button>
-        <button type="button" id="wi-accept" class="btn-primary">Apply Scenario (Undoable)</button>
+      <div id="wi-finish-summary" class="bk-card" style="font-size:var(--bk-text-sm);color:var(--bk-text-muted);font-variant-numeric:tabular-nums;">
+        Baseline Finish: <strong>--</strong> → Simulated Finish: <strong>--</strong>
       </div>
-    </div>
-  `;
+    `,
+    footerHtml: `
+      <button type="button" id="wi-revert" class="bk-btn bk-btn--secondary">Cancel / Revert</button>
+      <button type="button" id="wi-accept" class="bk-btn bk-btn--primary">Apply Scenario (Undoable)</button>
+    `,
+  });
 
-  document.body.appendChild(overlay);
+  const overlay = modal.overlay;
 
   let latestResult: WhatIfScenarioResult = simulateTaskDelayScenario(
     options.tasks,
@@ -268,7 +257,7 @@ export function openWhatIfSandboxModal(options: {
     if (slipEl) {
       slipEl.textContent = `${latestResult.projectSlipDays >= 0 ? "+" : ""}${latestResult.projectSlipDays}d`;
       slipEl.style.color =
-        latestResult.projectSlipDays > 0 ? "var(--color-danger)" : "var(--color-success)";
+        latestResult.projectSlipDays > 0 ? "var(--bk-danger)" : "var(--bk-success)";
     }
     const affEl = overlay.querySelector("#wi-kpi-affected");
     if (affEl) affEl.textContent = String(latestResult.affectedTaskCount);
@@ -277,7 +266,7 @@ export function openWhatIfSandboxModal(options: {
     if (costEl) {
       costEl.textContent = `${latestResult.deltaCostImpact >= 0 ? "+" : "-"}$${Math.abs(latestResult.deltaCostImpact).toLocaleString()}`;
       costEl.style.color =
-        latestResult.deltaCostImpact > 0 ? "var(--color-danger)" : "var(--color-success)";
+        latestResult.deltaCostImpact > 0 ? "var(--bk-danger)" : "var(--bk-success)";
     }
     const spiEl = overlay.querySelector("#wi-kpi-spi");
     if (spiEl) {
@@ -285,14 +274,13 @@ export function openWhatIfSandboxModal(options: {
     }
     const finEl = overlay.querySelector("#wi-finish-summary");
     if (finEl) {
-      finEl.innerHTML = `Baseline Finish: <strong>${escapeHtml(latestResult.baselineEndDate)}</strong> &nbsp;→&nbsp; Simulated Finish: <strong style="color:var(--color-warning);">${escapeHtml(latestResult.simulatedEndDate)}</strong>`;
+      finEl.innerHTML = `Baseline Finish: <strong>${escapeHtml(latestResult.baselineEndDate)}</strong> &nbsp;→&nbsp; Simulated Finish: <strong style="color:var(--bk-warning);">${escapeHtml(latestResult.simulatedEndDate)}</strong>`;
     }
   };
 
   updateReadouts();
 
-  overlay.querySelector("#wi-close")?.addEventListener("click", () => overlay.remove());
-  overlay.querySelector("#wi-revert")?.addEventListener("click", () => overlay.remove());
+  overlay.querySelector("#wi-revert")?.addEventListener("click", () => modal.close());
   overlay.querySelector<HTMLSelectElement>("#wi-task-select")?.addEventListener("change", (ev) => {
     selectedTaskId = (ev.target as HTMLSelectElement).value;
     updateReadouts();
@@ -314,7 +302,7 @@ export function openWhatIfSandboxModal(options: {
     }
     try {
       await options.onAcceptScenario(latestResult);
-      overlay.remove();
+      modal.close();
     } catch (err) {
       console.error("Failed to apply What-If scenario:", err);
       if (acceptBtn) {
@@ -322,9 +310,5 @@ export function openWhatIfSandboxModal(options: {
         acceptBtn.textContent = "Apply Scenario (Undoable)";
       }
     }
-  });
-
-  overlay.addEventListener("click", (ev) => {
-    if (ev.target === overlay) overlay.remove();
   });
 }
