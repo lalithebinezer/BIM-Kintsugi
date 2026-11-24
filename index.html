@@ -574,6 +574,13 @@
           <!-- Header Controls -->
         <div class="header-controls">
           <div class="theme-select-wrapper" style="display: flex; align-items: center; gap: 0.35rem;">
+            <select id="workspace-persona-select" class="persona-select-pill" aria-label="Workspace Role Persona" title="Switch Role-Based Workspace Mode (Design / 4D Planner / 5D QS / Field)">
+              <option value="all" selected>All Tools</option>
+              <option value="design">Design Review</option>
+              <option value="planner-4d">4D Planner</option>
+              <option value="commercial-5d">5D Commercial</option>
+              <option value="field">Field Touch</option>
+            </select>
             <select id="select-theme-toggle" class="custom-select select-theme-toggle" title="Switch UI & 3D Lighting Theme Preset">
               <option value="obsidian">✦ Obsidian</option>
               <option value="zen">☀️ Zen</option>
@@ -3144,6 +3151,21 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
               <span id="timeline-slf-badge">4D SLF</span>
             </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-lookahead" title="2 / 3 / 4 / 6-Week Construction Site Lookahead Filter &amp; CSV Export">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Lookahead</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-whatif-sandbox" title="Live 4D/5D What-If Delay Scenario Sandbox (Cascade, Cost Delta &amp; Undo)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              <span>What-If</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-crane-envelope" title="Toggle 4D Tower Crane &amp; Swing-Radius Safety Envelope Simulator">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 21V3l16 5H4"/><path d="M16 8v6"/></svg>
+              <span>Crane</span>
+            </button>
           </div>
 
           <!-- Cluster 5: QA Audit & Timelapse Export -->
@@ -3417,8 +3439,8 @@
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">4D Phasing, Cash-Flow Histogram, Split-Screen 4D, IDS QA &amp; CasCADe Lens</div>
-                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Use the segmented 4D dock to <strong>Import</strong> or <strong>Map CSV</strong> (single or composite <code>Storey+Category</code> keys), inspect monthly/weekly spend &amp; resources in <strong>Cash Flow</strong>, drag <strong>Split 4D</strong> for Planned vs. Actual comparison, run <strong>IDS QA</strong> (ISO 19650 / 4D / 5D) &amp; <strong>Link Audit</strong>, toggle <strong>Trade Colors</strong> or <strong>Variance</strong>, open <strong>WBS Gantt</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd>), or export a <strong>WebM</strong> timelapse with HUD overlay. Drag the floating <strong>4D HUD</strong> anywhere, save/restore IndexedDB sessions (<kbd>Ctrl+Shift+S</kbd>), copy shareable <code>#view=</code> deep-links (<kbd>Ctrl+Shift+L</kbd>), enable <strong>Touch</strong> tablet mode, or switch on <strong>CasCADe Lens</strong>.</div>
+                  <div class="step-name">4D Phasing, Lookahead, What-If Sandbox, Crane Safety, bSDD &amp; CasCADe Lens</div>
+                  <div class="step-desc">Switch role personas in the header (<strong>All / Design / 4D Planner / 5D Commercial / Field Touch</strong>) and click <strong>4D Gantt</strong> (or <kbd>Ctrl+K</kbd>). Use the segmented 4D dock for <strong>Import</strong> / <strong>Map CSV</strong> (composite <code>Storey+Category</code> keys), <strong>Cash Flow</strong> histogram, <strong>Split 4D</strong> Planned vs. Actual, <strong>Lookahead</strong> (<code>2W/3W/4W/6W</code> + CSV), <strong>What-If</strong> delay cascade sandbox (with Undo/Redo), <strong>Crane</strong> swing-radius safety envelope, <strong>IDS QA</strong> &amp; <strong>bSDD</strong> IFC 4.3 lookup, <strong>Trade Colors</strong>, <strong>WebM</strong> timelapse, IndexedDB session snapshots (<kbd>Ctrl+Shift+S</kbd>), shareable <code>#view=</code> deep-links (<kbd>Ctrl+Shift+L</kbd>), multi-tab realtime sync, and <strong>CasCADe Lens</strong>.</div>
                 </div>
               </div>
               <div class="step-item">

@@ -6,7 +6,7 @@
  * to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v8";
+const CACHE_NAME = "bim-kintsugi-cache-v9";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -18,6 +18,12 @@ const STATIC_ASSETS = [
   "./web-ifc-node.wasm",
   "./manifest.json",
 ];
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

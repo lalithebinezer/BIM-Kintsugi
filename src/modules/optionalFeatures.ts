@@ -56,3 +56,13 @@ export const splitScreenComparisonFeature = lazyFeature("4D split-screen compari
   (await import("../ui/SplitScreenComparisonController")).SplitScreenComparisonController.getInstance());
 export const idsPresetsFeature = lazyFeature("IDS compliance presets", async () =>
   await import("./IdsPresetEngine"));
+export const lookaheadFeature = lazyFeature("4D site lookahead engine", async () =>
+  await import("./LookaheadEngine"));
+export const whatIfSandboxFeature = lazyFeature("4D/5D what-if delay sandbox", async () =>
+  await import("./WhatIfScenarioEngine"));
+export const craneEnvelopeFeature = lazyFeature("4D tower crane safety envelope", async () =>
+  (await import("./EquipmentEnvelopeSimulator")).EquipmentEnvelopeSimulator.getInstance());
+export const bsddClientFeature = lazyFeature("buildingSMART Data Dictionary (bSDD)", async () =>
+  await import("./BsddClient"));
+export const aiToolCallFeature = lazyFeature("structured AI BIM tool router", async () =>
+  await import("./AiToolCallEngine"));

@@ -31,6 +31,15 @@ export class SplitScreenComparisonController {
   private splitPct = 50;
   private active = false;
   private callbacks: SplitScreenCallbacks | null = null;
+  private resyncDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  public scheduleCameraResync(delayMs = 260): void {
+    if (!this.active) return;
+    if (this.resyncDebounce) clearTimeout(this.resyncDebounce);
+    this.resyncDebounce = setTimeout(() => {
+      this.refreshComparison().catch(() => {});
+    }, delayMs);
+  }
 
   public static getInstance(): SplitScreenComparisonController {
     if (!this.instance) this.instance = new SplitScreenComparisonController();

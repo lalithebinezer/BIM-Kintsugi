@@ -38,6 +38,12 @@ import {
 } from "./core/WorkspaceSnapshotManager";
 import { buildShareableViewUrl, decodeDeepLinkHash, type DeepLinkViewState } from "./core/DeepLinkManager";
 import { JobsiteTouchMode } from "./ui/JobsiteTouchMode";
+import { AppStateStore, type WorkspacePersonaId } from "./core/AppStateStore";
+import { EditHistoryManager } from "./core/EditHistoryManager";
+import { GpuPerformanceMonitor } from "./core/GpuPerformanceMonitor";
+import { initPwaUpdateWatcher } from "./core/PwaUpdateManager";
+import { WorkspacePersonaManager } from "./ui/WorkspacePersonaManager";
+import { RealtimeCollaborationBridge } from "./modules/RealtimeCollaborationBridge";
 
 import { CameraSpeedController } from "./core/CameraSpeedController";
 import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
@@ -62,6 +68,11 @@ import {
   cashFlowHistogramFeature,
   splitScreenComparisonFeature,
   idsPresetsFeature,
+  lookaheadFeature,
+  whatIfSandboxFeature,
+  craneEnvelopeFeature,
+  bsddClientFeature,
+  aiToolCallFeature,
 } from "./modules/optionalFeatures";
 import { runFeature } from "./utils/lazyFeature";
 import { ModelManager } from "./core/ModelManager";
@@ -8592,6 +8603,16 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   if (cfh && cfh.isOpen()) {
     cfh.render(scheduleManager?.getTasksSorted() ?? [], dateMs);
   }
+  const crane = craneEnvelopeFeature.peek();
+  if (crane && crane.isActive() && timelineMinDate && timelineMaxDate) {
+    const span = Math.max(1, timelineMaxDate.getTime() - timelineMinDate.getTime());
+    const ratio = Math.max(0, Math.min(1, (dateMs - timelineMinDate.getTime()) / span));
+    crane.updateForTimelineRatio(ratio);
+  }
+  AppStateStore.getInstance().setState({ is4dMode, currentTimelineDateMs: dateMs });
+  if (RealtimeCollaborationBridge.getInstance().isConnected()) {
+    RealtimeCollaborationBridge.getInstance().broadcastTimeline(dateMs, is4dMode);
+  }
 
   // Sync selected element inputs dynamically if properties panel is open for it
   if (activeModelId && activeExpressId !== null) {
@@ -9733,6 +9754,14 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "ws-restore-snapshot", title: "Workspace: Restore Last Saved Session Snapshot", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`, action: () => (window as any).restoreWorkspaceSnapshot?.() },
     { id: "ws-share-link", title: "Workspace: Copy Shareable 3D/4D View Link (Ctrl+Shift+L)", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`, action: () => (window as any).copyShareableViewLink?.() },
     { id: "ws-touch-mode", title: "Workspace: Toggle Offline / Jobsite Tablet Touch Mode (44px)", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`, action: () => (window as any).toggleJobsiteTouchMode?.() },
+    { id: "tool-4d-lookahead", title: "4D Site Lookahead Filter (2W / 3W / 4W / 6W + CSV Export)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`, action: () => (window as any).open4DLookaheadModal?.() },
+    { id: "tool-4d-whatif", title: "4D/5D What-If Delay Scenario Sandbox (Cascade & Cost Impact)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>`, action: () => (window as any).open4DWhatIfSandbox?.() },
+    { id: "tool-4d-crane", title: "Toggle 4D Tower Crane & Swing-Radius Safety Envelope", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 21V3l16 5H4"/></svg>`, action: () => (window as any).toggle4DCraneEnvelope?.() },
+    { id: "tool-bsdd-lookup", title: "Open buildingSMART Data Dictionary (bSDD) & IFC 4.3 Lookup", category: "Compliance", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`, action: () => (window as any).openBsddLookupModal?.() },
+    { id: "tool-edit-undo", title: "Undo Last Schedule / Scenario Edit", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`, action: () => (window as any).undoWorkspaceEdit?.() },
+    { id: "tool-edit-redo", title: "Redo Schedule / Scenario Edit", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>`, action: () => (window as any).redoWorkspaceEdit?.() },
+    { id: "tool-realtime-collab", title: "Toggle Real Multi-Tab Collaboration Sync (Camera & 4D Date)", category: "Collaboration", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>`, action: () => (window as any).toggleRealtimeCollabSync?.() },
+    { id: "tool-gpu-telemetry", title: "Inspect Live WebGL GPU Memory & Draw Call Budget", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>`, action: () => (window as any).showGpuMemoryReport?.() },
     { id: "tool-4d-variance", title: "Toggle Planned vs. Actual Variance Mode", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>`, action: () => document.getElementById("btn-4d-variance-toggle")?.click() },
     { id: "tool-export-cobie", title: "Export 7D COBie Facility Management Handover Data (CSV)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>`, action: () => runFeature(async () => (await cobieExport.load()).exportCobieCSV()) },
     {
@@ -10700,3 +10729,224 @@ if (incomingDeepLink) {
     }
   }, 1200);
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── ENTERPRISE STANDARDS: PERSONAS, LOOKAHEAD, WHAT-IF, CRANE, bSDD, GPU, PWA, REALTIME ───
+// ═════════════════════════════════════════════════════════════════════
+
+// 1. GPU Adaptive DRS & PWA Update Watcher
+if (world.renderer?.three) {
+  GpuPerformanceMonitor.getInstance().attach(world.renderer.three);
+}
+world.camera.controls.addEventListener("control", () => {
+  GpuPerformanceMonitor.getInstance().notifyInteractiveMotion();
+  splitScreenComparisonFeature.peek()?.scheduleCameraResync(280);
+});
+initPwaUpdateWatcher();
+
+(window as any).showGpuMemoryReport = () => {
+  const snap = GpuPerformanceMonitor.getInstance().getSnapshot();
+  showToast(
+    `GPU Telemetry — Geometries: ${snap.geometries} · Textures: ${snap.textures} · Calls: ${snap.drawCalls} · Triangles: ${snap.triangles.toLocaleString()} · DPR: ${snap.pixelRatio.toFixed(2)}`,
+    "info"
+  );
+  return snap;
+};
+
+// 2. Role-Based Workspace Persona Switcher
+const personaMgr = WorkspacePersonaManager.getInstance();
+const initialPersona = personaMgr.init();
+const personaSelect = document.getElementById("workspace-persona-select") as HTMLSelectElement | null;
+if (personaSelect) {
+  personaSelect.value = initialPersona;
+  personaSelect.addEventListener("change", () => {
+    const chosen = personaSelect.value as WorkspacePersonaId;
+    const def = personaMgr.applyPersona(chosen, true, {
+      switchTab: (barId, tab) => (window as any).switchSidebarTab?.(barId, tab),
+      toggle4D: (force) => (window as any).toggle4DMode?.(force),
+    });
+    showToast(`Workspace Mode: ${def.label}`, "info");
+  });
+}
+
+// 3. Edit History Undo / Redo
+async function undoWorkspaceEdit() {
+  const cmd = await EditHistoryManager.getInstance().undo();
+  showToast(cmd ? `↩ Undid: ${cmd.label}` : "Nothing to undo.", "info");
+}
+async function redoWorkspaceEdit() {
+  const cmd = await EditHistoryManager.getInstance().redo();
+  showToast(cmd ? `↪ Redid: ${cmd.label}` : "Nothing to redo.", "info");
+}
+(window as any).undoWorkspaceEdit = undoWorkspaceEdit;
+(window as any).redoWorkspaceEdit = redoWorkspaceEdit;
+
+// 4. 4D Construction Site Lookahead (2W / 3W / 4W / 6W)
+async function open4DLookaheadModal() {
+  const tasks = scheduleManager?.getTasksSorted() ?? [];
+  if (tasks.length === 0) {
+    showToast("Load a model or import a 4D schedule first to run Lookahead.", "warning");
+    return;
+  }
+  const { openLookaheadModal } = await lookaheadFeature.load();
+  const anchorMs = currentTimelineDate?.getTime() ?? Date.now();
+  openLookaheadModal({
+    tasks,
+    anchorMs,
+    initialWeeks: 3,
+    onApply3DLookahead: async (report) => {
+      AppStateStore.getInstance().setState({ lookaheadWeeks: report.weeks });
+      const hider = components.get(OBC.Hider);
+      await hider.set(false);
+      if (Object.keys(report.buckets.completed).length > 0) {
+        await hider.set(true, report.buckets.completed);
+        await highlighter.highlightByID("timeline-completed", report.buckets.completed, true, false);
+      }
+      if (Object.keys(report.buckets.thisWeek).length > 0) {
+        await hider.set(true, report.buckets.thisWeek);
+        await highlighter.highlightByID("timeline-inprogress", report.buckets.thisWeek, true, false);
+      }
+      if (Object.keys(report.buckets.lookahead).length > 0) {
+        await hider.set(true, report.buckets.lookahead);
+        await highlighter.highlightByID("timeline-variance-delayed", report.buckets.lookahead, true, false);
+      }
+      document.getElementById("btn-4d-lookahead")?.classList.add("active");
+      showToast(
+        `${report.weeks}-Week Lookahead applied: ${report.thisWeekTasks.length} this week, ${report.lookaheadTasks.length} upcoming`,
+        "success"
+      );
+    },
+    onClearLookahead: async () => {
+      AppStateStore.getInstance().setState({ lookaheadWeeks: null });
+      document.getElementById("btn-4d-lookahead")?.classList.remove("active");
+      if (currentTimelineDate) await updateTimelineVisualState(true);
+    },
+  });
+}
+(window as any).open4DLookaheadModal = open4DLookaheadModal;
+document.getElementById("btn-4d-lookahead")?.addEventListener("click", () => open4DLookaheadModal());
+
+// 5. Live 4D/5D What-If Delay Scenario Sandbox (with Undo/Redo integration)
+async function open4DWhatIfSandbox() {
+  const tasks = scheduleManager?.getTasksSorted() ?? [];
+  if (tasks.length === 0) {
+    showToast("Load a 4D schedule first to run What-If Delay Sandbox.", "warning");
+    return;
+  }
+  const { openWhatIfSandboxModal } = await whatIfSandboxFeature.load();
+  const evalDateMs = currentTimelineDate?.getTime() ?? Date.now();
+  openWhatIfSandboxModal({
+    tasks,
+    evalDateMs,
+    onAcceptScenario: async (result) => {
+      const beforeSnapshot = serializeScheduleTasks(scheduleManager.tasks.values());
+      const afterSnapshot = serializeScheduleTasks(result.simulatedTasks);
+      await EditHistoryManager.getInstance().execute({
+        id: `whatif-${Date.now()}`,
+        label: `What-If Delay (${result.delayDays >= 0 ? "+" : ""}${result.delayDays}d on ${result.targetTaskName})`,
+        apply: async () => {
+          scheduleManager.tasks.clear();
+          for (const t of deserializeScheduleTasks(afterSnapshot)) {
+            scheduleManager.tasks.set(t.id, t);
+          }
+          calculateTimelineBounds();
+          updateCumulative5DCost();
+          updateScheduleWidgetUI();
+          InteractiveGanttDrawer.getInstance().render();
+          if (currentTimelineDate) await updateTimelineVisualState(true);
+        },
+        revert: async () => {
+          scheduleManager.tasks.clear();
+          for (const t of deserializeScheduleTasks(beforeSnapshot)) {
+            scheduleManager.tasks.set(t.id, t);
+          }
+          calculateTimelineBounds();
+          updateCumulative5DCost();
+          updateScheduleWidgetUI();
+          InteractiveGanttDrawer.getInstance().render();
+          if (currentTimelineDate) await updateTimelineVisualState(true);
+        },
+      });
+      showToast(
+        `Applied What-If scenario (+${result.projectSlipDays}d slip, Δ $${result.deltaCostImpact.toLocaleString()}) — Undo anytime via Ctrl+K → Undo`,
+        "success"
+      );
+    },
+  });
+}
+(window as any).open4DWhatIfSandbox = open4DWhatIfSandbox;
+document.getElementById("btn-4d-whatif-sandbox")?.addEventListener("click", () => open4DWhatIfSandbox());
+
+// 6. 4D Tower Crane & Swing-Radius Safety Envelope Simulator
+async function toggle4DCraneEnvelope() {
+  const crane = await craneEnvelopeFeature.load();
+  let box: THREE.Box3 | null = null;
+  try {
+    const boundingBoxer = components.get(OBC.BoundingBoxer);
+    boundingBoxer.list.clear();
+    boundingBoxer.addFromModels();
+    box = boundingBoxer.get();
+    boundingBoxer.list.clear();
+  } catch {
+    box = null;
+  }
+  const status = crane.toggle(world.scene.three, box);
+  document.getElementById("btn-4d-crane-envelope")?.classList.toggle("active", status.active);
+  showToast(
+    status.active
+      ? `Tower Crane Safety Envelope ON (Radius ${status.jibRadiusMeters}m · Hook ${status.hookHeightMeters}m · Clearance ${status.clearanceOk ? "OK" : "CHECK"})`
+      : "Tower Crane Safety Envelope OFF",
+    "info"
+  );
+  return status;
+}
+(window as any).toggle4DCraneEnvelope = toggle4DCraneEnvelope;
+document.getElementById("btn-4d-crane-envelope")?.addEventListener("click", () => toggle4DCraneEnvelope());
+
+// 7. buildingSMART Data Dictionary (bSDD) & IFC 4.3 Lookup
+async function openBsddLookupModal(query = "") {
+  const { openBsddValidatorModal } = await bsddClientFeature.load();
+  openBsddValidatorModal(query);
+}
+(window as any).openBsddLookupModal = openBsddLookupModal;
+
+// 8. Structured Grounded AI Tool-Call Bridge
+(window as any).runStructuredBimAiQuery = async (prompt: string) => {
+  const { parsePromptToToolCall, executeGroundedToolCall } = await aiToolCallFeature.load();
+  const call = parsePromptToToolCall(prompt);
+  if (!call) return null;
+  return executeGroundedToolCall(call, {
+    tasks: scheduleManager?.getTasksSorted() ?? [],
+    evalDateMs: currentTimelineDate?.getTime() ?? Date.now(),
+  });
+};
+
+// 9. Real Multi-Tab Collaboration Bridge (BroadcastChannel)
+function toggleRealtimeCollabSync(): boolean {
+  const bridge = RealtimeCollaborationBridge.getInstance();
+  if (bridge.isConnected()) {
+    bridge.disconnect();
+    showToast("Multi-Tab Realtime Sync disconnected.", "info");
+    return false;
+  }
+  bridge.connect({
+    displayName: document.getElementById("header-user-role")?.textContent?.trim() || "BIM Reviewer",
+    handlers: {
+      onPeerListChanged: (peers) => {
+        showToast(`Realtime Sync: ${peers.length} connected peer tab(s)`, "info");
+      },
+      onRemoteCamera: async (_peerId, pos, target) => {
+        await world.camera.controls.setLookAt(pos[0], pos[1], pos[2], target[0], target[1], target[2], false);
+      },
+      onRemoteTimeline: async (_peerId, dateMs, remote4d) => {
+        if (remote4d && !is4dMode) (window as any).toggle4DMode?.(true);
+        currentTimelineDate = new Date(dateMs);
+        updateTimelineDateUI();
+        await updateTimelineVisualState(true);
+      },
+    },
+  });
+  showToast("Realtime Multi-Tab Sync connected (open a 2nd tab to sync camera & 4D date live!)", "success");
+  return true;
+}
+(window as any).toggleRealtimeCollabSync = toggleRealtimeCollabSync;

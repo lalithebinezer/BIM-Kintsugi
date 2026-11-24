@@ -3,6 +3,8 @@
  * Auto-Scroll, Camera Auto-Follow, and Viewport 4D HUD Controller.
  */
 
+import { escapeHtml } from "../utils/formatters";
+
 export type ScheduleFilterStatus = "all" | "active" | "completed" | "planned" | "unlinked";
 
 export interface ScheduleTaskWidgetStats {
@@ -362,11 +364,11 @@ export class ScheduleTimelineController {
 
     item.innerHTML = `
       <div class="task-header-row">
-        <span class="task-title" title="${entry.taskName}">${entry.cleanDisplayTitle}</span>
+        <span class="task-title" title="${escapeHtml(entry.taskName)}">${escapeHtml(entry.cleanDisplayTitle)}</span>
         <span class="task-status-badge task-badge-planned">Planned</span>
       </div>
       <div class="task-date-info">
-        <span class="task-date-range">${entry.stats.startDate} <span class="task-date-arrow">→</span> ${entry.stats.endDate}</span>
+        <span class="task-date-range">${escapeHtml(entry.stats.startDate)} <span class="task-date-arrow">→</span> ${escapeHtml(entry.stats.endDate)}</span>
         <span class="task-progress-text">0% (0/0)</span>
       </div>
       <div class="task-progress-row">

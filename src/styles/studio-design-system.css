@@ -1067,3 +1067,448 @@ body.jobsite-touch-mode .schedule-task-item {
   min-height: 78px !important;
   padding: 0.75rem 0.9rem !important;
 }
+
+
+/* ==========================================================================
+   LIGHT & LIGHT-STUDIO THEME HIGH-CONTRAST POLISH
+   Ensures WCAG AA/AAA readability across Schedule Widget, Floating 4D HUD,
+   4D Timeline Dock, and Modals when [data-theme="light"] or "light-studio"
+   ========================================================================== */
+
+[data-theme="light"] .schedule-widget > .panel-header,
+[data-theme="light-studio"] .schedule-widget > .panel-header {
+  border-bottom-color: rgba(15, 23, 42, 0.09) !important;
+  background: rgba(15, 23, 42, 0.02);
+}
+
+[data-theme="light"] .schedule-widget > .panel-header .header-title-group,
+[data-theme="light-studio"] .schedule-widget > .panel-header .header-title-group {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget > .panel-header .header-title-group svg,
+[data-theme="light-studio"] .schedule-widget > .panel-header .header-title-group svg {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .schedule-widget .sequence-generator-box,
+[data-theme="light-studio"] .schedule-widget .sequence-generator-box {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.11) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] .schedule-widget .sequence-box-title,
+[data-theme="light-studio"] .schedule-widget .sequence-box-title {
+  color: #0f172a !important;
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .schedule-widget .btn-collapse-seq,
+[data-theme="light-studio"] .schedule-widget .btn-collapse-seq {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  color: #334155;
+}
+
+[data-theme="light"] .schedule-widget .btn-collapse-seq:hover,
+[data-theme="light-studio"] .schedule-widget .btn-collapse-seq:hover {
+  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(79, 70, 229, 0.45);
+  color: #4338ca;
+}
+
+[data-theme="light"] .schedule-widget .btn-param-reader-trigger,
+[data-theme="light-studio"] .schedule-widget .btn-param-reader-trigger {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget .btn-param-reader-trigger:hover,
+[data-theme="light-studio"] .schedule-widget .btn-param-reader-trigger:hover {
+  background: #f1f5f9 !important;
+  border-color: rgba(79, 70, 229, 0.45) !important;
+}
+
+[data-theme="light"] .schedule-widget .sequence-input,
+[data-theme="light-studio"] .schedule-widget .sequence-input,
+[data-theme="light"] .schedule-widget .sequence-prop-select,
+[data-theme="light-studio"] .schedule-widget .sequence-prop-select,
+[data-theme="light"] .schedule-widget .schedule-search-input,
+[data-theme="light-studio"] .schedule-widget .schedule-search-input {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.16) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget .btn-calculate-seq,
+[data-theme="light-studio"] .schedule-widget .btn-calculate-seq {
+  background: rgba(79, 70, 229, 0.1) !important;
+  border: 1px solid rgba(79, 70, 229, 0.42) !important;
+  color: #4338ca !important;
+}
+
+[data-theme="light"] .schedule-widget .btn-calculate-seq:hover,
+[data-theme="light-studio"] .schedule-widget .btn-calculate-seq:hover {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28) !important;
+}
+
+[data-theme="light"] .schedule-widget #btn-sync-synchro-simulation,
+[data-theme="light-studio"] .schedule-widget #btn-sync-synchro-simulation {
+  background: rgba(2, 132, 199, 0.1) !important;
+  border: 1px solid rgba(2, 132, 199, 0.4) !important;
+  color: #0369a1 !important;
+}
+
+[data-theme="light"] .schedule-widget #btn-sync-synchro-simulation:hover,
+[data-theme="light-studio"] .schedule-widget #btn-sync-synchro-simulation:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-export-actions,
+[data-theme="light-studio"] .schedule-widget .schedule-export-actions {
+  background: rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid rgba(15, 23, 42, 0.11) !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-export-actions .btn-gantt-drawer-action,
+[data-theme="light-studio"] .schedule-widget .schedule-export-actions .btn-gantt-drawer-action {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-export-actions .btn-gantt-drawer-action:hover,
+[data-theme="light-studio"] .schedule-widget .schedule-export-actions .btn-gantt-drawer-action:hover {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .schedule-widget .schedule-list-toolbar,
+[data-theme="light-studio"] .schedule-widget .schedule-list-toolbar {
+  border-bottom-color: rgba(15, 23, 42, 0.09);
+  background: rgba(15, 23, 42, 0.015);
+}
+
+[data-theme="light"] .schedule-widget .schedule-count-badge,
+[data-theme="light-studio"] .schedule-widget .schedule-count-badge {
+  background: rgba(15, 23, 42, 0.07);
+  color: #334155;
+}
+
+[data-theme="light"] .schedule-widget .btn-sched-icon,
+[data-theme="light-studio"] .schedule-widget .btn-sched-icon {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  color: #475569;
+}
+
+[data-theme="light"] .schedule-widget .btn-sched-icon.active,
+[data-theme="light-studio"] .schedule-widget .btn-sched-icon.active {
+  background: rgba(79, 70, 229, 0.12);
+  border-color: rgba(79, 70, 229, 0.45);
+  color: #4338ca;
+}
+
+[data-theme="light"] .schedule-widget .schedule-filter-pills,
+[data-theme="light-studio"] .schedule-widget .schedule-filter-pills {
+  background: rgba(15, 23, 42, 0.055);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .schedule-widget .sched-filter-pill,
+[data-theme="light-studio"] .schedule-widget .sched-filter-pill {
+  color: #475569;
+}
+
+[data-theme="light"] .schedule-widget .sched-filter-pill.active,
+[data-theme="light-studio"] .schedule-widget .sched-filter-pill.active {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #4338ca;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.09);
+}
+
+[data-theme="light"] .schedule-widget .btn-schedule-jump-active,
+[data-theme="light-studio"] .schedule-widget .btn-schedule-jump-active {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.42);
+  color: #4338ca;
+}
+
+/* Task Cards in Light & Light-Studio */
+[data-theme="light"] .schedule-widget .schedule-task-item,
+[data-theme="light-studio"] .schedule-widget .schedule-task-item {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.11) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-task-item:hover,
+[data-theme="light-studio"] .schedule-widget .schedule-task-item:hover {
+  background: #f8fafc !important;
+  border-color: rgba(79, 70, 229, 0.35) !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-task-item.active-task,
+[data-theme="light-studio"] .schedule-widget .schedule-task-item.active-task {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.02) 100%) !important;
+  border-color: rgba(79, 70, 229, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.16), 0 4px 10px rgba(79, 70, 229, 0.12) !important;
+}
+
+[data-theme="light"] .schedule-widget .schedule-task-item.active-task::before,
+[data-theme="light-studio"] .schedule-widget .schedule-task-item.active-task::before {
+  background: #4f46e5 !important;
+  box-shadow: 0 0 8px rgba(79, 70, 229, 0.45);
+}
+
+[data-theme="light"] .schedule-widget .task-title,
+[data-theme="light-studio"] .schedule-widget .task-title,
+[data-theme="light"] .schedule-widget .schedule-task-item.active-task .task-title,
+[data-theme="light-studio"] .schedule-widget .schedule-task-item.active-task .task-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .schedule-widget .task-date-info,
+[data-theme="light-studio"] .schedule-widget .task-date-info {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .schedule-widget .task-progress-text,
+[data-theme="light-studio"] .schedule-widget .task-progress-text {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .schedule-widget .task-progress-bar,
+[data-theme="light-studio"] .schedule-widget .task-progress-bar {
+  background: rgba(15, 23, 42, 0.1) !important;
+}
+
+[data-theme="light"] .schedule-widget .task-progress-fill,
+[data-theme="light-studio"] .schedule-widget .task-progress-fill {
+  background: linear-gradient(90deg, #4f46e5, #059669) !important;
+}
+
+[data-theme="light"] .schedule-widget .task-badge-active,
+[data-theme="light-studio"] .schedule-widget .task-badge-active {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+[data-theme="light"] .schedule-widget .task-badge-complete,
+[data-theme="light-studio"] .schedule-widget .task-badge-complete {
+  background: rgba(5, 150, 105, 0.12);
+  color: #047857;
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+[data-theme="light"] .schedule-widget .task-badge-planned,
+[data-theme="light-studio"] .schedule-widget .task-badge-planned {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* Floating 4D Viewport HUD in Light & Light-Studio */
+[data-theme="light"] .viewport-4d-hud,
+[data-theme="light-studio"] .viewport-4d-hud {
+  background: rgba(255, 255, 255, 0.93) !important;
+  border: 1px solid rgba(15, 23, 42, 0.14) !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .viewport-4d-hud.dragging,
+[data-theme="light-studio"] .viewport-4d-hud.dragging {
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(79, 70, 229, 0.5) !important;
+}
+
+[data-theme="light"] .hud-4d-date,
+[data-theme="light-studio"] .hud-4d-date {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .hud-4d-pct,
+[data-theme="light-studio"] .hud-4d-pct,
+[data-theme="light"] .hud-4d-active-tasks,
+[data-theme="light-studio"] .hud-4d-active-tasks {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .hud-4d-meta,
+[data-theme="light-studio"] .hud-4d-meta,
+[data-theme="light"] .hud-4d-close,
+[data-theme="light-studio"] .hud-4d-close {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .hud-4d-progress-track,
+[data-theme="light-studio"] .hud-4d-progress-track {
+  background: rgba(15, 23, 42, 0.1) !important;
+}
+
+[data-theme="light"] .hud-4d-progress-fill,
+[data-theme="light-studio"] .hud-4d-progress-fill {
+  background: linear-gradient(90deg, #4f46e5, #059669) !important;
+}
+
+/* 4D Bottom Dock Parity for Light-Studio */
+[data-theme="light-studio"] .timeline-seg-group {
+  background: rgba(15, 23, 42, 0.045);
+  border-color: rgba(15, 23, 42, 0.11);
+}
+
+[data-theme="light-studio"] .timeline-controls-row .btn-timeline-csv,
+[data-theme="light-studio"] .timeline-controls-row label.btn-timeline-csv {
+  color: #1e293b;
+  background: transparent;
+  border-color: transparent;
+}
+
+[data-theme="light-studio"] .timeline-controls-row .btn-timeline-csv:hover,
+[data-theme="light-studio"] .timeline-controls-row label.btn-timeline-csv:hover {
+  background: rgba(15, 23, 42, 0.07);
+  color: #0f172a;
+}
+
+[data-theme="light-studio"] .timeline-controls-row .btn-timeline-csv.btn-timeline-primary,
+[data-theme="light"] .timeline-controls-row .btn-timeline-csv.btn-timeline-primary {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.35);
+  color: #4338ca;
+}
+
+[data-theme="light"] .timeline-controls-row .btn-timeline-csv.active,
+[data-theme="light-studio"] .timeline-controls-row .btn-timeline-csv.active,
+[data-theme="light"] .timeline-controls-row #btn-4d-trade-profiles.active,
+[data-theme="light-studio"] .timeline-controls-row #btn-4d-trade-profiles.active {
+  background: rgba(79, 70, 229, 0.14) !important;
+  border-color: rgba(79, 70, 229, 0.55) !important;
+  color: #4338ca !important;
+  box-shadow: 0 0 8px rgba(79, 70, 229, 0.18) !important;
+}
+
+
+/* ==========================================================================
+   ALL-5-THEME WCAG 2.2 AA CONTRAST HARMONIZATION (Zen, Cyberpunk, Blueprint)
+   & ROLE-BASED WORKSPACE PERSONA PROGRESSIVE DISCLOSURE
+   ========================================================================== */
+
+/* Zen / Cozy (Warm Light/Sand Theme) — Ensure dark readable ink on warm cards */
+[data-theme="zen"] .schedule-widget .task-title,
+[data-theme="zen"] .schedule-widget .sequence-box-title,
+[data-theme="zen"] .schedule-widget .btn-param-reader-trigger,
+[data-theme="zen"] .schedule-widget .schedule-task-item.active-task .task-title,
+[data-theme="cozy"] .schedule-widget .task-title,
+[data-theme="cozy"] .schedule-widget .sequence-box-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="zen"] .schedule-widget .task-date-info,
+[data-theme="zen"] .schedule-widget .task-progress-text,
+[data-theme="zen"] .timeline-controls-row .btn-timeline-csv,
+[data-theme="zen"] .timeline-controls-row label.btn-timeline-csv {
+  color: var(--text-primary);
+}
+
+[data-theme="zen"] .viewport-4d-hud {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-strong) !important;
+}
+
+[data-theme="zen"] .hud-4d-date {
+  color: var(--accent-500) !important;
+}
+
+[data-theme="zen"] .hud-4d-pct,
+[data-theme="zen"] .hud-4d-active-tasks {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="zen"] .hud-4d-meta {
+  color: var(--text-muted) !important;
+}
+
+/* Cyberpunk & Blueprint Dark Themes — Crisp high-contrast token binding */
+[data-theme="cyberpunk"] .schedule-widget .task-title,
+[data-theme="blueprint"] .schedule-widget .task-title,
+[data-theme="cyberpunk"] .schedule-widget .sequence-box-title,
+[data-theme="blueprint"] .schedule-widget .sequence-box-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="cyberpunk"] .schedule-widget .btn-calculate-seq,
+[data-theme="blueprint"] .schedule-widget .btn-calculate-seq {
+  color: var(--accent-400, var(--accent-500)) !important;
+  border-color: var(--accent-500) !important;
+  background: color-mix(in srgb, var(--accent-500) 15%, transparent) !important;
+}
+
+[data-theme="cyberpunk"] .schedule-widget .schedule-task-item.active-task,
+[data-theme="blueprint"] .schedule-widget .schedule-task-item.active-task {
+  border-color: var(--accent-500) !important;
+  background: color-mix(in srgb, var(--accent-500) 12%, transparent) !important;
+}
+
+[data-theme="cyberpunk"] .schedule-widget .schedule-task-item.active-task::before,
+[data-theme="blueprint"] .schedule-widget .schedule-task-item.active-task::before {
+  background: var(--accent-500) !important;
+}
+
+/* Header Workspace Persona Selector Pill */
+.persona-select-pill {
+  height: 28px;
+  padding: 0 0.55rem;
+  border-radius: 7px;
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline-strong);
+  color: var(--text-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.persona-select-pill:hover,
+.persona-select-pill:focus {
+  border-color: var(--accent-500);
+}
+
+/* Progressive Disclosure Rules by Role Persona */
+body[data-persona="design"] .timeline-controls-row .cluster-import,
+body[data-persona="design"] #btn-4d-cashflow-histogram,
+body[data-persona="design"] #btn-4d-whatif-sandbox,
+body[data-persona="design"] #btn-4d-crane-envelope {
+  opacity: 0.55;
+}
+
+body[data-persona="planner-4d"] #btn-dock-carbon,
+body[data-persona="planner-4d"] #btn-dock-gis {
+  opacity: 0.55;
+}
+
+body[data-persona="commercial-5d"] #btn-4d-crane-envelope,
+body[data-persona="commercial-5d"] #btn-4d-trade-profiles {
+  opacity: 0.55;
+}
+
+body[data-persona="field"] #sequence-generator-box {
+  display: none;
+}
+
+/* Modal Text Theme-Safe Defaults */
+#csv-column-mapper-modal .csv-mapper-dialog,
+#schedule-linkage-audit-modal > div,
+#ids-presets-audit-modal > div,
+#whatif-sandbox-modal > div,
+#lookahead-modal > div,
+#bsdd-validator-modal > div {
+  background: var(--bg-panel, #12141c) !important;
+  color: var(--text-primary, #f8fafc) !important;
+  border-color: var(--border-strong, #2e3346) !important;
+}

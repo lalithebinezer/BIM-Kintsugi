@@ -12,6 +12,7 @@
  */
 
 import type { IndexableModelElement } from "./CsvSchedulePropertyLinker";
+import { escapeHtml } from "../utils/formatters";
 
 export type IdsPresetId =
   | "iso-19650-naming"
@@ -186,30 +187,30 @@ export function openIdsPresetsModal(options: {
         r.status === "pass" ? "#10b981" : r.status === "warn" ? "#f59e0b" : "#f43f5e";
       const cats = r.failingByCategory
         .slice(0, 5)
-        .map((c) => `<span class="audit-cat-chip">${c.category}: <strong>${c.count}</strong></span>`)
+        .map((c) => `<span class="audit-cat-chip">${escapeHtml(c.category)}: <strong>${c.count}</strong></span>`)
         .join("");
       return `
-        <div style="padding:0.85rem;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:0.45rem;">
+        <div class="ids-preset-card" style="padding:0.85rem;border-radius:10px;background:var(--studio-surface-1,rgba(255,255,255,0.03));border:1px solid var(--studio-hairline,rgba(255,255,255,0.08));display:flex;flex-direction:column;gap:0.45rem;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
             <div>
-              <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;">${r.preset.title}</div>
-              <div style="font-size:0.68rem;color:#94a3b8;">${r.preset.standard} • ${r.passedCount.toLocaleString()}/${r.totalElements.toLocaleString()} passed</div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary,#f8fafc);">${escapeHtml(r.preset.title)}</div>
+              <div style="font-size:0.68rem;color:var(--text-muted,#94a3b8);">${escapeHtml(r.preset.standard)} • ${r.passedCount.toLocaleString()}/${r.totalElements.toLocaleString()} passed</div>
             </div>
             <span style="font-size:0.85rem;font-weight:800;font-variant-numeric:tabular-nums;color:${color};">${r.compliancePct}%</span>
           </div>
-          <div style="height:5px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;">
+          <div style="height:5px;border-radius:999px;background:var(--studio-surface-2,rgba(255,255,255,0.08));overflow:hidden;">
             <div style="height:100%;width:${r.compliancePct}%;background:${color};"></div>
           </div>
-          <div style="font-size:0.71rem;color:#cbd5e1;">${r.preset.description}</div>
-          <div style="font-size:0.69rem;color:#38bdf8;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.22);padding:0.38rem 0.55rem;border-radius:6px;">
-            <strong>1-Click Fix Guidance:</strong> ${r.preset.fixSuggestion}
+          <div style="font-size:0.71rem;color:var(--text-secondary,#cbd5e1);">${escapeHtml(r.preset.description)}</div>
+          <div style="font-size:0.69rem;color:var(--color-info,#38bdf8);background:var(--color-info-subtle,rgba(56,189,248,0.08));border:1px solid var(--color-info-border,rgba(56,189,248,0.22));padding:0.38rem 0.55rem;border-radius:6px;">
+            <strong>1-Click Fix Guidance:</strong> ${escapeHtml(r.preset.fixSuggestion)}
           </div>
           ${cats ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;">${cats}</div>` : ""}
           <div style="display:flex;justify-content:flex-end;gap:0.4rem;margin-top:0.15rem;">
             ${
               r.failedCount > 0
-                ? `<button type="button" class="btn-primary btn-ids-isolate" data-preset-id="${r.preset.id}" style="font-size:0.7rem;padding:0.28rem 0.65rem;">Highlight ${r.failedCount.toLocaleString()} Failing in 3D</button>`
-                : `<span style="font-size:0.7rem;font-weight:700;color:#10b981;">✓ Fully Compliant</span>`
+                ? `<button type="button" class="btn-primary btn-ids-isolate" data-preset-id="${escapeHtml(r.preset.id)}" style="font-size:0.7rem;padding:0.28rem 0.65rem;">Highlight ${r.failedCount.toLocaleString()} Failing in 3D</button>`
+                : `<span style="font-size:0.7rem;font-weight:700;color:var(--color-success,#10b981);">✓ Fully Compliant</span>`
             }
           </div>
         </div>
