@@ -48,3 +48,11 @@ export const scheduleParsersFeature = lazyFeature("schedule import/export parser
   (await import("./ScheduleImportParsers")).ScheduleImportParsers);
 export const csvExportModalFeature = lazyFeature("CSV export property selector", async () =>
   (await import("../ui/CsvExportModal")).CsvExportModal.getInstance());
+export const timelapseExporterFeature = lazyFeature("4D timelapse WebM exporter", async () =>
+  await import("./TimelapseExporter"));
+export const cashFlowHistogramFeature = lazyFeature("4D cash-flow & resource histogram", async () =>
+  (await import("../ui/CashFlowHistogramDrawer")).CashFlowHistogramDrawer.getInstance());
+export const splitScreenComparisonFeature = lazyFeature("4D split-screen comparison", async () =>
+  (await import("../ui/SplitScreenComparisonController")).SplitScreenComparisonController.getInstance());
+export const idsPresetsFeature = lazyFeature("IDS compliance presets", async () =>
+  await import("./IdsPresetEngine"));

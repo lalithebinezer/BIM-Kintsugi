@@ -30,7 +30,14 @@ import { MeasurementSuite } from "./modules/MeasurementSuite";
 import { MinimapModule } from "./modules/MinimapModule";
 import { ScheduleTimelineController, type ScheduleTaskWidgetStats } from "./ui/ScheduleTimelineController";
 import { TradeAppearanceEngine } from "./modules/TradeAppearanceEngine";
-import { export4DTimelapseVideo } from "./modules/TimelapseExporter";
+import { importScheduleFileIntoManager } from "./ui/ScheduleImportController";
+import {
+  WorkspaceSnapshotManager,
+  serializeScheduleTasks,
+  deserializeScheduleTasks,
+} from "./core/WorkspaceSnapshotManager";
+import { buildShareableViewUrl, decodeDeepLinkHash, type DeepLinkViewState } from "./core/DeepLinkManager";
+import { JobsiteTouchMode } from "./ui/JobsiteTouchMode";
 
 import { CameraSpeedController } from "./core/CameraSpeedController";
 import { ScheduleManager, type ScheduleTask } from "./modules/ScheduleManager";
@@ -43,7 +50,19 @@ import { CostRateManager } from "./modules/CostRateManager";
 import { BCFManager } from "./modules/BcfManager";
 import { IDSChecker } from "./modules/IdsChecker";
 import { BimEngine } from "./core/BimEngine";
-import { executiveReport, cobieExport, recorder, evmDashboard, gisFeature, scheduleParsersFeature, csvExportModalFeature } from "./modules/optionalFeatures";
+import {
+  executiveReport,
+  cobieExport,
+  recorder,
+  evmDashboard,
+  gisFeature,
+  scheduleParsersFeature,
+  csvExportModalFeature,
+  timelapseExporterFeature,
+  cashFlowHistogramFeature,
+  splitScreenComparisonFeature,
+  idsPresetsFeature,
+} from "./modules/optionalFeatures";
 import { runFeature } from "./utils/lazyFeature";
 import { ModelManager } from "./core/ModelManager";
 import { ViewportController } from "./core/ViewportController";
@@ -3098,14 +3117,8 @@ async function handleScheduleFile(file: File) {
   const isExcel = /\.(xlsx|xls)$/i.test(file.name);
   updateViewportHint(`Parsing 4D/5D Schedule (${isExcel ? "Excel" : "CSV"})...`);
   try {
-    let count = 0;
-    if (isExcel) {
-      const buffer = await file.arrayBuffer();
-      count = await scheduleManager.importScheduleFromExcel(buffer, file.name);
-    } else {
-      const text = await file.text();
-      count = scheduleManager.importScheduleFromCSV(text, { replaceExisting: true });
-    }
+    const outcome = await importScheduleFileIntoManager(file, scheduleManager);
+    const count = outcome.importedCount;
 
     if (count > 0) {
       const syncRes = await syncImportedScheduleWithActiveModels();
@@ -3279,6 +3292,7 @@ export async function recordFull4DSimulation(): Promise<void> {
   showToast("🎬 Recording 4D Timelapse WebM with HUD overlay (click again to cancel)...", "info");
 
   try {
+    const { export4DTimelapseVideo } = await timelapseExporterFeature.load();
     const res = await export4DTimelapseVideo({
       sourceCanvas: canvas,
       totalSteps: totalDays,
@@ -8574,6 +8588,10 @@ async function renderTimelineVisualFrame(force: boolean = false) {
   if (evmPanel && !evmPanel.classList.contains("hidden")) {
     evmDashboard.peek()?.render(dateMs);
   }
+  const cfh = cashFlowHistogramFeature.peek();
+  if (cfh && cfh.isOpen()) {
+    cfh.render(scheduleManager?.getTasksSorted() ?? [], dateMs);
+  }
 
   // Sync selected element inputs dynamically if properties panel is open for it
   if (activeModelId && activeExpressId !== null) {
@@ -9708,6 +9726,13 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tool-4d-toggle", title: "Toggle 4D Construction Simulation", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`, action: () => (window as any).toggle4DMode?.() },
     { id: "tool-4d-record", title: "Record 4D Simulation Video (WebM)", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>`, action: () => runFeature(async () => (await recorder.load()).toggleRecording()) },
     { id: "tool-4d-gantt", title: "Toggle Interactive 4D Construction Gantt Chart", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`, action: () => InteractiveGanttDrawer.getInstance().toggle() },
+    { id: "tool-4d-cashflow", title: "Toggle 4D Cash-Flow & Resource Histogram", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`, action: () => (window as any).toggleCashFlowHistogram?.() },
+    { id: "tool-4d-split", title: "Toggle 4D Side-by-Side Split-Screen Comparison", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>`, action: () => (window as any).toggleSplitScreenComparison?.() },
+    { id: "tool-ids-presets", title: "Run OpenBIM IDS & QA Compliance Presets (ISO 19650 / 4D / 5D)", category: "Compliance", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`, action: () => (window as any).openIdsPresetsAudit?.() },
+    { id: "ws-save-snapshot", title: "Workspace: Save Session Snapshot to IndexedDB (Ctrl+Shift+S)", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>`, action: () => (window as any).saveWorkspaceSnapshot?.() },
+    { id: "ws-restore-snapshot", title: "Workspace: Restore Last Saved Session Snapshot", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`, action: () => (window as any).restoreWorkspaceSnapshot?.() },
+    { id: "ws-share-link", title: "Workspace: Copy Shareable 3D/4D View Link (Ctrl+Shift+L)", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`, action: () => (window as any).copyShareableViewLink?.() },
+    { id: "ws-touch-mode", title: "Workspace: Toggle Offline / Jobsite Tablet Touch Mode (44px)", category: "Workspace", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`, action: () => (window as any).toggleJobsiteTouchMode?.() },
     { id: "tool-4d-variance", title: "Toggle Planned vs. Actual Variance Mode", category: "4D Simulation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>`, action: () => document.getElementById("btn-4d-variance-toggle")?.click() },
     { id: "tool-export-cobie", title: "Export 7D COBie Facility Management Handover Data (CSV)", category: "Enterprise BIM", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg>`, action: () => runFeature(async () => (await cobieExport.load()).exportCobieCSV()) },
     {
@@ -10381,3 +10406,297 @@ document.getElementById("btn-trigger-model-diff")?.addEventListener("click", asy
 
 
 
+
+// ═════════════════════════════════════════════════════════════════════
+// ─── PLATFORM UPGRADES: HISTOGRAM, SPLIT-4D, IDS QA, SNAPSHOTS, DEEP-LINKS, TOUCH ───
+// ═════════════════════════════════════════════════════════════════════
+
+async function toggleCashFlowHistogram() {
+  const drawer = await cashFlowHistogramFeature.load();
+  const tasks = scheduleManager?.getTasksSorted() ?? [];
+  const btn = document.getElementById("btn-4d-cashflow-histogram");
+  drawer.toggle(tasks, currentTimelineDate?.getTime(), async (targetMs) => {
+    if (!timelineMinDate) return;
+    currentTimelineDate = new Date(targetMs);
+    const diffDays = Math.max(
+      0,
+      Math.round((targetMs - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    if (timelineSlider) timelineSlider.value = String(diffDays);
+    updateTimelineDateUI();
+    await updateTimelineVisualState(true);
+  });
+  btn?.classList.toggle("active", drawer.isOpen());
+}
+(window as any).toggleCashFlowHistogram = toggleCashFlowHistogram;
+document.getElementById("btn-4d-cashflow-histogram")?.addEventListener("click", () => {
+  toggleCashFlowHistogram();
+});
+
+async function toggleSplitScreenComparison() {
+  const ctrl = await splitScreenComparisonFeature.load();
+  const btn = document.getElementById("btn-4d-split-screen");
+  const computeStats = () => {
+    const tasksList = scheduleManager?.getTasksSorted() ?? [];
+    const dateMs = currentTimelineDate?.getTime() ?? Date.now();
+    const delayReport = DelayImpactEngine.getInstance().computeProjectDelayReport(tasksList, dateMs);
+    const plannedPct =
+      delayReport.totalPlannedCost > 0
+        ? (delayReport.plannedValue / delayReport.totalPlannedCost) * 100
+        : 0;
+    const actualPct =
+      delayReport.totalPlannedCost > 0
+        ? (delayReport.earnedValue / delayReport.totalPlannedCost) * 100
+        : 0;
+    return {
+      dateLabel: currentTimelineDate ? currentTimelineDate.toISOString().slice(0, 10) : "--",
+      plannedPct,
+      actualPct,
+      varianceDays: delayReport.projectSlippageDays,
+      spi: delayReport.spi,
+      delayedCount: delayReport.delayedCount + delayReport.criticalDelayCount,
+    };
+  };
+
+  const prevVariance = isVarianceMode;
+  const nowActive = await ctrl.toggle({
+    getCanvas: () => world.renderer?.three?.domElement ?? null,
+    renderPlannedPass: async () => {
+      isVarianceMode = false;
+      await updateTimelineVisualState(true);
+      return computeStats();
+    },
+    renderActualPass: async () => {
+      isVarianceMode = true;
+      await updateTimelineVisualState(true);
+      return computeStats();
+    },
+    onClose: async () => {
+      isVarianceMode = prevVariance;
+      btn?.classList.remove("active");
+      await updateTimelineVisualState(true);
+    },
+  });
+  btn?.classList.toggle("active", nowActive);
+  showToast(
+    nowActive
+      ? "Split-Screen 4D active: drag center handle to compare Planned vs. Actual"
+      : "Exited Split-Screen 4D comparison",
+    "info"
+  );
+}
+(window as any).toggleSplitScreenComparison = toggleSplitScreenComparison;
+document.getElementById("btn-4d-split-screen")?.addEventListener("click", () => {
+  toggleSplitScreenComparison();
+});
+
+async function openIdsPresetsAudit() {
+  const activeModels = Array.from(fragments.list.entries());
+  if (activeModels.length === 0) {
+    showToast("Load an IFC model first to run OpenBIM IDS Compliance Presets.", "warning");
+    return;
+  }
+  const { collectLoadedModelElements } = await import("./modules/CsvSchedulePropertyLinker");
+  const { evaluateAllIdsPresets, openIdsPresetsModal } = await idsPresetsFeature.load();
+  const elements = await collectLoadedModelElements(activeModels);
+  const results = evaluateAllIdsPresets(elements);
+  openIdsPresetsModal({
+    results,
+    onIsolateFailing: async (presetTitle, modelIdMaps, failedCount) => {
+      const hider = components.get(OBC.Hider);
+      await hider.set(false);
+      await hider.set(true, modelIdMaps);
+      await highlighter.highlightByID("select", modelIdMaps, true, false);
+      showToast(`Highlighted ${failedCount} elements failing "${presetTitle}"`, "warning");
+    },
+    onResetView: async () => {
+      const hider = components.get(OBC.Hider);
+      await hider.set(true);
+      await highlighter.clear("select");
+    },
+  });
+}
+(window as any).openIdsPresetsAudit = openIdsPresetsAudit;
+document.getElementById("btn-4d-ids-presets")?.addEventListener("click", () => {
+  openIdsPresetsAudit();
+});
+
+async function saveWorkspaceSnapshot() {
+  const mgr = WorkspaceSnapshotManager.getInstance();
+  const pos = new THREE.Vector3();
+  const target = new THREE.Vector3();
+  world.camera.controls.getPosition(pos);
+  world.camera.controls.getTarget(target);
+  const sampleSel = document.getElementById("sample-model-select") as HTMLSelectElement | null;
+  const saved = await mgr.saveSnapshot({
+    name: `Session ${new Date().toLocaleTimeString()}`,
+    sampleModelKey: sampleSel?.value || "snowdon",
+    modelNames: Array.from(fragments.list.keys()),
+    timelineDateIso: currentTimelineDate ? currentTimelineDate.toISOString().slice(0, 10) : undefined,
+    is4dMode,
+    activeTheme: document.documentElement.getAttribute("data-theme") || "dark",
+    cameraPose: {
+      position: [pos.x, pos.y, pos.z],
+      target: [target.x, target.y, target.z],
+    },
+    tasks: serializeScheduleTasks(scheduleManager.tasks.values()),
+    savedSelectionSetsJson: localStorage.getItem("bim_kintsugi_saved_selection_sets") || undefined,
+  });
+  showToast(
+    `✓ Saved workspace snapshot (${saved.tasks.length} tasks, camera & session state in IndexedDB)`,
+    "success"
+  );
+  return saved;
+}
+(window as any).saveWorkspaceSnapshot = saveWorkspaceSnapshot;
+document.getElementById("btn-workspace-save-snapshot")?.addEventListener("click", () => {
+  saveWorkspaceSnapshot();
+});
+
+async function restoreWorkspaceSnapshot() {
+  const mgr = WorkspaceSnapshotManager.getInstance();
+  const snap = await mgr.loadSnapshot();
+  if (!snap) {
+    showToast("No saved workspace snapshot found in IndexedDB yet.", "warning");
+    return null;
+  }
+  if (snap.activeTheme) {
+    document.documentElement.setAttribute("data-theme", snap.activeTheme);
+  }
+  if (snap.savedSelectionSetsJson) {
+    try {
+      localStorage.setItem("bim_kintsugi_saved_selection_sets", snap.savedSelectionSetsJson);
+    } catch {
+      // Ignore
+    }
+  }
+  if (snap.tasks.length > 0) {
+    scheduleManager.tasks.clear();
+    for (const t of deserializeScheduleTasks(snap.tasks)) {
+      scheduleManager.tasks.set(t.id, t);
+    }
+    calculateTimelineBounds();
+    updateCumulative5DCost();
+    updateScheduleWidgetUI();
+  }
+  if (snap.timelineDateIso && timelineMinDate) {
+    currentTimelineDate = new Date(snap.timelineDateIso);
+    const diffDays = Math.max(
+      0,
+      Math.round((currentTimelineDate.getTime() - timelineMinDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    if (timelineSlider) timelineSlider.value = String(diffDays);
+    updateTimelineDateUI();
+  }
+  if (snap.is4dMode && !is4dMode) {
+    (window as any).toggle4DMode?.(true);
+  }
+  if (snap.cameraPose) {
+    const [px, py, pz] = snap.cameraPose.position;
+    const [tx, ty, tz] = snap.cameraPose.target;
+    await world.camera.controls.setLookAt(px, py, pz, tx, ty, tz, true);
+  }
+  showToast(`✓ Restored workspace snapshot from ${new Date(snap.savedAt).toLocaleString()}`, "success");
+  return snap;
+}
+(window as any).restoreWorkspaceSnapshot = restoreWorkspaceSnapshot;
+document.getElementById("btn-workspace-restore-snapshot")?.addEventListener("click", () => {
+  restoreWorkspaceSnapshot();
+});
+
+async function copyShareableViewLink(): Promise<string> {
+  const pos = new THREE.Vector3();
+  const target = new THREE.Vector3();
+  world.camera.controls.getPosition(pos);
+  world.camera.controls.getTarget(target);
+  const sampleSel = document.getElementById("sample-model-select") as HTMLSelectElement | null;
+  const lens: DeepLinkViewState["lens"] = cascade4DController.isCascadeMode
+    ? "cascade"
+    : isVarianceMode
+      ? "variance"
+      : tradeAppearanceEngine.enabled
+        ? "trades"
+        : "standard";
+  const url = buildShareableViewUrl({
+    camPos: [pos.x, pos.y, pos.z],
+    camTarget: [target.x, target.y, target.z],
+    mode4d: is4dMode,
+    date4d: currentTimelineDate ? currentTimelineDate.toISOString().slice(0, 10) : undefined,
+    lens,
+    sample: sampleSel?.value || undefined,
+  });
+  try {
+    window.history.replaceState(null, "", url);
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+    }
+    showToast("✓ Copied shareable 3D/4D deep-link URL to clipboard!", "success");
+  } catch {
+    showToast("Updated URL hash with shareable 3D/4D view link.", "info");
+  }
+  return url;
+}
+(window as any).copyShareableViewLink = copyShareableViewLink;
+document.getElementById("btn-workspace-share-link")?.addEventListener("click", () => {
+  copyShareableViewLink();
+});
+
+function toggleJobsiteTouchMode(): boolean {
+  const enabled = JobsiteTouchMode.getInstance().toggle();
+  document.getElementById("btn-toggle-touch-mode")?.classList.toggle("active", enabled);
+  showToast(
+    enabled
+      ? "Jobsite Tablet Touch Mode ON (44px touch targets & swipe-to-dismiss drawers)"
+      : "Jobsite Tablet Touch Mode OFF",
+    "info"
+  );
+  return enabled;
+}
+(window as any).toggleJobsiteTouchMode = toggleJobsiteTouchMode;
+JobsiteTouchMode.getInstance().init();
+document
+  .getElementById("btn-toggle-touch-mode")
+  ?.classList.toggle("active", JobsiteTouchMode.getInstance().isEnabled());
+document.getElementById("btn-toggle-touch-mode")?.addEventListener("click", () => {
+  toggleJobsiteTouchMode();
+});
+
+// Workspace Keyboard Shortcuts (Ctrl+Shift+L Share Link, Ctrl+Shift+S Save Snapshot)
+window.addEventListener("keydown", (ev: KeyboardEvent) => {
+  if (!ev.ctrlKey || !ev.shiftKey) return;
+  const k = ev.key.toLowerCase();
+  if (k === "l") {
+    ev.preventDefault();
+    copyShareableViewLink();
+  } else if (k === "s") {
+    ev.preventDefault();
+    saveWorkspaceSnapshot();
+  }
+});
+
+// Apply incoming #view=... Deep-Link on page load
+const incomingDeepLink = decodeDeepLinkHash(window.location.hash);
+if (incomingDeepLink) {
+  setTimeout(async () => {
+    if (incomingDeepLink.camPos && incomingDeepLink.camTarget) {
+      const [px, py, pz] = incomingDeepLink.camPos;
+      const [tx, ty, tz] = incomingDeepLink.camTarget;
+      await world.camera.controls.setLookAt(px, py, pz, tx, ty, tz, true);
+    }
+    if (incomingDeepLink.mode4d) {
+      (window as any).toggle4DMode?.(true);
+    }
+    if (incomingDeepLink.date4d && timelineMinDate) {
+      currentTimelineDate = new Date(incomingDeepLink.date4d);
+      updateTimelineDateUI();
+      await updateTimelineVisualState(true);
+    }
+    if (incomingDeepLink.lens === "trades") {
+      tradeAppearanceEngine.enabled = true;
+      document.getElementById("btn-4d-trade-profiles")?.classList.add("active");
+    } else if (incomingDeepLink.lens === "variance") {
+      isVarianceMode = true;
+      document.getElementById("btn-4d-variance-toggle")?.classList.add("active");
+    }
+  }, 1200);
+}

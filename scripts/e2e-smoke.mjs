@@ -144,6 +144,34 @@ try {
   const civilDotCount = await page.locator("#eng-civil-profile-container .civil-station-dot").count();
   assert(civilDotCount >= 2, `Expected >=2 civil station dots, got ${civilDotCount}`);
 
+  // 7. 4D Cash-Flow Histogram, Shareable Deep-Link, Workspace Snapshot & Jobsite Touch Mode
+  await page.evaluate(async () => {
+    await window.toggleCashFlowHistogram?.();
+  });
+  await page.locator("#cashflow-histogram-drawer").waitFor({ state: "visible", timeout: 5000 });
+  await page.evaluate(async () => {
+    await window.toggleCashFlowHistogram?.();
+    await window.saveWorkspaceSnapshot?.();
+  });
+  const shareUrl = await page.evaluate(() => window.copyShareableViewLink?.());
+  assert(typeof shareUrl === "string" && shareUrl.includes("#view="), "Shareable deep-link hash missing");
+  const touchEnabled = await page.evaluate(() => window.toggleJobsiteTouchMode?.());
+  assert(touchEnabled === true, "Jobsite touch mode should toggle ON");
+  await page.evaluate(() => window.toggleJobsiteTouchMode?.());
+
+  // 8. Multi-Viewport Responsive Checks (Tablet 768x1024 & Mobile 390x844)
+  for (const vp of [
+    { name: "tablet", width: 768, height: 1024 },
+    { name: "mobile", width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.waitForTimeout(200);
+    const overflowX = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 4
+    );
+    assert(!overflowX, `Unexpected horizontal overflow on ${vp.name} (${vp.width}x${vp.height})`);
+  }
+
   assert(consoleErrors.length === 0, `Console errors detected: ${consoleErrors.join(" | ")}`);
   assert(pageErrors.length === 0, `Page errors detected: ${pageErrors.join(" | ")}`);
 
@@ -153,6 +181,8 @@ try {
         status: "PASSED",
         bandCount,
         civilDotCount,
+        deepLinkVerified: true,
+        multiViewportVerified: ["1440x900", "768x1024", "390x844"],
         consoleErrorCount: consoleErrors.length,
         pageErrorCount: pageErrors.length,
       },

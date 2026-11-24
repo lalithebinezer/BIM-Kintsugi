@@ -1276,6 +1276,26 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/></svg>
                 <span>3D Revision Diff &amp; Federation</span>
               </button>
+
+              <!-- Workspace Session Persistence & Shareable Deep-Link Bar -->
+              <div class="workspace-session-bar" role="group" aria-label="Workspace Session and Share">
+                <button type="button" class="btn-ws-action" id="btn-workspace-save-snapshot" title="Save Workspace Snapshot to IndexedDB (Ctrl+Shift+S)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  <span>Save</span>
+                </button>
+                <button type="button" class="btn-ws-action" id="btn-workspace-restore-snapshot" title="Restore Last Saved Workspace Snapshot from IndexedDB">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                  <span>Restore</span>
+                </button>
+                <button type="button" class="btn-ws-action" id="btn-workspace-share-link" title="Copy Shareable Deep-Link View URL (Ctrl+Shift+L)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <span>Share</span>
+                </button>
+                <button type="button" class="btn-ws-action" id="btn-toggle-touch-mode" title="Toggle Jobsite Tablet Touch Mode (44px targets &amp; swipe drawers)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                  <span>Touch</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -3091,6 +3111,11 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               <span>EVM</span>
             </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-cashflow-histogram" title="Toggle Interactive 4D Cash-Flow &amp; Resource Load Histogram (Click bars to scrub)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>Cash Flow</span>
+            </button>
           </div>
 
           <!-- Cluster 4: 3D Visual Lenses (Toggles) -->
@@ -3098,6 +3123,11 @@
             <button class="btn-timeline-csv" id="btn-4d-variance-toggle" title="Toggle Planned vs. Actual Variance Coloring">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
               <span>Variance</span>
+            </button>
+
+            <button class="btn-timeline-csv" id="btn-4d-split-screen" title="Side-by-Side 4D Split-Screen Comparison (Planned Baseline vs. Actual Variance)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+              <span>Split 4D</span>
             </button>
 
             <button class="btn-timeline-csv" id="btn-4d-trade-profiles" title="Color-code active 4D elements by Trade / Task Prefix (FOU, COL, FLO, WALL, FRA, STR, MEP)">
@@ -3118,6 +3148,11 @@
 
           <!-- Cluster 5: QA Audit & Timelapse Export -->
           <div class="timeline-cluster timeline-seg-group cluster-qa" role="group" aria-label="Audit and Export">
+            <button class="btn-timeline-csv" id="btn-4d-ids-presets" title="Run OpenBIM IDS &amp; QA Rule Presets (ISO 19650, 4D SIMULATION, 5D QTO, Storeys)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              <span>IDS QA</span>
+            </button>
+
             <button class="btn-timeline-csv" id="btn-4d-linkage-audit" title="Audit Matched, Resource & Unscheduled 3D Elements (with 1-click Isolate Unscheduled)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
               <span>Link Audit</span>
@@ -3382,8 +3417,8 @@
               <div class="step-item">
                 <div class="step-num">04</div>
                 <div class="step-body">
-                  <div class="step-name">4D Phasing, CSV Mapper, Trade Colors, Floating HUD &amp; CasCADe Lens</div>
-                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Use the segmented 4D dock to <strong>Import</strong> or <strong>Map CSV</strong> (with single or composite keys like <code>Storey+Category</code>), run <strong>Link Audit</strong> to isolate unscheduled 3D elements, toggle <strong>Trade Colors</strong> or <strong>Variance</strong>, open the collapsible <strong>WBS Gantt Chart</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd> timescale, SVG links, <strong>Rule Builder</strong> &amp; <strong>Rules XML</strong>), or record a <strong>WebM</strong> timelapse with HUD overlay. Drag the floating <strong>4D HUD</strong> anywhere (double-click to reset), filter/auto-follow tasks in the collapsible 4D Schedule panel, toggle <strong>4D SLF</strong>, or switch on <strong>CasCADe Lens</strong> (12 indicators, 15 ColorBrewer palettes, band isolation &amp; 3D Bezier Dependency Arcs).</div>
+                  <div class="step-name">4D Phasing, Cash-Flow Histogram, Split-Screen 4D, IDS QA &amp; CasCADe Lens</div>
+                  <div class="step-desc">Click the <strong>4D Gantt</strong> icon on the bottom dock (or trigger 4D in Command Palette <kbd>Ctrl+K</kbd>). Use the segmented 4D dock to <strong>Import</strong> or <strong>Map CSV</strong> (single or composite <code>Storey+Category</code> keys), inspect monthly/weekly spend &amp; resources in <strong>Cash Flow</strong>, drag <strong>Split 4D</strong> for Planned vs. Actual comparison, run <strong>IDS QA</strong> (ISO 19650 / 4D / 5D) &amp; <strong>Link Audit</strong>, toggle <strong>Trade Colors</strong> or <strong>Variance</strong>, open <strong>WBS Gantt</strong> (<kbd>M</kbd>/<kbd>W</kbd>/<kbd>D</kbd>), or export a <strong>WebM</strong> timelapse with HUD overlay. Drag the floating <strong>4D HUD</strong> anywhere, save/restore IndexedDB sessions (<kbd>Ctrl+Shift+S</kbd>), copy shareable <code>#view=</code> deep-links (<kbd>Ctrl+Shift+L</kbd>), enable <strong>Touch</strong> tablet mode, or switch on <strong>CasCADe Lens</strong>.</div>
                 </div>
               </div>
               <div class="step-item">

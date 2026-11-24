@@ -808,3 +808,262 @@ header,
   color: #047857 !important;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1) !important;
 }
+
+
+/* ==========================================================================
+   WORKSPACE SESSION BAR, 4D CASH-FLOW HISTOGRAM, SPLIT-SCREEN & TOUCH MODE
+   ========================================================================== */
+
+.workspace-session-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding: 3px;
+  margin-top: 0.35rem;
+  border-radius: 9px;
+  background: var(--studio-recessed);
+  border: 1px solid var(--studio-hairline);
+}
+
+.btn-ws-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-ws-action:hover {
+  background: var(--studio-surface-2);
+  color: var(--text-primary);
+}
+
+.btn-ws-action.active {
+  background: color-mix(in srgb, var(--accent-500) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-500) 50%, transparent);
+  color: var(--accent-400, var(--accent-500));
+}
+
+/* 4D Cash-Flow & Resource Histogram Floating Drawer */
+.cashflow-histogram-drawer {
+  position: fixed;
+  left: 50%;
+  bottom: 138px;
+  transform: translateX(-50%);
+  z-index: 860;
+  width: min(820px, calc(100vw - 2rem));
+  padding: 0.72rem 0.9rem;
+  border-radius: 12px;
+  background: var(--studio-glass-elevated);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--studio-hairline-strong);
+  box-shadow: var(--studio-sheen), var(--studio-shadow-modal);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cashflow-histogram-drawer.hidden {
+  display: none !important;
+}
+
+.cfh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cfh-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.cfh-title {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+
+.cfh-summary {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: var(--studio-surface-2);
+  border: 1px solid var(--studio-hairline);
+  color: var(--accent-400, var(--accent-500));
+}
+
+.cfh-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cfh-controls .btn-timeline-csv {
+  height: 24px;
+  padding: 0 0.5rem;
+  font-size: 0.65rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+}
+
+.cfh-controls .btn-timeline-csv.active {
+  background: color-mix(in srgb, var(--accent-500) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-500) 48%, transparent);
+  color: var(--accent-400, var(--accent-500));
+}
+
+.cfh-footer {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+/* 4D Side-by-Side Split-Screen Curtain Overlay */
+.split-screen-4d-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 780;
+  pointer-events: none;
+}
+
+.split-screen-4d-overlay.hidden {
+  display: none !important;
+}
+
+.split-left-pane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.split-left-snapshot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.split-divider-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--accent-400, #d4ff3f);
+  box-shadow: 0 0 12px rgba(212, 255, 63, 0.55);
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.split-divider-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(12, 14, 21, 0.92);
+  border: 2px solid var(--accent-400, #d4ff3f);
+  color: var(--accent-400, #d4ff3f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+
+.split-badge {
+  position: absolute;
+  top: 74px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.72rem;
+  border-radius: 10px;
+  background: var(--studio-glass-elevated);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--studio-hairline-strong);
+  box-shadow: var(--studio-shadow-dock);
+  pointer-events: auto;
+}
+
+.split-badge-left {
+  left: 16px;
+}
+
+.split-badge-right {
+  right: 16px;
+}
+
+.split-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.split-dot.planned {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+}
+
+.split-dot.actual {
+  background: #d4ff3f;
+  box-shadow: 0 0 8px rgba(212, 255, 63, 0.7);
+}
+
+.split-badge-title {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+.split-badge-sub {
+  font-size: 0.67rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Offline / Jobsite Tablet Touch Mode (44×44px WCAG/Apple HIG Targets) */
+body.jobsite-touch-mode .dock-icon.btn-tool,
+body.jobsite-touch-mode .btn-sched-icon,
+body.jobsite-touch-mode .btn-ws-action,
+body.jobsite-touch-mode .sidebar-tab-btn,
+body.jobsite-touch-mode .timeline-controls-row .btn-timeline-csv,
+body.jobsite-touch-mode .timeline-controls-row label.btn-timeline-csv,
+body.jobsite-touch-mode .sched-filter-pill {
+  min-height: 44px !important;
+  min-width: 44px !important;
+  padding-inline: 0.7rem !important;
+  font-size: 0.76rem !important;
+}
+
+body.jobsite-touch-mode .schedule-task-item {
+  min-height: 78px !important;
+  padding: 0.75rem 0.9rem !important;
+}
