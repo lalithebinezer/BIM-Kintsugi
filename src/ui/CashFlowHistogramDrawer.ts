@@ -40,12 +40,12 @@ export interface FloatingHistogramGeometry {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FLOAT_STORAGE_KEY = "bim_kintsugi_cfh_float_v1";
-const MIN_FLOAT_WIDTH = 360;
+const MIN_FLOAT_WIDTH = 300;
 const MAX_FLOAT_WIDTH = 1120;
-const MIN_FLOAT_HEIGHT = 200;
+const MIN_FLOAT_HEIGHT = 180;
 const MAX_FLOAT_HEIGHT = 560;
-const DEFAULT_FLOAT_WIDTH = 660;
-const DEFAULT_FLOAT_HEIGHT = 258;
+const DEFAULT_FLOAT_WIDTH = 640;
+const DEFAULT_FLOAT_HEIGHT = 244;
 
 function formatPeriodLabel(d: Date, granularity: HistogramGranularity): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -186,22 +186,85 @@ export class CashFlowHistogramDrawer {
 
   private computeDefaultGeometry(): FloatingHistogramGeometry {
     const { vw, vh } = this.getViewportSize();
-    const width = Math.max(MIN_FLOAT_WIDTH, Math.min(DEFAULT_FLOAT_WIDTH, vw - 32));
-    const height = Math.max(MIN_FLOAT_HEIGHT, Math.min(DEFAULT_FLOAT_HEIGHT, vh - 180));
-    const left = Math.max(16, vw - width - 24);
-    const top = Math.max(68, Math.min(82, vh - height - 150));
+    const safeMinW = Math.min(MIN_FLOAT_WIDTH, Math.max(260, vw - 16));
+
+    // Read live HUD landmark bounds so the floating window spawns cleanly clear of Header, Quick-Views, ViewCube & Bottom Dock
+    let headerBottom = 56;
+    let topClearance = 126;
+    let bottomDockTop = vh - 96;
+    let minimapLeft = vw - 12;
+    if (typeof document !== "undefined") {
+      const hdr = document.querySelector("header")?.getBoundingClientRect();
+      if (hdr && hdr.height > 0) headerBottom = Math.ceil(hdr.bottom);
+
+      const topLeft = document.querySelector(".hud-anchor-top-left")?.getBoundingClientRect();
+      const viewCube = document.querySelector(".view-cube-layer")?.getBoundingClientRect();
+      const topCandidates = [headerBottom + 8];
+      if (topLeft && topLeft.height > 0 && topLeft.bottom < vh * 0.45) {
+        topCandidates.push(Math.ceil(topLeft.bottom) + 8);
+      }
+      if (viewCube && viewCube.height > 0 && viewCube.bottom < vh * 0.45) {
+        topCandidates.push(Math.ceil(viewCube.bottom) + 8);
+      }
+      topClearance = Math.max(...topCandidates);
+
+      const timeline = document.querySelector(".timeline-panel");
+      const dock = document.querySelector("#bottom-toolbar");
+      const activeDock =
+        timeline && getComputedStyle(timeline).display !== "none"
+          ? timeline.getBoundingClientRect()
+          : dock?.getBoundingClientRect();
+      if (activeDock && activeDock.height > 0 && activeDock.top > headerBottom + 80) {
+        bottomDockTop = Math.floor(activeDock.top);
+      }
+
+      const minimap = document.querySelector(".hud-anchor-bottom-right");
+      if (minimap && getComputedStyle(minimap).display !== "none") {
+        const mr = minimap.getBoundingClientRect();
+        if (mr.width > 0 && mr.top > vh * 0.4) minimapLeft = Math.floor(mr.left);
+      }
+    }
+
+    const availH = Math.max(140, bottomDockTop - topClearance - 12);
+    const height = Math.round(
+      vh <= 480
+        ? Math.max(136, Math.min(180, bottomDockTop - headerBottom - 16))
+        : Math.max(Math.min(MIN_FLOAT_HEIGHT, availH), Math.min(DEFAULT_FLOAT_HEIGHT, availH))
+    );
+
+    // On wide desktop (>= 1024px), leave left clear of Crane HUD (300px) and right clear of Minimap
+    const maxDesktopW =
+      vw >= 1024 ? Math.min(DEFAULT_FLOAT_WIDTH, Math.max(safeMinW, minimapLeft - 316)) : DEFAULT_FLOAT_WIDTH;
+    const width = Math.round(Math.max(safeMinW, Math.min(maxDesktopW, vw - 16)));
+
+    let left = Math.max(8, Math.round((vw - width) / 2));
+    if (vw >= 1024) {
+      if (left < 304 && minimapLeft - width - 12 >= 304) {
+        left = Math.min(308, minimapLeft - width - 12);
+      } else if (left + width > minimapLeft - 10) {
+        left = Math.max(8, minimapLeft - width - 12);
+      }
+    }
+
+    const top =
+      vh <= 480
+        ? Math.max(headerBottom + 6, Math.min(topClearance, bottomDockTop - height - 8))
+        : Math.max(topClearance, Math.min(bottomDockTop - height - 12, Math.round(topClearance + (availH - height) / 2)));
+
     return { left, top, width, height, collapsed: false };
   }
 
   private clampGeometry(geom: FloatingHistogramGeometry): FloatingHistogramGeometry {
     const { vw, vh } = this.getViewportSize();
-    const maxW = Math.max(MIN_FLOAT_WIDTH, Math.min(MAX_FLOAT_WIDTH, vw - 24));
-    const maxH = Math.max(MIN_FLOAT_HEIGHT, Math.min(MAX_FLOAT_HEIGHT, vh - 88));
-    const width = Math.round(Math.max(MIN_FLOAT_WIDTH, Math.min(maxW, geom.width)));
-    const height = Math.round(Math.max(MIN_FLOAT_HEIGHT, Math.min(maxH, geom.height)));
+    const safeMinW = Math.min(MIN_FLOAT_WIDTH, Math.max(260, vw - 16));
+    const maxW = Math.max(safeMinW, Math.min(MAX_FLOAT_WIDTH, vw - 16));
+    const minH = vh <= 480 ? 148 : MIN_FLOAT_HEIGHT;
+    const maxH = Math.max(minH, Math.min(MAX_FLOAT_HEIGHT, vh - 76));
+    const width = Math.round(Math.max(safeMinW, Math.min(maxW, geom.width)));
+    const height = Math.round(Math.max(minH, Math.min(maxH, geom.height)));
     const effectiveH = geom.collapsed ? 48 : height;
-    const left = Math.round(Math.max(12, Math.min(Math.max(12, vw - width - 12), geom.left)));
-    const top = Math.round(Math.max(58, Math.min(Math.max(58, vh - effectiveH - 12), geom.top)));
+    const left = Math.round(Math.max(8, Math.min(Math.max(8, vw - width - 8), geom.left)));
+    const top = Math.round(Math.max(54, Math.min(Math.max(54, vh - effectiveH - 10), geom.top)));
     return { left, top, width, height, collapsed: Boolean(geom.collapsed) };
   }
 

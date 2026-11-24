@@ -1,15 +1,155 @@
 /* Responsive overrides share the existing panel state and tool handlers. */
 .responsive-more { display: none; }
+
+/* ─── C4: Safe dynamic viewport height (dvh) & notch-safe framing ─── */
+#app {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.enterprise-drawer {
+  height: calc(100dvh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2rem);
+  max-height: calc(100dvh - var(--header-bottom, 4.35rem) - var(--dock-h, 64px) - 2rem);
+}
+
+.saved-views-flyout {
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - var(--header-bottom, 4.35rem) - 1.5rem);
+}
+
+/* ─── C2: Guard floating 4D overlays against narrow/short viewport clipping ─── */
+#crane-transform-hud {
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - var(--header-bottom, 64px) - 20px) !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cashflow-histogram-drawer {
+  min-width: min(300px, calc(100vw - 16px)) !important;
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - var(--header-bottom, 64px) - 20px) !important;
+}
+
+/* ─── M5: Scrollable data tables on narrow screens ─── */
+.property-table,
+.cost-rate-table,
+.clash-matrix-table,
+.report-table,
+.csv-mapper-preview-table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── m1: Legible UI chrome floor (>= 11px) ─── */
+.sidebar.right-sidebar #right-tab-bar .sidebar-tab-btn,
+.btn-timeline-csv,
+label.btn-timeline-csv,
+.btn-speed-pill,
+#bim-breadcrumbs-bar {
+  font-size: clamp(11px, 0.7rem, 13px) !important;
+}
+
+/* ─── m3: Prevent keyboard focus from entering off-screen collapsed sidebars ─── */
+body.left-sidebar-collapsed .left-sidebar:not(.open),
+body.right-sidebar-collapsed .right-sidebar:not(.open) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ─── C1: Never clip header flyout dropdowns via overflow-x: hidden ─── */
+@media (max-width: 1080px) {
+  header {
+    overflow: visible !important;
+  }
+  .header-controls {
+    min-width: 0;
+  }
+}
+
+/* ─── M1: Tablet bottom-dock vs minimap vertical clearance (641px–1080px) ─── */
+@media (min-width: 641px) and (max-width: 1080px) {
+  .hud-anchor-bottom-right {
+    bottom: calc(var(--dock-h, 76px) + 1.5rem) !important;
+  }
+}
+
+/* ─── M3, M4, M5: Touch targets (>= 44x44px), spacing, and non-hover ergonomics ─── */
 @media (pointer: coarse) {
   button, select, input[type="file"] { min-height: 44px; }
-  .btn-tool, .btn-quick-view, .btn-sidebar-toggle { min-width: 44px; }
+  .btn-tool,
+  .btn-quick-view,
+  .btn-sidebar-toggle,
+  .btn-shortcuts-toggle,
+  .btn-minimap-tool,
+  .btn-zoom-step,
+  #btn-shortcuts-toggle,
+  #btn-minimap-zoom-in,
+  #btn-minimap-zoom-out,
+  #btn-close-gantt-bar,
+  #btn-shortcuts-close {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  .quick-view-toolbar,
+  .header-controls,
+  .minimap-header-actions {
+    gap: 6px !important;
+  }
+  .minimap-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .minimap-radar-widget {
+    width: min(240px, 86vw) !important;
+    max-width: 86vw !important;
+  }
+  input[type="checkbox"] {
+    min-width: 24px;
+    min-height: 24px;
+    width: 24px;
+    height: 24px;
+  }
 }
-@media (max-width: 767px) {
+
+@media (hover: none), (pointer: coarse) {
+  .prop-row-actions {
+    opacity: 1 !important;
+  }
+  .btn-pick-to-4d {
+    min-height: 36px;
+    padding: 0.25rem 0.55rem;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 768px) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select,
+  textarea,
+  #select-theme-toggle,
+  #workspace-persona-select,
+  .minimap-level-select,
+  #crane-transform-hud input[type="number"] {
+    font-size: 16px !important;
+  }
+}
+
+/* ─── Unified mobile + iPad portrait compact dock & bottom sheets (<= 768px) ─── */
+@media (max-width: 768px) {
+  .hud-anchor-bottom-center {
+    max-width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    width: auto !important;
+  }
   #bottom-toolbar {
     display: flex !important;
     flex-wrap: nowrap;
-    width: calc(100vw - 24px) !important;
-    max-width: calc(100vw - 24px) !important;
+    width: min(calc(100vw - 24px), 560px) !important;
+    max-width: 100% !important;
     height: auto !important;
     min-height: 74px !important;
     overflow: auto;
@@ -66,8 +206,8 @@
   .left-sidebar, .right-sidebar {
     top: auto !important;
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
-    left: 8px !important;
-    right: 8px !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
     width: auto !important;
     max-width: none !important;
     height: min(65dvh, 580px) !important;
@@ -78,10 +218,23 @@
     max-height: 80dvh !important;
     overflow: auto;
   }
-  #minimap-container { max-width: 140px; max-height: 160px; overflow: hidden; }
-  .hud-anchor-bottom-right { bottom: 94px !important; }
+  #minimap-container { max-width: 160px; max-height: 170px; overflow: hidden; }
+  .hud-anchor-bottom-right { bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
   input, select, textarea { font-size: 16px; max-width: 100%; }
 }
+
+/* ─── m2: Narrow mobile portrait header breathing room (<= 430px) ─── */
+@media (max-width: 430px) {
+  #workspace-persona-select {
+    display: none !important;
+  }
+  #select-theme-toggle {
+    min-width: 82px !important;
+    max-width: 112px !important;
+  }
+}
+
+/* ─── C3: Mobile landscape header & sidebars (height <= 500px) ─── */
 @media (max-height: 500px) and (max-width: 1080px) {
   .left-sidebar, .right-sidebar {
     top: 60px !important;
@@ -91,9 +244,23 @@
   }
   #minimap-container { display: none; }
 }
+
+@media (max-height: 500px) and (pointer: coarse) {
+  body {
+    --header-bottom: 3.65rem;
+  }
+  header {
+    height: auto !important;
+    min-height: 46px !important;
+    max-height: none !important;
+    padding-inline: max(0.45rem, env(safe-area-inset-left)) max(0.45rem, env(safe-area-inset-right)) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
+
 button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid var(--accent-500);
   outline-offset: 3px;

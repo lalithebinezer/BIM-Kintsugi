@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BIM Viewer by Lalith Ebinezer</title>
   <meta name="description" content="Enterprise BIM Viewer with IFC model loading, 3D navigation, digital twin data, and section cutting tools." />
   <link rel="manifest" href="./manifest.json" />
@@ -602,7 +602,7 @@
             </button>
 
             <!-- Flyout Dropdown for Saved Custom Views -->
-            <div class="saved-views-flyout hidden" id="menu-saved-views" style="position: absolute; top: calc(100% + 12px); right: 0; width: 360px; z-index: 10000; overflow: hidden;">
+            <div class="saved-views-flyout hidden" id="menu-saved-views" style="position: absolute; top: calc(100% + 10px); right: 0; width: min(360px, calc(100vw - 16px)); z-index: 10010; overflow: hidden;">
               <div id="saved-views-dropdown-content"></div>
             </div>
           </div>

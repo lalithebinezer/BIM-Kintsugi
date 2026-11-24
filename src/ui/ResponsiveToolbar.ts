@@ -23,7 +23,7 @@ export function initResponsiveToolbar() {
       document.activeElement?.classList.contains("compact-secondary");
     dock.classList.remove("tools-expanded");
     more.setAttribute("aria-expanded", "false");
-    if (restoreFocus && matchMedia("(max-width: 767px)").matches) more.focus();
+    if (restoreFocus && matchMedia("(max-width: 768px)").matches) more.focus();
   };
   more.addEventListener("click", () => {
     const expanded = dock.classList.toggle("tools-expanded");
@@ -40,7 +40,7 @@ export function initResponsiveToolbar() {
     const button = (event.target as Element).closest("button");
     if (button && button !== more) close();
   });
-  const compact = matchMedia("(max-width: 767px)");
+  const compact = matchMedia("(max-width: 768px)");
   compact.addEventListener("change", close);
   document.addEventListener("pointerdown", (event) => {
     if (!dock.contains(event.target as Node)) close();

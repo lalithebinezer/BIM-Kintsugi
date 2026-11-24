@@ -419,10 +419,74 @@ export class EquipmentEnvelopeSimulator {
     const minY = Math.min(Math.round(this.modelCenter.z - span), Math.floor(this.transform.y - 10));
     const maxY = Math.max(Math.round(this.modelCenter.z + span), Math.ceil(this.transform.y + 10));
 
+    const vw = typeof window !== "undefined" && window.innerWidth > 0 ? window.innerWidth : 1280;
+    const vh = typeof window !== "undefined" && window.innerHeight > 0 ? window.innerHeight : 800;
+    const hdrBottom = Math.ceil(document.querySelector("header")?.getBoundingClientRect().bottom || 56);
+    const topLeftRect = document.querySelector(".hud-anchor-top-left")?.getBoundingClientRect();
+    const viewCubeRect = document.querySelector(".view-cube-layer")?.getBoundingClientRect();
+    const dockEl =
+      document.querySelector(".timeline-panel") &&
+      getComputedStyle(document.querySelector(".timeline-panel")!).display !== "none"
+        ? document.querySelector(".timeline-panel")
+        : document.querySelector("#bottom-toolbar");
+    const dockTop = Math.floor(dockEl?.getBoundingClientRect().top || vh - 96);
+
+    const hudWidth = Math.min(276, Math.max(240, vw - 16));
+    let initialTop = Math.max(hdrBottom + 10, Math.ceil(topLeftRect?.bottom || 124) + 10);
+    let posStyle = "";
+
+    if (vw >= 960) {
+      // Wide screens: anchor left below Quick-Views bar, respecting open desktop sidebar and Cash-Flow Histogram
+      const leftSidebar = document.querySelector(".left-sidebar");
+      const leftCollapsed = document.body.classList.contains("left-sidebar-collapsed");
+      const leftOpen =
+        Boolean(leftSidebar) &&
+        (!leftCollapsed || leftSidebar!.classList.contains("open"));
+      const leftW = leftOpen ? Math.max(250, Math.ceil(leftSidebar!.getBoundingClientRect().width || 280)) : 0;
+      const initialLeft = leftOpen ? leftW + 24 : 16;
+
+      // Avoid colliding with an already-open Cash-Flow Histogram if horizontal tracks overlap
+      const cfhEl = document.getElementById("cashflow-histogram-drawer");
+      if (cfhEl && !cfhEl.classList.contains("hidden")) {
+        const cfhRect = cfhEl.getBoundingClientRect();
+        const horizOverlap = initialLeft < cfhRect.right + 8 && initialLeft + hudWidth > cfhRect.left - 8;
+        if (horizOverlap && cfhRect.left - 12 >= initialLeft + hudWidth) {
+          // Fits left of histogram cleanly
+        } else if (horizOverlap && vw - cfhRect.right >= hudWidth + 24) {
+          // Place cleanly to the right of histogram below ViewCube
+          const rightTop = Math.max(hdrBottom + 10, Math.ceil(viewCubeRect?.bottom || hdrBottom + 64) + 10);
+          const minimapEl = document.querySelector(".hud-anchor-bottom-right");
+          const mmTop =
+            minimapEl && getComputedStyle(minimapEl).display !== "none"
+              ? Math.floor(minimapEl.getBoundingClientRect().top)
+              : dockTop;
+          const rightMaxH = Math.max(170, Math.min(400, Math.min(mmTop, dockTop) - rightTop - 12));
+          posStyle = `top:${rightTop}px;left:${Math.ceil(cfhRect.right) + 12}px;max-height:${rightMaxH}px;`;
+        } else if (horizOverlap && cfhRect.top - initialTop >= 180) {
+          const maxH = Math.max(160, Math.floor(cfhRect.top - initialTop - 10));
+          posStyle = `top:${initialTop}px;left:${initialLeft}px;max-height:${maxH}px;`;
+        }
+      }
+      if (!posStyle) {
+        const maxH = Math.max(180, Math.min(400, Math.floor(dockTop - initialTop - 12)));
+        posStyle = `top:${initialTop}px;left:${initialLeft}px;max-height:${maxH}px;`;
+      }
+    } else {
+      // Compact / mobile screens: stay cleanly below top controls & above bottom dock with internal scroll
+      const topClear = Math.max(
+        hdrBottom + 8,
+        Math.ceil(topLeftRect?.bottom || hdrBottom + 44) + 8,
+        Math.ceil(viewCubeRect?.bottom || hdrBottom + 50) + 8
+      );
+      initialTop = vh <= 500 ? hdrBottom + 6 : Math.min(topClear, Math.max(hdrBottom + 8, dockTop - 200));
+      const maxH = Math.max(140, Math.floor(Math.min(dockTop - initialTop - 10, vh - initialTop - 14)));
+      posStyle = `top:${initialTop}px;right:8px;max-height:${maxH}px;`;
+    }
+
     const panel = document.createElement("div");
     panel.id = "crane-transform-hud";
     panel.style.cssText =
-      "position:fixed;top:138px;right:18px;z-index:890;width:284px;padding:0.72rem 0.82rem;border-radius:12px;background:var(--studio-glass-elevated,#12141c);backdrop-filter:blur(18px);border:1px solid var(--studio-hairline-strong,rgba(255,255,255,0.16));color:var(--text-primary,#f8fafc);box-shadow:0 16px 40px rgba(0,0,0,0.45);display:flex;flex-direction:column;gap:0.52rem;font-size:0.72rem;";
+      `position:fixed;${posStyle}z-index:890;width:${hudWidth}px;overflow-y:auto;overscroll-behavior:contain;padding:0.72rem 0.82rem;border-radius:12px;background:var(--studio-glass-elevated,#12141c);backdrop-filter:blur(18px);border:1px solid var(--studio-hairline-strong,rgba(255,255,255,0.16));color:var(--text-primary,#f8fafc);box-shadow:0 16px 40px rgba(0,0,0,0.45);display:flex;flex-direction:column;gap:0.52rem;font-size:0.72rem;`;
 
     panel.innerHTML = `
       <div id="crane-hud-header" style="display:flex;align-items:center;justify-content:space-between;cursor:grab;user-select:none;padding-bottom:0.35rem;border-bottom:1px solid var(--studio-hairline,rgba(255,255,255,0.08));">
