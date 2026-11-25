@@ -2,12 +2,14 @@ var e=!1;function t(t){let n=t??document.getElementById(`enterprise-drawers-root
     <div id="measurement-panel" class="enterprise-drawer hidden">
       <div class="drawer-header">
         <div class="drawer-title-wrap">
+          <span class="measure-float-grip" title="Drag to move floating palette" aria-hidden="true"><svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor"><circle cx="3" cy="3" r="1.2"/><circle cx="9" cy="3" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="9" cy="7" r="1.2"/><circle cx="3" cy="11" r="1.2"/><circle cx="9" cy="11" r="1.2"/></svg></span>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2.2"><path d="M21.3 8.7 8.7 21.3a2.12 2.12 0 0 1-3 0l-4.4-4.4a2.12 2.12 0 0 1 0-3L14 1.3a2.12 2.12 0 0 1 3 0l4.3 4.4a2.12 2.12 0 0 1 0 3Z"/><line x1="14.5" y1="4.5" x2="16.5" y2="6.5"/><line x1="11" y1="8" x2="13" y2="10"/><line x1="7.5" y1="11.5" x2="9.5" y2="13.5"/><line x1="4" y1="15" x2="6" y2="17"/></svg>
           <h3>3D Snap Dimensioning</h3>
         </div>
         <div class="drawer-header-actions">
           <span id="measurement-mode-badge" class="drawer-status-tag">Ready</span>
-          <button class="btn-icon drawer-center-toggle-btn" data-target="measurement-panel" aria-label="Toggle Centralized Modal / Right Dock" title="Toggle Centralized Modal / Right Dock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button type="button" id="btn-measure-collapse" class="btn-icon measure-collapse-btn" aria-label="Collapse or Expand Floating Palette" aria-expanded="true" title="Collapse / Expand Floating Palette"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+          <button class="btn-icon drawer-center-toggle-btn" data-target="measurement-panel" aria-label="Toggle Floating Palette or Docked Drawer" title="Toggle Floating Palette / Docked Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button class="btn-icon drawer-close-btn" data-target="measurement-panel" aria-label="Close Dimensions Drawer" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
@@ -41,6 +43,17 @@ var e=!1;function t(t){let n=t??document.getElementById(`enterprise-drawers-root
               <input type="checkbox" id="chk-measure-snap" aria-label="Enable Measurement Edge and Vertex Snap" checked />
               <span class="toggle-slider"></span>
             </label>
+          </div>
+          <div class="section-card-row" style="margin-top:0.35rem;">
+            <label for="select-measure-unit">Display Units</label>
+            <select id="select-measure-unit" class="bk-select bk-select--sm" aria-label="Measurement Display Units" style="width:auto;min-width:128px;">
+              <option value="m" selected>Meters (m)</option>
+              <option value="mm">Millimeters (mm)</option>
+              <option value="cm">Centimeters (cm)</option>
+              <option value="ft-in">Feet &amp; Inches (ft-in)</option>
+              <option value="ft">Decimal Feet (ft)</option>
+              <option value="in">Inches (in)</option>
+            </select>
           </div>
           <div class="live-measure-preview">
             <span class="live-label">Live Cursor:</span>
