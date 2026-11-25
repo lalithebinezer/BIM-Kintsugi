@@ -127,6 +127,166 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   }
   (window as any).closeAllEnterpriseDrawers = closeAllEnterpriseDrawers;
 
+  // Floatable, Draggable & Collapsible 3D Snap Dimensioning Palette (Classic UI + Spatial Cockpit UI)
+  const MEASURE_FLOAT_KEY = "bim_measure_floating";
+  const MEASURE_FLOAT_POS_KEY = "bim_measure_float_pos";
+
+  const clampMeasureFloatPosition = (panel: HTMLElement, left: number, top: number) => {
+    const vw = typeof window !== "undefined" ? window.innerWidth : 1440;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 900;
+    const rect = panel.getBoundingClientRect();
+    const panelW = rect.width > 40 ? rect.width : Math.min(332, vw - 24);
+    const minTop = 64;
+    const maxLeft = Math.max(12, vw - panelW - 12);
+    const maxTop = Math.max(minTop, vh - 68);
+    const clampedLeft = Math.round(Math.min(Math.max(12, left), maxLeft));
+    const clampedTop = Math.round(Math.min(Math.max(minTop, top), maxTop));
+    panel.style.setProperty("--float-left", `${clampedLeft}px`);
+    panel.style.setProperty("--float-top", `${clampedTop}px`);
+    panel.style.setProperty("--float-right", "auto");
+    return { left: clampedLeft, top: clampedTop };
+  };
+
+  const restoreMeasureFloatPosition = (panel: HTMLElement) => {
+    try {
+      const raw = localStorage.getItem(MEASURE_FLOAT_POS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed?.left === "number" && typeof parsed?.top === "number") {
+          clampMeasureFloatPosition(panel, parsed.left, parsed.top);
+          return;
+        }
+      }
+    } catch {
+      /* ignore invalid saved pos */
+    }
+    panel.style.removeProperty("--float-left");
+    panel.style.removeProperty("--float-top");
+    panel.style.removeProperty("--float-right");
+  };
+
+  const applyMeasurementFloatingMode = (floating: boolean, persist = true) => {
+    const panel = document.getElementById("measurement-panel");
+    if (!panel) return;
+    panel.classList.remove("centralized");
+    panel.classList.toggle("is-floating", floating);
+    if (floating) {
+      restoreMeasureFloatPosition(panel);
+    } else {
+      panel.classList.remove("is-collapsed");
+      panel.style.removeProperty("--float-left");
+      panel.style.removeProperty("--float-top");
+      panel.style.removeProperty("--float-right");
+    }
+    const toggleBtn = panel.querySelector<HTMLElement>(".drawer-center-toggle-btn");
+    if (toggleBtn) {
+      toggleBtn.title = floating ? "Dock to Side Drawer" : "Float Palette Over Viewport";
+      toggleBtn.setAttribute("aria-pressed", String(floating));
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(MEASURE_FLOAT_KEY, String(floating));
+      } catch {
+        /* ignore */
+      }
+    }
+    (window as any).__mobileWorkspace?.syncState?.();
+  };
+
+  const initFloatingMeasurementPalette = () => {
+    const panel = document.getElementById("measurement-panel");
+    const header = panel?.querySelector<HTMLElement>(".drawer-header");
+    if (!panel || !header || panel.dataset.floatBound === "1") return;
+    panel.dataset.floatBound = "1";
+
+    let dragging = false;
+    let pointerId = -1;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    header.addEventListener("pointerdown", (ev: PointerEvent) => {
+      if (!panel.classList.contains("is-floating")) return;
+      if (ev.button !== 0 && ev.pointerType === "mouse") return;
+      if ((ev.target as HTMLElement)?.closest("button, input, select, a, label")) return;
+
+      const rect = panel.getBoundingClientRect();
+      dragging = true;
+      pointerId = ev.pointerId;
+      offsetX = ev.clientX - rect.left;
+      offsetY = ev.clientY - rect.top;
+      panel.classList.add("is-dragging");
+      clampMeasureFloatPosition(panel, rect.left, rect.top);
+      try {
+        header.setPointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      ev.preventDefault();
+    });
+
+    header.addEventListener("pointermove", (ev: PointerEvent) => {
+      if (!dragging || ev.pointerId !== pointerId) return;
+      clampMeasureFloatPosition(panel, ev.clientX - offsetX, ev.clientY - offsetY);
+    });
+
+    const endDrag = (ev: PointerEvent) => {
+      if (!dragging || ev.pointerId !== pointerId) return;
+      dragging = false;
+      pointerId = -1;
+      panel.classList.remove("is-dragging");
+      try {
+        if (header.hasPointerCapture(ev.pointerId)) header.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      const rect = panel.getBoundingClientRect();
+      const clamped = clampMeasureFloatPosition(panel, rect.left, rect.top);
+      try {
+        localStorage.setItem(MEASURE_FLOAT_POS_KEY, JSON.stringify(clamped));
+      } catch {
+        /* ignore */
+      }
+    };
+    header.addEventListener("pointerup", endDrag);
+    header.addEventListener("pointercancel", endDrag);
+
+    // Collapse / Expand Floating Palette button + double-click header shortcut
+    const toggleCollapse = (force?: boolean) => {
+      if (!panel.classList.contains("is-floating")) return;
+      const collapsed = force !== undefined ? force : !panel.classList.contains("is-collapsed");
+      panel.classList.toggle("is-collapsed", collapsed);
+      const colBtn = document.getElementById("btn-measure-collapse");
+      if (colBtn) colBtn.setAttribute("aria-expanded", String(!collapsed));
+    };
+
+    document.getElementById("btn-measure-collapse")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      toggleCollapse();
+    });
+    header.addEventListener("dblclick", (ev) => {
+      if ((ev.target as HTMLElement)?.closest("button, input, select, a, label")) return;
+      toggleCollapse();
+    });
+
+    window.addEventListener("resize", () => {
+      if (panel.classList.contains("is-floating") && !panel.classList.contains("hidden")) {
+        const leftVal = parseFloat(panel.style.getPropertyValue("--float-left"));
+        const topVal = parseFloat(panel.style.getPropertyValue("--float-top"));
+        if (Number.isFinite(leftVal) && Number.isFinite(topVal)) {
+          clampMeasureFloatPosition(panel, leftVal, topVal);
+        }
+      }
+    });
+
+    (window as any).toggleMeasurementFloat = (force?: boolean) => {
+      const next = force !== undefined ? force : !panel.classList.contains("is-floating");
+      applyMeasurementFloatingMode(next, true);
+      return next;
+    };
+    (window as any).setMeasurementFloatCollapsed = (collapsed: boolean) => toggleCollapse(collapsed);
+  };
+  initFloatingMeasurementPalette();
+
   function toggleEnterpriseDrawer(panelId: string) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -135,23 +295,29 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     if (!isCurrentlyOpen) {
       panel.classList.remove("hidden");
       (panel as HTMLElement).style.display = "";
-      if (localStorage.getItem("bim-drawer-centralized") === "true") {
+      if (panelId === "measurement-panel") {
+        // Default to floating palette on both Classic & Cockpit UI unless explicitly docked
+        const shouldFloat = localStorage.getItem(MEASURE_FLOAT_KEY) !== "false";
+        applyMeasurementFloatingMode(shouldFloat, false);
+      } else if (localStorage.getItem("bim-drawer-centralized") === "true") {
         panel.classList.add("centralized");
       } else {
         panel.classList.remove("centralized");
       }
-      if (!document.body.classList.contains("right-sidebar-collapsed")) {
-        document.body.classList.add("right-sidebar-collapsed");
-      }
-      if (window.innerWidth <= 1440 && !document.body.classList.contains("left-sidebar-collapsed")) {
-        document.body.classList.add("left-sidebar-collapsed");
+      if (!panel.classList.contains("is-floating")) {
+        if (!document.body.classList.contains("right-sidebar-collapsed")) {
+          document.body.classList.add("right-sidebar-collapsed");
+        }
+        if (window.innerWidth <= 1440 && !document.body.classList.contains("left-sidebar-collapsed")) {
+          document.body.classList.add("left-sidebar-collapsed");
+        }
       }
       SoundManager.getInstance().playClick();
     }
     syncDockActiveStates();
   }
 
-  // Delegated click listener for centralized workspace toggle button
+  // Delegated click listener for centralized / float-dock workspace toggle button
   document.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement)?.closest(".drawer-center-toggle-btn") as HTMLElement | null;
     if (btn) {
@@ -159,6 +325,15 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       const targetId = btn.getAttribute("data-target");
       const targetPanel = targetId ? document.getElementById(targetId) : btn.closest(".enterprise-drawer");
       if (targetPanel) {
+        if (targetPanel.id === "measurement-panel") {
+          const nextFloat = !targetPanel.classList.contains("is-floating");
+          applyMeasurementFloatingMode(nextFloat, true);
+          showToast(
+            nextFloat ? "3D Snap Dimensioning: Floating Palette (drag header to move)" : "3D Snap Dimensioning: Docked to Side Drawer",
+            "info"
+          );
+          return;
+        }
         targetPanel.classList.toggle("centralized");
         const isCentralized = targetPanel.classList.contains("centralized");
         localStorage.setItem("bim-drawer-centralized", String(isCentralized));
@@ -411,6 +586,17 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   document.getElementById("chk-measure-snap")?.addEventListener("change", (e) => {
     measurementSuite.setSnapEnabled((e.target as HTMLInputElement).checked);
   });
+
+  const measureUnitSelect = document.getElementById("select-measure-unit") as HTMLSelectElement | null;
+  if (measureUnitSelect) {
+    measureUnitSelect.value = measurementSuite.getUnit();
+    measureUnitSelect.addEventListener("change", () => {
+      const nextUnit = measureUnitSelect.value as any;
+      measurementSuite.setUnit(nextUnit);
+      showToast(`Measurement Units: ${measureUnitSelect.selectedOptions[0]?.textContent || nextUnit}`, "info");
+    });
+  }
+  (window as any).setMeasurementUnit = (unit: any) => measurementSuite.setUnit(unit);
 
   document.getElementById("btn-clear-all-measurements")?.addEventListener("click", () => {
     measurementSuite.clearAllMeasurements();

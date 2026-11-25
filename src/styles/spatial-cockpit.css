@@ -1148,7 +1148,7 @@ body.mode-4d .mob-dock.bk-cockpit {
     z-index: 420 !important;
   }
 
-  .enterprise-drawer:not(.centralized) {
+  .enterprise-drawer:not(.centralized):not(.is-floating) {
     top: calc(var(--header-bottom) + 12px) !important;
     right: 14px !important;
     bottom: 16px !important;
@@ -1160,7 +1160,7 @@ body.mode-4d .mob-dock.bk-cockpit {
     box-shadow: var(--bk-sheen), var(--bk-shadow-float) !important;
   }
 
-  body:has(.enterprise-drawer:not(.hidden):not(.centralized)) {
+  body:has(.enterprise-drawer:not(.hidden):not(.centralized):not(.is-floating)) {
     --cockpit-right-w: 400px;
   }
 }
@@ -1547,7 +1547,7 @@ body:not(.mode-4d) #timeline-options-modal {
   .left-sidebar { left: 12px !important; right: auto !important; }
   .right-sidebar { right: 12px !important; left: auto !important; }
 
-  .enterprise-drawer {
+  .enterprise-drawer:not(.is-floating) {
     top: calc(var(--header-bottom) + 10px) !important;
     right: 12px !important;
     left: auto !important;
@@ -1773,7 +1773,7 @@ body:not(.mode-4d) #timeline-options-modal {
     display: none !important;
   }
 
-  .enterprise-drawer {
+  .enterprise-drawer:not(.is-floating) {
     top: auto !important;
     left: 0 !important;
     right: 0 !important;
@@ -1788,7 +1788,7 @@ body:not(.mode-4d) #timeline-options-modal {
     z-index: 10008 !important;
   }
 
-  .enterprise-drawer .drawer-center-toggle-btn {
+  .enterprise-drawer:not(#measurement-panel) .drawer-center-toggle-btn {
     display: none !important;
   }
 
@@ -2030,7 +2030,7 @@ body:not(.mode-4d) #timeline-options-modal {
   .mob-sheet.bk-cockpit,
   .left-sidebar,
   .right-sidebar,
-  .enterprise-drawer {
+  .enterprise-drawer:not(.is-floating) {
     top: calc(var(--mob-header-h) + max(6px, env(safe-area-inset-top)) + 8px) !important;
     bottom: calc(var(--mob-dock-h) + max(6px, env(safe-area-inset-bottom)) + 10px) !important;
     left: auto !important;

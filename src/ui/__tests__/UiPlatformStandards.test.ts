@@ -642,4 +642,38 @@ describe("UI Platform Standards & Global Component Contract", () => {
 
     resetMobileWorkspaceForTest();
   });
+
+  it("renders #measurement-panel with floating palette drag grip, Display Units selector, and collapse control without occupying Cockpit right rail", () => {
+    resetMobileWorkspaceForTest();
+    resetEnterpriseDrawersForTest();
+
+    document.body.innerHTML = `
+      <div class="ui-layer">
+        <header><div class="brand"><div class="brand-logo">K</div></div><div class="header-controls"></div></header>
+        <div id="enterprise-drawers-root"></div>
+      </div>
+    `;
+
+    mountEnterpriseDrawers();
+    const panel = document.getElementById("measurement-panel")!;
+    expect(panel.querySelector(".measure-float-grip")).not.toBeNull();
+    expect(document.getElementById("btn-measure-collapse")).not.toBeNull();
+    expect(document.getElementById("select-measure-unit")).not.toBeNull();
+
+    const ctrl = initMobileWorkspace();
+    ctrl.setUiLayout("cockpit", false);
+
+    // Floating measurement palette stays non-blocking (does not mark cockpit right edge as occupied)
+    panel.classList.remove("hidden");
+    panel.classList.add("is-floating");
+    ctrl.syncState();
+    expect(document.body.classList.contains("cockpit-right-occupied")).toBe(false);
+
+    // Docked drawer DOES occupy cockpit right edge so the camera rail shifts cleanly
+    panel.classList.remove("is-floating");
+    ctrl.syncState();
+    expect(document.body.classList.contains("cockpit-right-occupied")).toBe(true);
+
+    resetMobileWorkspaceForTest();
+  });
 });

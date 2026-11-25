@@ -544,9 +544,9 @@ export class AnnotationModule {
       }
 
       const toolsNav = document.getElementById("tools-settings-cat-nav");
-      const measureBtn = toolsNav?.querySelector('[data-tcat="measure"]') as HTMLElement;
-      if (measureBtn && !measureBtn.classList.contains("active")) {
-        measureBtn.click();
+      const pinsBtn = toolsNav?.querySelector('[data-tcat="pins"]') as HTMLElement;
+      if (pinsBtn && !pinsBtn.classList.contains("active")) {
+        pinsBtn.click();
       }
 
       const toggleAnnotation = document.getElementById("settings-toggle-annotation") as HTMLInputElement;

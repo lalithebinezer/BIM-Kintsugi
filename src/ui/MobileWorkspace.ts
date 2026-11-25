@@ -1287,13 +1287,16 @@ export function initMobileWorkspace(): MobileWorkspaceController {
       const is4D = document.body.classList.contains("mode-4d");
       const isLeftOpen = isLeftPanelOpen();
       const isRightOpen = isRightPanelOpen();
-      const hasOpenDrawer = Array.from(document.querySelectorAll<HTMLElement>(".enterprise-drawer")).some(
-        (d) => !d.classList.contains("hidden") && d.style.display !== "none"
+      const hasDockedDrawer = Array.from(document.querySelectorAll<HTMLElement>(".enterprise-drawer")).some(
+        (d) =>
+          !d.classList.contains("hidden") &&
+          d.style.display !== "none" &&
+          !d.classList.contains("is-floating")
       );
 
-      const anyPanelOpen = Boolean(openSheetId || isLeftOpen || isRightOpen || hasOpenDrawer);
+      const anyPanelOpen = Boolean(openSheetId || isLeftOpen || isRightOpen || hasDockedDrawer);
       setClassIfChanged(document.body, "mob-panel-open", anyPanelOpen);
-      setClassIfChanged(document.body, "cockpit-right-occupied", isRightOpen || hasOpenDrawer);
+      setClassIfChanged(document.body, "cockpit-right-occupied", isRightOpen || hasDockedDrawer);
 
       // Sync bottom 5-tab active indicator
       const setTabActive = (nav: string, active: boolean) => {
@@ -1309,7 +1312,7 @@ export function initMobileWorkspace(): MobileWorkspaceController {
       setTabActive("inspect", isRightOpen);
       setTabActive("tools", openSheetId === "tools");
       setTabActive("4d", is4D);
-      setTabActive("suites", openSheetId === "suites" || hasOpenDrawer);
+      setTabActive("suites", openSheetId === "suites" || hasDockedDrawer);
 
       // Mirror active tool states from desktop buttons into mobile tiles & rail
       const mirrorActive = (mobId: string, srcId: string) => {
@@ -1375,10 +1378,14 @@ export function initMobileWorkspace(): MobileWorkspaceController {
         document.getElementById("shortcuts-modal") &&
           !document.getElementById("shortcuts-modal")!.classList.contains("hidden")
       );
+      const hasFloatingDrawer = Array.from(document.querySelectorAll<HTMLElement>(".enterprise-drawer.is-floating")).some(
+        (d) => !d.classList.contains("hidden") && d.style.display !== "none"
+      );
       const showEmpty =
         !launcherDismissed &&
         !hasModel &&
         !anyPanelOpen &&
+        !hasFloatingDrawer &&
         !is4D &&
         !helpOpen &&
         !document.body.classList.contains("walkthrough-active");

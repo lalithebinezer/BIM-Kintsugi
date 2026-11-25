@@ -392,7 +392,7 @@ body.right-sidebar-collapsed {
   --right-safe-offset: 0.75rem;
 }
 
-body:has(.enterprise-drawer:not(.hidden):not(.centralized)) {
+body:has(.enterprise-drawer:not(.hidden):not(.centralized):not(.is-floating)) {
   --right-safe-offset: calc(390px + 1.5rem);
 }
 
@@ -5885,7 +5885,7 @@ body[data-theme="light"] {
     z-index: 10002;
   }
 
-  body:has(.enterprise-drawer:not(.hidden):not(.centralized)) {
+  body:has(.enterprise-drawer:not(.hidden):not(.centralized):not(.is-floating)) {
     --right-safe-offset: calc(390px + 1.35rem);
   }
 
@@ -8809,8 +8809,105 @@ body.right-sidebar-collapsed .right-sidebar {
   overflow: hidden !important;
 }
 
+.enterprise-drawer.is-floating {
+  position: fixed !important;
+  top: var(--float-top, calc(var(--header-bottom, 4.35rem) + 14px)) !important;
+  left: var(--float-left, auto) !important;
+  right: var(--float-right, 16px) !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: min(376px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  height: auto !important;
+  max-height: min(560px, calc(100dvh - var(--header-bottom, 4.35rem) - 96px)) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border-strong, rgba(255, 255, 255, 0.12)) !important;
+  z-index: 10012 !important;
+  animation: none !important;
+  transition: box-shadow 0.16s ease;
+}
+
+.enterprise-drawer.is-floating .drawer-header {
+  padding: 0.65rem 0.75rem;
+  gap: 0.4rem;
+}
+
+.enterprise-drawer.is-floating .drawer-title-wrap {
+  min-width: 0;
+  overflow: hidden;
+  gap: 0.35rem;
+}
+
+.enterprise-drawer.is-floating .drawer-title-wrap h3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.78rem;
+}
+
+.enterprise-drawer.is-floating .drawer-header-actions {
+  flex-shrink: 0;
+  gap: 0.22rem;
+}
+
+.enterprise-drawer.is-floating .drawer-status-tag {
+  white-space: nowrap;
+  font-size: 0.58rem;
+  padding: 0.12rem 0.38rem;
+}
+
+.enterprise-drawer.is-floating.is-dragging {
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--accent-500, #D4FF3F) !important;
+  transition: none !important;
+}
+
+.enterprise-drawer.is-floating .drawer-header {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.enterprise-drawer.is-floating.is-dragging .drawer-header {
+  cursor: grabbing;
+}
+
+.measure-float-grip {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #94A3B8);
+  opacity: 0.72;
+  flex-shrink: 0;
+  margin-right: 0.1rem;
+}
+
+.enterprise-drawer.is-floating .measure-float-grip {
+  display: inline-flex;
+}
+
+.enterprise-drawer:not(.is-floating) .measure-collapse-btn {
+  display: none;
+}
+
+.enterprise-drawer.is-floating.is-collapsed .drawer-body {
+  display: none !important;
+}
+
+.enterprise-drawer.is-floating.is-collapsed .drawer-header {
+  border-bottom: none !important;
+}
+
+.enterprise-drawer.is-floating.is-collapsed .measure-collapse-btn svg {
+  transform: rotate(180deg);
+}
+
+.measure-collapse-btn svg {
+  transition: transform 0.16s ease;
+}
+
 .enterprise-drawer.hidden,
 .enterprise-drawer.centralized.hidden,
+.enterprise-drawer.is-floating.hidden,
 .enterprise-drawer[style*="display: none"],
 .enterprise-drawer[hidden] {
   display: none !important;

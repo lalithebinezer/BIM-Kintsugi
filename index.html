@@ -2700,25 +2700,24 @@
           </div>
         </div>
 
-        <!-- Tab 4: Measurements & Tools Widget -->
+        <!-- Tab 4: Tools & 3D Pins Widget -->
         <div class="tab-content-panel" id="tab-right-tools">
           <div class="panel widget-panel measurements-widget">
             <div class="panel-header">
               <div class="header-title-group">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="5" x2="19" y2="19" />
-                  <circle cx="5" cy="5" r="2" />
-                  <circle cx="19" cy="19" r="2" />
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
                 </svg>
-                <span>Measurements & Tools</span>
+                <span>Tools &amp; Pins</span>
               </div>
             </div>
             <div class="panel-body thin-scrollbar">
               <!-- Categorized Tools Sub-Nav -->
               <div class="settings-category-nav" id="tools-settings-cat-nav" style="display: flex; gap: 0.25rem; background: var(--bg-card); padding: 0.25rem; border: 1px solid var(--border-color); border-radius: 4px; box-shadow: none; margin-bottom: 0.65rem;">
-                <button class="tools-cat-btn active" data-tcat="measure" title="Tape & Pin Measurement Tools" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.3rem 0.1rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 3px; color: var(--text-primary); cursor: pointer; font-size: 0.6rem; font-weight: 800; font-family: var(--font-body); transition: all 0.15s ease;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="5" x2="19" y2="19"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/></svg>
-                  <span>Measure</span>
+                <button class="tools-cat-btn active" data-tcat="pins" title="3D Pin Annotations & Tours" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.3rem 0.1rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 3px; color: var(--text-primary); cursor: pointer; font-size: 0.6rem; font-weight: 800; font-family: var(--font-body); transition: all 0.15s ease;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <span>3D Pins</span>
                 </button>
                 <button class="tools-cat-btn" data-tcat="box" title="6-Axis Section Box Slicing" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.3rem 0.1rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 3px; color: var(--text-primary); cursor: pointer; font-size: 0.6rem; font-weight: 800; font-family: var(--font-body); transition: all 0.15s ease;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -2734,19 +2733,8 @@
                 </button>
               </div>
 
-              <!-- TOOLS CATEGORY 1: MEASUREMENTS -->
-              <div class="tools-cat-panel active" id="tcat-measure" style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="scene-control-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.5rem 0.65rem; border-radius: 2px; box-shadow: none;">
-                  <div class="scene-control-label" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--text-primary); font-weight: 800;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="15" y2="6" /><line x1="3" y1="18" x2="18" y2="18" /></svg>
-                    <span>Tape Measure Tool</span>
-                  </div>
-                  <label class="toggle-switch" for="settings-toggle-measure" aria-label="Toggle Tape Measure Tool">
-                    <input type="checkbox" id="settings-toggle-measure" aria-label="Tape Measure Tool" />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-
+              <!-- TOOLS CATEGORY 1: 3D PIN ANNOTATIONS -->
+              <div class="tools-cat-panel active" id="tcat-pins" style="display: flex; flex-direction: column; gap: 0.6rem;">
                 <div class="scene-control-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.5rem 0.65rem; border-radius: 2px; box-shadow: none;">
                   <div class="scene-control-label" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--text-primary); font-weight: 800;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
@@ -2868,11 +2856,6 @@
                     </button>
                   </div>
                 </div>
-
-                <button class="btn-secondary" id="btn-clear-measurements" style="width: 100%; border-color: var(--color-warning); color: var(--color-warning); display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.72rem; padding: 0.45rem; font-weight: 800; margin-bottom: 0.35rem;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  Clear Tape Measurements
-                </button>
               </div>
 
               <!-- TOOLS CATEGORY 2: SECTION BOX SLICING -->

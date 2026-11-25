@@ -7671,18 +7671,7 @@ container.addEventListener("pointerup", (e: PointerEvent) => {
   }
 });
 
-// --- TAPE MEASURE BINDINGS ---
-const settingsToggleMeasure = document.getElementById("settings-toggle-measure") as HTMLInputElement | null;
-settingsToggleMeasure?.addEventListener("change", () => {
-  const suite = MeasurementSuite.getInstance();
-  if (settingsToggleMeasure.checked) {
-    suite.startMeasurement("distance");
-  } else {
-    suite.stopMeasurement();
-    measurements.cancelCreation();
-  }
-});
-
+// --- NATIVE MEASUREMENT SHORTCUT FALLBACK ---
 container.addEventListener("click", () => {
   const suite = MeasurementSuite.getInstance();
   if (measurements.enabled && (!suite.isMeasuringActive())) {
@@ -7699,15 +7688,6 @@ window.addEventListener("keydown", (e) => {
     }
   }
 });
-
-const btnClearMeasurements = document.getElementById("btn-clear-measurements");
-if (btnClearMeasurements) {
-  btnClearMeasurements.addEventListener("click", () => {
-    MeasurementSuite.getInstance().clearAllMeasurements();
-    measurements.list.clear();
-    measurements.cancelCreation();
-  });
-}
 
 // --- BCF ISSUE MANAGEMENT BINDINGS ---
 const btnCreateBcfTopic = document.getElementById("btn-create-bcf-topic");

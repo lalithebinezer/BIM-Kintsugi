@@ -170,7 +170,7 @@ export class UIManager {
       document.querySelector('.right-sidebar')?.classList.remove('open');
       document.getElementById('sidebar-backdrop')?.classList.remove('active');
       document.querySelectorAll('.mobile-nav-btn').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+      document.querySelectorAll('.enterprise-drawer:not(.is-floating)').forEach((d) => d.classList.add('hidden'));
       document.getElementById('timeline-options-modal')?.classList.add('hidden');
       document.getElementById('btn-timeline-options-hub')?.classList.remove('active');
     };
@@ -201,7 +201,7 @@ export class UIManager {
         document.body.classList.toggle('right-sidebar-collapsed');
         if (!document.body.classList.contains('right-sidebar-collapsed')) {
           document.body.classList.add('left-sidebar-collapsed');
-          document.querySelectorAll('.enterprise-drawer').forEach((d) => d.classList.add('hidden'));
+          document.querySelectorAll('.enterprise-drawer:not(.is-floating)').forEach((d) => d.classList.add('hidden'));
         }
       } else {
         const rightSidebar = document.querySelector('.right-sidebar');

@@ -9,6 +9,95 @@ import { PointerInputArbiter } from "../core/PointerInputArbiter";
 import { ResourceLifecycleManager } from "../core/ResourceLifecycleManager";
 
 export type SnapType = "vertex" | "edge" | "midpoint" | "face" | "free";
+export type MeasurementUnit = "m" | "mm" | "cm" | "ft-in" | "ft" | "in";
+
+export const MEASUREMENT_UNIT_STORAGE_KEY = "bim_measurement_unit";
+const VALID_UNITS: readonly MeasurementUnit[] = ["m", "mm", "cm", "ft-in", "ft", "in"];
+
+export function isMeasurementUnit(val: unknown): val is MeasurementUnit {
+  return typeof val === "string" && (VALID_UNITS as readonly string[]).includes(val);
+}
+
+/**
+ * Formats a linear distance in meters into the selected architectural/engineering display unit.
+ */
+export function formatMeasurementLength(meters: number, unit: MeasurementUnit, compact = false): string {
+  const safe = Number.isFinite(meters) ? meters : 0;
+  switch (unit) {
+    case "mm": {
+      const mm = safe * 1000;
+      const digits = Math.abs(mm) < 10 && !compact ? 1 : 0;
+      return `${mm.toFixed(digits)} mm`;
+    }
+    case "cm":
+      return `${(safe * 100).toFixed(1)} cm`;
+    case "ft":
+      return `${(safe * 3.280839895).toFixed(compact ? 2 : 3)} ft`;
+    case "in":
+      return `${(safe * 39.37007874).toFixed(compact ? 1 : 2)} in`;
+    case "ft-in": {
+      const sign = safe < 0 ? "-" : "";
+      const totalInches = Math.abs(safe) * 39.37007874;
+      let feet = Math.floor(totalInches / 12);
+      let inches = Math.round((totalInches - feet * 12) * 10) / 10;
+      if (inches >= 12) {
+        feet += 1;
+        inches = 0;
+      }
+      if (feet === 0) return `${sign}${inches.toFixed(1)}"`;
+      return `${sign}${feet}'-${inches.toFixed(1)}"`;
+    }
+    case "m":
+    default:
+      return `${safe.toFixed(compact ? 2 : 3)} m`;
+  }
+}
+
+/**
+ * Formats a surface area in square meters into the selected display unit.
+ */
+export function formatMeasurementArea(sqMeters: number, unit: MeasurementUnit): string {
+  const safe = Number.isFinite(sqMeters) ? sqMeters : 0;
+  switch (unit) {
+    case "mm":
+      return `${Math.round(safe * 1e6).toLocaleString("en-US")} mm²`;
+    case "cm":
+      return `${(safe * 1e4).toLocaleString("en-US", { maximumFractionDigits: 1 })} cm²`;
+    case "ft":
+    case "ft-in":
+      return `${(safe * 10.763910417).toFixed(2)} ft²`;
+    case "in":
+      return `${(safe * 1550.0031).toFixed(1)} in²`;
+    case "m":
+    default:
+      return `${safe.toFixed(2)} m²`;
+  }
+}
+
+/**
+ * Formats a volume in cubic meters into the selected display unit.
+ */
+export function formatMeasurementVolume(cuMeters: number, unit: MeasurementUnit): string {
+  const safe = Number.isFinite(cuMeters) ? cuMeters : 0;
+  switch (unit) {
+    case "mm":
+      return `${Math.round(safe * 1e9).toLocaleString("en-US")} mm³`;
+    case "cm":
+      return `${Math.round(safe * 1e6).toLocaleString("en-US")} cm³`;
+    case "ft":
+    case "ft-in":
+      return `${(safe * 35.314666721).toFixed(2)} ft³`;
+    case "in":
+      return `${(safe * 61023.744).toFixed(1)} in³`;
+    case "m":
+    default:
+      return `${safe.toFixed(2)} m³`;
+  }
+}
+
+export function formatMeasurementDeltas(dx: number, dy: number, dz: number, unit: MeasurementUnit): string {
+  return `ΔX: ${formatMeasurementLength(dx, unit, true)} · ΔY: ${formatMeasurementLength(dy, unit, true)} · ΔZ: ${formatMeasurementLength(dz, unit, true)}`;
+}
 
 export interface MeasurementPoint {
   position: THREE.Vector3;
@@ -50,6 +139,7 @@ export class MeasurementSuite {
   private isMeasuring: boolean = false;
   private snapEnabled: boolean = true;
   private snapTolerance: number = 0.35; // world units
+  private unit: MeasurementUnit = "m";
   private currentPoints: MeasurementPoint[] = [];
 
   // Native ThatOpen @thatopen/components-front measurers
@@ -75,6 +165,14 @@ export class MeasurementSuite {
 
   private constructor() {
     this.engine = BimEngine.getInstance();
+    try {
+      const savedUnit = typeof localStorage !== "undefined" ? localStorage.getItem(MEASUREMENT_UNIT_STORAGE_KEY) : null;
+      if (isMeasurementUnit(savedUnit)) {
+        this.unit = savedUnit;
+      }
+    } catch {
+      /* storage unavailable */
+    }
     this.overlayGroup = new THREE.Group();
     this.overlayGroup.name = "MeasurementOverlayGroup";
 
@@ -174,7 +272,7 @@ export class MeasurementSuite {
             start: { position: line.start.clone(), snapType: "vertex" },
             end: { position: line.end.clone(), snapType: "vertex" },
             value: dist,
-            formattedValue: `${dist.toFixed(3)} m`,
+            formattedValue: formatMeasurementLength(dist, this.unit),
             deltaX: dx,
             deltaY: dy,
             deltaZ: dz,
@@ -200,7 +298,7 @@ export class MeasurementSuite {
             type: "area",
             start: { position: startPos, snapType: "vertex" },
             value: val,
-            formattedValue: `${val.toFixed(2)} m²`,
+            formattedValue: formatMeasurementArea(val, this.unit),
             createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           });
           this.updateMeasurementUI();
@@ -244,7 +342,7 @@ export class MeasurementSuite {
             type: "volume",
             start: { position: center.clone(), snapType: "face" },
             value: v,
-            formattedValue: `${v.toFixed(2)} m³`,
+            formattedValue: formatMeasurementVolume(v, this.unit),
             createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           });
           this.updateMeasurementUI();
@@ -378,8 +476,6 @@ export class MeasurementSuite {
     } catch (e) { }
     if (typeof document !== "undefined") {
       document.querySelectorAll(".btn-drawer-tool").forEach((b) => b.classList.remove("active"));
-      const tapeToggle = document.getElementById("settings-toggle-measure") as HTMLInputElement | null;
-      if (tapeToggle) tapeToggle.checked = false;
     }
     this.syncNativeMeasurerState();
     this.updateSnapBadge(null);
@@ -405,6 +501,70 @@ export class MeasurementSuite {
 
   public getSnapEnabled(): boolean {
     return this.snapEnabled;
+  }
+
+  public getUnit(): MeasurementUnit {
+    return this.unit;
+  }
+
+  public setUnit(unit: MeasurementUnit): void {
+    if (!isMeasurementUnit(unit)) return;
+    this.unit = unit;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(MEASUREMENT_UNIT_STORAGE_KEY, unit);
+      }
+    } catch {
+      /* storage blocked */
+    }
+
+    // Sync native ThatOpen measurer units when using metric presets
+    try {
+      const metricLen: "m" | "cm" | "mm" = unit === "mm" ? "mm" : unit === "cm" ? "cm" : "m";
+      if (this.lengthMeasurer) {
+        this.lengthMeasurer.units = metricLen;
+        this.lengthMeasurer.rounding = unit === "mm" ? 0 : unit === "cm" ? 1 : 3;
+      }
+      if (this.areaMeasurer) {
+        this.areaMeasurer.units = (metricLen === "mm" ? "mm2" : metricLen === "cm" ? "cm2" : "m2") as any;
+      }
+      if (this.volumeMeasurer) {
+        this.volumeMeasurer.units = (metricLen === "mm" ? "mm3" : metricLen === "cm" ? "cm3" : "m3") as any;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // Live re-format all existing measurements and their 3D viewport labels
+    for (const item of this.measurements) {
+      if (item.type === "distance" || item.type === "delta") {
+        item.formattedValue = formatMeasurementLength(item.value, this.unit);
+      } else if (item.type === "area") {
+        item.formattedValue = formatMeasurementArea(item.value, this.unit);
+      } else if (item.type === "volume") {
+        item.formattedValue = formatMeasurementVolume(item.value, this.unit);
+      }
+      if (item.labelElement) {
+        item.labelElement.innerHTML = this.buildLabelInnerHtml(item);
+      }
+    }
+
+    // Sync live cursor preview readout and dropdown control
+    if (typeof document !== "undefined") {
+      const sel = document.getElementById("select-measure-unit") as HTMLSelectElement | null;
+      if (sel && sel.value !== this.unit) sel.value = this.unit;
+      const hudLive = document.getElementById("measurement-live-val");
+      if (hudLive) {
+        if (this.currentPoints.length > 0 && this.lastResolvedSnap) {
+          const dist = this.currentPoints[0].position.distanceTo(this.lastResolvedSnap.result.position);
+          hudLive.innerText = formatMeasurementLength(dist, this.unit);
+        } else {
+          hudLive.innerText = formatMeasurementLength(0, this.unit);
+        }
+      }
+    }
+
+    this.updateMeasurementUI();
   }
 
   public isMeasuringActive(): boolean {
@@ -444,7 +604,7 @@ export class MeasurementSuite {
     if (typeof document !== "undefined") {
       document.querySelectorAll("#container .bim-3d-dimension-badge").forEach((el) => el.remove());
       const hudLive = document.getElementById("measurement-live-val");
-      if (hudLive) hudLive.innerText = "0.000 m";
+      if (hudLive) hudLive.innerText = formatMeasurementLength(0, this.unit);
     }
     this.measurements = [];
     this.updateMeasurementUI();
@@ -883,7 +1043,7 @@ export class MeasurementSuite {
       const dist = p1.distanceTo(snappedPos);
       const hudLive = document.getElementById("measurement-live-val");
       if (hudLive) {
-        hudLive.innerText = `${dist.toFixed(3)} m`;
+        hudLive.innerText = formatMeasurementLength(dist, this.unit);
       }
     }
   }
@@ -917,7 +1077,14 @@ export class MeasurementSuite {
   private handlePointerMove(e: PointerEvent) {
     const seq = ++this.pointerMoveSeq;
     void this.resolveSnapAtEvent(e).then((resolved) => {
-      if (seq !== this.pointerMoveSeq || !this.isMeasuring || !resolved) return;
+      if (seq !== this.pointerMoveSeq || !this.isMeasuring) return;
+      if (!resolved) {
+        this.lastResolvedSnap = null;
+        this.snapMarker.visible = false;
+        this.snapEdgeLine.visible = false;
+        this.updateSnapBadge(null);
+        return;
+      }
       this.lastResolvedSnap = {
         clientX: e.clientX,
         clientY: e.clientY,
@@ -1052,7 +1219,7 @@ export class MeasurementSuite {
       start: p1,
       end: p2,
       value: dist,
-      formattedValue: `${dist.toFixed(3)} m`,
+      formattedValue: formatMeasurementLength(dist, this.unit),
       deltaX: dx,
       deltaY: dy,
       deltaZ: dz,
@@ -1152,7 +1319,7 @@ export class MeasurementSuite {
       start: points[0],
       extraPoints: points.slice(1),
       value: area,
-      formattedValue: `${area.toFixed(2)} m²`,
+      formattedValue: formatMeasurementArea(area, this.unit),
       lineGroup: group,
       createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
@@ -1162,6 +1329,17 @@ export class MeasurementSuite {
     this.updateMeasurementUI();
   }
 
+  private buildLabelInnerHtml(item: DimensionItem): string {
+    const deltasHtml =
+      item.deltaX !== undefined
+        ? `<span class="dim-deltas">${formatMeasurementDeltas(item.deltaX, item.deltaY ?? 0, item.deltaZ ?? 0, this.unit)}</span>`
+        : "";
+    return `
+      <span class="dim-val">${item.formattedValue}</span>
+      ${deltasHtml}
+    `;
+  }
+
   private create3DHtmlLabel(item: DimensionItem, pos: THREE.Vector3) {
     if (typeof document === "undefined") return;
     const container = document.getElementById("container");
@@ -1169,10 +1347,7 @@ export class MeasurementSuite {
 
     const label = document.createElement("div");
     label.className = "bim-3d-dimension-badge";
-    label.innerHTML = `
-      <span class="dim-val">${item.formattedValue}</span>
-      ${item.deltaX !== undefined ? `<span class="dim-deltas">ΔX: ${item.deltaX.toFixed(2)}m · ΔY: ${item.deltaY?.toFixed(2)}m · ΔZ: ${item.deltaZ?.toFixed(2)}m</span>` : ""}
-    `;
+    label.innerHTML = this.buildLabelInnerHtml(item);
     label.style.position = "absolute";
     label.style.pointerEvents = "none";
     label.style.transform = "translate(-50%, -50%)";
@@ -1228,7 +1403,13 @@ export class MeasurementSuite {
     const modeEl = document.getElementById("measurement-mode-badge");
 
     if (countEl) countEl.innerText = `${this.measurements.length} Active`;
-    if (modeEl) modeEl.innerText = this.isMeasuring ? `Measuring: ${this.activeType.toUpperCase()}` : "Ready";
+    if (modeEl) modeEl.innerText = this.isMeasuring ? this.activeType.toUpperCase() : "Ready";
+    const unitSel = document.getElementById("select-measure-unit") as HTMLSelectElement | null;
+    if (unitSel && unitSel.value !== this.unit) unitSel.value = this.unit;
+    if (this.currentPoints.length === 0) {
+      const hudLive = document.getElementById("measurement-live-val");
+      if (hudLive) hudLive.innerText = formatMeasurementLength(0, this.unit);
+    }
 
     if (listEl) {
       listEl.innerHTML = "";

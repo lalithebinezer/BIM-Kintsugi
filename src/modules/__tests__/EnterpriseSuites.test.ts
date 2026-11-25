@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { MeasurementSuite } from "../MeasurementSuite";
+import {
+  MeasurementSuite,
+  formatMeasurementLength,
+  formatMeasurementArea,
+  formatMeasurementVolume,
+  MEASUREMENT_UNIT_STORAGE_KEY,
+} from "../MeasurementSuite";
 import { ClashDetector } from "../ClashDetector";
 import { CarbonLcaManager } from "../CarbonLcaManager";
 import { BimAiCopilot } from "../BimAiCopilot";
@@ -165,6 +171,45 @@ describe("Enterprise BIM Kintsugi Suites", () => {
         (engine as any).fragments = origFragments;
         (engine as any).components = origComponents;
       }
+    });
+
+    it("should convert measurement lengths, areas, volumes & live 3D labels across m, mm, cm, ft-in, ft, and in", () => {
+      // Pure unit conversions
+      expect(formatMeasurementLength(4.515, "m")).toBe("4.515 m");
+      expect(formatMeasurementLength(4.515, "mm")).toBe("4515 mm");
+      expect(formatMeasurementLength(4.515, "cm")).toBe("451.5 cm");
+      expect(formatMeasurementLength(1.0, "ft")).toBe("3.281 ft");
+      expect(formatMeasurementLength(0.3048, "ft-in")).toBe(`1'-0.0"`);
+      expect(formatMeasurementLength(0.3047, "ft-in")).toBe(`1'-0.0"`); // inch carry 12.0" -> 1'-0.0"
+      expect(formatMeasurementLength(0.254, "in")).toBe("10.00 in");
+      expect(formatMeasurementArea(10, "ft")).toBe("107.64 ft²");
+      expect(formatMeasurementVolume(1, "ft")).toBe("35.31 ft³");
+
+      // Live re-formatting of existing measurements, 3D DOM labels, and localStorage persistence
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<select id="select-measure-unit"><option value="m">m</option><option value="mm">mm</option><option value="ft-in">ft-in</option></select>`
+      );
+
+      suite.setUnit("m");
+      (suite as any).finalizeDistanceMeasurement(
+        { position: new THREE.Vector3(0, 0, 0), snapType: "vertex" },
+        { position: new THREE.Vector3(4.515, 0, 0), snapType: "edge" }
+      );
+      expect(suite.getMeasurements()[0].formattedValue).toBe("4.515 m");
+
+      suite.setUnit("mm");
+      expect(suite.getUnit()).toBe("mm");
+      expect(localStorage.getItem(MEASUREMENT_UNIT_STORAGE_KEY)).toBe("mm");
+      expect(suite.getMeasurements()[0].formattedValue).toBe("4515 mm");
+      expect(suite.getMeasurements()[0].labelElement?.innerHTML).toContain("4515 mm");
+      expect(document.getElementById("measurement-live-val")?.innerText).toBe("0.0 mm");
+
+      suite.setUnit("ft-in");
+      expect(suite.getMeasurements()[0].formattedValue).toBe(`14'-9.8"`);
+      expect(suite.getMeasurements()[0].labelElement?.innerHTML).toContain(`14'-9.8"`);
+
+      suite.setUnit("m");
     });
   });
 
