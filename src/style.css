@@ -9171,18 +9171,32 @@ html[data-theme="zen"] .bim-3d-dimension-badge .dim-deltas {
   color: #334155;
 }
 
-#measurement-snap-badge[data-snap-type="vertex"] { color: #D4FF3F; }
-#measurement-snap-badge[data-snap-type="edge"] { color: #38BDF8; }
-#measurement-snap-badge[data-snap-type="midpoint"] { color: #F59E0B; }
+#measurement-snap-badge[data-snap-type="vertex"] {
+  color: #D4FF3F;
+}
+
+#measurement-snap-badge[data-snap-type="edge"] {
+  color: #38BDF8;
+}
+
+#measurement-snap-badge[data-snap-type="midpoint"] {
+  color: #F59E0B;
+}
 
 html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="vertex"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="vertex"] { color: #15803D; }
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="vertex"] {
+  color: #15803D;
+}
 
 html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="edge"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="edge"] { color: #0369A1; }
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="edge"] {
+  color: #0369A1;
+}
 
 html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="midpoint"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="midpoint"] { color: #B45309; }
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="midpoint"] {
+  color: #B45309;
+}
 
 .measurement-item-row {
   display: flex;
@@ -13183,14 +13197,14 @@ body.light-theme #gis-panel .geo-val {
   min-height: 0;
 }
 
-.schedule-widget > .panel-header {
+.schedule-widget>.panel-header {
   padding: 0.6rem 0.75rem !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.065) !important;
   background: rgba(255, 255, 255, 0.015);
   flex-shrink: 0;
 }
 
-.schedule-widget > .panel-header .header-title-group {
+.schedule-widget>.panel-header .header-title-group {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -13201,7 +13215,7 @@ body.light-theme #gis-panel .geo-val {
   color: #f1f5f9;
 }
 
-.schedule-widget > .panel-header .header-title-group svg {
+.schedule-widget>.panel-header .header-title-group svg {
   color: var(--accent-400, #d4ff3f);
   opacity: 0.9;
 }
@@ -13562,12 +13576,12 @@ body.light-theme #gis-panel .geo-val {
 }
 
 /* Light Theme Parity for .schedule-widget */
-[data-theme="light"] .schedule-widget > .panel-header {
+[data-theme="light"] .schedule-widget>.panel-header {
   border-bottom-color: rgba(15, 23, 42, 0.08) !important;
   background: rgba(15, 23, 42, 0.02);
 }
 
-[data-theme="light"] .schedule-widget > .panel-header .header-title-group {
+[data-theme="light"] .schedule-widget>.panel-header .header-title-group {
   color: #0f172a;
 }
 
