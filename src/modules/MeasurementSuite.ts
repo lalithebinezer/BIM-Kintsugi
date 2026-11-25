@@ -57,7 +57,7 @@ export class MeasurementSuite {
   public areaMeasurer?: OBF.AreaMeasurement;
   public angleMeasurer?: OBF.AngleMeasurement;
   public volumeMeasurer?: OBF.VolumeMeasurement;
-  
+
   private overlayGroup: THREE.Group;
   private snapMarker: THREE.Mesh;
   private snapMarkerMaterial: THREE.MeshBasicMaterial;
@@ -273,7 +273,7 @@ export class MeasurementSuite {
       if (active) {
         active.enabled = true;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private bindPointerEvents() {
@@ -317,7 +317,7 @@ export class MeasurementSuite {
         if (active && active.enabled) {
           active.create();
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     window.addEventListener("keydown", (e) => {
@@ -344,7 +344,7 @@ export class MeasurementSuite {
             this.stopMeasurement();
           }
         }
-      } catch (err) {}
+      } catch (err) { }
     });
   }
 
@@ -375,7 +375,7 @@ export class MeasurementSuite {
       this.areaMeasurer?.cancelCreation?.();
       this.angleMeasurer?.cancelCreation?.();
       this.volumeMeasurer?.cancelCreation?.();
-    } catch (e) {}
+    } catch (e) { }
     if (typeof document !== "undefined") {
       document.querySelectorAll(".btn-drawer-tool").forEach((b) => b.classList.remove("active"));
       const tapeToggle = document.getElementById("settings-toggle-measure") as HTMLInputElement | null;
@@ -400,7 +400,7 @@ export class MeasurementSuite {
       if (this.lengthMeasurer) this.lengthMeasurer.snappings = snaps;
       if (this.areaMeasurer) this.areaMeasurer.snappings = snaps;
       if (this.angleMeasurer) this.angleMeasurer.snappings = snaps;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   public getSnapEnabled(): boolean {
@@ -440,7 +440,7 @@ export class MeasurementSuite {
       this.areaMeasurer?.list?.clear();
       this.angleMeasurer?.list?.clear();
       this.volumeMeasurer?.list?.clear();
-    } catch (e) {}
+    } catch (e) { }
     if (typeof document !== "undefined") {
       document.querySelectorAll("#container .bim-3d-dimension-badge").forEach((el) => el.remove());
       const hudLive = document.getElementById("measurement-live-val");
@@ -510,8 +510,8 @@ export class MeasurementSuite {
       const fovRad = THREE.MathUtils.degToRad(camera.fov || 60);
       const worldPerPx = (2 * dist * Math.tan(fovRad * 0.5)) / viewportH;
       return {
-        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 9, 0.025, 0.18),
-        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 22, 0.06, 0.42),
+        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 14, 0.04, 0.28),
+        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 24, 0.06, 0.45),
       };
     }
 
@@ -519,8 +519,8 @@ export class MeasurementSuite {
       const worldPerPx =
         Math.abs(camera.top - camera.bottom) / Math.max(0.001, camera.zoom || 1) / viewportH;
       return {
-        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 9, 0.025, 0.18),
-        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 22, 0.06, 0.42),
+        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 14, 0.04, 0.28),
+        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 24, 0.06, 0.45),
       };
     }
 
@@ -854,11 +854,11 @@ export class MeasurementSuite {
     const camera = this.engine.world?.camera?.three;
     if (camera) {
       const dist = Math.max(0.25, camera.position.distanceTo(snappedPos));
-      const worldRadius = THREE.MathUtils.clamp(dist * 0.011, 0.025, 0.35);
+      const worldRadius = THREE.MathUtils.clamp(dist * 0.0075, 0.009, 0.22);
       const scaleFactor = worldRadius / 0.08;
       this.snapMarker.scale.setScalar(scaleFactor);
     } else {
-      this.snapMarker.scale.setScalar(1);
+      this.snapMarker.scale.setScalar(0.5);
     }
     this.snapMarker.visible = true;
 
@@ -892,39 +892,32 @@ export class MeasurementSuite {
     if (typeof document === "undefined") return;
     const badge = document.getElementById("measurement-snap-badge");
     if (!badge) return;
+    badge.style.color = "";
     if (!this.snapEnabled) {
       badge.textContent = "SNAP OFF";
-      badge.style.color = "";
+      badge.removeAttribute("data-snap-type");
       return;
     }
     if (!snapType) {
       badge.textContent = "EDGE · VERTEX";
-      badge.style.color = "";
+      badge.removeAttribute("data-snap-type");
       return;
     }
-    const labels: Record<SnapType, { text: string; color: string }> = {
-      vertex: { text: "SNAP: VERTEX", color: "#D4FF3F" },
-      edge: { text: "SNAP: EDGE", color: "#38BDF8" },
-      midpoint: { text: "SNAP: MIDPOINT", color: "#F59E0B" },
-      face: { text: "SNAP: FACE", color: "" },
-      free: { text: "FREE", color: "" },
+    const labels: Record<SnapType, string> = {
+      vertex: "SNAP: VERTEX",
+      edge: "SNAP: EDGE",
+      midpoint: "SNAP: MIDPOINT",
+      face: "SNAP: FACE",
+      free: "FREE",
     };
-    const cfg = labels[snapType];
-    badge.textContent = cfg.text;
-    badge.style.color = cfg.color;
+    badge.textContent = labels[snapType];
+    badge.setAttribute("data-snap-type", snapType);
   }
 
   private handlePointerMove(e: PointerEvent) {
     const seq = ++this.pointerMoveSeq;
     void this.resolveSnapAtEvent(e).then((resolved) => {
-      if (seq !== this.pointerMoveSeq || !this.isMeasuring) return;
-      if (!resolved) {
-        this.lastResolvedSnap = null;
-        this.snapMarker.visible = false;
-        this.snapEdgeLine.visible = false;
-        this.updateSnapBadge(null);
-        return;
-      }
+      if (seq !== this.pointerMoveSeq || !this.isMeasuring || !resolved) return;
       this.lastResolvedSnap = {
         clientX: e.clientX,
         clientY: e.clientY,
@@ -992,6 +985,42 @@ export class MeasurementSuite {
     }
   }
 
+  private createEndpointMarker(position: THREE.Vector3, coreHex = 0xd4ff3f): THREE.Group {
+    const pin = new THREE.Group();
+    pin.position.copy(position);
+    pin.userData.isDimensionEndpoint = true;
+
+    // Dark outer contrast halo so pins stay razor-crisp on bright green, white, and dark elements
+    const haloGeo = new THREE.SphereGeometry(0.036, 14, 14);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0x0f172a,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.92,
+    });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.renderOrder = 9998;
+    pin.add(halo);
+
+    // Bright precision inner core
+    const coreGeo = new THREE.SphereGeometry(0.024, 14, 14);
+    const coreMat = new THREE.MeshBasicMaterial({ color: coreHex, depthTest: false });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.renderOrder = 9999;
+    pin.add(core);
+
+    this.scaleEndpointMarkerToCamera(pin);
+    return pin;
+  }
+
+  private scaleEndpointMarkerToCamera(pin: THREE.Object3D): void {
+    const camera = this.engine.world?.camera?.three;
+    if (!camera) return;
+    const dist = Math.max(0.2, camera.position.distanceTo(pin.position));
+    const desiredCoreRadius = THREE.MathUtils.clamp(dist * 0.0055, 0.006, 0.12);
+    pin.scale.setScalar(desiredCoreRadius / 0.024);
+  }
+
   private finalizeDistanceMeasurement(p1: MeasurementPoint, p2: MeasurementPoint) {
     const dist = p1.position.distanceTo(p2.position);
     const dx = Math.abs(p2.position.x - p1.position.x);
@@ -1011,17 +1040,9 @@ export class MeasurementSuite {
     line.renderOrder = 9997;
     group.add(line);
 
-    // Endpoints
-    const endGeo = new THREE.SphereGeometry(0.06, 12, 12);
-    const endMat = new THREE.MeshBasicMaterial({ color: 0xd4ff3f, depthTest: false });
-    const s1 = new THREE.Mesh(endGeo, endMat);
-    s1.position.copy(p1.position);
-    s1.renderOrder = 9998;
-    const s2 = new THREE.Mesh(endGeo, endMat);
-    s2.position.copy(p2.position);
-    s2.renderOrder = 9998;
-    group.add(s1);
-    group.add(s2);
+    // Camera-scaled high-contrast architectural endpoint pins
+    group.add(this.createEndpointMarker(p1.position, 0xd4ff3f));
+    group.add(this.createEndpointMarker(p2.position, 0xd4ff3f));
 
     this.overlayGroup.add(group);
 
@@ -1117,7 +1138,7 @@ export class MeasurementSuite {
       const polyMesh = new THREE.Mesh(polyGeo, polyMat);
       polyMesh.renderOrder = 9996;
       group.add(polyMesh);
-    } catch (e) {}
+    } catch (e) { }
 
     this.overlayGroup.add(group);
 
@@ -1176,11 +1197,18 @@ export class MeasurementSuite {
 
     label.style.left = `${x}px`;
     label.style.top = `${y}px`;
-    label.style.display = p.z < 1 ? "block" : "none";
+    label.style.display = p.z < 1 ? "inline-flex" : "none";
   }
 
   public updateOverlayPositions() {
     for (const item of this.measurements) {
+      if (item.lineGroup) {
+        for (const child of item.lineGroup.children) {
+          if (child.userData?.isDimensionEndpoint) {
+            this.scaleEndpointMarkerToCamera(child);
+          }
+        }
+      }
       if (!item.labelElement) continue;
       let worldPos = item.start.position;
       if (item.type === "angle" && item.extraPoints?.[0]) {

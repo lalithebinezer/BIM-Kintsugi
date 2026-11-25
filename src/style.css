@@ -9122,26 +9122,67 @@ body.right-sidebar-collapsed .right-sidebar {
 
 /* 3D Measurement Overlay Badges */
 .bim-3d-dimension-badge {
-  background: rgba(10, 10, 12, 0.92);
+  background: rgba(10, 14, 22, 0.94);
   border: 1.5px solid var(--accent-500, #D4FF3F);
-  border-radius: 4px;
-  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  padding: 0.24rem 0.55rem;
   font-family: var(--font-mono, monospace);
   color: var(--accent-500, #D4FF3F);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  gap: 0.12rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 100;
 }
 
-.dim-deltas {
-  font-size: 0.55rem;
-  color: var(--text-muted, #94A3B8);
+.bim-3d-dimension-badge .dim-val {
+  color: var(--accent-500, #D4FF3F);
+  letter-spacing: 0.01em;
 }
+
+.dim-deltas {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: #CBD5E1;
+}
+
+html[data-theme="light-studio"] .bim-3d-dimension-badge,
+html[data-theme="zen"] .bim-3d-dimension-badge {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1.5px solid #0F172A;
+  color: #0F172A;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.22);
+}
+
+html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-val,
+html[data-theme="zen"] .bim-3d-dimension-badge .dim-val {
+  color: #1D4ED8;
+}
+
+html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-deltas,
+html[data-theme="zen"] .bim-3d-dimension-badge .dim-deltas {
+  color: #334155;
+}
+
+#measurement-snap-badge[data-snap-type="vertex"] { color: #D4FF3F; }
+#measurement-snap-badge[data-snap-type="edge"] { color: #38BDF8; }
+#measurement-snap-badge[data-snap-type="midpoint"] { color: #F59E0B; }
+
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="vertex"],
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="vertex"] { color: #15803D; }
+
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="edge"],
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="edge"] { color: #0369A1; }
+
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="midpoint"],
+html[data-theme="zen"] #measurement-snap-badge[data-snap-type="midpoint"] { color: #B45309; }
 
 .measurement-item-row {
   display: flex;
