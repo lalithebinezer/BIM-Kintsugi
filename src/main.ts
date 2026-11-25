@@ -9335,9 +9335,14 @@ function apply4dMode(active: boolean) {
     if (optionsModal) optionsModal.classList.add("hidden");
     const hubBtn = document.getElementById("btn-timeline-options-hub");
     if (hubBtn) hubBtn.classList.remove("active");
-    // Switch left sidebar away from 4D-only schedule tab cleanly on exit
+    // Switch left sidebar away from 4D-only schedule tab cleanly on exit (without popping open mobile drawer/backdrop)
     const schedTab = document.querySelector('#left-tab-bar .sidebar-tab-btn[data-tab="schedule"]');
-    if (schedTab?.classList.contains("active") && typeof (window as any).switchSidebarTab === "function") {
+    const isLeftOpenOnMobile = document.querySelector(".left-sidebar")?.classList.contains("open");
+    if (
+      schedTab?.classList.contains("active") &&
+      (window.innerWidth > 1080 || isLeftOpenOnMobile) &&
+      typeof (window as any).switchSidebarTab === "function"
+    ) {
       (window as any).switchSidebarTab("left-tab-bar", "files");
     }
     if (leftCollapsedBefore4d) {
@@ -10327,7 +10332,8 @@ if ("serviceWorker" in navigator && window.location.protocol.startsWith("http"))
         .register("./sw.js")
         .then((reg) => {
           console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
-          // Check for service worker updates immediately
+          initPwaUpdateWatcher(undefined, reg);
+          // Check for service worker updates without forcing an immediate double-reload
           reg.update().catch(() => { });
         })
         .catch((err) => {
@@ -10764,7 +10770,6 @@ world.camera.controls.addEventListener("control", () => {
   GpuPerformanceMonitor.getInstance().notifyInteractiveMotion();
   splitScreenComparisonFeature.peek()?.scheduleCameraResync(280);
 });
-initPwaUpdateWatcher();
 
 (window as any).showGpuMemoryReport = () => {
   const snap = GpuPerformanceMonitor.getInstance().getSnapshot();

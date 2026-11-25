@@ -10,6 +10,7 @@ import {
   createBkButton,
   createBkSelect,
 } from "../UiPlatform";
+import { initPwaUpdateWatcher, resetPwaUpdateWatcherForTest } from "../../core/PwaUpdateManager";
 
 describe("UI Platform Standards & Global Component Contract", () => {
   beforeEach(() => {
@@ -165,5 +166,52 @@ describe("UI Platform Standards & Global Component Contract", () => {
     sel.value = "week";
     sel.dispatchEvent(new Event("change"));
     expect(selectedVal).toBe("week");
+  });
+
+  it("never triggers unsolicited reload on first-visit Service Worker claim (prevents double-load on start)", () => {
+    resetPwaUpdateWatcherForTest();
+    const listeners = new Map<string, Array<() => void>>();
+    let postedSkipWaiting = false;
+    let reloadCount = 0;
+
+    const fakeSw = {
+      controller: null as unknown,
+      addEventListener: (evt: string, fn: () => void) => {
+        listeners.set(evt, [...(listeners.get(evt) || []), fn]);
+      },
+      getRegistration: async () => undefined,
+    };
+    Object.defineProperty(navigator, "serviceWorker", { value: fakeSw, configurable: true });
+
+    const fakeReg = {
+      waiting: { postMessage: (msg: { type: string }) => { if (msg.type === "SKIP_WAITING") postedSkipWaiting = true; } },
+      installing: null,
+      addEventListener: () => {},
+    } as unknown as ServiceWorkerRegistration;
+
+    initPwaUpdateWatcher(undefined, fakeReg, () => { reloadCount++; });
+
+    // Simulate first-visit SW claiming the page — MUST NOT reload
+    for (const fn of listeners.get("controllerchange") || []) fn();
+    expect(reloadCount).toBe(0);
+    expect(postedSkipWaiting).toBe(false);
+
+    // Now simulate returning user with an existing controller + waiting update
+    resetPwaUpdateWatcherForTest();
+    listeners.clear();
+    fakeSw.controller = { state: "activated" };
+    let triggerReload: (() => void) | null = null;
+    initPwaUpdateWatcher((fn) => { triggerReload = fn; }, fakeReg, () => { reloadCount++; });
+
+    // Unsolicited controllerchange before clicking Reload — MUST NOT reload
+    for (const fn of listeners.get("controllerchange") || []) fn();
+    expect(reloadCount).toBe(0);
+
+    // User clicks Reload -> posts SKIP_WAITING -> controllerchange reloads ONCE
+    expect(triggerReload).not.toBeNull();
+    triggerReload!();
+    expect(postedSkipWaiting).toBe(true);
+    for (const fn of listeners.get("controllerchange") || []) fn();
+    expect(reloadCount).toBe(1);
   });
 });

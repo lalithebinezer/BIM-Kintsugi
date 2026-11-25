@@ -282,6 +282,38 @@ try {
   });
   assert(mobileRightOk, "Mobile right sidebar & Tools tab failed to open visibly on 390x844");
   await page.click("#btn-toggle-right");
+  await page.waitForTimeout(200);
+
+  // Verify Mobile Header Menu (#btn-mobile-menu -> #mobile-main-menu) & expanded More tools drawer
+  await page.click("#btn-mobile-menu");
+  await page.waitForTimeout(150);
+  const mobileMenuOk = await page.evaluate(() => {
+    const m = document.getElementById("mobile-main-menu");
+    if (!m || m.classList.contains("hidden")) return false;
+    const r = m.getBoundingClientRect();
+    return r.width >= 180 && r.height >= 120 && r.left >= 0 && r.right <= window.innerWidth + 2;
+  });
+  assert(mobileMenuOk, "Mobile header menu (#mobile-main-menu) failed to open cleanly on 390x844");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+
+  // Exit 4D mode if active so the bottom Magic Dock (#bottom-toolbar) is shown, then verify expanded More sheet
+  await page.evaluate(() => {
+    if (document.body.classList.contains("mode-4d")) {
+      document.getElementById("btn-close-gantt-bar")?.click();
+    }
+  });
+  await page.waitForTimeout(200);
+  await page.click("#bottom-toolbar .responsive-more");
+  await page.waitForTimeout(150);
+  const moreDrawerOk = await page.evaluate(() => {
+    const d = document.getElementById("bottom-toolbar");
+    if (!d || !d.classList.contains("tools-expanded")) return false;
+    const br = getComputedStyle(d).borderRadius;
+    return br !== "9999px" && d.getBoundingClientRect().height >= 200;
+  });
+  assert(moreDrawerOk, "Mobile More tools drawer failed to expand with clean rectangular sheet radius");
+  await page.click("#bottom-toolbar .responsive-more");
 
   assert(consoleErrors.length === 0, `Console errors detected: ${consoleErrors.join(" | ")}`);
   assert(pageErrors.length === 0, `Page errors detected: ${pageErrors.join(" | ")}`);
