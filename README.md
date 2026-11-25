@@ -6,7 +6,7 @@
 [![That Open Front](https://img.shields.io/badge/@thatopen/components--front-3.6.1-00e5ff)](https://thatopen.com/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-4.x-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Tests](https://img.shields.io/badge/Tests-332%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
+[![Tests](https://img.shields.io/badge/Tests-334%20passed-success)](https://github.com/lalithebinezer/BIM-Kintsugi/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **BIM Kintsugi** is an enterprise-grade Web BIM (Building Information Modeling) viewer, **4D construction phasing & Gantt simulator**, **ANSI/EIA 748-B & PMI Earned Value Management (EVM) Suite**, **5D cost estimation & BOQ suite**, **6D embodied carbon LCA analyzer**, **3D clash detection & BCF 2.1/3.0 issue coordination hub**, **Engineering Studio (2D DXF · Scans · IFC Split · Civil)**, **Boardroom Executive Twin Report Generator**, and **AI BIM Copilot** built natively with **Vanilla TypeScript**, **`@thatopen/components` (`^3.6.0`)**, **`@thatopen/components-front` (`^3.6.1`)**, **`@thatopen/fragments` (`^3.6.1`)**, and **Three.js (`r184`)** — featuring a **Switchable Dual-Mode Interface (Classic UI & Spatial Cockpit UI)** with zero heavy frontend framework overhead.
@@ -285,13 +285,13 @@ Compiles TypeScript (`tsc`) and bundles the app (`index`) plus optimized vendor 
 
 ## 🧪 Testing & Quality Assurance
 
-Run strict TypeScript type-checking, the **332-test Vitest suite across all 43 test files**, and the headless Chromium Playwright E2E smoke test:
+Run strict TypeScript type-checking, the **334-test Vitest suite across all 43 test files**, and the headless Chromium Playwright E2E smoke test:
 
 ```bash
 # Type-check with zero emit (Strict Mode)
 npm run lint
 
-# Run all 43 unit & integration test files (332 tests)
+# Run all 43 unit & integration test files (334 tests)
 npm test
 
 # Run headless Chromium Playwright E2E smoke suite against production preview
@@ -300,7 +300,7 @@ npm run test:e2e
 
 The automated testing harness also executes end-to-end headless Chromium verification and multi-viewport visual audits:
 - **0 runtime page errors**, **0 console errors**, **0 stale DOM IDs**.
-- **332/332 unit & integration tests passing** across 43 test files (100% green), including real IFC4 STEP fixture tests, UI platform contracts, live Classic ↔ Cockpit layout switching, rich `#view=` deep-links, and interactive contextual Help Center navigation.
+- **334/334 unit & integration tests passing** across 43 test files (100% green), including real IFC4 STEP fixture tests, UI platform contracts, live Classic ↔ Cockpit layout switching, rich `#view=` deep-links, precision 3D edge/vertex snapping, and interactive contextual Help Center navigation.
 - **All-5-Theme WCAG 2.2 AA/AAA Contrast Gate**: Automated Playwright contrast verification across Obsidian Dark, Light Studio, Zen, Cyberpunk, and Blueprint (`>= 7.9:1`–`15.95:1`).
 - **PR CI Quality Gate & Playwright Caching**: `.github/workflows/deploy.yml` runs lint, unit tests, production build, and Playwright E2E on both `pull_request` and `push` to `main`, with cached Playwright browser binaries.
 - **0 HUD/panel collisions** across Desktop (`1440×900`), Laptop (`1280×720`), Tablet (`768×1024`), and Phone (`390×844`, `0px` horizontal overflow).

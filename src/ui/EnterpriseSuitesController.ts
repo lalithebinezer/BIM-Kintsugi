@@ -229,7 +229,14 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
     document.getElementById(dockId)?.addEventListener("click", handler);
   };
 
-  bindEnterpriseTrigger("btn-dock-measure", "measurement-panel", () => measurementSuite.updateMeasurementUI());
+  bindEnterpriseTrigger("btn-dock-measure", "measurement-panel", () => {
+    measurementSuite.updateMeasurementUI();
+    if (!measurementSuite.isMeasuringActive()) {
+      const activeToolBtn = document.querySelector<HTMLElement>("#measurement-panel .btn-drawer-tool.active");
+      const activeType = (activeToolBtn?.dataset.type as any) || "distance";
+      measurementSuite.startMeasurement(activeType);
+    }
+  });
   bindEnterpriseTrigger("btn-dock-clash", "clash-panel", () => clashDetector.updateClashUI());
   bindEnterpriseTrigger("btn-dock-carbon", "carbon-panel", () => {
     carbonManager.updateCarbonUI();

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
 import * as FRAGS from "@thatopen/fragments";
 import { BimEngine } from "../core/BimEngine";
@@ -7,11 +8,22 @@ import { BvhAccelerationService } from "../core/BvhAccelerationService";
 import { PointerInputArbiter } from "../core/PointerInputArbiter";
 import { ResourceLifecycleManager } from "../core/ResourceLifecycleManager";
 
+export type SnapType = "vertex" | "edge" | "midpoint" | "face" | "free";
+
 export interface MeasurementPoint {
   position: THREE.Vector3;
   elementId?: number;
   modelId?: string;
-  snapType?: "vertex" | "edge" | "face" | "free";
+  snapType?: SnapType;
+}
+
+export interface ResolvedSnapPoint {
+  position: THREE.Vector3;
+  snapType: SnapType;
+  elementId?: number;
+  modelId?: string;
+  edgeStart?: THREE.Vector3;
+  edgeEnd?: THREE.Vector3;
 }
 
 export interface DimensionItem {
@@ -48,8 +60,18 @@ export class MeasurementSuite {
   
   private overlayGroup: THREE.Group;
   private snapMarker: THREE.Mesh;
+  private snapMarkerMaterial: THREE.MeshBasicMaterial;
+  private snapEdgeLine: THREE.Line;
+  private snapEdgeGeometry: THREE.BufferGeometry;
   private previewLine: THREE.Line;
   private previewLineGeometry: THREE.BufferGeometry;
+  private pointerMoveSeq: number = 0;
+  private lastResolvedSnap: {
+    clientX: number;
+    clientY: number;
+    result: ResolvedSnapPoint;
+    timestamp: number;
+  } | null = null;
 
   private constructor() {
     this.engine = BimEngine.getInstance();
@@ -60,18 +82,34 @@ export class MeasurementSuite {
       this.engine.world.scene.three.add(this.overlayGroup);
     }
 
-    // Snap visual indicator sphere
+    // Snap visual indicator sphere (dynamically scaled by camera distance & color-coded by snap type)
     const sphereGeo = new THREE.SphereGeometry(0.08, 16, 16);
-    const sphereMat = new THREE.MeshBasicMaterial({
+    this.snapMarkerMaterial = new THREE.MeshBasicMaterial({
       color: 0xd4ff3f,
       depthTest: false,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.95,
     });
-    this.snapMarker = new THREE.Mesh(sphereGeo, sphereMat);
+    this.snapMarker = new THREE.Mesh(sphereGeo, this.snapMarkerMaterial);
     this.snapMarker.visible = false;
     this.snapMarker.renderOrder = 9999;
     this.overlayGroup.add(this.snapMarker);
+
+    // Highlighted 3D element edge line (lights up the exact snapped edge segment)
+    this.snapEdgeGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(),
+      new THREE.Vector3(),
+    ]);
+    const snapEdgeMat = new THREE.LineBasicMaterial({
+      color: 0x38bdf8,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.95,
+    });
+    this.snapEdgeLine = new THREE.Line(this.snapEdgeGeometry, snapEdgeMat);
+    this.snapEdgeLine.visible = false;
+    this.snapEdgeLine.renderOrder = 9998;
+    this.overlayGroup.add(this.snapEdgeLine);
 
     // Dynamic measurement preview line
     this.previewLineGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -286,14 +324,25 @@ export class MeasurementSuite {
       if (!this.isMeasuring) return;
       try {
         const active = this.getActiveNativeMeasurer();
-        if (!active || !active.enabled) return;
-        if (e.key === "Enter") {
-          active.endCreation?.();
-        } else if (e.key === "Escape") {
-          active.cancelCreation?.();
-          this.stopMeasurement();
-        } else if (e.key === "Delete" || e.key === "Backspace") {
-          active.delete?.();
+        if (active && active.enabled) {
+          if (e.key === "Enter") {
+            active.endCreation?.();
+          } else if (e.key === "Escape") {
+            active.cancelCreation?.();
+            this.stopMeasurement();
+          } else if (e.key === "Delete" || e.key === "Backspace") {
+            active.delete?.();
+          }
+          return;
+        }
+        if (e.key === "Escape") {
+          if (this.currentPoints.length > 0) {
+            this.currentPoints = [];
+            this.previewLine.visible = false;
+            this.snapEdgeLine.visible = false;
+          } else {
+            this.stopMeasurement();
+          }
         }
       } catch (err) {}
     });
@@ -303,17 +352,23 @@ export class MeasurementSuite {
     this.activeType = type;
     this.isMeasuring = true;
     this.currentPoints = [];
+    this.lastResolvedSnap = null;
     this.snapMarker.visible = false;
+    this.snapEdgeLine.visible = false;
     this.previewLine.visible = false;
 
     this.syncNativeMeasurerState();
+    this.updateSnapBadge(this.snapEnabled ? null : "free");
     this.updateMeasurementUI();
   }
 
   public stopMeasurement() {
     this.isMeasuring = false;
     this.currentPoints = [];
+    this.lastResolvedSnap = null;
+    this.pointerMoveSeq++;
     this.snapMarker.visible = false;
+    this.snapEdgeLine.visible = false;
     this.previewLine.visible = false;
     try {
       this.lengthMeasurer?.cancelCreation?.();
@@ -327,11 +382,17 @@ export class MeasurementSuite {
       if (tapeToggle) tapeToggle.checked = false;
     }
     this.syncNativeMeasurerState();
+    this.updateSnapBadge(null);
     this.updateMeasurementUI();
   }
 
   public setSnapEnabled(enabled: boolean) {
     this.snapEnabled = enabled;
+    this.lastResolvedSnap = null;
+    if (!enabled) {
+      this.snapEdgeLine.visible = false;
+    }
+    this.updateSnapBadge(enabled ? null : "free");
     try {
       const snaps = enabled
         ? [FRAGS.SnappingClass.POINT, FRAGS.SnappingClass.LINE, FRAGS.SnappingClass.FACE]
@@ -366,7 +427,9 @@ export class MeasurementSuite {
       }
     }
     this.currentPoints = [];
+    this.lastResolvedSnap = null;
     this.snapMarker.visible = false;
+    this.snapEdgeLine.visible = false;
     this.previewLine.visible = false;
     try {
       this.lengthMeasurer?.cancelCreation?.();
@@ -415,7 +478,7 @@ export class MeasurementSuite {
         obj instanceof THREE.Mesh &&
         obj.visible &&
         obj !== this.snapMarker &&
-        !this.overlayGroup.children.includes(obj) &&
+        !this.isDescendantOfOverlay(obj) &&
         obj.name !== "BIM_GroundContactShadow"
       ) {
         candidateMeshes.push(obj);
@@ -424,10 +487,76 @@ export class MeasurementSuite {
     return candidateMeshes;
   }
 
+  private isDescendantOfOverlay(obj: THREE.Object3D): boolean {
+    let cur: THREE.Object3D | null = obj;
+    while (cur) {
+      if (cur === this.overlayGroup) return true;
+      cur = cur.parent;
+    }
+    return false;
+  }
+
   /**
-   * Snaps a world position to the closest BVH vertex/edge or measurement endpoint if within tolerance.
+   * Computes camera-distance adaptive snap tolerances so close-up detail work has
+   * millimeter accuracy while building-scale overview work still feels magnetic.
    */
-  public snapPosition(rawPos: THREE.Vector3): { position: THREE.Vector3; snapType: "vertex" | "edge" | "face" | "free" } {
+  public computeAdaptiveSnapRadii(worldPos: THREE.Vector3): { vertexRadius: number; edgeRadius: number } {
+    const camera = this.engine.world?.camera?.three;
+    const renderer = this.engine.world?.renderer?.three;
+    const viewportH = Math.max(240, renderer?.domElement?.clientHeight || 800);
+
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const dist = Math.max(0.2, camera.position.distanceTo(worldPos));
+      const fovRad = THREE.MathUtils.degToRad(camera.fov || 60);
+      const worldPerPx = (2 * dist * Math.tan(fovRad * 0.5)) / viewportH;
+      return {
+        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 9, 0.025, 0.18),
+        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 22, 0.06, 0.42),
+      };
+    }
+
+    if (camera instanceof THREE.OrthographicCamera) {
+      const worldPerPx =
+        Math.abs(camera.top - camera.bottom) / Math.max(0.001, camera.zoom || 1) / viewportH;
+      return {
+        vertexRadius: THREE.MathUtils.clamp(worldPerPx * 9, 0.025, 0.18),
+        edgeRadius: THREE.MathUtils.clamp(worldPerPx * 22, 0.06, 0.42),
+      };
+    }
+
+    return {
+      vertexRadius: Math.min(this.snapTolerance * 0.65, 0.22),
+      edgeRadius: this.snapTolerance,
+    };
+  }
+
+  private findExistingMeasurementSnap(rawPos: THREE.Vector3, radius: number): ResolvedSnapPoint | null {
+    let best: THREE.Vector3 | null = null;
+    let bestDist = radius;
+    const check = (pt?: THREE.Vector3) => {
+      if (!pt) return;
+      const d = pt.distanceTo(rawPos);
+      if (d <= bestDist) {
+        bestDist = d;
+        best = pt;
+      }
+    };
+    for (const m of this.measurements) {
+      check(m.start.position);
+      check(m.end?.position);
+      if (m.extraPoints) {
+        for (const ep of m.extraPoints) check(ep.position);
+      }
+    }
+    return best ? { position: (best as THREE.Vector3).clone(), snapType: "vertex" } : null;
+  }
+
+  /**
+   * Snaps a world position to the closest BVH vertex, edge midpoint, or true
+   * architectural feature edge if within tolerance. Only applies the 0.1m grid
+   * fallback when no scene geometry exists (e.g. empty canvas).
+   */
+  public snapPosition(rawPos: THREE.Vector3): ResolvedSnapPoint {
     if (!this.snapEnabled) {
       return { position: rawPos.clone(), snapType: "free" };
     }
@@ -437,27 +566,34 @@ export class MeasurementSuite {
       return { position: rawPos.clone(), snapType: "free" };
     }
 
-    // 1. Snap to existing measurement vertices first
-    for (const m of this.measurements) {
-      if (m.start.position.distanceTo(rawPos) <= this.snapTolerance) {
-        return { position: m.start.position.clone(), snapType: "vertex" };
+    const { vertexRadius, edgeRadius } = this.computeAdaptiveSnapRadii(rawPos);
+
+    // 1. Snap to existing measurement endpoints first
+    const existingSnap = this.findExistingMeasurementSnap(rawPos, vertexRadius);
+    if (existingSnap) return existingSnap;
+
+    // 2. BVH shapecast vertex / midpoint / sharp feature edge snapping across scene geometry
+    const candidateMeshes = this.getCandidateMeshes();
+    if (candidateMeshes.length > 0) {
+      const bvhSnap = BvhAccelerationService.getInstance().findNearestSnapPoint(
+        rawPos,
+        edgeRadius,
+        candidateMeshes,
+        { vertexRadius }
+      );
+      if (bvhSnap) {
+        return {
+          position: bvhSnap.point,
+          snapType: bvhSnap.snapType,
+          edgeStart: bvhSnap.edgeStart,
+          edgeEnd: bvhSnap.edgeEnd,
+        };
       }
-      if (m.end && m.end.position.distanceTo(rawPos) <= this.snapTolerance) {
-        return { position: m.end.position.clone(), snapType: "vertex" };
-      }
+      // Stay accurately on the hit 3D surface rather than rounding onto an arbitrary 0.1m grid
+      return { position: rawPos.clone(), snapType: "face" };
     }
 
-    // 2. BVH shapecast vertex/edge snapping across nearby scene geometry
-    const bvhSnap = BvhAccelerationService.getInstance().findNearestSnapPoint(
-      rawPos,
-      this.snapTolerance,
-      this.getCandidateMeshes()
-    );
-    if (bvhSnap) {
-      return { position: bvhSnap.point, snapType: bvhSnap.snapType };
-    }
-
-    // 3. Fallback 0.1m architectural grid snap
+    // 3. Empty-canvas fallback 0.1m architectural grid snap
     const snapped = rawPos.clone();
     snapped.x = Math.round(snapped.x * 10) / 10;
     snapped.y = Math.round(snapped.y * 10) / 10;
@@ -470,22 +606,280 @@ export class MeasurementSuite {
     return { position: rawPos.clone(), snapType: "face" };
   }
 
-  private handlePointerMove(e: PointerEvent) {
-    const rawPos = this.getWorldPositionFromEvent(e);
-    if (!rawPos) return;
+  /**
+   * Native `@thatopen/components` GPU pick + `SnapResolver` edge/vertex snapping for
+   * loaded IFC Fragment models. Evaluates exact IFC shell vertices (`POINT`), edge
+   * midpoints, and true continuous edge projections (`LINE` with `snappedEdgeP1/P2`).
+   */
+  public async resolveFragmentSnap(
+    ndc: THREE.Vector2,
+    viewportW: number,
+    viewportH: number
+  ): Promise<ResolvedSnapPoint | null> {
+    const components = this.engine.components;
+    const world = this.engine.world;
+    const fragments = this.engine.fragments;
+    if (!components || !world || !fragments?.initialized || fragments.list.size === 0) {
+      return null;
+    }
 
-    const { position: snappedPos } = this.snapPosition(rawPos);
+    try {
+      const fastPicker = components.get(OBC.FastModelPickers).get(world);
+      let hit = await fastPicker.getFullPick(ndc);
+
+      // Micro-ring probe (±6px) when cursor sits just outside a silhouette edge
+      if (!hit && this.snapEnabled) {
+        const dx = (6 / Math.max(200, viewportW)) * 2;
+        const dy = (6 / Math.max(200, viewportH)) * 2;
+        const offsets: Array<[number, number]> = [
+          [dx, 0],
+          [-dx, 0],
+          [0, dy],
+          [0, -dy],
+        ];
+        for (const [ox, oy] of offsets) {
+          const probe = await fastPicker.getFullPick(new THREE.Vector2(ndc.x + ox, ndc.y + oy));
+          if (probe) {
+            hit = probe;
+            break;
+          }
+        }
+      }
+
+      if (!hit || !hit.point) return null;
+
+      const rawPos = hit.point.clone();
+      if (!this.snapEnabled) {
+        return {
+          position: rawPos,
+          snapType: "face",
+          elementId: hit.localId,
+          modelId: hit.modelId,
+        };
+      }
+
+      const { vertexRadius, edgeRadius } = this.computeAdaptiveSnapRadii(rawPos);
+
+      // 1. Existing measurement endpoints take top priority within vertex radius
+      const existingSnap = this.findExistingMeasurementSnap(rawPos, vertexRadius);
+      if (existingSnap) return existingSnap;
+
+      // 2. Native ThatOpen SnapResolver on exact IFC shell polygons (vertices & real edges)
+      const resolver = components.get(OBC.SnapResolvers).get();
+      const prevMaxDistance = resolver.maxDistance;
+      try {
+        // Tier 1: Corner Vertex within tight vertexRadius
+        resolver.maxDistance = vertexRadius;
+        const vertexSnap = await resolver.resolve(rawPos, hit.modelId, hit.itemId, [
+          OBC.SnapClass.POINT,
+        ]);
+        if (vertexSnap && vertexSnap.snappingClass === OBC.SnapClass.POINT && vertexSnap.point) {
+          return {
+            position: vertexSnap.point.clone(),
+            snapType: "vertex",
+            elementId: hit.localId,
+            modelId: hit.modelId,
+          };
+        }
+
+        // Tier 2: True Element Edge (continuous segment projection + midpoint detection)
+        resolver.maxDistance = edgeRadius;
+        const edgeSnap = await resolver.resolve(rawPos, hit.modelId, hit.itemId, [
+          OBC.SnapClass.LINE,
+        ]);
+        if (edgeSnap && edgeSnap.snappingClass === OBC.SnapClass.LINE && edgeSnap.point) {
+          const p1 = edgeSnap.snappedEdgeP1?.clone();
+          const p2 = edgeSnap.snappedEdgeP2?.clone();
+          if (p1 && p2) {
+            // Check exact endpoints first if projection landed near a corner
+            if (eDistWithin(edgeSnap.point, p1, vertexRadius * 0.6)) {
+              return {
+                position: p1,
+                snapType: "vertex",
+                elementId: hit.localId,
+                modelId: hit.modelId,
+                edgeStart: p1,
+                edgeEnd: p2,
+              };
+            }
+            if (eDistWithin(edgeSnap.point, p2, vertexRadius * 0.6)) {
+              return {
+                position: p2,
+                snapType: "vertex",
+                elementId: hit.localId,
+                modelId: hit.modelId,
+                edgeStart: p1,
+                edgeEnd: p2,
+              };
+            }
+            // Check exact edge midpoint for longer architectural edges
+            const edgeLen = p1.distanceTo(p2);
+            if (edgeLen > vertexRadius * 1.5) {
+              const mid = p1.clone().add(p2).multiplyScalar(0.5);
+              if (edgeSnap.point.distanceTo(mid) <= vertexRadius * 0.78) {
+                return {
+                  position: mid,
+                  snapType: "midpoint",
+                  elementId: hit.localId,
+                  modelId: hit.modelId,
+                  edgeStart: p1,
+                  edgeEnd: p2,
+                };
+              }
+            }
+          }
+
+          return {
+            position: edgeSnap.point.clone(),
+            snapType: "edge",
+            elementId: hit.localId,
+            modelId: hit.modelId,
+            edgeStart: p1,
+            edgeEnd: p2,
+          };
+        }
+      } finally {
+        resolver.maxDistance = prevMaxDistance;
+      }
+
+      // 3. No vertex or edge within range -> stay accurately on the hit element surface
+      return {
+        position: rawPos,
+        snapType: "face",
+        elementId: hit.localId,
+        modelId: hit.modelId,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Resolves the best 3D snapped point for a pointer event using native IFC Fragment
+   * edge/vertex snapping first, then BVH mesh/InstancedMesh feature-edge snapping,
+   * and finally a y=0 ground plane fallback when pointing at empty space.
+   */
+  public async resolveSnapAtEvent(e: PointerEvent): Promise<ResolvedSnapPoint | null> {
+    const container = document.getElementById("container") || this.engine.container;
+    if (!(container instanceof HTMLElement)) return null;
+    const rect = container.getBoundingClientRect();
+    const w = rect.width || 1;
+    const h = rect.height || 1;
+    const x = ((e.clientX - rect.left) / w) * 2 - 1;
+    const y = -((e.clientY - rect.top) / h) * 2 + 1;
+    const ndc = new THREE.Vector2(x, y);
+
+    const camera = this.engine.world?.camera?.three;
+    if (!camera) {
+      return { position: new THREE.Vector3(x * 10, 0, -y * 10), snapType: "free" };
+    }
+
+    // 1. Primary: Native ThatOpen Fragment GPU pick + exact IFC shell vertex/edge SnapResolver
+    const fragSnap = await this.resolveFragmentSnap(ndc, w, h);
+    if (fragSnap) {
+      return fragSnap;
+    }
+
+    // 2. Fallback: Three.js Mesh / InstancedMesh BVH raycast + feature-edge snapping
+    const candidateMeshes = this.getCandidateMeshes();
+    if (candidateMeshes.length > 0) {
+      const hits = BvhAccelerationService.getInstance().raycastMeshes(
+        candidateMeshes,
+        ndc,
+        camera,
+        { firstHitOnly: true, ownerTag: "bvh:measurement" }
+      );
+      if (hits.length > 0) {
+        const hit = hits[0];
+        const hitPoint = hit.point.clone();
+        if (!this.snapEnabled) {
+          return { position: hitPoint, snapType: "face" };
+        }
+
+        const { vertexRadius, edgeRadius } = this.computeAdaptiveSnapRadii(hitPoint);
+        const existingSnap = this.findExistingMeasurementSnap(hitPoint, vertexRadius);
+        if (existingSnap) return existingSnap;
+
+        const instanceHints = new Map<THREE.InstancedMesh, number>();
+        if ((hit.object as THREE.InstancedMesh).isInstancedMesh && typeof hit.instanceId === "number") {
+          instanceHints.set(hit.object as THREE.InstancedMesh, hit.instanceId);
+        }
+
+        // Prioritize the directly hit mesh first, plus other nearby non-instanced meshes
+        const hitMesh = hit.object as THREE.Mesh;
+        const snapPool = [hitMesh, ...candidateMeshes.filter((m) => m !== hitMesh && !(m as THREE.InstancedMesh).isInstancedMesh)];
+        const bvhSnap = BvhAccelerationService.getInstance().findNearestSnapPoint(
+          hitPoint,
+          edgeRadius,
+          snapPool,
+          { vertexRadius, instanceHints }
+        );
+        if (bvhSnap) {
+          return {
+            position: bvhSnap.point,
+            snapType: bvhSnap.snapType,
+            edgeStart: bvhSnap.edgeStart,
+            edgeEnd: bvhSnap.edgeEnd,
+          };
+        }
+
+        return { position: hitPoint, snapType: "face" };
+      }
+    }
+
+    // 3. Empty-space ground plane fallback
+    const fallbackRay = new THREE.Raycaster();
+    fallbackRay.setFromCamera(ndc, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const target = new THREE.Vector3();
+    if (!fallbackRay.ray.intersectPlane(plane, target)) return null;
+    return { position: target, snapType: "free" };
+  }
+
+  private applySnapVisuals(resolved: ResolvedSnapPoint): void {
+    const snappedPos = resolved.position;
     this.snapMarker.position.copy(snappedPos);
+
+    // Color-code snap marker by snap class so edge vs corner vs midpoint is unmistakable
+    const colorMap: Record<SnapType, number> = {
+      vertex: 0xd4ff3f,   // Acid chartreuse corner
+      edge: 0x38bdf8,     // Electric cyan edge
+      midpoint: 0xf59e0b, // Amber gold midpoint
+      face: 0xe2e8f0,     // Neutral surface
+      free: 0x94a3b8,
+    };
+    this.snapMarkerMaterial.color.setHex(colorMap[resolved.snapType] ?? 0xd4ff3f);
+
+    // Scale marker adaptively to camera distance so it stays crisp at all zoom levels
+    const camera = this.engine.world?.camera?.three;
+    if (camera) {
+      const dist = Math.max(0.25, camera.position.distanceTo(snappedPos));
+      const worldRadius = THREE.MathUtils.clamp(dist * 0.011, 0.025, 0.35);
+      const scaleFactor = worldRadius / 0.08;
+      this.snapMarker.scale.setScalar(scaleFactor);
+    } else {
+      this.snapMarker.scale.setScalar(1);
+    }
     this.snapMarker.visible = true;
+
+    // Highlight the exact element edge segment in 3D when snapping to an edge or midpoint
+    if (resolved.edgeStart && resolved.edgeEnd) {
+      this.snapEdgeGeometry.setFromPoints([resolved.edgeStart, resolved.edgeEnd]);
+      const edgeMat = this.snapEdgeLine.material as THREE.LineBasicMaterial;
+      edgeMat.color.setHex(resolved.snapType === "midpoint" ? 0xf59e0b : 0x38bdf8);
+      this.snapEdgeLine.visible = true;
+    } else {
+      this.snapEdgeLine.visible = false;
+    }
+
+    this.updateSnapBadge(resolved.snapType);
 
     if (this.currentPoints.length > 0) {
       const p1 = this.currentPoints[0].position;
-      const pts = [p1, snappedPos];
-      this.previewLineGeometry.setFromPoints(pts);
+      this.previewLineGeometry.setFromPoints([p1, snappedPos]);
       this.previewLine.computeLineDistances();
       this.previewLine.visible = true;
 
-      // Update real-time live distance in HUD
       const dist = p1.distanceTo(snappedPos);
       const hudLive = document.getElementById("measurement-live-val");
       if (hudLive) {
@@ -494,14 +888,81 @@ export class MeasurementSuite {
     }
   }
 
-  private handlePointerClick(e: PointerEvent) {
-    const rawPos = this.getWorldPositionFromEvent(e);
-    if (!rawPos) return;
+  private updateSnapBadge(snapType: SnapType | null): void {
+    if (typeof document === "undefined") return;
+    const badge = document.getElementById("measurement-snap-badge");
+    if (!badge) return;
+    if (!this.snapEnabled) {
+      badge.textContent = "SNAP OFF";
+      badge.style.color = "";
+      return;
+    }
+    if (!snapType) {
+      badge.textContent = "EDGE · VERTEX";
+      badge.style.color = "";
+      return;
+    }
+    const labels: Record<SnapType, { text: string; color: string }> = {
+      vertex: { text: "SNAP: VERTEX", color: "#D4FF3F" },
+      edge: { text: "SNAP: EDGE", color: "#38BDF8" },
+      midpoint: { text: "SNAP: MIDPOINT", color: "#F59E0B" },
+      face: { text: "SNAP: FACE", color: "" },
+      free: { text: "FREE", color: "" },
+    };
+    const cfg = labels[snapType];
+    badge.textContent = cfg.text;
+    badge.style.color = cfg.color;
+  }
 
-    const { position: snappedPos, snapType } = this.snapPosition(rawPos);
+  private handlePointerMove(e: PointerEvent) {
+    const seq = ++this.pointerMoveSeq;
+    void this.resolveSnapAtEvent(e).then((resolved) => {
+      if (seq !== this.pointerMoveSeq || !this.isMeasuring) return;
+      if (!resolved) {
+        this.lastResolvedSnap = null;
+        this.snapMarker.visible = false;
+        this.snapEdgeLine.visible = false;
+        this.updateSnapBadge(null);
+        return;
+      }
+      this.lastResolvedSnap = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        result: resolved,
+        timestamp: Date.now(),
+      };
+      this.applySnapVisuals(resolved);
+    });
+  }
+
+  private handlePointerClick(e: PointerEvent) {
+    // Use the hover-cached snap immediately if cursor hasn't moved > 8px (0ms click latency)
+    const cached = this.lastResolvedSnap;
+    if (
+      cached &&
+      Date.now() - cached.timestamp < 500 &&
+      Math.hypot(e.clientX - cached.clientX, e.clientY - cached.clientY) <= 8
+    ) {
+      this.commitMeasurementPoint(cached.result);
+      return;
+    }
+
+    const seq = ++this.pointerMoveSeq;
+    void this.resolveSnapAtEvent(e).then((resolved) => {
+      if (!this.isMeasuring || !resolved) return;
+      if (seq === this.pointerMoveSeq) {
+        this.applySnapVisuals(resolved);
+      }
+      this.commitMeasurementPoint(resolved);
+    });
+  }
+
+  private commitMeasurementPoint(resolved: ResolvedSnapPoint): void {
     const newPt: MeasurementPoint = {
-      position: snappedPos,
-      snapType,
+      position: resolved.position.clone(),
+      snapType: resolved.snapType,
+      elementId: resolved.elementId,
+      modelId: resolved.modelId,
     };
 
     this.currentPoints.push(newPt);
@@ -512,18 +973,21 @@ export class MeasurementSuite {
         this.finalizeDistanceMeasurement(this.currentPoints[0], this.currentPoints[1]);
         this.currentPoints = [];
         this.previewLine.visible = false;
+        this.snapEdgeLine.visible = false;
       }
     } else if (this.activeType === "angle") {
       if (this.currentPoints.length >= 3) {
         this.finalizeAngleMeasurement(this.currentPoints[0], this.currentPoints[1], this.currentPoints[2]);
         this.currentPoints = [];
         this.previewLine.visible = false;
+        this.snapEdgeLine.visible = false;
       }
     } else if (this.activeType === "area") {
       if (this.currentPoints.length >= 3) {
         this.finalizeAreaMeasurement([...this.currentPoints]);
         this.currentPoints = [];
         this.previewLine.visible = false;
+        this.snapEdgeLine.visible = false;
       }
     }
   }
@@ -728,38 +1192,6 @@ export class MeasurementSuite {
     }
   }
 
-  private getWorldPositionFromEvent(e: PointerEvent): THREE.Vector3 | null {
-    const container = document.getElementById("container");
-    if (!container) return null;
-    const rect = container.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
-    const y = -((e.clientY - rect.top) / (rect.height || 1)) * 2 + 1;
-
-    const camera = this.engine.world?.camera?.three;
-    if (!camera) return new THREE.Vector3(x * 10, 0, -y * 10);
-
-    const ndc = new THREE.Vector2(x, y);
-    const candidateMeshes = this.getCandidateMeshes();
-    if (candidateMeshes.length > 0) {
-      const hits = BvhAccelerationService.getInstance().raycastMeshes(
-        candidateMeshes,
-        ndc,
-        camera,
-        { firstHitOnly: true, ownerTag: "bvh:measurement" }
-      );
-      if (hits.length > 0) {
-        return hits[0].point.clone();
-      }
-    }
-
-    const fallbackRay = new THREE.Raycaster();
-    fallbackRay.setFromCamera(ndc, camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const target = new THREE.Vector3();
-    fallbackRay.ray.intersectPlane(plane, target);
-    return target;
-  }
-
   public updateMeasurementUI() {
     if (typeof document === "undefined") return;
 
@@ -796,4 +1228,8 @@ export class MeasurementSuite {
       }
     }
   }
+}
+
+function eDistWithin(a: THREE.Vector3, b: THREE.Vector3, radius: number): boolean {
+  return a.distanceToSquared(b) <= radius * radius;
 }

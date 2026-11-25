@@ -254,9 +254,45 @@ describe("Enterprise 3D Performance & Optimization Architecture", () => {
       const nearCorner = new THREE.Vector3(1.92, 1.95, 1.96);
       const snap = bvhService.findNearestSnapPoint(nearCorner, 0.3, [mesh]);
       expect(snap).toBeTruthy();
+      expect(snap!.snapType).toBe("vertex");
       expect(snap!.point.x).toBeCloseTo(2, 4);
       expect(snap!.point.y).toBeCloseTo(2, 4);
       expect(snap!.point.z).toBeCloseTo(2, 4);
+
+      // Snap continuously anywhere along a true architectural box edge (NOT just midpoint/corner)
+      const alongTopEdge = new THREE.Vector3(-1.3, 1.94, 1.96);
+      const edgeSnap = bvhService.findNearestSnapPoint(alongTopEdge, 0.3, [mesh], { vertexRadius: 0.12 });
+      expect(edgeSnap).toBeTruthy();
+      expect(edgeSnap!.snapType).toBe("edge");
+      expect(edgeSnap!.point.x).toBeCloseTo(-1.3, 3);
+      expect(edgeSnap!.point.y).toBeCloseTo(2, 4);
+      expect(edgeSnap!.point.z).toBeCloseTo(2, 4);
+      expect(edgeSnap!.edgeStart).toBeDefined();
+      expect(edgeSnap!.edgeEnd).toBeDefined();
+
+      // Reject coplanar interior triangulation diagonal on the middle of a flat face
+      const onFlatFaceCenter = new THREE.Vector3(0.05, 0.05, 2.0);
+      const diagCheck = bvhService.findNearestSnapPoint(onFlatFaceCenter, 0.3, [mesh], { vertexRadius: 0.12 });
+      expect(diagCheck).toBeNull();
+
+      // Snap accurately on a translated THREE.InstancedMesh (as used by batched BIM elements)
+      const instGeo = new THREE.BoxGeometry(2, 2, 2);
+      const instMesh = new THREE.InstancedMesh(instGeo, mat, 2);
+      instMesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(0, 0, 0));
+      instMesh.setMatrixAt(1, new THREE.Matrix4().makeTranslation(10, 0, 0));
+      instMesh.instanceMatrix.needsUpdate = true;
+      instMesh.updateMatrixWorld();
+      const instNearEdge = new THREE.Vector3(9.45, 0.95, 1.03);
+      const instSnap = bvhService.findNearestSnapPoint(instNearEdge, 0.3, [instMesh], {
+        vertexRadius: 0.1,
+        instanceHints: new Map([[instMesh, 1]]),
+      });
+      expect(instSnap).toBeTruthy();
+      expect(instSnap!.snapType).toBe("edge");
+      expect(instSnap!.point.x).toBeCloseTo(9.45, 3);
+      expect(instSnap!.point.y).toBeCloseTo(1, 4);
+      expect(instSnap!.point.z).toBeCloseTo(1, 4);
+      bvhService.disposeGeometryBvh(instGeo);
 
       const queryBox = new THREE.Box3(new THREE.Vector3(-1, -1, 1.5), new THREE.Vector3(1, 1, 3));
       expect(bvhService.intersectsWorldBox(mesh, queryBox)).toBe(true);

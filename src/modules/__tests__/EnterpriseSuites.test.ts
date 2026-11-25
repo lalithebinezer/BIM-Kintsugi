@@ -65,6 +65,107 @@ describe("Enterprise BIM Kintsugi Suites", () => {
       const modeBadge = document.getElementById("measurement-mode-badge");
       expect(modeBadge?.innerText).toContain("DISTANCE");
     });
+
+    it("should snap continuously to true element edges and midpoints without bogus 0.1m grid rounding", () => {
+      suite.setSnapEnabled(true);
+      const engine = BimEngine.getInstance();
+      const scene = engine.world?.scene?.three;
+      expect(scene).toBeDefined();
+
+      // Create an off-grid architectural wall box (edges at x=4.237, y=3.145, z=0.618)
+      const wallGeo = new THREE.BoxGeometry(4, 3, 0.3);
+      const wallMesh = new THREE.Mesh(wallGeo, new THREE.MeshBasicMaterial());
+      wallMesh.position.set(2.237, 1.645, 0.468); // max corner = (4.237, 3.145, 0.618)
+      wallMesh.updateMatrixWorld(true);
+      scene!.add(wallMesh);
+
+      try {
+        // Point near the top-front edge off-center (x=1.123 is away from midpoint 2.237 and corners)
+        const nearTopEdge = new THREE.Vector3(1.123, 3.10, 0.59);
+        const edgeSnap = suite.snapPosition(nearTopEdge);
+        expect(edgeSnap.snapType).toBe("edge");
+        expect(edgeSnap.position.x).toBeCloseTo(1.123, 3);
+        expect(edgeSnap.position.y).toBeCloseTo(3.145, 3);
+        expect(edgeSnap.position.z).toBeCloseTo(0.618, 3);
+        expect(edgeSnap.edgeStart).toBeDefined();
+        expect(edgeSnap.edgeEnd).toBeDefined();
+
+        // Point near the middle of the flat wall face (far from edges): MUST stay on exact face, NOT round to 0.1m
+        const onFlatFace = new THREE.Vector3(2.237, 1.645, 0.618);
+        const faceSnap = suite.snapPosition(onFlatFace);
+        expect(faceSnap.snapType).toBe("face");
+        expect(faceSnap.position.x).toBeCloseTo(2.237, 4);
+        expect(faceSnap.position.y).toBeCloseTo(1.645, 4);
+        expect(faceSnap.position.z).toBeCloseTo(0.618, 4);
+      } finally {
+        scene!.remove(wallMesh);
+        wallGeo.dispose();
+      }
+    });
+
+    it("should resolve native ThatOpen Fragment LINE edge snaps and highlight snapped edge endpoints", async () => {
+      suite.setSnapEnabled(true);
+      const engine = BimEngine.getInstance();
+      const origFragments = engine.fragments;
+      const origComponents = engine.components;
+
+      const fakeEdgeP1 = new THREE.Vector3(0, 3.0, 2.0);
+      const fakeEdgeP2 = new THREE.Vector3(6.0, 3.0, 2.0);
+      const hitPoint = new THREE.Vector3(1.75, 2.95, 1.98);
+
+      const fakePicker = {
+        getFullPick: async () => ({
+          modelId: "model_1",
+          itemId: 42,
+          localId: 1001,
+          point: hitPoint.clone(),
+          normal: new THREE.Vector3(0, 0, 1),
+          distance: 8,
+        }),
+      };
+      const fakeResolver = {
+        maxDistance: 1,
+        resolve: async (_pt: THREE.Vector3, _mId: string, _iId: number, classes: number[]) => {
+          // Simulate cursor along the edge away from corners: POINT returns FACE fallback, LINE returns exact edge
+          if (classes.includes(0)) {
+            return { point: hitPoint.clone(), snappingClass: 2 };
+          }
+          if (classes.includes(1)) {
+            return {
+              point: new THREE.Vector3(1.75, 3.0, 2.0),
+              snappingClass: 1,
+              snappedEdgeP1: fakeEdgeP1.clone(),
+              snappedEdgeP2: fakeEdgeP2.clone(),
+            };
+          }
+          return null;
+        },
+      };
+
+      (engine as any).fragments = { initialized: true, list: new Map([["model_1", {}]]) };
+      (engine as any).components = {
+        get: (ctor: any) => {
+          if (ctor?.name === "FastModelPickers") return { get: () => fakePicker };
+          if (ctor?.name === "SnapResolvers") return { get: () => fakeResolver };
+          return origComponents.get(ctor);
+        },
+      };
+
+      try {
+        const res = await suite.resolveFragmentSnap(new THREE.Vector2(0, 0), 1280, 800);
+        expect(res).not.toBeNull();
+        expect(res!.snapType).toBe("edge");
+        expect(res!.position.x).toBeCloseTo(1.75, 4);
+        expect(res!.position.y).toBeCloseTo(3.0, 4);
+        expect(res!.position.z).toBeCloseTo(2.0, 4);
+        expect(res!.edgeStart?.x).toBeCloseTo(0, 4);
+        expect(res!.edgeEnd?.x).toBeCloseTo(6.0, 4);
+        expect(res!.elementId).toBe(1001);
+      } finally {
+        (engine as any).fragments = origFragments;
+        (engine as any).components = origComponents;
+      }
+    });
   });
 
   describe("2. ClashDetector", () => {
