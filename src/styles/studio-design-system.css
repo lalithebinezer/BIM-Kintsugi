@@ -111,8 +111,18 @@ header,
 #bottom-toolbar.magic-dock .dock-icon.btn-tool.active {
   background: color-mix(in srgb, var(--accent-500) 16%, transparent);
   border-color: color-mix(in srgb, var(--accent-500) 55%, transparent);
-  color: var(--accent-400, var(--accent-500));
+  color: var(--bk-accent-text, var(--accent-400, var(--accent-500)));
   box-shadow: 0 0 9px color-mix(in srgb, var(--accent-500) 24%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent-500) 12%, transparent);
+}
+
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg path,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg polyline,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg line,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg polygon,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg circle,
+#bottom-toolbar.magic-dock .dock-icon.btn-tool.active:not(#btn-section-cut) svg rect {
+  stroke: var(--bk-accent-text, var(--accent-400, var(--accent-500))) !important;
 }
 
 /* ─── Unified Sidebar Segmented Tab Bars ─── */

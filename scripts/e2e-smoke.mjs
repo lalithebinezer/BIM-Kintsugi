@@ -61,19 +61,63 @@ try {
 
   await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForFunction(() => typeof window.toggle4DMode === "function", { timeout: 25000 });
+  await page.evaluate(() => window.__enterpriseDrawersReady);
   await page.waitForTimeout(500);
 
-  // 1. Help & Guide Modal tabs
+  // 1. Help & Guide Modal tabs + Clickable In-App Help Center + Standalone Help Portal
   const helpVisible = await page.locator("#shortcuts-modal").isVisible();
   assert(helpVisible, "Help modal should appear on clean startup");
   const helpWelcomeText = await page.locator("#help-tab-welcome").innerText();
   assert(helpWelcomeText.includes("CasCADe Lens"), "Help welcome tab missing CasCADe Lens");
+  await page.locator('.help-tab-btn[data-help-tab="guides"]').click();
+  await page.locator("#help-center-root .hc-article-card").first().waitFor({ state: "visible", timeout: 5000 });
+  const hcCount = await page.locator("#help-center-root .hc-article-card").count();
+  assert(hcCount >= 8, `Expected >=8 Help Center articles, got ${hcCount}`);
+  await page.locator('#help-center-root [data-hc-article="ui-layouts"]').click();
+  await page.locator("#help-center-root .hc-step-card").first().waitFor({ state: "visible", timeout: 5000 });
+  assert(
+    (await page.locator("#help-center-root .hc-step-card").count()) >= 3,
+    "Help Center article view failed to render step-by-step cards"
+  );
+  assert(
+    (await page.locator('#help-center-root [data-hc-action="toggle-layout"]').count()) === 1,
+    "Help Center Try It Now interactive action button missing"
+  );
+
+  // Verify single-source Vite-built standalone help.html renders articles & Print/PDF button cleanly
+  const helpPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const helpPageErrors = [];
+  helpPage.on("pageerror", (err) => helpPageErrors.push(String(err)));
+  const helpResp = await helpPage.goto(`${URL}help.html`, { waitUntil: "domcontentloaded", timeout: 20000 });
+  assert(helpResp && helpResp.status() === 200, `Standalone help.html portal returned HTTP ${helpResp?.status()}`);
+  await helpPage.locator("#help-main .guide-card").first().waitFor({ state: "visible", timeout: 5000 });
+  const portalCards = await helpPage.locator("#help-main .guide-card").count();
+  assert(portalCards >= 8, `Standalone help.html expected >=8 guide cards, got ${portalCards}`);
+  await helpPage.locator('#help-main .guide-card[data-nav="clash-bcf"]').click();
+  await helpPage.locator("#btn-print-guide").waitFor({ state: "visible", timeout: 5000 });
+  assert(helpPageErrors.length === 0, `help.html page errors: ${helpPageErrors.join(" | ")}`);
+  await helpPage.close();
+
   await page.locator('.help-tab-btn[data-help-tab="tools"]').click();
   assert((await page.locator("#help-tab-tools").innerText()).includes("GAEB"), "Help tools tab missing GAEB");
   await page.locator("#btn-shortcuts-close").click();
   await page.waitForTimeout(200);
 
-  // 2. 4D Mode + CasCADe Lens + Band Isolation
+  // 2. 4D Mode + Classic Default Desktop UI + CasCADe Lens + Band Isolation (Desktop 1440x900)
+  const initialDesktopClassic = await page.evaluate(() => ({
+    layout: document.documentElement.getAttribute("data-ui-layout"),
+    saved: localStorage.getItem("bim_ui_layout"),
+    oldDock: getComputedStyle(document.getElementById("bottom-toolbar")).display,
+    cockpitDock: getComputedStyle(document.getElementById("mob-dock")).display,
+  }));
+  assert(
+    initialDesktopClassic.layout === "classic" &&
+      initialDesktopClassic.saved === null &&
+      initialDesktopClassic.oldDock !== "none" &&
+      initialDesktopClassic.cockpitDock === "none",
+    `Desktop should default to Classic UI: ${JSON.stringify(initialDesktopClassic)}`
+  );
+
   await page.evaluate(() => window.toggle4DMode(true));
   await page.waitForTimeout(300);
   await page.locator("#btn-4d-cascade-toggle").click();
@@ -95,7 +139,7 @@ try {
     .evaluate((el) => el.classList.contains("isolated"));
   assert(bandIsolated, "Clicking CasCADe band chip did not toggle .isolated");
 
-  // 3. WBS Gantt + Visual Rule Builder + 4D SLF Sync
+  // 3. WBS Gantt + Visual Rule Builder + 4D SLF Sync in Classic Desktop UI
   await page.locator("#btn-4d-gantt-chart").click();
   await page.waitForTimeout(300);
   assert(await page.locator("#gantt-chart-drawer").isVisible(), "Gantt drawer not visible");
@@ -117,10 +161,18 @@ try {
   await page.evaluate(() => window.toggle4DMode(false));
   await page.waitForTimeout(250);
 
-  // 4. Clash Drawer (Temporal 4D + SLF)
+  // 4. Clash Drawer (Temporal 4D + SLF + Contextual ? Help Button)
   await page.evaluate(() => document.getElementById("btn-dock-clash")?.click());
   await page.waitForTimeout(250);
   assert((await page.locator("#clash-scan-mode option").count()) === 3, "Expected 3 clash scan modes");
+  assert(
+    (await page.locator('#clash-panel .drawer-help-btn[data-help-article="clash-bcf"]').count()) === 1,
+    "Contextual ? help button missing from #clash-panel"
+  );
+  await page.locator('#clash-panel .drawer-help-btn[data-help-article="clash-bcf"]').click();
+  await page.locator('#help-center-root [data-active-article="clash-bcf"]').waitFor({ state: "visible", timeout: 5000 });
+  await page.locator("#btn-shortcuts-close").click();
+  await page.waitForTimeout(150);
   await page.selectOption("#clash-scan-mode", "temporal-4d");
   await page.locator("#btn-analyze-workspace-slf").click();
   await page.locator("#clash-slf-summary").waitFor({ state: "visible", timeout: 5000 });
@@ -231,34 +283,142 @@ try {
     );
   }
 
-  // 9. Multi-Viewport Responsive Checks (Desktop isolation, Tablet 768x1024 isolation, Mobile-Only Cockpit 390x844)
-  const desktopMobileHidden = await page.evaluate(() => {
+  // 9. Multi-Viewport Layout Defaults & Live Switcher Checks (Desktop=Classic default, Mobile=Cockpit default)
+  await page.evaluate(() => {
+    if (document.body.classList.contains("mode-4d")) {
+      window.toggle4DMode?.(false);
+    }
+    window.__mobileWorkspace?.closeAllSheets();
+  });
+  await page.waitForTimeout(200);
+
+  // Switch Desktop (1440x900) from Classic default -> Spatial Cockpit UI via 1-click header toggle
+  await page.click("#btn-toggle-ui-layout");
+  await page.waitForTimeout(250);
+
+  const desktopDiag = await page.evaluate(() => {
+    const header = document.querySelector("header");
     const dock = document.getElementById("mob-dock");
     const rail = document.getElementById("mob-camera-rail");
+    const oldTopHud = document.getElementById("hud-anchor-top-left");
+    const oldDock = document.getElementById("bottom-toolbar");
+    const walkHud = document.getElementById("mob-walk-hud");
+    const dockDisp = dock ? getComputedStyle(dock).display : "";
+    const dockW = dock ? dock.getBoundingClientRect().width : 0;
+    const ok = Boolean(
+      document.documentElement.getAttribute("data-ui-layout") === "cockpit" &&
+        localStorage.getItem("bim_ui_layout") === "cockpit" &&
+        document.getElementById("cascade-4d-panel")?.parentElement?.classList.contains("ui-layer") &&
+        header &&
+        header.getBoundingClientRect().height <= 60 &&
+        dock &&
+        (dockDisp === "flex" || dockDisp === "inline-flex") &&
+        dockW > 200 &&
+        dockW < window.innerWidth - 100 &&
+        rail &&
+        getComputedStyle(rail).display === "flex" &&
+        oldTopHud &&
+        getComputedStyle(oldTopHud).display === "none" &&
+        oldDock &&
+        getComputedStyle(oldDock).display === "none" &&
+        (!walkHud || getComputedStyle(walkHud).display === "none")
+    );
+    return {
+      ok,
+      layout: document.documentElement.getAttribute("data-ui-layout"),
+      headerH: header?.getBoundingClientRect().height,
+      dockDisp,
+      dockW,
+      railDisp: rail ? getComputedStyle(rail).display : null,
+      oldTopHudDisp: oldTopHud ? getComputedStyle(oldTopHud).display : null,
+      oldDockDisp: oldDock ? getComputedStyle(oldDock).display : null,
+      walkHudDisp: walkHud ? getComputedStyle(walkHud).display : null,
+    };
+  });
+  assert(
+    desktopDiag.ok,
+    `Switching Desktop (1440x900) to Spatial Cockpit UI failed: ${JSON.stringify(desktopDiag)}`
+  );
+
+  // Verify Desktop Cockpit side-by-side Model panel toggle
+  await page.click("#mob-tab-model");
+  await page.waitForTimeout(220);
+  assert(
+    await page.evaluate(() => !document.body.classList.contains("left-sidebar-collapsed")),
+    "Desktop Model tab failed to open left glass panel"
+  );
+  await page.click("#mob-tab-model");
+  await page.waitForTimeout(160);
+
+  // Switch Desktop back to Classic UI via 1-click header toggle
+  await page.click("#btn-toggle-ui-layout");
+  await page.waitForTimeout(250);
+  const classicDesktopOk = await page.evaluate(() => {
+    const dock = document.getElementById("mob-dock");
+    const oldDock = document.getElementById("bottom-toolbar");
+    const oldTopHud = document.getElementById("hud-anchor-top-left");
+    const cascadeParent = document.getElementById("cascade-4d-panel")?.parentElement?.id;
     return Boolean(
-      dock && rail && getComputedStyle(dock).display === "none" && getComputedStyle(rail).display === "none"
+      document.documentElement.getAttribute("data-ui-layout") === "classic" &&
+        localStorage.getItem("bim_ui_layout") === "classic" &&
+        dock &&
+        getComputedStyle(dock).display === "none" &&
+        oldDock &&
+        getComputedStyle(oldDock).display !== "none" &&
+        oldTopHud &&
+        getComputedStyle(oldTopHud).display !== "none" &&
+        cascadeParent === "timeline-panel"
     );
   });
-  assert(desktopMobileHidden, "Mobile-only cockpit leaked onto desktop (1440x900)");
+  assert(classicDesktopOk, "Switching from Cockpit UI back to Classic UI failed on desktop (1440x900)");
 
-  for (const vp of [
-    { name: "tablet", width: 768, height: 1024 },
-    { name: "mobile", width: 390, height: 844 },
-  ]) {
-    await page.setViewportSize({ width: vp.width, height: vp.height });
-    await page.waitForTimeout(200);
-    const overflowX = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth + 4
+  // Verify Tablet (768x1024) zero overflow in both Classic & Cockpit UI
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.waitForTimeout(200);
+  assert(
+    !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 4)),
+    "Unexpected horizontal overflow on tablet (768x1024) Classic UI"
+  );
+  await page.evaluate(() => window.setUiLayout?.("cockpit"));
+  await page.waitForTimeout(200);
+  const tabletCockpitOk = await page.evaluate(() => {
+    const dock = document.getElementById("mob-dock");
+    const rail = document.getElementById("mob-camera-rail");
+    const dockDisp = dock ? getComputedStyle(dock).display : "";
+    const dockW = dock ? dock.getBoundingClientRect().width : 0;
+    return Boolean(
+      dock &&
+        (dockDisp === "flex" || dockDisp === "inline-flex") &&
+        dockW > 200 &&
+        dockW < window.innerWidth - 60 &&
+        rail &&
+        getComputedStyle(rail).display === "flex"
     );
-    assert(!overflowX, `Unexpected horizontal overflow on ${vp.name} (${vp.width}x${vp.height})`);
-    if (vp.name === "tablet") {
-      const tabletMobileHidden = await page.evaluate(() => {
-        const dock = document.getElementById("mob-dock");
-        return Boolean(dock && getComputedStyle(dock).display === "none");
-      });
-      assert(tabletMobileHidden, "Mobile-only dock leaked onto tablet (768x1024)");
-    }
-  }
+  });
+  assert(tabletCockpitOk, "Spatial Cockpit failed to render floating pill dock on tablet (768x1024)");
+
+  // Verify Fresh Mobile (390x844) defaults AUTOMATICALLY to Cockpit UI (without saved preference or #view= hash)
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    localStorage.removeItem("bim_ui_layout");
+    localStorage.setItem("bim-help-dont-show", "1");
+    window.history.replaceState(null, "", window.location.pathname);
+  });
+  await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction(() => typeof window.toggle4DMode === "function", { timeout: 25000 });
+  await page.evaluate(() => window.__enterpriseDrawersReady);
+  await page.waitForTimeout(400);
+  const mobileDefaultLayout = await page.evaluate(() => ({
+    layout: document.documentElement.getAttribute("data-ui-layout"),
+    saved: localStorage.getItem("bim_ui_layout"),
+    overflowX: document.documentElement.scrollWidth > window.innerWidth + 4,
+  }));
+  assert(
+    mobileDefaultLayout.layout === "cockpit" &&
+      mobileDefaultLayout.saved === null &&
+      !mobileDefaultLayout.overflowX,
+    `Fresh mobile (390x844) should default automatically to Cockpit UI: ${JSON.stringify(mobileDefaultLayout)}`
+  );
 
   // Verify Dedicated Mobile-Only Spatial Cockpit on 390x844
   await page.evaluate(() => {
@@ -388,6 +548,50 @@ try {
     "Mobile right-thumb Camera Views popover failed to open"
   );
   await page.click("#mob-cam-views");
+
+  // 7) Dedicated Mobile 4D Mini-Scrubber (#mob-4d-bar) + #mob-sheet-4d + Empty Launcher check
+  const emptyLauncherVisible = await page.evaluate(() =>
+    Boolean(document.getElementById("mob-empty-launcher")?.classList.contains("is-visible"))
+  );
+  assert(emptyLauncherVisible, "Mobile empty-canvas quick launcher should be visible before loading a model");
+
+  await page.click("#mob-tab-4d");
+  await page.waitForTimeout(260);
+  const mobile4dOk = await page.evaluate(() => {
+    const bar = document.getElementById("mob-4d-bar");
+    const desktopBar = document.getElementById("timeline-panel");
+    const dock = document.getElementById("mob-dock");
+    return Boolean(
+      document.body.classList.contains("mode-4d") &&
+        bar &&
+        getComputedStyle(bar).display === "flex" &&
+        desktopBar &&
+        getComputedStyle(desktopBar).display === "none" &&
+        dock &&
+        getComputedStyle(dock).display === "none"
+    );
+  });
+  assert(mobile4dOk, "Dedicated Mobile 4D Mini-Scrubber failed to replace desktop timeline on 390x844");
+
+  await page.click("#mob-4d-tools-btn");
+  await page.waitForTimeout(180);
+  assert(
+    await page.evaluate(() => Boolean(document.getElementById("mob-sheet-4d")?.classList.contains("is-open"))),
+    "Mobile 4D Tools sheet (#mob-sheet-4d) failed to open"
+  );
+  await page.click("#mob-4d-exit");
+  await page.waitForTimeout(220);
+  assert(
+    await page.evaluate(() => !document.body.classList.contains("mode-4d")),
+    "Mobile 4D Exit button failed to exit 4D mode"
+  );
+
+  // 8) Verify Mobile GPU Adaptive Quality cap active on phone viewport
+  const mobileGpuCapped = await page.evaluate(() => {
+    const ctrl = window.__mobileGpuController;
+    return Boolean(ctrl && ctrl.isMobileViewport() && ctrl.computeTargetPixelRatio(3) <= 1.5);
+  });
+  assert(mobileGpuCapped, "MobileGpuAdaptiveController did not cap phone pixel ratio <= 1.5");
 
   assert(consoleErrors.length === 0, `Console errors detected: ${consoleErrors.join(" | ")}`);
   assert(pageErrors.length === 0, `Page errors detected: ${pageErrors.join(" | ")}`);

@@ -183,6 +183,10 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
         const safePrio = escapeHtml(t.priority);
         const safeDesc = escapeHtml(t.description);
         const safeAssigned = escapeHtml(t.assignedTo || "Unassigned");
+        const safePhoto =
+          t.photoDataUrl && t.photoDataUrl.startsWith("data:image/")
+            ? `<div class="bcf-photo-preview"><img src="${t.photoDataUrl}" alt="${escapeHtml(t.photoName || "Site photo")}" loading="lazy" /></div>`
+            : "";
         return `
         <div class="bcf-issue-card" data-guid="${safeGuid}">
           <div class="bcf-card-header">
@@ -190,6 +194,7 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
             <span class="bcf-priority-badge ${safePrio}">${safePrio}</span>
           </div>
           <p class="bcf-card-desc">${safeDesc}</p>
+          ${safePhoto}
           <div class="bcf-card-footer">
             <span style="font-size: 0.6rem; color: var(--text-muted);">👤 ${safeAssigned}</span>
             <button class="btn-bcf-restore" data-guid="${safeGuid}">📍 Restore View</button>
@@ -254,6 +259,85 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
       count > 0 ? "success" : "warning"
     );
   });
+
+  // 1-Tap Field Snagging: Camera / Site Photo -> BCF Issue with live 3D viewpoint
+  const compressPhotoFile = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Photo read failed"));
+      reader.onload = () => {
+        const rawUrl = String(reader.result || "");
+        if (!rawUrl.startsWith("data:image/")) {
+          resolve(rawUrl);
+          return;
+        }
+        const img = new Image();
+        img.onerror = () => resolve(rawUrl);
+        img.onload = () => {
+          try {
+            const maxDim = 960;
+            const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(rawUrl);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.78));
+          } catch {
+            resolve(rawUrl);
+          }
+        };
+        img.src = rawUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  let photoInput = document.getElementById("bcf-site-photo-input") as HTMLInputElement | null;
+  if (!photoInput) {
+    photoInput = document.createElement("input");
+    photoInput.type = "file";
+    photoInput.id = "bcf-site-photo-input";
+    photoInput.accept = "image/*";
+    photoInput.setAttribute("capture", "environment");
+    photoInput.style.display = "none";
+    document.body.appendChild(photoInput);
+  }
+
+  photoInput.addEventListener("change", async () => {
+    const file = photoInput?.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressPhotoFile(file);
+      const storey = document.getElementById("breadcrumb-storey")?.textContent?.trim() || "Active Level";
+      const titleInput = document.getElementById("bcf-new-title") as HTMLInputElement | null;
+      const customTitle = titleInput?.value.trim();
+      const title = customTitle || `Site Photo Snag — ${storey}`;
+      const desc = `Captured on site (${file.name}) pinned to current 3D viewpoint on ${storey}.`;
+      bcfIssueManager.createPhotoIssue(title, desc, dataUrl, file.name, "Major", "Field Engineer");
+      if (titleInput) titleInput.value = "";
+      renderBcfIssues();
+      const panel = document.getElementById("bcf-issues-panel");
+      if (panel && panel.classList.contains("hidden")) {
+        toggleEnterpriseDrawer("bcf-issues-panel");
+      }
+      try { navigator.vibrate?.([12, 30, 12]); } catch { /* noop */ }
+      showToast(`Site photo pinned to BCF: ${title}`, "success");
+    } catch {
+      showToast("Could not attach site photo to BCF issue.", "error");
+    } finally {
+      if (photoInput) photoInput.value = "";
+    }
+  });
+
+  const triggerSitePhotoBcfSnag = () => {
+    photoInput?.click();
+  };
+  (window as any).triggerSitePhotoBcfSnag = triggerSitePhotoBcfSnag;
+  document.getElementById("btn-bcf-photo-snag")?.addEventListener("click", triggerSitePhotoBcfSnag);
 
   document.getElementById("btn-view-snapshot")?.addEventListener("click", () => {
     const vfx = GraphicsVFXManager.getInstance();
@@ -1982,7 +2066,10 @@ export function initEnterpriseSuitesController(world: any, highlighter: any) {
   // Enterprise Theme Synchronization
   function applyGlobalTheme(themeKey: string) {
     const preset = THEME_PRESET_MAP[themeKey] || THEME_PRESET_MAP.obsidian;
+    document.documentElement.classList.add("theme-switching");
     document.documentElement.setAttribute("data-theme", preset.name);
+    void document.documentElement.offsetHeight;
+    document.documentElement.classList.remove("theme-switching");
     try {
       localStorage.setItem("bim_theme_preset", preset.name);
       localStorage.setItem("bim_theme", preset.name);

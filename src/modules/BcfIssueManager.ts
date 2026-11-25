@@ -24,6 +24,8 @@ export interface BcfTopic {
   assignedTo?: string;
   viewpoint: BcfViewpoint;
   redlinePoints?: { x: number; y: number }[];
+  photoDataUrl?: string;
+  photoName?: string;
 }
 
 export class BcfIssueManager {
@@ -159,6 +161,21 @@ export class BcfIssueManager {
     this.topics.unshift(newTopic);
     this.registerTopicMarker(newTopic);
     return newTopic;
+  }
+
+  public createPhotoIssue(
+    title: string,
+    description: string,
+    photoDataUrl: string,
+    photoName = "site-photo.jpg",
+    priority: BcfPriority = "Major",
+    assignedTo = "Field Engineer"
+  ): BcfTopic {
+    const topic = this.createIssue(title, description, priority, assignedTo);
+    topic.topicType = "Field Snag";
+    topic.photoDataUrl = photoDataUrl;
+    topic.photoName = photoName;
+    return topic;
   }
 
   public createIssueFromClash(clash: {

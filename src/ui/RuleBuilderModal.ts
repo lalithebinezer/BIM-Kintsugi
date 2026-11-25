@@ -126,52 +126,58 @@ export class RuleBuilderModal {
 
     const overlay = document.createElement("div");
     overlay.id = "rule-builder-modal";
-    overlay.className = "rb-modal-overlay hidden";
+    overlay.className = "rb-modal-overlay bk-modal-backdrop hidden";
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-label", "Dynamic Search Set Rule Builder");
 
     overlay.innerHTML = `
-      <div class="rb-modal-card">
-        <div class="rb-modal-header">
-          <div class="rb-modal-title">
+      <div class="rb-modal-card bk-modal bk-modal--lg">
+        <div class="rb-modal-header bk-modal__header">
+          <div class="rb-modal-title bk-modal__title">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span>Dynamic Search Set Rule Builder</span>
           </div>
-          <button type="button" class="btn-icon-sm" id="rb-btn-close" title="Close Rule Builder">✕</button>
+          <button type="button" class="btn-icon-sm bk-btn bk-btn--ghost bk-btn--icon" id="rb-btn-close" title="Close Rule Builder">✕</button>
         </div>
 
-        <div class="rb-modal-body thin-scrollbar">
+        <div class="rb-modal-body bk-modal__body thin-scrollbar">
           <div class="rb-section-label">Saved Search Set Rules</div>
           <div class="rb-saved-list" id="rb-saved-rules-list"></div>
 
           <div class="rb-section-label" style="margin-top:0.75rem;">Rule Definition</div>
           <div class="rb-name-row">
-            <input type="text" id="rb-rule-name" class="gis-input" placeholder="e.g. Level 2 Structural Walls" aria-label="Search Set Rule Name" />
-            <button type="button" id="rb-btn-new-draft" class="btn-xs btn-outline">New</button>
+            <input type="text" id="rb-rule-name" class="gis-input bk-input" placeholder="e.g. Level 2 Structural Walls" aria-label="Search Set Rule Name" />
+            <button type="button" id="rb-btn-new-draft" class="btn-xs btn-outline bk-btn bk-btn--sm">New</button>
           </div>
 
           <div class="rb-conditions-list" id="rb-conditions-list"></div>
-          <button type="button" id="rb-btn-add-condition" class="btn-xs btn-outline" style="margin-top:0.35rem;">+ Add Condition</button>
+          <button type="button" id="rb-btn-add-condition" class="btn-xs btn-outline bk-btn bk-btn--sm" style="margin-top:0.35rem;">+ Add Condition</button>
 
           <div class="rb-bind-row">
             <label for="rb-bind-task-select">Bind to 4D Task:</label>
-            <select id="rb-bind-task-select" class="clash-status-select" aria-label="Bind Rule to 4D Task"></select>
+            <select id="rb-bind-task-select" class="clash-status-select bk-select bk-select--sm" aria-label="Bind Rule to 4D Task"></select>
           </div>
 
           <div class="rb-test-output" id="rb-test-output"></div>
         </div>
 
-        <div class="rb-modal-footer">
-          <button type="button" id="rb-btn-test" class="btn-xs btn-outline">Test &amp; Highlight</button>
-          <button type="button" id="rb-btn-save" class="btn-xs btn-accent">Save Rule</button>
-          <button type="button" id="rb-btn-save-bind" class="btn-xs btn-accent">Save &amp; Bind to Task</button>
+        <div class="rb-modal-footer bk-modal__footer">
+          <button type="button" id="rb-btn-test" class="btn-xs btn-outline bk-btn bk-btn--sm">Test &amp; Highlight</button>
+          <button type="button" id="rb-btn-save" class="btn-xs btn-accent bk-btn bk-btn--primary bk-btn--sm">Save Rule</button>
+          <button type="button" id="rb-btn-save-bind" class="btn-xs btn-accent bk-btn bk-btn--primary bk-btn--sm">Save &amp; Bind to Task</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(overlay);
     this.modalEl = overlay;
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.modalEl && !this.modalEl.classList.contains("hidden")) {
+        this.close();
+      }
+    });
 
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) this.close();

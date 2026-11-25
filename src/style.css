@@ -5678,9 +5678,7 @@ body[data-theme="light"] {
   color: #10b981;
 }
 
-.mobile-bottom-nav {
-  display: none;
-}
+/* Mobile bottom navigation is superseded by dedicated `src/styles/mobile-layout.css` cockpit. */
 
 /* Mobile responsive drawer */
 .mobile-nav-bar {
@@ -5721,9 +5719,9 @@ body[data-theme="light"] {
     flex-shrink: 1;
   }
 
-  /* Collapse button text to icons for tablet viewports */
-  .btn-shortcuts-toggle span:not(#clash-header-count):not(#bcf-header-count):not(#saved-views-count-badge):not(#collab-header-count),
-  .btn-shortcuts-toggle kbd,
+  /* Collapse button text to icons for tablet viewports (keep Spatial Cockpit search & layout pills controlled cleanly) */
+  .btn-shortcuts-toggle:not(#btn-open-command-palette):not(#btn-toggle-ui-layout) span:not(#clash-header-count):not(#bcf-header-count):not(#saved-views-count-badge):not(#collab-header-count),
+  .btn-shortcuts-toggle:not(#btn-open-command-palette):not(#btn-toggle-ui-layout) kbd,
   .btn-4d-mode #btn-4d-label {
     display: none !important;
   }
@@ -6042,11 +6040,6 @@ body[data-theme="light"] {
   #btn-header-gantt,
   #btn-header-carbon,
   #btn-header-collab {
-    display: none !important;
-  }
-
-  /* Mobile bottom nav disabled to prioritize workstation Magic Dock */
-  .mobile-bottom-nav {
     display: none !important;
   }
 

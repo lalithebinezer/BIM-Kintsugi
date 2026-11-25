@@ -1,0 +1,342 @@
+/**
+ * HelpCenterArticles — Single Source of Truth for BIM Kintsugi In-App Help Center
+ *
+ * Written in SaaS Help Center format: clear prerequisites, numbered step-by-step
+ * workflows, expected outcomes, Pro Tips, and troubleshooting callouts.
+ */
+
+export interface HelpStep {
+  title: string;
+  body: string;
+  tip?: string;
+}
+
+export interface HelpCallout {
+  tone: "tip" | "note" | "warning";
+  title: string;
+  body: string;
+}
+
+export interface HelpFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface HelpArticleAction {
+  label: string;
+  runId:
+    | "load-snowdon"
+    | "toggle-layout"
+    | "photo-snag"
+    | "enter-4d"
+    | "open-clash"
+    | "open-5d"
+    | "open-gis"
+    | "open-palette";
+}
+
+export interface HelpArticle {
+  id: string;
+  category: "Getting Started" | "Interface" | "Field & Mobile" | "4D / 5D / 6D" | "Coordination";
+  title: string;
+  summary: string;
+  readTime: string;
+  accent: string;
+  icon: string;
+  keywords: string[];
+  action?: HelpArticleAction;
+  prerequisites?: string[];
+  steps: HelpStep[];
+  callouts?: HelpCallout[];
+  faqs?: HelpFaqItem[];
+}
+
+export const HELP_CENTER_ARTICLES: HelpArticle[] = [
+  {
+    id: "getting-started",
+    category: "Getting Started",
+    title: "Getting Started: Load Models & Explore in 3D",
+    summary: "Load an IFC or FRAG model in one click, run automatic STEP pre-flight diagnostics, and inspect element metadata.",
+    readTime: "3 min read",
+    accent: "#38BDF8",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+    keywords: ["load", "ifc", "frag", "sample", "snowdon", "upload", "select", "meta", "orbit", "viewcube", "start"],
+    action: { label: "Load Snowdon Towers (IFC)", runId: "load-snowdon" },
+    prerequisites: [
+      "A modern WebGL2 browser (Chrome, Edge, Safari, or Firefox) on desktop, tablet, or mobile.",
+      "Optional: any local .ifc (IFC2x3 / IFC4 / IFC4.3) or pre-compiled .frag model file.",
+    ],
+    steps: [
+      {
+        title: "Open a demo model or upload your IFC/FRAG file",
+        body: "On mobile or in Spatial Cockpit UI, click <strong>Load Snowdon Towers (IFC)</strong> on the centered Quick Launcher card. In Classic Desktop UI, open the <strong>Files</strong> tab (<kbd>1</kbd>) and click <strong>Load</strong>, or drag-and-drop any <code>.ifc</code> / <code>.frag</code> file directly onto the 3D canvas.",
+        tip: "Uploaded IFC models are automatically converted into binary Fragments and cached in IndexedDB so reopening the same project is nearly instant.",
+      },
+      {
+        title: "Review automatic IFC Pre-Flight diagnostics",
+        body: "When an <code>.ifc</code> file loads, an off-thread Web Worker scans schema version, SI units, georeferencing (<code>IfcMapConversion</code>), quantity sets (<code>Qto_*</code>), and embedded IFC4 <code>IfcWorkSchedule</code> timelines without freezing the UI.",
+      },
+      {
+        title: "Navigate the 3D building effortlessly",
+        body: "<strong>Left-drag</strong> to orbit, <strong>Right-drag</strong> to pan, and <strong>Scroll</strong> (or press <kbd>+</kbd>/<kbd>-</kbd>) to zoom. Click any face on the top-right <strong>3D ViewCube</strong> to snap orthogonal elevations, press <kbd>T</kbd> for Top Plan, <kbd>P</kbd> for Isometric 3D, or <kbd>F</kbd> / <kbd>Home</kbd> to fit the whole building.",
+      },
+      {
+        title: "Select elements and inspect BIM Metadata",
+        body: "<strong>Left-click</strong> any wall, slab, column, or MEP component to open the dedicated <strong>META</strong> inspector (<kbd>8</kbd>). Hold <kbd>Shift</kbd> while clicking—or press <kbd>B</kbd> and drag a marquee box—to multi-select and view summed <code>NetVolume</code>, surface area, cost valuation, and category filter chips.",
+        tip: "Lost a complex multi-selection? Press Ctrl+Z / Ctrl+Y for 25-step Selection Undo/Redo, or click Save Set to pin reusable groups in Finder (2).",
+      },
+    ],
+    callouts: [
+      {
+        tone: "tip",
+        title: "Instant Floor Isolation",
+        body: "Click the Storey Pill in the Cockpit top bar (or open the 2D Floor Radar in Classic UI) to jump directly to any building level and slice ceilings above your active storey.",
+      },
+    ],
+  },
+  {
+    id: "ui-layouts",
+    category: "Interface",
+    title: "Switching Between Classic UI & Spatial Cockpit UI",
+    summary: "Understand device-smart defaults, switch layouts in one click with zero reload, and customize themes & role personas.",
+    readTime: "2 min read",
+    accent: "#A855F7",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
+    keywords: ["classic", "cockpit", "layout", "switch", "theme", "light", "studio", "obsidian", "persona", "role"],
+    action: { label: "Toggle Classic / Cockpit UI", runId: "toggle-layout" },
+    steps: [
+      {
+        title: "Know your automatic default layout",
+        body: "BIM Kintsugi automatically chooses the optimal workspace for your screen: <strong>Desktop &amp; Tablet (&ge; 768px)</strong> starts in <strong>Classic UI</strong> with full sidebars, quick-view ribbon, and Magic Dock, while <strong>Mobile (&le; 767px)</strong> starts in the minimalist <strong>Spatial Cockpit UI</strong> with 88%+ unobstructed 3D canvas.",
+      },
+      {
+        title: "Switch layouts in one click (zero reload)",
+        body: "<strong>From Classic UI:</strong> click the highlighted <strong>Cockpit UI</strong> button in the top-right header (or tap <strong>Switch to Cockpit UI</strong> at the top of the mobile <code>&equiv;</code> menu).<br/><strong>From Spatial Cockpit UI:</strong> click <strong>Classic UI</strong> in the desktop top bar, or open <strong>Workspace &amp; Views</strong> (&equiv;) and select <strong>Cockpit UI</strong> or <strong>Classic UI</strong> under <em>Interface Layout</em>.",
+        tip: "You can also press Ctrl+K and type \"Toggle UI Layout\" at any time.",
+      },
+      {
+        title: "Choose your appearance theme (5 WCAG AAA themes)",
+        body: "Open the Theme switcher (top header in Classic UI, or <strong>Workspace &amp; Views</strong> in Cockpit UI) to switch cleanly between <strong>Obsidian</strong>, <strong>Studio (Light)</strong>, <strong>Zen</strong>, <strong>Neon</strong>, and <strong>CAD Blueprint</strong>. Both UI chrome and 3D viewport lighting/grid update instantaneously with zero flash.",
+      },
+      {
+        title: "Filter tools by Workspace Role Persona",
+        body: "Pick <strong>All Tools</strong>, <strong>Design Review</strong>, <strong>4D Planner</strong>, <strong>5D Commercial</strong>, or <strong>Field Touch</strong> to tailor visible controls and touch target sizing to your current workflow.",
+      },
+    ],
+    callouts: [
+      {
+        tone: "note",
+        title: "Preference Persistence",
+        body: "Once you explicitly switch between Classic UI and Spatial Cockpit UI, your preference is saved in local storage and restored synchronously before first paint on future visits.",
+      },
+    ],
+  },
+  {
+    id: "mobile-field-guide",
+    category: "Field & Mobile",
+    title: "Mobile & Jobsite Field Guide (Touch, Walk & Photo Snags)",
+    summary: "Navigate 3D models one-handed on phones, walk jobsite corridors with dual-thumb joysticks, and capture camera photos straight into BCF issues.",
+    readTime: "4 min read",
+    accent: "#10B981",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+    keywords: ["mobile", "phone", "touch", "walkthrough", "joystick", "photo", "camera", "snag", "bcf", "offline", "pwa", "gpu"],
+    action: { label: "Snap Site Photo → BCF", runId: "photo-snag" },
+    steps: [
+      {
+        title: "Master the 5-Tab Bottom Bar & Swipe Sheets",
+        body: "Use the thumb-friendly bottom bar to open <strong>Model</strong> (files, finder, schedule), <strong>Inspect</strong> (scene, metadata, tools), <strong>Tools</strong> (measure, section, selection chips), <strong>4D</strong> (timeline scrubber), or <strong>Suites</strong> (Clash, BCF, AI Copilot, 5D, 6D, GIS). Drag any sheet handle downward to dismiss or upward to expand to full height.",
+      },
+      {
+        title: "Use the Right-Edge Thumb Camera Rail",
+        body: "Tap the floating right-edge rail for 1-tap <strong>Fit View</strong> (Home), <strong>Camera Views</strong> popover (<em>Top, Iso, Explode, Grid, Radar</em>), and <strong>Section Cut</strong> without leaving the 3D viewport.",
+      },
+      {
+        title: "Walk inside the model with Dual-Thumb Touch Controls",
+        body: "Open <strong>Workspace &amp; Views</strong> (&equiv;) and tap <strong>First-Person Touch Walk</strong>. Use the left analog joystick to move/strafe, drag the right pad to look around, tap <strong>&uarr; / &darr;</strong> to change floor elevation, and tap <strong>Exit</strong> to return to Orbit mode.",
+      },
+      {
+        title: "Capture 1-Tap Site Photo Snags directly into BCF",
+        body: "Tap <strong>Tools &rarr; Photo Snag &rarr; BCF</strong> (or open <strong>Suites &rarr; BCF Issues</strong> and tap <strong>Photo</strong>). Snap a photo with your phone's rear camera—BIM Kintsugi compresses the image client-side, binds your live 3D camera viewpoint and selected element, and creates an exportable <code>.bcfzip</code> field topic automatically.",
+        tip: "Install BIM Kintsugi to your home screen (Add to Home Screen / PWA) for offline WebAssembly IFC loading and automatic GPU adaptive resolution during touch orbiting.",
+      },
+    ],
+    callouts: [
+      {
+        tone: "tip",
+        title: "Automatic Mobile GPU Smoothing",
+        body: "On phones, MobileGpuAdaptiveController caps idle pixel ratio to 1.5x and temporarily drops DPR to 1.0x during active pinch/orbit gestures, restoring sharp rendering 180ms after you lift your finger.",
+      },
+    ],
+  },
+  {
+    id: "4d-simulation",
+    category: "4D / 5D / 6D",
+    title: "4D Construction Simulation, WBS Gantt & CasCADe Lens",
+    summary: "Sequence construction timelines from IFC properties or CSV/XML/XER schedules, inspect slack with CasCADe Lens, and simulate tower crane envelopes.",
+    readTime: "4 min read",
+    accent: "#F59E0B",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>`,
+    keywords: ["4d", "gantt", "timeline", "schedule", "cascade", "slack", "float", "crane", "lookahead", "what-if", "csv", "xml", "xer", "cpm"],
+    action: { label: "Launch 4D Simulation", runId: "enter-4d" },
+    steps: [
+      {
+        title: "Enter 4D Mode & Scrub the Construction Timeline",
+        body: "Click the <strong>4D</strong> tab in Spatial Cockpit UI (or the <strong>4D Gantt</strong> icon in Classic UI) to reveal the floating 4D Scrubber Bar. Press <strong>Play</strong> (or <kbd>Space</kbd>), drag the timeline slider across weeks, or open <strong>4D Tools</strong> to change playback speed (<code>1x</code>, <code>2x</code>, <code>5x</code>, <code>10x</code>).",
+      },
+      {
+        title: "Import or Auto-Generate a 4D Schedule",
+        body: "Open <strong>4D Schedule</strong> (<kbd>3</kbd>) to generate a bottom-up sequence by any IFC property (e.g., <em>Storey</em> or <em>Phase</em>), or import <strong>CSV</strong> (with interactive column mapping &amp; composite <code>Storey+Category</code> keys), <strong>MS Project (.xml)</strong>, <strong>Primavera P6 (.xer)</strong>, or native <strong>IFC4 IfcWorkSchedule</strong> files.",
+      },
+      {
+        title: "Inspect Float & Dependencies with CasCADe 4D Lens",
+        body: "Click <strong>4D Tools &rarr; CasCADe Lens</strong> (or <strong>CasCADe</strong> on the Classic 4D bar). Select from 12 CPM indicators (<em>Total Slack, Free Slack, Duration, Cost Density</em>) and 15 ColorBrewer palettes. Click any of the 5 legend bands to isolate matching elements in 3D and toggle <code>Crit Arcs</code>, <code>Pred/Succ</code>, or <code>Out-of-Seq</code> 3D Bezier vectors.",
+      },
+      {
+        title: "Run WBS Gantt, Visual Rule Builder, Crane & What-If Sandbox",
+        body: "Launch <strong>WBS Gantt</strong> to zoom <code>M/W/D</code> timescales or open the <strong>Visual Rule Builder</strong> to bind boolean search sets directly to tasks. Use <strong>Tower Crane</strong> for 3D swing-radius clash envelopes, <strong>Lookahead</strong> for 2–6 week site windows, <strong>What-If Sim</strong> to test delay cascades, and <strong>Cash-Flow</strong> for live S-curve cost histograms.",
+      },
+    ],
+    callouts: [
+      {
+        tone: "tip",
+        title: "Clean 4D Exit",
+        body: "Click the red X button on the 4D bar to exit 4D mode cleanly—all temporary 4D highlights, growth planes, and dependency arcs clear automatically and your pre-4D model visibility is restored.",
+      },
+    ],
+  },
+  {
+    id: "clash-bcf",
+    category: "Coordination",
+    title: "3D/4D Clash Detection, SLF Zones & BCF Coordination",
+    summary: "Detect spatial and temporal conflicts ranked by criticality, visualize storey congestion (SLF), and export BCF 2.1/3.0 packages.",
+    readTime: "3 min read",
+    accent: "#F43F5E",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    keywords: ["clash", "temporal", "slf", "congestion", "bcf", "bcfzip", "issue", "pin", "coordination", "bwm"],
+    action: { label: "Open Clash Matrix", runId: "open-clash" },
+    steps: [
+      {
+        title: "Choose Your Clash Detection Mode",
+        body: "Open <strong>Clash Matrix</strong> from <strong>Suites</strong> (Cockpit UI) or the crimson bolt icon on the Classic bottom dock. Select <strong>Static 3D</strong> for geometric intersections, <strong>Temporal 4D</strong> to prune clashes whose tasks never overlap in time, or <strong>Workspace 4D</strong> for crew safety clearance envelopes.",
+      },
+      {
+        title: "Run Scan & Prioritize by BWM Criticality Index (CI)",
+        body: "Click <strong>Run Clash Scan</strong>. Results run off-thread in a Web Worker and sort automatically by <strong>Criticality Index (CI)</strong>. Click any conflict to fly the camera, highlight Element A vs. Element B, and ghost surrounding geometry.",
+      },
+      {
+        title: "Analyze 4D Workspace Congestion (SLF)",
+        body: "Click <strong>Analyze SLF</strong> inside Clash Matrix—or enable <strong>SLF Zones</strong> in 4D Tools—to compute Hosny Space Loading Factors per storey (<code>Optimal &le; 0.70</code>, <code>Moderate 0.70–0.90</code>, <code>Extreme &gt; 0.90</code>) with translucent 3D heatmap overlays.",
+      },
+      {
+        title: "Create & Export BCF 2.1/3.0 Coordination Issues",
+        body: "Promote any clash (or right-click any 3D element &rarr; <strong>Create BCF Issue</strong>) to record a BCF topic with live camera viewpoint, status, priority, and optional site photo. Click <strong>Export .bcfzip</strong> inside the BCF drawer to share directly with Revit, Navisworks, Solibri, or ACC.",
+      },
+    ],
+  },
+  {
+    id: "5d-cost-evm",
+    category: "4D / 5D / 6D",
+    title: "5D Rule-Book BOQ, GAEB .X83, ANSI EVM & Executive PDF",
+    summary: "Generate standard-compliant Bills of Quantities, audit model data readiness, forecast EAC with ANSI 748-B EVM, and print boardroom PDF reports.",
+    readTime: "4 min read",
+    accent: "#EAB308",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    keywords: ["5d", "cost", "boq", "gaeb", "x83", "din", "uniclass", "masterformat", "audit", "evm", "cpi", "spi", "report", "pdf"],
+    action: { label: "Open 5D Cost & BOQ", runId: "open-5d" },
+    steps: [
+      {
+        title: "Select a Cost Classification Rule-Book & Currency",
+        body: "Open <strong>5D Cost &amp; BOQ</strong> (green <strong>$</strong> icon or <strong>Suites &rarr; 5D Cost &amp; BOQ</strong>). Switch between <strong>DIN 276</strong>, <strong>Uniclass 2015</strong>, and <strong>CSI MasterFormat</strong>, adjust your currency, or import a custom <code>.csv</code> unit-rate catalog.",
+      },
+      {
+        title: "Run Model & BOQ Quality Audit Drill-Down",
+        body: "Click <strong>Model &amp; BOQ Audit</strong> to inspect traffic-light readiness across 6 QA checks (<code>MISSING_QTO</code>, <code>ZERO_RATE</code>, <code>UNIT_MISMATCH</code>, <code>LOW_CONFIDENCE</code>, <code>UNCLASSIFIED</code>). Click any flagged issue to isolate affected 3D elements, switch per-item QTO provenance, or export <strong>GAEB DA XML (.X83)</strong> and CSV BOQ.",
+      },
+      {
+        title: "Track Earned Value (EVM) & Multi-Model Forecasts",
+        body: "Open <strong>EVM Control</strong> to view live <strong>CPI</strong>, <strong>SPI</strong>, Lipke Earned Schedule (<code>SV(t)</code>, <code>SPI(t)</code>, <code>EAC(t)</code>), the APM Bulls-Eye Quadrant scatter plot, and ANSI/EIA 748-B Tier 1/Tier 2 Variance Alerts. Export <strong>CPR Format 1 (WBS Ledger)</strong> or <strong>CPR Format 5 (VAR Report)</strong>.",
+      },
+      {
+        title: "Generate a Boardroom Executive Twin Report",
+        body: "Click <strong>Executive Report</strong> inside the 5D drawer (or press <kbd>Ctrl+K</kbd> &rarr; <em>Executive Report</em>) to compile 4D progress, EVM S-Curve, clash matrix, and 6D carbon grade into a print-ready vector PDF layout or raw BI JSON.",
+      },
+    ],
+  },
+  {
+    id: "6d-carbon-gis",
+    category: "4D / 5D / 6D",
+    title: "6D Carbon LCA, GeoBIM GIS & Engineering Studio",
+    summary: "Paint 3D embodied carbon heatmaps, place models on real-world satellite terrain with NOAA solar alignment, and align DXF plans & Civil 4.3 profiles.",
+    readTime: "3 min read",
+    accent: "#06B6D4",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+    keywords: ["6d", "carbon", "lca", "gis", "geobim", "satellite", "solar", "sun", "dxf", "point cloud", "civil", "splitter", "geojson"],
+    action: { label: "Open GeoBIM GIS", runId: "open-gis" },
+    steps: [
+      {
+        title: "Visualize 6D Embodied Carbon (ICE v3.0)",
+        body: "Open <strong>6D Carbon LCA</strong> to compute embodied carbon (<code>kgCO₂e</code>) directly from IFC volumes and paint a 5-band <strong>Grade A &rarr; Grade E</strong> heatmap onto the 3D geometry. Simulate lower-carbon substitutions (<em>Fly-Ash Concrete, CLT, EAF Recycled Steel</em>) and export EN 15978 CSV reports.",
+      },
+      {
+        title: "Georeference & Drape 3D Satellite Terrain (GeoBIM GIS)",
+        body: "Press <kbd>G</kbd> or open <strong>GeoBIM GIS</strong>. Search any global address (keyless OpenStreetMap Nominatim) or auto-read <code>IfcMapConversion</code> / <code>IfcSite</code> coordinates. Enable 1:1 metric satellite basemaps, municipal GeoJSON cadastre/utilities, and <strong>NOAA Solar Position</strong> shadow studies.",
+      },
+      {
+        title: "Overlay 2D DXF Plans, Point Clouds & Civil 4.3 Alignments",
+        body: "Open <strong>Engineering Studio</strong> to align 2D DXF drawings on active storey planes, inspect E57/LAS/PLY point clouds, split federated models by storey/category with <strong>IfcSplitter</strong>, or scan <strong>Civil 4.3</strong> alignments and click station dots on the vertical profile SVG to fly along corridors.",
+      },
+    ],
+  },
+  {
+    id: "shortcuts-troubleshooting",
+    category: "Getting Started",
+    title: "Command Palette, Shortcuts & Troubleshooting FAQ",
+    summary: "Work at keyboard speed with Ctrl+K, master selection & camera hotkeys, and resolve common WebGL, IFC, or offline cache questions.",
+    readTime: "3 min read",
+    accent: "#34D399",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    keywords: ["shortcut", "hotkey", "keyboard", "ctrl+k", "command", "palette", "troubleshoot", "faq", "slow", "webgl", "cache", "ollama"],
+    action: { label: "Open Command Palette (Ctrl+K)", runId: "open-palette" },
+    steps: [
+      {
+        title: "Launch anything instantly with Command Palette (Ctrl+K)",
+        body: "Press <kbd>Ctrl+K</kbd> (or <kbd>Cmd+K</kbd> on macOS) and type any action—<em>\"Toggle UI Layout\"</em>, <em>\"Photo Snag\"</em>, <em>\"Section Cut\"</em>, <em>\"Top View\"</em>, <em>\"4K Snapshot\"</em>, or an IFC element name—then press <kbd>Enter</kbd>.",
+      },
+      {
+        title: "Use high-frequency selection & camera hotkeys",
+        body: "Press <kbd>I</kbd> to Isolate, <kbd>H</kbd> to Hide, <kbd>U</kbd> to Unhide All, <kbd>C</kbd> to select Same Category, <kbd>X</kbd> for Section Cut, <kbd>M</kbd> for 3D Measure, <kbd>B</kbd> for Box Select, <kbd>[</kbd>/<kbd>]</kbd> to adjust zoom speed, and <kbd>?</kbd> to reopen this Help Center anytime.",
+      },
+      {
+        title: "Share exact views & save session snapshots",
+        body: "Press <kbd>Ctrl+Shift+L</kbd> to copy a shareable <code>#view=</code> deep-link encoding camera position, target, and theme, or press <kbd>Ctrl+Shift+S</kbd> to persist a complete IndexedDB workspace snapshot.",
+      },
+    ],
+    faqs: [
+      {
+        question: "Why did my phone open Spatial Cockpit UI while my laptop opened Classic UI?",
+        answer: "BIM Kintsugi defaults to Classic UI on desktops/tablets (>= 768px) and Spatial Cockpit UI on phones (<= 767px) for ergonomic screen use. Click the header toggle button (or Workspace & Views -> Interface Layout) at any time to switch and save your personal preference.",
+      },
+      {
+        question: "A large IFC file feels slow while orbiting on mobile—what should I do?",
+        answer: "Export the loaded model once as a compressed .frag file (Field Tools -> Export FRAG) for instant reloads, keep Mobile Adaptive GPU Quality active, and use Storey Slicing or Category Isolation (I) to focus only on active work zones.",
+      },
+      {
+        question: "How do I enable optional local Ollama AI Copilot responses?",
+        answer: "Run Ollama locally on http://localhost:11434 with CORS enabled and toggle local LLM enrichment in the AI Copilot drawer (or set localStorage.bim_enable_ollama = \"true\"). Without Ollama, the built-in structured BIM tool router handles all offline queries natively.",
+      },
+      {
+        question: "How do I reset cached data or dismiss startup help?",
+        answer: "Check \"Don't show on startup\" at the bottom of the Help modal. To clear cached models/preferences, clear site storage for BIM Kintsugi in your browser settings and refresh.",
+      },
+    ],
+  },
+];
+
+export const HELP_CENTER_CATEGORIES = [
+  "All",
+  "Getting Started",
+  "Interface",
+  "Field & Mobile",
+  "4D / 5D / 6D",
+  "Coordination",
+] as const;

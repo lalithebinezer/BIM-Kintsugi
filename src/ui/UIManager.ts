@@ -3,9 +3,28 @@
  * Manages UI overlays, sidebar tab systems, mobile navigation, help modal, and theme switcher event bindings.
  */
 
+import type { HelpCenterController } from "./HelpCenterController";
+
+const DRAWER_HELP_MAP: Record<string, string> = {
+  "clash-panel": "clash-bcf",
+  "bcf-panel": "clash-bcf",
+  "collab-panel": "clash-bcf",
+  "cost-control-panel": "5d-cost-evm",
+  "evm-panel": "5d-cost-evm",
+  "carbon-panel": "6d-carbon-gis",
+  "gis-panel": "6d-carbon-gis",
+  "engineering-panel": "6d-carbon-gis",
+  "measurement-panel": "getting-started",
+  "copilot-panel": "shortcuts-troubleshooting",
+  "ifc-param-drawer": "4d-simulation",
+  "gantt-chart-drawer": "4d-simulation",
+};
+
 export class UIManager {
   private static instance: UIManager | null = null;
   private initialized = false;
+  private helpCenter: HelpCenterController | null = null;
+  private helpCenterPromise: Promise<HelpCenterController> | null = null;
 
   private constructor() {}
 
@@ -23,7 +42,6 @@ export class UIManager {
     this.setupSidebarTabSystem();
     this.setupSettingsCategorySystem();
     this.setupHelpModalController();
-    this.setupMobileNavigation();
   }
 
   public setupSettingsCategorySystem() {
@@ -88,7 +106,9 @@ export class UIManager {
       if (!sidebar) return;
 
       const isMobile = window.innerWidth <= 1080;
-      const isPhoneCockpit = window.innerWidth <= 767 || (window.innerHeight <= 460 && window.innerWidth <= 932);
+      const isCockpit = document.documentElement.getAttribute('data-ui-layout') !== 'classic';
+      const isPhoneCockpit =
+        isCockpit && (window.innerWidth <= 767 || (window.innerHeight <= 460 && window.innerWidth <= 932));
       const currentActiveBtn = tabBar.querySelector('.sidebar-tab-btn.active, .tab-btn.active');
       const currentActiveTab = currentActiveBtn?.getAttribute('data-tab');
 
@@ -209,9 +229,25 @@ export class UIManager {
     const btnHelpDone        = document.getElementById("btn-help-done") as HTMLButtonElement | null;
     const helpDontShow       = document.getElementById("help-dont-show-again") as HTMLInputElement | null;
 
-    const HELP_TABS = ["welcome", "tools", "shortcuts", "navigate"] as const;
+    const HELP_TABS = ["welcome", "guides", "tools", "shortcuts", "navigate"] as const;
     type HelpTab = typeof HELP_TABS[number];
     let helpCurrentTab: HelpTab = "welcome";
+
+    const ensureHelpCenter = async (): Promise<HelpCenterController> => {
+      if (this.helpCenter) {
+        this.helpCenter.mount("help-center-root");
+        return this.helpCenter;
+      }
+      if (!this.helpCenterPromise) {
+        this.helpCenterPromise = import("./HelpCenterController").then(({ HelpCenterController }) => {
+          const ctrl = new HelpCenterController();
+          ctrl.mount("help-center-root");
+          this.helpCenter = ctrl;
+          return ctrl;
+        });
+      }
+      return this.helpCenterPromise;
+    };
 
     const switchHelpTab = (tab: HelpTab) => {
       helpCurrentTab = tab;
@@ -224,6 +260,10 @@ export class UIManager {
         panel.classList.toggle("active", panel.id === `help-tab-${tab}`);
       });
 
+      if (tab === "guides") {
+        void ensureHelpCenter();
+      }
+
       const idx = HELP_TABS.indexOf(tab);
       if (btnHelpPrev) btnHelpPrev.classList.toggle("hidden", idx === 0);
       if (btnHelpNext) btnHelpNext.classList.toggle("hidden", idx === HELP_TABS.length - 1);
@@ -235,6 +275,24 @@ export class UIManager {
       helpModal.classList.remove("hidden");
       switchHelpTab(startTab);
     };
+
+    (window as any).openHelpArticle = (articleId?: string) => {
+      openHelpModal("guides");
+      void ensureHelpCenter().then((ctrl) => {
+        if (articleId) {
+          ctrl.openArticle(articleId);
+        } else {
+          ctrl.showDirectory();
+        }
+      });
+    };
+
+    this.injectContextualDrawerHelpButtons();
+    const drawersRoot = document.getElementById("enterprise-drawers-root");
+    if (drawersRoot && typeof MutationObserver !== "undefined") {
+      const obs = new MutationObserver(() => this.injectContextualDrawerHelpButtons());
+      obs.observe(drawersRoot, { childList: true });
+    }
 
     const closeHelpModal = () => {
       if (!helpModal) return;
@@ -282,47 +340,25 @@ export class UIManager {
     btnHelpDone?.addEventListener("click", closeHelpModal);
   }
 
-  public setupMobileNavigation() {
-    const mobileNavBtns = document.querySelectorAll<HTMLButtonElement>(".mobile-nav-btn");
-    mobileNavBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const targetTab = btn.getAttribute("data-mobile-tab");
-        if (!targetTab) return;
+  public injectContextualDrawerHelpButtons(): void {
+    for (const [drawerId, articleId] of Object.entries(DRAWER_HELP_MAP)) {
+      const drawer = document.getElementById(drawerId);
+      if (!drawer || drawer.querySelector(".drawer-help-btn")) continue;
+      const closeBtn = drawer.querySelector<HTMLElement>(".drawer-close-btn, #btn-close-gantt-drawer");
+      if (!closeBtn || !closeBtn.parentElement) continue;
 
-        const leftSidebar = document.querySelector(".left-sidebar");
-        const rightSidebar = document.querySelector(".right-sidebar");
-        const isLeftOpen = leftSidebar?.classList.contains("open");
-        const isRightOpen = rightSidebar?.classList.contains("open");
-        const isBtnActive = btn.classList.contains("active");
-
-        const closeAll = (window as any).closeAllSidebars;
-
-        if (isBtnActive && (isLeftOpen || isRightOpen)) {
-          if (typeof closeAll === "function") closeAll();
-          return;
-        }
-
-        mobileNavBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        if (targetTab === "files" || targetTab === "finder" || targetTab === "sched" || targetTab === "schedule") {
-          rightSidebar?.classList.remove("open");
-          leftSidebar?.classList.add("open");
-
-          const actualTab = targetTab === "sched" ? "schedule" : targetTab;
-          const tabBtn = document.querySelector<HTMLButtonElement>(`#left-tab-bar [data-tab="${actualTab}"]`);
-          if (tabBtn) tabBtn.click();
-        } else if (targetTab === "scene" || targetTab === "tools" || targetTab === "inspector" || targetTab === "controls") {
-          leftSidebar?.classList.remove("open");
-          rightSidebar?.classList.add("open");
-
-          const tabBtn = document.querySelector<HTMLButtonElement>(`#right-tab-bar [data-tab="${targetTab}"]`);
-          if (tabBtn) tabBtn.click();
-        }
-
-        const backdrop = document.getElementById("sidebar-backdrop");
-        if (backdrop) backdrop.classList.add("active");
+      const helpBtn = document.createElement("button");
+      helpBtn.type = "button";
+      helpBtn.className = "drawer-help-btn";
+      helpBtn.dataset.helpArticle = articleId;
+      helpBtn.title = "Open Step-by-Step Help Guide";
+      helpBtn.setAttribute("aria-label", "Open Help Guide");
+      helpBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+      helpBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        (window as any).openHelpArticle?.(articleId);
       });
-    });
+      closeBtn.parentElement.insertBefore(helpBtn, closeBtn);
+    }
   }
 }

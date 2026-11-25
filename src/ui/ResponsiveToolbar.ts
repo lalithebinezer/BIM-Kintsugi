@@ -56,9 +56,18 @@ function initMobileHeaderMenu(): void {
       anchor: menuBtn,
       items: [
         {
+          id: "mob-switch-cockpit",
+          label: "Switch to Cockpit UI",
+          badge: "✦",
+          onSelect: () => {
+            (window as any).setUiLayout?.("cockpit");
+          },
+        },
+        {
           id: "mob-views",
           label: "Saved Views & Bookmarks",
           badge: viewsBadge || undefined,
+          dividerBefore: true,
           onSelect: () => {
             document.getElementById("btn-ribbon-saved-views")?.click();
           },

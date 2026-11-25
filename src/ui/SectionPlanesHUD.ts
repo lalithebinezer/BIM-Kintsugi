@@ -29,7 +29,7 @@ export class SectionPlanesHUD {
     if (!hud) {
       hud = document.createElement("div");
       hud.id = "section-planes-hud";
-      hud.className = "section-planes-hud hidden";
+      hud.className = "section-planes-hud bk-surface-hud hidden";
       
       // Mount inside bottom toolbar section or anchor
       const bottomCenter = document.getElementById("hud-anchor-bottom-center") || document.body;

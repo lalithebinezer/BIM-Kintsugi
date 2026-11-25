@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { resolve } from "node:path";
 
 export default defineConfig({
   base: "./",
@@ -14,6 +15,10 @@ export default defineConfig({
     target: "esnext",
     chunkSizeWarningLimit: 8000,
     rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, "index.html"),
+        help: resolve(import.meta.dirname, "help.html"),
+      },
       output: {
         manualChunks(id: string) {
           const norm = id.replace(/\\/g, "/");

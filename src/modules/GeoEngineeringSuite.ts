@@ -557,6 +557,7 @@ export class GeoEngineeringSuite {
   // Walkthrough
   public walkActive = false;
   private walkKeys = new Set<string>();
+  private walkTouchInput = { forward: 0, right: 0, vertical: 0 };
   private walkYaw = 0;
   private walkPitch = 0;
   private walkAnimId: number | null = null;
@@ -564,6 +565,7 @@ export class GeoEngineeringSuite {
   private walkLastT = 0;
   public walkConfig = { speed: 3.2, eyeHeight: 1.65, collision: true };
   private walkHandlers: { [k: string]: (e: any) => void } = {};
+  private walkExitCallback?: () => void;
 
   public static getInstance(): GeoEngineeringSuite {
     if (!GeoEngineeringSuite.instance) GeoEngineeringSuite.instance = new GeoEngineeringSuite();
@@ -1060,12 +1062,29 @@ export class GeoEngineeringSuite {
 
   // ---------------- 6. WALKTHROUGH ----------------
 
+  public setTouchMoveInput(forward: number, right: number, vertical = 0): void {
+    this.walkTouchInput.forward = Math.max(-1, Math.min(1, forward));
+    this.walkTouchInput.right = Math.max(-1, Math.min(1, right));
+    this.walkTouchInput.vertical = Math.max(-1, Math.min(1, vertical));
+  }
+
+  public addLookDelta(dx: number, dy: number): void {
+    if (!this.walkActive) return;
+    this.walkYaw -= dx * 0.004;
+    this.walkPitch = Math.max(-1.4, Math.min(1.4, this.walkPitch - dy * 0.004));
+  }
+
   public startWalkthrough(onExit?: () => void): boolean {
     const cam: THREE.PerspectiveCamera | undefined = this.world?.camera?.three;
     const controls = this.world?.camera?.controls;
     const dom: HTMLElement | undefined = this.world?.renderer?.three?.domElement;
     if (!cam || !dom || this.walkActive) return false;
     this.walkActive = true;
+    this.walkExitCallback = onExit;
+    this.walkTouchInput = { forward: 0, right: 0, vertical: 0 };
+    if (typeof document !== "undefined") {
+      document.body.classList.add("walkthrough-active");
+    }
     if (controls) controls.enabled = false;
 
     // Colliders: model meshes only
@@ -1129,13 +1148,20 @@ export class GeoEngineeringSuite {
     if (k.has("s") || k.has("arrowdown")) move.sub(fwd);
     if (k.has("d") || k.has("arrowright")) move.add(right);
     if (k.has("a") || k.has("arrowleft")) move.sub(right);
-    if (k.has("e")) cam.position.y += dt * 2;
-    if (k.has("q")) cam.position.y -= dt * 2;
+    if (Math.abs(this.walkTouchInput.forward) > 0.05) {
+      move.addScaledVector(fwd, this.walkTouchInput.forward);
+    }
+    if (Math.abs(this.walkTouchInput.right) > 0.05) {
+      move.addScaledVector(right, this.walkTouchInput.right);
+    }
+    const vertDelta = (k.has("e") ? 1 : 0) - (k.has("q") ? 1 : 0) + this.walkTouchInput.vertical;
+    if (Math.abs(vertDelta) > 0.05) cam.position.y += dt * 2 * vertDelta;
 
     const bvh = BvhAccelerationService.getInstance();
     if (move.lengthSq() > 0) {
+      const analogScale = Math.min(1, move.length());
       move.normalize();
-      let dist = this.walkConfig.speed * run * dt;
+      let dist = this.walkConfig.speed * run * analogScale * dt;
       if (this.walkConfig.collision && this.walkColliders.length) {
         const origin = cam.position.clone();
         origin.y -= this.walkConfig.eyeHeight * 0.5; // chest height
@@ -1150,7 +1176,7 @@ export class GeoEngineeringSuite {
       cam.position.addScaledVector(move, dist);
     }
 
-    if (this.walkConfig.collision && this.walkColliders.length && !k.has("e") && !k.has("q")) {
+    if (this.walkConfig.collision && this.walkColliders.length && Math.abs(vertDelta) <= 0.05) {
       const origin = cam.position.clone().add(new THREE.Vector3(0, 0.3, 0));
       const down = new THREE.Vector3(0, -1, 0);
       const floor = bvh.raycastMeshes(
@@ -1171,6 +1197,12 @@ export class GeoEngineeringSuite {
   public stopWalkthrough() {
     if (!this.walkActive) return;
     this.walkActive = false;
+    this.walkTouchInput = { forward: 0, right: 0, vertical: 0 };
+    if (typeof document !== "undefined") {
+      document.body.classList.remove("walkthrough-active");
+    }
+    const exitCb = this.walkExitCallback;
+    this.walkExitCallback = undefined;
     if (this.walkAnimId !== null) cancelAnimationFrame(this.walkAnimId);
     this.walkAnimId = null;
     window.removeEventListener("keydown", this.walkHandlers.keydown);
@@ -1190,5 +1222,6 @@ export class GeoEngineeringSuite {
       }
     }
     this.render();
+    exitCb?.();
   }
 }

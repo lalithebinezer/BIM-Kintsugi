@@ -9,6 +9,10 @@ import './responsive.css';
 import './styles/mobile-layout.css';
 import { initResponsiveToolbar } from "./ui/ResponsiveToolbar";
 import { initMobileWorkspace } from "./ui/MobileWorkspace";
+import { MobileWalkthroughControls } from "./ui/MobileWalkthroughControls";
+import { MobileGpuAdaptiveController } from "./core/MobileGpuAdaptiveController";
+import { initViewCubeController } from "./core/ViewCubeController";
+import { createCoreCommandPalette } from "./ui/CommandPaletteRegistry";
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import fragmentsWorkerUrl from "@thatopen/fragments/worker?url";
@@ -65,6 +69,7 @@ import {
   recorder,
   evmDashboard,
   gisFeature,
+  geoTools,
   scheduleParsersFeature,
   csvExportModalFeature,
   timelapseExporterFeature,
@@ -85,7 +90,6 @@ import { QueryModule } from "./modules/QueryModule";
 import { IdsModule } from "./modules/IdsModule";
 import { Timeline4DModule } from "./modules/Timeline4DModule";
 import { FederationModule } from "./modules/FederationModule";
-import { CommandPalette } from "./ui/CommandPalette";
 import { SceneManager } from "./core/SceneManager";
 import { KeyboardController } from "./core/KeyboardController";
 import { CustomViewManager } from "./core/CustomViewManager";
@@ -93,7 +97,6 @@ import { CostChartComponent } from "./ui/CostChartComponent";
 import { UIManager } from "./ui/UIManager";
 import { ExplosionModule } from "./modules/ExplosionModule";
 import { AnnotationModule } from "./modules/AnnotationModule";
-import { SnapshotModule } from "./modules/SnapshotModule";
 import { HighlighterManager } from "./modules/HighlighterManager";
 import { ModelInfoManager } from "./modules/ModelInfoManager";
 import { GlobalSearchOverlay } from "./ui/GlobalSearchOverlay";
@@ -182,6 +185,9 @@ if (!camAny._navigationModes.has("Orbit")) {
   camAny._mode = camAny._navigationModes.get("Orbit");
 }
 world.camera.set("Orbit");
+// Mobile GPU Adaptive Quality: caps phone DPR <= 1.5 and drops to 1.0 during active touch gestures
+const mobileGpuController = new MobileGpuAdaptiveController(world as any);
+(window as any).__mobileGpuController = mobileGpuController;
 if (world.camera.threePersp) {
   world.camera.threePersp.fov = 55;
   world.camera.threePersp.near = 0.01;
@@ -361,164 +367,15 @@ document.getElementById("header-tenant-rbac")?.addEventListener("click", () => {
   showToast(`Access Control: Role switched to '${nextRole}' (${acm.getActiveTenant().name})`, "info");
 });
 
-// Setup Command Palette (Ctrl + K)
-const commandPalette = new CommandPalette([
-  {
-    label: "Earned Value Management (EVM) Control Suite", action: () => {
-      if (typeof (window as any).toggleUnifiedEvmSuite === "function") {
-        (window as any).toggleUnifiedEvmSuite();
-      }
-    }
-  },
-  {
-    label: "Switch Active Tenant / Access Role (RBAC)", action: () => {
-      document.getElementById("header-tenant-rbac")?.click();
-    }
-  },
-  {
-    label: "Export Security Compliance Audit Trail (CSV)", action: () => {
-      const acm = AccessControlManager.getInstance();
-      const csv = acm.exportAuditLedgerCsv();
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Security_Audit_Ledger_${Date.now()}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast("✓ Exported ISO 19650 / SOC2 Security Audit Trail", "success");
-    }
-  },
-  {
-    label: "Top 2D Orthographic View", action: () => {
-      document.getElementById("btn-view-top")?.click();
-    }
-  },
-  {
-    label: "Reset 3D Isometric View", action: () => {
-      document.getElementById("btn-view-iso")?.click();
-    }
-  },
-  {
-    label: "Bookmark Current Camera Viewpoint", action: () => {
-      document.getElementById("btn-add-viewpoint")?.click();
-    }
-  },
-  {
-    label: "Export Bills of Quantities (BOQ CSV)", action: () => {
-      document.getElementById("btn-export-boq-csv")?.click();
-    }
-  },
-  {
-    label: "Toggle Section Cut Mode", action: () => {
-      document.getElementById("btn-section-cut")?.click();
-    }
-  },
-  {
-    label: "Manage Active Section Planes (Floating Mini-HUD)", action: () => {
-      sectionPlanesHUD.show();
-    }
-  },
-  {
-    label: "Add Floor Plan Cut (+Y)", action: () => {
-      clippingModule.createDefaultPlane("Y");
-      sectionPlanesHUD.show();
-    }
-  },
-  {
-    label: "Add Lateral Section Cut (+X)", action: () => {
-      clippingModule.createDefaultPlane("X");
-      sectionPlanesHUD.show();
-    }
-  },
-  {
-    label: "Add Longitudinal Elevation Cut (+Z)", action: () => {
-      clippingModule.createDefaultPlane("Z");
-      sectionPlanesHUD.show();
-    }
-  },
-  {
-    label: "Clear All Section Planes", action: () => {
-      clippingModule.deleteAllPlanes();
-      sectionPlanesHUD.renderPlanesList([]);
-    }
-  },
-  {
-    label: "Run IDS Door Compliance Audit", action: () => {
-      const spec = idsModule.createSampleDoorSpec();
-      idsModule.runAudit(spec);
-    }
-  },
-  { label: "Start 4D Simulation Playback", action: () => timeline4DModule.startSimulation() },
-  { label: "Stop 4D Simulation", action: () => timeline4DModule.stopSimulation() },
-  { label: "Export 4K Architectural Snapshot (.png)", action: () => SnapshotModule.getInstance().captureTechnicalSnapshot() },
-  { label: "Reset Model Visibility", action: () => queryModule.resetVisibility() },
-  {
-    label: "Exploded Disassembly View (50% Expansion)", action: () => {
-      const slider = document.getElementById("settings-explosion-slider") as HTMLInputElement | null;
-      if (slider) { slider.value = "50"; slider.dispatchEvent(new Event("input")); }
-    }
-  },
-  {
-    label: "Exploded Disassembly View (100% Full Separation)", action: () => {
-      const slider = document.getElementById("settings-explosion-slider") as HTMLInputElement | null;
-      if (slider) { slider.value = "100"; slider.dispatchEvent(new Event("input")); }
-    }
-  },
-  {
-    label: "Reset Exploded Disassembly (0% Assembled)", action: () => {
-      const slider = document.getElementById("settings-explosion-slider") as HTMLInputElement | null;
-      if (slider) { slider.value = "0"; slider.dispatchEvent(new Event("input")); }
-    }
-  },
-  {
-    label: "Exploded View: Sort by Category Clusters", action: () => {
-      const select = document.getElementById("select-explosion-mode") as HTMLSelectElement | null;
-      if (select) { select.value = "category-cluster"; select.dispatchEvent(new Event("change")); }
-    }
-  },
-  {
-    label: "Exploded View: Asset & Equipment Matrix Mode (Tandem)", action: () => {
-      const select = document.getElementById("select-explosion-mode") as HTMLSelectElement | null;
-      if (select) { select.value = "asset-dense-cluster"; select.dispatchEvent(new Event("change")); }
-    }
-  },
-  {
-    label: "Exploded View: Sort by Storey Levels", action: () => {
-      const select = document.getElementById("select-explosion-mode") as HTMLSelectElement | null;
-      if (select) { select.value = "storey-cluster"; select.dispatchEvent(new Event("change")); }
-    }
-  },
-  {
-    label: "Exploded View: Radial Spatial Mode", action: () => {
-      const select = document.getElementById("select-explosion-mode") as HTMLSelectElement | null;
-      if (select) { select.value = "radial"; select.dispatchEvent(new Event("change")); }
-    }
-  },
-  {
-    label: "Save Current Configuration as Custom View (Bookmark)", action: () => {
-      document.getElementById("btn-add-viewpoint")?.click();
-    }
-  },
-  {
-    label: "Open Saved Custom Views Ribbon", action: () => {
-      const menu = document.getElementById("menu-saved-views");
-      if (menu) {
-        customViewManager.renderRibbonDropdown();
-        menu.classList.remove("hidden");
-      }
-    }
-  },
-  {
-    label: "Toggle Help & Guide Modal", action: () => {
-      if (typeof (window as any).toggleShortcutsModal === "function") {
-        (window as any).toggleShortcutsModal();
-      }
-    }
-  }
-]);
+// Setup Command Palette (Ctrl + K) via extracted CommandPaletteRegistry
+const commandPalette = createCoreCommandPalette({
+  clippingModule,
+  sectionPlanesHUD,
+  idsModule,
+  timeline4DModule,
+  queryModule,
+  customViewManager,
+});
 (window as any).commandPalette = commandPalette;
 
 world.onCameraChanged.add((camera) => {
@@ -7946,7 +7803,10 @@ function initThemeSystem() {
     themeSelect.value = savedTheme;
     themeSelect.addEventListener("change", () => {
       const selected = themeSelect.value;
+      document.documentElement.classList.add("theme-switching");
       document.documentElement.setAttribute("data-theme", selected);
+      void document.documentElement.offsetHeight;
+      document.documentElement.classList.remove("theme-switching");
       try {
         localStorage.setItem("bim_theme_preset", selected);
         localStorage.setItem("bim_theme", selected);
@@ -9416,73 +9276,16 @@ document.getElementById('btn-close-gantt-bar')?.addEventListener('click', () => 
   updateTimelineVisualState(true);
 };
 
-// --- 3D VIEW CUBE CONTROLLER ---
-async function orientCameraToFace(face: string) {
-  const target = new THREE.Vector3();
-  world.camera.controls.getTarget(target);
-
-  const boxer = components.get(OBC.BoundingBoxer);
-  boxer.list.clear();
-  boxer.addFromModels();
-  const bbox = boxer.get();
-  boxer.list.clear();
-
-  let center = new THREE.Vector3();
-  let d = 20;
-  if (!bbox.isEmpty()) {
-    bbox.getCenter(center);
-    const size = new THREE.Vector3();
-    bbox.getSize(size);
-    d = Math.max(size.x, size.y, size.z) * 1.5;
-  } else {
-    center.copy(target);
-    d = world.camera.controls.distance || 20;
-  }
-
-  let posX = center.x;
-  let posY = center.y;
-  let posZ = center.z;
-
-  switch (face) {
-    case "front": posZ += d; break;
-    case "back": posZ -= d; break;
-    case "left": posX -= d; break;
-    case "right": posX += d; break;
-    case "top": posY += d; break;
-    case "bottom": posY -= d; break;
-  }
-
-  await world.camera.controls.setLookAt(posX, posY, posZ, center.x, center.y, center.z, true);
-}
-
-const viewCube = document.getElementById("view-cube") as any;
-if (viewCube) {
-  viewCube.camera = world.camera.three;
-
-  world.camera.controls.addEventListener("update", () => viewCube.updateOrientation());
-  world.camera.controls.addEventListener("control", () => viewCube.updateOrientation());
-
-  viewCube.addEventListener("drag", (e: any) => {
-    world.camera.controls.rotate(e.detail.dx, e.detail.dy, false);
-  });
-
-  viewCube.addEventListener("frontclick", () => orientCameraToFace("front"));
-  viewCube.addEventListener("backclick", () => orientCameraToFace("back"));
-  viewCube.addEventListener("leftclick", () => orientCameraToFace("left"));
-  viewCube.addEventListener("rightclick", () => orientCameraToFace("right"));
-  viewCube.addEventListener("topclick", () => orientCameraToFace("top"));
-  viewCube.addEventListener("bottomclick", () => orientCameraToFace("bottom"));
-  viewCube.addEventListener("homeclick", () => {
-    activateIsometric3DView();
-  });
-  viewCube.addEventListener("cardinalclick", (e: any) => {
-    const cardinal = e.detail?.cardinal;
-    if (cardinal === "north") orientCameraToFace("back");
-    else if (cardinal === "south") orientCameraToFace("front");
-    else if (cardinal === "east") orientCameraToFace("right");
-    else if (cardinal === "west") orientCameraToFace("left");
-  });
-}
+// --- 3D VIEW CUBE CONTROLLER (Extracted to src/core/ViewCubeController.ts) ---
+const viewCubeController = initViewCubeController({
+  world: world as any,
+  components,
+  onHomeClick: () => {
+    void activateIsometric3DView();
+  },
+});
+const viewCube = viewCubeController.element;
+const orientCameraToFace = viewCubeController.orientCameraToFace;
 
 // --- QUICK VIEW TOOLBAR & CAMERA PROJECTION CONTROLLER ---
 async function setCameraProjection(projectionMode: "Orthographic" | "Perspective") {
@@ -10303,12 +10106,35 @@ function renderHUD() {
 requestAnimationFrame(renderHUD);
 
 // ═════════════════════════════════════════════════════════════════════
-// ─── ENTERPRISE BIM SUITES INITIALIZATION & DRAWER CONTROLS ──────────
+// ─── ENTERPRISE BIM SUITES INITIALIZATION & LAZY DRAWER HYDRATION ────
 // ═════════════════════════════════════════════════════════════════════
-initEnterpriseSuitesController(world, highlighter);
+const enterpriseDrawersReady = import("./ui/templates/enterpriseDrawersHtml").then(({ mountEnterpriseDrawers }) => {
+  mountEnterpriseDrawers();
+  initEnterpriseSuitesController(world, highlighter);
+});
+(window as any).__enterpriseDrawersReady = enterpriseDrawersReady;
 initPropertySequenceEngineUI();
 (window as any).getEngineTelemetry = () => bimEngine.getPerformanceTelemetry();
 (window as any).MetadataApiAdapter = MetadataApiAdapter;
+
+// Wire Mobile Dual-Thumb First-Person Walkthrough Controls
+let cachedWalkthroughTarget: any = null;
+MobileWalkthroughControls.init(() => cachedWalkthroughTarget);
+(window as any).startMobileWalkthrough = async () => {
+  try {
+    await enterpriseDrawersReady;
+    const suite = await geoTools.load();
+    cachedWalkthroughTarget = suite;
+    if (!suite.walkActive) {
+      const started = suite.startWalkthrough();
+      if (started) {
+        showToast("Walkthrough Active — Left stick moves, right pad looks", "info");
+      }
+    }
+  } catch {
+    showToast("Could not start Walkthrough mode", "warning");
+  }
+};
 // Geo tools initialize when the GIS suite opens.
 
 // ═════════════════════════════════════════════════════════════════════
@@ -10677,9 +10503,23 @@ async function copyShareableViewLink(): Promise<string> {
       : tradeAppearanceEngine.enabled
         ? "trades"
         : "standard";
+  const levelSel = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
+  const activeLayout = typeof (window as any).getUiLayout === "function" ? (window as any).getUiLayout() : undefined;
+  const selMap = SelectionManager.getInstance().getSelectionInfo().modelIdMap;
+  const selectedIds: string[] = [];
+  for (const [mId, idSet] of Object.entries(selMap)) {
+    for (const id of idSet) {
+      selectedIds.push(`${mId}:${id}`);
+      if (selectedIds.length >= 20) break;
+    }
+    if (selectedIds.length >= 20) break;
+  }
   const url = buildShareableViewUrl({
     camPos: [pos.x, pos.y, pos.z],
     camTarget: [target.x, target.y, target.z],
+    storey: levelSel?.value || undefined,
+    selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
+    layout: activeLayout === "cockpit" || activeLayout === "classic" ? activeLayout : undefined,
     mode4d: is4dMode,
     date4d: currentTimelineDate ? currentTimelineDate.toISOString().slice(0, 10) : undefined,
     lens,
@@ -10737,11 +10577,21 @@ window.addEventListener("keydown", (ev: KeyboardEvent) => {
 // Apply incoming #view=... Deep-Link on page load
 const incomingDeepLink = decodeDeepLinkHash(window.location.hash);
 if (incomingDeepLink) {
+  if (incomingDeepLink.layout) {
+    (window as any).setUiLayout?.(incomingDeepLink.layout, false, false);
+  }
   setTimeout(async () => {
     if (incomingDeepLink.camPos && incomingDeepLink.camTarget) {
       const [px, py, pz] = incomingDeepLink.camPos;
       const [tx, ty, tz] = incomingDeepLink.camTarget;
       await world.camera.controls.setLookAt(px, py, pz, tx, ty, tz, true);
+    }
+    if (incomingDeepLink.storey) {
+      const lvlSel = document.getElementById("minimap-level-select") as HTMLSelectElement | null;
+      if (lvlSel && Array.from(lvlSel.options).some((o) => o.value === incomingDeepLink.storey)) {
+        lvlSel.value = incomingDeepLink.storey;
+        lvlSel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     }
     if (incomingDeepLink.mode4d) {
       (window as any).toggle4DMode?.(true);

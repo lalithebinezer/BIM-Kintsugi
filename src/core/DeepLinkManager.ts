@@ -16,6 +16,10 @@ export interface DeepLinkViewState {
   /** Selected element GUID or modelId:expressId token */
   selectedGuid?: string;
   selectedExpressId?: number;
+  /** Up to 20 selected element tokens ("modelId:expressId") for shared multi-selection */
+  selectedIds?: string[];
+  /** Preferred UI layout ("cockpit" | "classic") */
+  layout?: "cockpit" | "classic";
   /** Whether 4D mode is active */
   mode4d?: boolean;
   /** Simulated 4D date (YYYY-MM-DD) */
@@ -55,6 +59,10 @@ export function encodeDeepLinkState(state: DeepLinkViewState): string {
   if (state.storey) compact.st = state.storey;
   if (state.selectedGuid) compact.g = state.selectedGuid;
   if (typeof state.selectedExpressId === "number") compact.e = state.selectedExpressId;
+  if (Array.isArray(state.selectedIds) && state.selectedIds.length > 0) {
+    compact.sel = state.selectedIds.slice(0, 20);
+  }
+  if (state.layout === "cockpit" || state.layout === "classic") compact.ui = state.layout;
   if (state.mode4d) compact.m4 = 1;
   if (state.date4d) compact.d = state.date4d;
   if (state.lens && state.lens !== "standard") compact.l = state.lens;
@@ -81,6 +89,11 @@ export function decodeDeepLinkHash(hashOrUrl: string): DeepLinkViewState | null 
     if (typeof raw.st === "string" && raw.st) out.storey = raw.st;
     if (typeof raw.g === "string" && raw.g) out.selectedGuid = raw.g;
     if (typeof raw.e === "number" && Number.isFinite(raw.e)) out.selectedExpressId = raw.e;
+    if (Array.isArray(raw.sel)) {
+      const cleanSel = raw.sel.filter((v: unknown): v is string => typeof v === "string" && v.length > 0).slice(0, 20);
+      if (cleanSel.length > 0) out.selectedIds = cleanSel;
+    }
+    if (raw.ui === "cockpit" || raw.ui === "classic") out.layout = raw.ui;
     if (raw.m4 === 1 || raw.m4 === true) out.mode4d = true;
     if (typeof raw.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.d)) out.date4d = raw.d;
     if (raw.l === "variance" || raw.l === "trades" || raw.l === "cascade") out.lens = raw.l;

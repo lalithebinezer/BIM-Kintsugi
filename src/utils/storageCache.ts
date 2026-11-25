@@ -80,6 +80,21 @@ export class StorageCache {
     });
   }
 
+  public async listCachedModelIds(): Promise<string[]> {
+    if (!this.db) return [];
+    return new Promise((resolve) => {
+      try {
+        const transaction = this.db!.transaction(STORE_MODELS, "readonly");
+        const store = transaction.objectStore(STORE_MODELS);
+        const request = store.getAllKeys();
+        request.onsuccess = () => resolve((request.result || []).map((k) => String(k)));
+        request.onerror = () => resolve([]);
+      } catch {
+        resolve([]);
+      }
+    });
+  }
+
   public async saveViewpoints(viewpoints: any[]): Promise<void> {
     if (!this.db) return;
     return new Promise((resolve) => {
