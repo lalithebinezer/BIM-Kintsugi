@@ -6,7 +6,7 @@
  * to enable offline 3D model navigation on construction sites.
  */
 
-const CACHE_NAME = "bim-kintsugi-cache-v13";
+const CACHE_NAME = "bim-kintsugi-cache-v14";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -31,22 +31,25 @@ self.addEventListener("install", (event) => {
       Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset)))
     )
   );
-  self.skipWaiting();
+  // Do NOT call self.skipWaiting() unconditionally here — wait for user confirmation via SKIP_WAITING
+  // message (PwaUpdateManager) or next fresh session so the page never reloads twice on startup.
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+          })
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
