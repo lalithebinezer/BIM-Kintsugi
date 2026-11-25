@@ -88,11 +88,14 @@ export class UIManager {
       if (!sidebar) return;
 
       const isMobile = window.innerWidth <= 1080;
+      const isPhoneCockpit = window.innerWidth <= 767 || (window.innerHeight <= 460 && window.innerWidth <= 932);
       const currentActiveBtn = tabBar.querySelector('.sidebar-tab-btn.active, .tab-btn.active');
       const currentActiveTab = currentActiveBtn?.getAttribute('data-tab');
 
-      // On mobile, clicking the currently active tab closes the drawer
-      if (isMobile && currentActiveTab === tabName && sidebar.classList.contains('open')) {
+      // On tablet (768–1080px), clicking the currently active tab toggles the drawer closed.
+      // On phones, bottom sheets have an explicit close button, drag handle, backdrop, and dock toggle,
+      // so tapping an already-active inner tab keeps the sheet open predictably.
+      if (isMobile && !isPhoneCockpit && currentActiveTab === tabName && sidebar.classList.contains('open')) {
         sidebar.classList.remove('open');
         currentActiveBtn?.classList.remove('active');
 

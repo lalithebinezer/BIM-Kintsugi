@@ -11,6 +11,7 @@ import {
   createBkSelect,
 } from "../UiPlatform";
 import { initPwaUpdateWatcher, resetPwaUpdateWatcherForTest } from "../../core/PwaUpdateManager";
+import { initMobileWorkspace, resetMobileWorkspaceForTest } from "../MobileWorkspace";
 
 describe("UI Platform Standards & Global Component Contract", () => {
   beforeEach(() => {
@@ -213,5 +214,94 @@ describe("UI Platform Standards & Global Component Contract", () => {
     expect(postedSkipWaiting).toBe(true);
     for (const fn of listeners.get("controllerchange") || []) fn();
     expect(reloadCount).toBe(1);
+  });
+
+  it("mounts dedicated mobile-only spatial cockpit with 5-tab bar, sheets, and single-sheet discipline", () => {
+    resetMobileWorkspaceForTest();
+    document.body.innerHTML = `
+      <div class="ui-layer">
+        <header>
+          <div class="brand"><div class="brand-logo">K</div></div>
+          <div class="header-controls">
+            <select id="select-theme-toggle"><option value="obsidian">Obsidian</option><option value="light">Studio</option></select>
+            <select id="workspace-persona-select"><option value="all">All Tools</option><option value="field">Field Touch</option></select>
+            <button id="btn-open-command-palette"></button>
+            <span id="saved-views-count-badge">6</span>
+          </div>
+        </header>
+        <span id="breadcrumb-storey">Level 2</span>
+        <select id="minimap-level-select"><option value="0">L0 (Ground)</option><option value="2" selected>L2 (Second)</option></select>
+        <div id="minimap-container"></div>
+        <div id="sidebar-backdrop"></div>
+        <aside class="left-sidebar"><div id="left-tab-bar"><button class="sidebar-tab-btn active" data-tab="files"></button></div></aside>
+        <aside class="right-sidebar"><div id="right-tab-bar"><button class="sidebar-tab-btn active" data-tab="scene"></button></div></aside>
+        <button id="btn-dock-measure"></button>
+        <button id="btn-section-cut"></button>
+        <button id="btn-dock-clash"></button>
+        <button id="btn-view-fit"></button>
+      </div>
+    `;
+
+    let measured = 0;
+    let clashed = 0;
+    let fitted = 0;
+    let switchedTo = "";
+    document.getElementById("btn-dock-measure")?.addEventListener("click", () => { measured++; });
+    document.getElementById("btn-dock-clash")?.addEventListener("click", () => { clashed++; });
+    document.getElementById("btn-view-fit")?.addEventListener("click", () => { fitted++; });
+    (window as any).switchSidebarTab = (barId: string, tab: string) => {
+      switchedTo = `${barId}:${tab}`;
+      const cls = barId === "left-tab-bar" ? ".left-sidebar" : ".right-sidebar";
+      document.querySelector(cls)?.classList.add("open");
+    };
+
+    const ctrl = initMobileWorkspace();
+
+    // Every injected mobile control carries `.bk-mobile-only` so desktop/tablet stays untouched
+    const dock = document.getElementById("mob-dock");
+    const rail = document.getElementById("mob-camera-rail");
+    const storeyPill = document.getElementById("mob-storey-pill");
+    const menuBtn = document.getElementById("mob-btn-menu");
+    expect(dock?.classList.contains("bk-mobile-only")).toBe(true);
+    expect(rail?.classList.contains("bk-mobile-only")).toBe(true);
+    expect(storeyPill?.classList.contains("bk-mobile-only")).toBe(true);
+    expect(menuBtn?.classList.contains("bk-mobile-only")).toBe(true);
+    expect(dock?.querySelectorAll("[data-mob-nav]").length).toBe(5);
+    expect(document.getElementById("mob-storey-pill-label")?.textContent).toBe("Level 2");
+
+    // Camera rail delegates Fit View directly
+    document.getElementById("mob-cam-fit")?.click();
+    expect(fitted).toBe(1);
+
+    // Opening Tools sheet and clicking Measure delegates & closes sheet
+    document.getElementById("mob-tab-tools")?.click();
+    expect(document.getElementById("mob-sheet-tools")?.classList.contains("is-open")).toBe(true);
+    document.getElementById("mob-tool-measure")?.click();
+    expect(measured).toBe(1);
+    expect(document.getElementById("mob-sheet-tools")?.classList.contains("is-open")).toBe(false);
+
+    // Single-sheet discipline: opening Suites closes Menu, clicking Clash delegates cleanly
+    menuBtn?.click();
+    expect(document.getElementById("mob-sheet-menu")?.classList.contains("is-open")).toBe(true);
+    document.getElementById("mob-tab-suites")?.click();
+    expect(document.getElementById("mob-sheet-menu")?.classList.contains("is-open")).toBe(false);
+    expect(document.getElementById("mob-sheet-suites")?.classList.contains("is-open")).toBe(true);
+    document.getElementById("mob-suite-clash")?.click();
+    expect(clashed).toBe(1);
+
+    // Model tab opens left sidebar sheet
+    document.getElementById("mob-tab-model")?.click();
+    expect(switchedTo).toBe("left-tab-bar:files");
+    expect(document.querySelector(".left-sidebar")?.classList.contains("open")).toBe(true);
+
+    // Theme choice inside Quick Menu syncs underlying select
+    menuBtn?.click();
+    const studioBtn = document.querySelector<HTMLButtonElement>('[data-mob-theme="light"]');
+    studioBtn?.click();
+    expect((document.getElementById("select-theme-toggle") as HTMLSelectElement).value).toBe("light");
+
+    ctrl.closeAllSheets();
+    expect(document.getElementById("mob-sheet-menu")?.classList.contains("is-open")).toBe(false);
+    resetMobileWorkspaceForTest();
   });
 });

@@ -6,7 +6,9 @@ import './theme.css';
 import './styles/studio-design-system.css';
 import './styles/ui-primitives.css';
 import './responsive.css';
+import './styles/mobile-layout.css';
 import { initResponsiveToolbar } from "./ui/ResponsiveToolbar";
+import { initMobileWorkspace } from "./ui/MobileWorkspace";
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import fragmentsWorkerUrl from "@thatopen/fragments/worker?url";
@@ -121,6 +123,7 @@ import type { IfcPreflightReport } from "./modules/IfcStepParser";
 
 BUI.Manager.init();
 initResponsiveToolbar();
+initMobileWorkspace();
 
 // --- INITIALIZE ENTERPRISE BIM ENGINE ---
 const components = new OBC.Components();

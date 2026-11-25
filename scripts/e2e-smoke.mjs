@@ -231,7 +231,16 @@ try {
     );
   }
 
-  // 9. Multi-Viewport Responsive Checks (Tablet 768x1024 & Mobile 390x844) + Mobile Sidebar Tab Regression Gate
+  // 9. Multi-Viewport Responsive Checks (Desktop isolation, Tablet 768x1024 isolation, Mobile-Only Cockpit 390x844)
+  const desktopMobileHidden = await page.evaluate(() => {
+    const dock = document.getElementById("mob-dock");
+    const rail = document.getElementById("mob-camera-rail");
+    return Boolean(
+      dock && rail && getComputedStyle(dock).display === "none" && getComputedStyle(rail).display === "none"
+    );
+  });
+  assert(desktopMobileHidden, "Mobile-only cockpit leaked onto desktop (1440x900)");
+
   for (const vp of [
     { name: "tablet", width: 768, height: 1024 },
     { name: "mobile", width: 390, height: 844 },
@@ -242,14 +251,51 @@ try {
       () => document.documentElement.scrollWidth > window.innerWidth + 4
     );
     assert(!overflowX, `Unexpected horizontal overflow on ${vp.name} (${vp.width}x${vp.height})`);
+    if (vp.name === "tablet") {
+      const tabletMobileHidden = await page.evaluate(() => {
+        const dock = document.getElementById("mob-dock");
+        return Boolean(dock && getComputedStyle(dock).display === "none");
+      });
+      assert(tabletMobileHidden, "Mobile-only dock leaked onto tablet (768x1024)");
+    }
   }
 
-  // Verify Left & Right mobile sidebars + side tabs open visibly on 390x844
+  // Verify Dedicated Mobile-Only Spatial Cockpit on 390x844
   await page.evaluate(() => {
     document.getElementById("shortcuts-modal")?.classList.add("hidden");
+    if (document.body.classList.contains("mode-4d")) {
+      document.getElementById("btn-close-gantt-bar")?.click();
+    }
+    window.__mobileWorkspace?.closeAllSheets();
   });
-  await page.click("#btn-toggle-left");
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(250);
+
+  const mobileCockpitChrome = await page.evaluate(() => {
+    const header = document.querySelector("header");
+    const dock = document.getElementById("mob-dock");
+    const rail = document.getElementById("mob-camera-rail");
+    const oldTopHud = document.getElementById("hud-anchor-top-left");
+    const oldDock = document.getElementById("bottom-toolbar");
+    const storeyPill = document.getElementById("mob-storey-pill");
+    const hRect = header?.getBoundingClientRect();
+    const dRect = dock?.getBoundingClientRect();
+    return Boolean(
+      hRect &&
+        hRect.height <= 58 &&
+        dRect &&
+        dRect.height >= 54 &&
+        getComputedStyle(dock).display === "grid" &&
+        getComputedStyle(rail).display === "flex" &&
+        getComputedStyle(storeyPill).display !== "none" &&
+        getComputedStyle(oldTopHud).display === "none" &&
+        getComputedStyle(oldDock).display === "none"
+    );
+  });
+  assert(mobileCockpitChrome, "Mobile-only cockpit chrome failed to render cleanly on 390x844");
+
+  // 1) Model tab -> opens left sidebar bottom sheet & switches to 4D Schedule tab visibly
+  await page.click("#mob-tab-model");
+  await page.waitForTimeout(260);
   await page.click('#left-tab-bar .sidebar-tab-btn[data-tab="schedule"]');
   await page.waitForTimeout(150);
   const mobileLeftOk = await page.evaluate(() => {
@@ -263,57 +309,85 @@ try {
         p?.classList.contains("active")
     );
   });
-  assert(mobileLeftOk, "Mobile left sidebar & 4D Schedule tab failed to open visibly on 390x844");
+  assert(mobileLeftOk, "Mobile Model bottom sheet & 4D Schedule tab failed to open visibly on 390x844");
 
-  await page.click("#btn-toggle-right");
-  await page.waitForTimeout(300);
+  // 2) Inspect tab -> closes Model sheet, opens right sidebar bottom sheet & switches to Tools tab visibly
+  await page.click("#mob-tab-inspect");
+  await page.waitForTimeout(260);
   await page.click('#right-tab-bar .sidebar-tab-btn[data-tab="tools"]');
   await page.waitForTimeout(150);
   const mobileRightOk = await page.evaluate(() => {
+    const l = document.querySelector(".left-sidebar");
     const s = document.querySelector(".right-sidebar");
     const cs = s ? getComputedStyle(s) : null;
     const p = document.getElementById("tab-right-tools");
     return Boolean(
-      s?.classList.contains("open") &&
+      !l?.classList.contains("open") &&
+        s?.classList.contains("open") &&
         cs?.visibility === "visible" &&
         parseFloat(cs?.opacity || "0") >= 0.95 &&
         p?.classList.contains("active")
     );
   });
-  assert(mobileRightOk, "Mobile right sidebar & Tools tab failed to open visibly on 390x844");
-  await page.click("#btn-toggle-right");
-  await page.waitForTimeout(200);
+  assert(mobileRightOk, "Mobile Inspect bottom sheet & Tools tab failed to open visibly on 390x844");
 
-  // Verify Mobile Header Menu (#btn-mobile-menu -> #mobile-main-menu) & expanded More tools drawer
-  await page.click("#btn-mobile-menu");
-  await page.waitForTimeout(150);
-  const mobileMenuOk = await page.evaluate(() => {
-    const m = document.getElementById("mobile-main-menu");
-    if (!m || m.classList.contains("hidden")) return false;
-    const r = m.getBoundingClientRect();
-    return r.width >= 180 && r.height >= 120 && r.left >= 0 && r.right <= window.innerWidth + 2;
+  // 3) Tools tab -> opens Field Tools bottom sheet cleanly
+  await page.click("#mob-tab-tools");
+  await page.waitForTimeout(220);
+  const mobileToolsOk = await page.evaluate(() => {
+    const sheet = document.getElementById("mob-sheet-tools");
+    if (!sheet || !sheet.classList.contains("is-open")) return false;
+    const r = sheet.getBoundingClientRect();
+    return r.width >= 360 && r.height >= 200 && r.right <= window.innerWidth + 2;
   });
-  assert(mobileMenuOk, "Mobile header menu (#mobile-main-menu) failed to open cleanly on 390x844");
+  assert(mobileToolsOk, "Mobile Field Tools sheet (#mob-sheet-tools) failed to open cleanly on 390x844");
+
+  // 4) Suites tab -> opens BIM Suites launcher and opens Clash Matrix drawer cleanly
+  await page.click("#mob-tab-suites");
+  await page.waitForTimeout(220);
+  assert(
+    await page.evaluate(() => Boolean(document.getElementById("mob-sheet-suites")?.classList.contains("is-open"))),
+    "Mobile BIM Suites sheet failed to open"
+  );
+  await page.click("#mob-suite-clash");
+  await page.waitForTimeout(220);
+  const clashSheetOk = await page.evaluate(() => {
+    const p = document.getElementById("clash-panel");
+    return Boolean(p && !p.classList.contains("hidden") && p.getBoundingClientRect().height >= 240);
+  });
+  assert(clashSheetOk, "Mobile Clash Matrix drawer failed to open from Suites sheet");
+  await page.evaluate(() => window.__mobileWorkspace?.closeAllSheets());
+  await page.waitForTimeout(180);
+
+  // 5) Storey Pill & Quick Menu Sheet
+  await page.click("#mob-storey-pill");
+  await page.waitForTimeout(180);
+  assert(
+    await page.evaluate(() => Boolean(document.getElementById("mob-sheet-storey")?.classList.contains("is-open"))),
+    "Mobile Storey sheet failed to open from top pill"
+  );
+  await page.click("#mob-btn-menu");
+  await page.waitForTimeout(180);
+  assert(
+    await page.evaluate(() =>
+      Boolean(
+        document.getElementById("mob-sheet-menu")?.classList.contains("is-open") &&
+          !document.getElementById("mob-sheet-storey")?.classList.contains("is-open")
+      )
+    ),
+    "Mobile Quick Menu sheet failed single-sheet transition"
+  );
   await page.keyboard.press("Escape");
   await page.waitForTimeout(150);
 
-  // Exit 4D mode if active so the bottom Magic Dock (#bottom-toolbar) is shown, then verify expanded More sheet
-  await page.evaluate(() => {
-    if (document.body.classList.contains("mode-4d")) {
-      document.getElementById("btn-close-gantt-bar")?.click();
-    }
-  });
-  await page.waitForTimeout(200);
-  await page.click("#bottom-toolbar .responsive-more");
-  await page.waitForTimeout(150);
-  const moreDrawerOk = await page.evaluate(() => {
-    const d = document.getElementById("bottom-toolbar");
-    if (!d || !d.classList.contains("tools-expanded")) return false;
-    const br = getComputedStyle(d).borderRadius;
-    return br !== "9999px" && d.getBoundingClientRect().height >= 200;
-  });
-  assert(moreDrawerOk, "Mobile More tools drawer failed to expand with clean rectangular sheet radius");
-  await page.click("#bottom-toolbar .responsive-more");
+  // 6) Right-thumb Camera Views Popover
+  await page.click("#mob-cam-views");
+  await page.waitForTimeout(120);
+  assert(
+    await page.evaluate(() => Boolean(document.getElementById("mob-cam-popover")?.classList.contains("is-open"))),
+    "Mobile right-thumb Camera Views popover failed to open"
+  );
+  await page.click("#mob-cam-views");
 
   assert(consoleErrors.length === 0, `Console errors detected: ${consoleErrors.join(" | ")}`);
   assert(pageErrors.length === 0, `Page errors detected: ${pageErrors.join(" | ")}`);
