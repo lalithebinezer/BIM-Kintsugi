@@ -20,6 +20,12 @@ export const SAMPLE_MODEL_CATALOG: readonly SampleModelDescriptor[] = [
     format: "ifc",
   },
   {
+    key: "tekla",
+    label: "Office Building (Tekla Structural IFC4)",
+    url: "Sample_Office_Building_Tekla.ifc",
+    format: "ifc",
+  },
+  {
     key: "school",
     label: "School Architecture (FRAG)",
     url: "school_arq.frag",

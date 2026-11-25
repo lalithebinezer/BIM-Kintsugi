@@ -450,10 +450,16 @@ function updateMetricScaleBar() {
 
 // Continuously update Scale Ruler, Measurements, and 3D Pin Annotations on render loops
 function animateHUD() {
-  AnnotationModule.getInstance().updateOverlayPositions();
-  MeasurementSuite.getInstance().updateOverlayPositions();
-  updateMetricScaleBar();
   requestAnimationFrame(animateHUD);
+  try {
+    AnnotationModule.getInstance().updateOverlayPositions();
+  } catch { /* keep HUD loop alive */ }
+  try {
+    MeasurementSuite.getInstance().updateOverlayPositions();
+  } catch { /* keep HUD loop alive */ }
+  try {
+    updateMetricScaleBar();
+  } catch { /* keep HUD loop alive */ }
 }
 animateHUD();
 if (world.renderer) {
@@ -2517,9 +2523,14 @@ function updateHoverBadgePosition(cursorX: number, cursorY: number) {
 
 if (container && hoverBadgeEl) {
   container.addEventListener("pointermove", (e: PointerEvent) => {
-    // If dragging, or clipper is enabled, or context menu is open, hide hover tooltip
+    // If dragging, or clipper/measurement is enabled, or context menu is open, hide hover tooltip
     const ctxMenuEl = document.getElementById("bim-context-menu");
-    if (e.buttons > 0 || clipper.enabled || (ctxMenuEl && ctxMenuEl.style.display === "flex")) {
+    if (
+      e.buttons > 0 ||
+      clipper.enabled ||
+      MeasurementSuite.getInstance().isMeasuringActive() ||
+      (ctxMenuEl && ctxMenuEl.style.display === "flex")
+    ) {
       hoverBadgeEl.style.display = "none";
       return;
     }
@@ -4822,12 +4833,15 @@ window.addEventListener("drop", async (e) => {
   }
 });
 
-// Load Sample Model (Snowdon Towers Structural IFC or School FRAG)
+// Load Sample Model (Snowdon Towers Structural IFC, Tekla Office Building IFC4, or School FRAG)
 async function loadSampleModel(sampleType: string = "snowdon") {
-  const isSnowdon = sampleType === "snowdon";
-  const fileName = isSnowdon
-    ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc"
-    : "school_arq.frag";
+  const isLocalIfc = sampleType === "snowdon" || sampleType === "tekla";
+  const fileName =
+    sampleType === "tekla"
+      ? "Sample_Office_Building_Tekla.ifc"
+      : sampleType === "snowdon"
+        ? "Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc"
+        : "school_arq.frag";
 
   const loadSampleBtn = document.getElementById("load-sample-btn");
   const loadSampleText = loadSampleBtn ? (loadSampleBtn.querySelector("span") || document.getElementById("load-sample-btn-text")) : null;
@@ -4842,16 +4856,16 @@ async function loadSampleModel(sampleType: string = "snowdon") {
 
     // Build candidate URLs with fallback paths to ensure robust loading regardless of base URL / proxy
     const candidates: string[] = [];
-    if (isSnowdon) {
+    if (isLocalIfc) {
       const base = (import.meta as any).env?.BASE_URL || "./";
       const cleanBase = base.endsWith("/") ? base : base + "/";
       try {
-        candidates.push(new URL("Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc", window.location.href).href);
+        candidates.push(new URL(fileName, window.location.href).href);
       } catch (e) { }
       candidates.push(
-        `${cleanBase}Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc`,
-        "./Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc",
-        "/Dynamo_NCP_Snowdon_Towers_Sample_Structural_Final.ifc"
+        `${cleanBase}${fileName}`,
+        `./${fileName}`,
+        `/${fileName}`
       );
     } else {
       candidates.push("https://thatopen.github.io/engine_components/resources/frags/school_arq.frag");
@@ -4868,12 +4882,12 @@ async function loadSampleModel(sampleType: string = "snowdon") {
           continue;
         }
         const cType = (response.headers.get("content-type") || "").toLowerCase();
-        if (cType.includes("text/html") && isSnowdon) {
+        if (cType.includes("text/html") && isLocalIfc) {
           // Vite SPA fallback intercepted the missing route; continue to next candidate
           continue;
         }
         const ab = await response.arrayBuffer();
-        if (isSnowdon && ab.byteLength < 1000) {
+        if (isLocalIfc && ab.byteLength < 1000) {
           // Empty or short HTML error page
           continue;
         }
@@ -9546,7 +9560,8 @@ const getCommandRegistry = (): CommandItem[] => {
     { id: "tab-camera", title: "First Person Camera Controls", category: "Navigation", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>`, action: () => (window as any).switchSidebarTab?.("right-tab-bar", "controls") },
 
     // Viewport & Tools
-    { id: "sample-snowdon", title: "Load Sample: Snowdon Towers (Structural IFC 13.9MB)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`, action: () => loadSampleModel("snowdon") },
+    { id: "sample-snowdon", title: "Load Sample: Snowdon Towers (Structural IFC 11.6MB)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`, action: () => loadSampleModel("snowdon") },
+    { id: "sample-tekla", title: "Load Sample: Office Building (Tekla Structural IFC4 19.0MB)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M7 7h2M11 7h2M15 7h2M7 11h2M11 11h2M15 11h2M7 15h2M11 15h2M15 15h2M9 22v-3h6v3"/></svg>`, action: () => loadSampleModel("tekla") },
     { id: "sample-school", title: "Load Sample: School Architecture (FRAG)", category: "Samples", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/></svg>`, action: () => loadSampleModel("school") },
     { id: "tool-fit", title: "Fit Geometry in View (Home)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`, action: () => (window as any).fitView?.() },
     { id: "tool-export-board", title: "Export 4K Architectural Presentation Board (.png)", category: "Viewport", icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`, action: async () => { (await import("./modules/PresentationSheetModule")).PresentationSheetModule.getInstance().export4KBoard(); } },

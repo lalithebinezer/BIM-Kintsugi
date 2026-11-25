@@ -9250,21 +9250,21 @@ body.right-sidebar-collapsed .right-sidebar {
   color: #CBD5E1;
 }
 
-html[data-theme="light-studio"] .bim-3d-dimension-badge,
-html[data-theme="zen"] .bim-3d-dimension-badge {
+html[data-theme="light"] .bim-3d-dimension-badge,
+html[data-theme="light-studio"] .bim-3d-dimension-badge {
   background: rgba(255, 255, 255, 0.96);
   border: 1.5px solid #0F172A;
   color: #0F172A;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.22);
 }
 
-html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-val,
-html[data-theme="zen"] .bim-3d-dimension-badge .dim-val {
+html[data-theme="light"] .bim-3d-dimension-badge .dim-val,
+html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-val {
   color: #1D4ED8;
 }
 
-html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-deltas,
-html[data-theme="zen"] .bim-3d-dimension-badge .dim-deltas {
+html[data-theme="light"] .bim-3d-dimension-badge .dim-deltas,
+html[data-theme="light-studio"] .bim-3d-dimension-badge .dim-deltas {
   color: #334155;
 }
 
@@ -9280,19 +9280,56 @@ html[data-theme="zen"] .bim-3d-dimension-badge .dim-deltas {
   color: #F59E0B;
 }
 
-html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="vertex"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="vertex"] {
+html[data-theme="light"] #measurement-snap-badge[data-snap-type="vertex"],
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="vertex"] {
   color: #15803D;
 }
 
-html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="edge"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="edge"] {
+html[data-theme="light"] #measurement-snap-badge[data-snap-type="edge"],
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="edge"] {
   color: #0369A1;
 }
 
-html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="midpoint"],
-html[data-theme="zen"] #measurement-snap-badge[data-snap-type="midpoint"] {
+html[data-theme="light"] #measurement-snap-badge[data-snap-type="midpoint"],
+html[data-theme="light-studio"] #measurement-snap-badge[data-snap-type="midpoint"] {
   color: #B45309;
+}
+
+/* Keep floating/docked measurement controls compact & crisp on touchscreen laptops & jobsite mode */
+#measurement-panel #select-measure-unit {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 26px 0 10px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+#measurement-panel .delete-dim-btn {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#measurement-panel #btn-clear-all-measurements {
+  height: 26px;
+  min-height: 26px;
+  padding: 0 0.55rem;
+  font-size: 0.64rem;
+}
+
+@media (max-width: 767px) {
+  #measurement-panel #select-measure-unit {
+    height: 34px;
+    min-height: 34px;
+    font-size: 0.78rem;
+  }
 }
 
 .measurement-item-row {

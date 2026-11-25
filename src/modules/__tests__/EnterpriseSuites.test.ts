@@ -211,6 +211,50 @@ describe("Enterprise BIM Kintsugi Suites", () => {
 
       suite.setUnit("m");
     });
+
+    it("should render opaque bullseye endpoint pins in strict renderOrder and restore active tool button after stop/restart", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<div id="measurement-panel">
+          <button id="btn-measure-dist" class="btn-drawer-tool" data-type="distance">Distance</button>
+          <button id="btn-measure-angle" class="btn-drawer-tool" data-type="angle">Angle</button>
+        </div>`
+      );
+
+      suite.startMeasurement("angle");
+      expect(document.getElementById("btn-measure-angle")?.classList.contains("active")).toBe(true);
+      expect(document.getElementById("btn-measure-dist")?.classList.contains("active")).toBe(false);
+
+      suite.stopMeasurement();
+      expect(document.getElementById("btn-measure-angle")?.classList.contains("active")).toBe(false);
+
+      // Re-opening measurement panel restarts distance mode -> Distance button must regain .active
+      suite.startMeasurement("distance");
+      expect(document.getElementById("btn-measure-dist")?.classList.contains("active")).toBe(true);
+
+      // Verify finalized endpoint pins put BOTH halo and core in opaque queue (`transparent: false`)
+      // so the dark halo (9998) never occludes the bright core (9999)
+      (suite as any).finalizeDistanceMeasurement(
+        { position: new THREE.Vector3(0, 0, 0), snapType: "vertex" },
+        { position: new THREE.Vector3(5, 0, 0), snapType: "vertex" }
+      );
+      const item = suite.getMeasurements()[0];
+      expect(item.labelElement?.parentElement?.id).toBe("measurement-labels-overlay");
+      const endpointGroups = item.lineGroup!.children.filter((c) => c.userData?.isDimensionEndpoint);
+      expect(endpointGroups.length).toBe(2);
+      for (const pin of endpointGroups) {
+        const halo = pin.getObjectByName("EndpointHalo") as THREE.Mesh;
+        const core = pin.getObjectByName("EndpointCore") as THREE.Mesh;
+        expect(halo).toBeDefined();
+        expect(core).toBeDefined();
+        expect((halo.material as THREE.MeshBasicMaterial).transparent).toBe(false);
+        expect((core.material as THREE.MeshBasicMaterial).transparent).toBe(false);
+        expect(halo.renderOrder).toBeLessThan(core.renderOrder);
+      }
+
+      suite.clearAllMeasurements();
+      expect(document.querySelectorAll(".bim-3d-dimension-badge").length).toBe(0);
+    });
   });
 
   describe("2. ClashDetector", () => {

@@ -427,7 +427,7 @@ describe("UI Platform Standards & Global Component Contract", () => {
       <div class="ui-layer">
         <header><div class="brand"><div class="brand-logo">K</div></div><div class="header-controls"></div></header>
         <span id="badge-files-count">0</span>
-        <select id="sample-model-select"><option value="snowdon">Snowdon</option><option value="school">School</option></select>
+        <select id="sample-model-select"><option value="snowdon">Snowdon</option><option value="tekla">Tekla</option><option value="school">School</option></select>
         <button id="load-sample-btn"></button>
         <input id="timeline-slider" type="range" min="0" max="100" value="10" />
         <span id="gantt-week-badge">Week 4 of 52</span>
@@ -469,6 +469,11 @@ describe("UI Platform Standards & Global Component Contract", () => {
     ctrl.closeAllSheets();
 
     // Empty launcher 1-tap demo trigger
+    document.getElementById("mob-launch-tekla")?.click();
+    expect((document.getElementById("sample-model-select") as HTMLSelectElement).value).toBe("tekla");
+    expect(sampleLoaded).toBe(true);
+    sampleLoaded = false;
+
     document.getElementById("mob-launch-school")?.click();
     expect((document.getElementById("sample-model-select") as HTMLSelectElement).value).toBe("school");
     expect(sampleLoaded).toBe(true);

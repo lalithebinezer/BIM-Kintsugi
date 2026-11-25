@@ -234,7 +234,10 @@ describe("Platform Upgrades Suite — Snapshots, Deep-Links, Shortcuts, IDS Pres
     expect(detectScheduleFileFormat("plan.xer")).toBe("primavera-xer");
 
     expect(resolveSampleModel("snowdon").format).toBe("ifc");
+    expect(resolveSampleModel("tekla").format).toBe("ifc");
+    expect(resolveSampleModel("tekla").url).toBe("Sample_Office_Building_Tekla.ifc");
     expect(resolveSampleModel("school").format).toBe("frag");
+    expect(resolveSampleModel("unknown").key).toBe("snowdon");
     expect(
       filterLoadedModels(
         [

@@ -724,6 +724,10 @@ export function initMobileWorkspace(): MobileWorkspaceController {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>
         <span>Load Snowdon Towers (IFC)</span>
       </button>
+      <button type="button" class="bk-btn bk-btn--secondary mob-empty-launcher__cta" id="mob-launch-tekla">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M7 7h2M11 7h2M15 7h2M7 11h2M11 11h2M15 11h2M7 15h2M11 15h2M15 15h2M9 22v-3h6v3"/></svg>
+        <span>Load Office Building (Tekla IFC4)</span>
+      </button>
       <div class="mob-empty-launcher__row">
         <button type="button" class="bk-btn bk-btn--secondary" id="mob-launch-school">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>
@@ -1588,6 +1592,7 @@ export function initMobileWorkspace(): MobileWorkspaceController {
     document.getElementById("load-sample-btn")?.click();
   };
   document.getElementById("mob-launch-snowdon")?.addEventListener("click", () => triggerSampleLoad("snowdon"));
+  document.getElementById("mob-launch-tekla")?.addEventListener("click", () => triggerSampleLoad("tekla"));
   document.getElementById("mob-launch-school")?.addEventListener("click", () => triggerSampleLoad("school"));
   document.getElementById("mob-launch-upload")?.addEventListener("click", () => {
     vibrateTap(10);

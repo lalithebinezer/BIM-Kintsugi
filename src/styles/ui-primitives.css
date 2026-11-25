@@ -282,7 +282,7 @@
   gap: 2px;
   padding: 2px;
   border-radius: calc(var(--bk-r-sm) + 2px);
-  background: var(--bk-surface-recessed);
+  background-color: var(--bk-surface-recessed);
   border: 1px solid var(--bk-border);
 }
 
@@ -328,7 +328,7 @@
   padding: 0 10px;
   border-radius: var(--bk-r-sm);
   border: 1px solid var(--bk-border-strong);
-  background: var(--bk-surface-recessed);
+  background-color: var(--bk-surface-recessed);
   color: var(--bk-text);
   font-family: var(--bk-font-sans);
   font-size: var(--bk-text-sm);
@@ -880,7 +880,7 @@ body.jobsite-touch-mode .bk-dropdown__item {
   border-radius: var(--bk-r-md);
   overflow: hidden;
   border: 1px solid var(--bk-border);
-  background: var(--bk-surface-recessed);
+  background-color: var(--bk-surface-recessed);
 }
 
 .bcf-photo-preview img {

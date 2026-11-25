@@ -455,6 +455,15 @@ export class MeasurementSuite {
     this.snapEdgeLine.visible = false;
     this.previewLine.visible = false;
 
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("#measurement-panel .btn-drawer-tool").forEach((btn) => {
+        const el = btn as HTMLElement;
+        el.classList.toggle("active", el.dataset.type === type);
+      });
+      const hoverBadge = document.getElementById("viewport-hover-badge");
+      if (hoverBadge) hoverBadge.style.display = "none";
+    }
+
     this.syncNativeMeasurerState();
     this.updateSnapBadge(this.snapEnabled ? null : "free");
     this.updateMeasurementUI();
@@ -602,7 +611,9 @@ export class MeasurementSuite {
       this.volumeMeasurer?.list?.clear();
     } catch (e) { }
     if (typeof document !== "undefined") {
-      document.querySelectorAll("#container .bim-3d-dimension-badge").forEach((el) => el.remove());
+      document
+        .querySelectorAll("#measurement-labels-overlay .bim-3d-dimension-badge, #container .bim-3d-dimension-badge")
+        .forEach((el) => el.remove());
       const hudLive = document.getElementById("measurement-live-val");
       if (hudLive) hudLive.innerText = formatMeasurementLength(0, this.unit);
     }
@@ -1157,22 +1168,31 @@ export class MeasurementSuite {
     pin.position.copy(position);
     pin.userData.isDimensionEndpoint = true;
 
-    // Dark outer contrast halo so pins stay razor-crisp on bright green, white, and dark elements
-    const haloGeo = new THREE.SphereGeometry(0.036, 14, 14);
+    // Both halo and core MUST stay in the opaque render queue (`transparent: false`) so Three.js
+    // strictly honors `renderOrder` (halo 9998 behind, bright core 9999 on top). Mixing transparent
+    // halo with opaque core causes the dark halo to draw after and completely cover the core.
+    const haloGeo = new THREE.SphereGeometry(0.032, 16, 16);
     const haloMat = new THREE.MeshBasicMaterial({
       color: 0x0f172a,
       depthTest: false,
-      transparent: true,
-      opacity: 0.92,
+      depthWrite: false,
+      transparent: false,
     });
     const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.name = "EndpointHalo";
     halo.renderOrder = 9998;
     pin.add(halo);
 
     // Bright precision inner core
-    const coreGeo = new THREE.SphereGeometry(0.024, 14, 14);
-    const coreMat = new THREE.MeshBasicMaterial({ color: coreHex, depthTest: false });
+    const coreGeo = new THREE.SphereGeometry(0.024, 16, 16);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: coreHex,
+      depthTest: false,
+      depthWrite: false,
+      transparent: false,
+    });
     const core = new THREE.Mesh(coreGeo, coreMat);
+    core.name = "EndpointCore";
     core.renderOrder = 9999;
     pin.add(core);
 
@@ -1180,11 +1200,41 @@ export class MeasurementSuite {
     return pin;
   }
 
+  private getActiveCamera(): THREE.Camera | undefined {
+    return (
+      this.engine.world?.camera?.three ||
+      (typeof window !== "undefined" ? (window as any).viewer_world?.camera?.three : undefined)
+    );
+  }
+
+  private getActiveRendererDom(): HTMLElement | null {
+    return (
+      (this.engine.world?.renderer as any)?.three?.domElement ||
+      (typeof window !== "undefined" ? (window as any).viewer_world?.renderer?.three?.domElement : null) ||
+      (typeof document !== "undefined" ? document.querySelector<HTMLElement>("#container canvas") : null) ||
+      (typeof document !== "undefined" ? document.getElementById("container") : null)
+    );
+  }
+
   private scaleEndpointMarkerToCamera(pin: THREE.Object3D): void {
-    const camera = this.engine.world?.camera?.three;
+    const camera = this.getActiveCamera();
     if (!camera) return;
-    const dist = Math.max(0.2, camera.position.distanceTo(pin.position));
-    const desiredCoreRadius = THREE.MathUtils.clamp(dist * 0.0055, 0.006, 0.12);
+    const domEl = this.getActiveRendererDom();
+    const viewportH = Math.max(240, domEl?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 800));
+
+    // Constant crisp screen-space radius (~4.2px core / ~5.6px outer dark ring) across near & far endpoints
+    let worldPerPx = 0.004;
+    if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+      const persp = camera as THREE.PerspectiveCamera;
+      const dist = Math.max(0.2, camera.position.distanceTo(pin.position));
+      const fovRad = THREE.MathUtils.degToRad(persp.fov || 55);
+      worldPerPx = (2 * dist * Math.tan(fovRad * 0.5)) / viewportH;
+    } else if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
+      const ortho = camera as THREE.OrthographicCamera;
+      worldPerPx = Math.abs(ortho.top - ortho.bottom) / Math.max(0.001, ortho.zoom || 1) / viewportH;
+    }
+
+    const desiredCoreRadius = THREE.MathUtils.clamp(worldPerPx * 4.2, 0.004, 0.45);
     pin.scale.setScalar(desiredCoreRadius / 0.024);
   }
 
@@ -1340,10 +1390,27 @@ export class MeasurementSuite {
     `;
   }
 
+  private getOrCreateLabelHost(): HTMLElement | null {
+    if (typeof document === "undefined") return null;
+    let host = document.getElementById("measurement-labels-overlay");
+    if (host && host.isConnected) return host;
+
+    const container = document.getElementById("container");
+    const appRoot = document.getElementById("app") || container?.parentElement || document.body;
+    if (!appRoot) return container;
+
+    host = document.createElement("div");
+    host.id = "measurement-labels-overlay";
+    host.style.cssText =
+      "position:fixed;inset:0;pointer-events:none;z-index:6;overflow:hidden;";
+    appRoot.appendChild(host);
+    return host;
+  }
+
   private create3DHtmlLabel(item: DimensionItem, pos: THREE.Vector3) {
     if (typeof document === "undefined") return;
-    const container = document.getElementById("container");
-    if (!container) return;
+    const host = this.getOrCreateLabelHost();
+    if (!host) return;
 
     const label = document.createElement("div");
     label.className = "bim-3d-dimension-badge";
@@ -1351,28 +1418,38 @@ export class MeasurementSuite {
     label.style.position = "absolute";
     label.style.pointerEvents = "none";
     label.style.transform = "translate(-50%, -50%)";
-    container.appendChild(label);
+    host.appendChild(label);
     item.labelElement = label;
 
-    // Attach frame update to keep label projected onto 2D screen
+    // Immediately project onto 2D screen coordinates
     this.updateLabelPosition(label, pos);
   }
 
   private updateLabelPosition(label: HTMLElement, worldPos: THREE.Vector3) {
-    const camera = this.engine.world?.camera?.three;
-    const renderer = this.engine.world?.renderer?.three;
-    if (!camera || !renderer) return;
+    const camera = this.getActiveCamera();
+    const domEl = this.getActiveRendererDom();
+    if (!camera || !domEl) return;
 
+    if (!label.isConnected) {
+      const host = this.getOrCreateLabelHost();
+      if (host) host.appendChild(label);
+    }
+
+    camera.updateMatrixWorld();
     const p = worldPos.clone().project(camera);
-    const w = renderer.domElement.clientWidth || 1000;
-    const h = renderer.domElement.clientHeight || 800;
+    const rect = domEl.getBoundingClientRect();
+    const w = rect.width > 0 ? rect.width : domEl.clientWidth || 1000;
+    const h = rect.height > 0 ? rect.height : domEl.clientHeight || 800;
+    const offsetLeft = rect.width > 0 ? rect.left : 0;
+    const offsetTop = rect.height > 0 ? rect.top : 0;
 
-    const x = ((p.x + 1) * w) / 2;
-    const y = ((-p.y + 1) * h) / 2;
+    const x = offsetLeft + ((p.x + 1) * w) / 2;
+    const y = offsetTop + ((-p.y + 1) * h) / 2;
 
-    label.style.left = `${x}px`;
-    label.style.top = `${y}px`;
-    label.style.display = p.z < 1 ? "inline-flex" : "none";
+    const inFrustum = Number.isFinite(x) && Number.isFinite(y) && p.z >= -1 && p.z <= 1;
+    label.style.left = `${x.toFixed(1)}px`;
+    label.style.top = `${y.toFixed(1)}px`;
+    label.style.display = inFrustum ? "inline-flex" : "none";
   }
 
   public updateOverlayPositions() {
