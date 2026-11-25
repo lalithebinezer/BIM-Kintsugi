@@ -60,6 +60,16 @@ body.right-sidebar-collapsed .right-sidebar:not(.open) {
   pointer-events: none;
 }
 
+.left-sidebar.open,
+.right-sidebar.open,
+body.left-sidebar-collapsed .left-sidebar.open,
+body.right-sidebar-collapsed .right-sidebar.open {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
 /* ─── C1: Never clip header flyout dropdowns via overflow-x: hidden ─── */
 @media (max-width: 1080px) {
   header {

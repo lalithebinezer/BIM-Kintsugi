@@ -5780,6 +5780,7 @@ body[data-theme="light"] {
   body.left-sidebar-collapsed .left-sidebar.open {
     transform: translateX(0) !important;
     opacity: 1 !important;
+    visibility: visible !important;
     pointer-events: auto !important;
   }
 
@@ -5787,6 +5788,7 @@ body[data-theme="light"] {
   body.right-sidebar-collapsed .right-sidebar.open {
     transform: translateX(0) !important;
     opacity: 1 !important;
+    visibility: visible !important;
     pointer-events: auto !important;
   }
 

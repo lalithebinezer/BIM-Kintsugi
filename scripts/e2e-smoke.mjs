@@ -231,7 +231,7 @@ try {
     );
   }
 
-  // 9. Multi-Viewport Responsive Checks (Tablet 768x1024 & Mobile 390x844)
+  // 9. Multi-Viewport Responsive Checks (Tablet 768x1024 & Mobile 390x844) + Mobile Sidebar Tab Regression Gate
   for (const vp of [
     { name: "tablet", width: 768, height: 1024 },
     { name: "mobile", width: 390, height: 844 },
@@ -243,6 +243,45 @@ try {
     );
     assert(!overflowX, `Unexpected horizontal overflow on ${vp.name} (${vp.width}x${vp.height})`);
   }
+
+  // Verify Left & Right mobile sidebars + side tabs open visibly on 390x844
+  await page.evaluate(() => {
+    document.getElementById("shortcuts-modal")?.classList.add("hidden");
+  });
+  await page.click("#btn-toggle-left");
+  await page.waitForTimeout(300);
+  await page.click('#left-tab-bar .sidebar-tab-btn[data-tab="schedule"]');
+  await page.waitForTimeout(150);
+  const mobileLeftOk = await page.evaluate(() => {
+    const s = document.querySelector(".left-sidebar");
+    const cs = s ? getComputedStyle(s) : null;
+    const p = document.getElementById("tab-left-schedule");
+    return Boolean(
+      s?.classList.contains("open") &&
+        cs?.visibility === "visible" &&
+        parseFloat(cs?.opacity || "0") >= 0.95 &&
+        p?.classList.contains("active")
+    );
+  });
+  assert(mobileLeftOk, "Mobile left sidebar & 4D Schedule tab failed to open visibly on 390x844");
+
+  await page.click("#btn-toggle-right");
+  await page.waitForTimeout(300);
+  await page.click('#right-tab-bar .sidebar-tab-btn[data-tab="tools"]');
+  await page.waitForTimeout(150);
+  const mobileRightOk = await page.evaluate(() => {
+    const s = document.querySelector(".right-sidebar");
+    const cs = s ? getComputedStyle(s) : null;
+    const p = document.getElementById("tab-right-tools");
+    return Boolean(
+      s?.classList.contains("open") &&
+        cs?.visibility === "visible" &&
+        parseFloat(cs?.opacity || "0") >= 0.95 &&
+        p?.classList.contains("active")
+    );
+  });
+  assert(mobileRightOk, "Mobile right sidebar & Tools tab failed to open visibly on 390x844");
+  await page.click("#btn-toggle-right");
 
   assert(consoleErrors.length === 0, `Console errors detected: ${consoleErrors.join(" | ")}`);
   assert(pageErrors.length === 0, `Page errors detected: ${pageErrors.join(" | ")}`);
